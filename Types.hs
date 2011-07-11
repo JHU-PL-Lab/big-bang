@@ -6,7 +6,7 @@ module Types
 
 class Tau a
 class (Tau a) => TauOpen a
-class (Tau a, TauOpen a) => TauClosed a
+class (Tau a) => TauClosed a
 class (Tau a) => TauDown a
 class (Tau a) => TauUp a
 class (TauDown a) => TauLabel a
@@ -67,7 +67,6 @@ instance TauDown OpenLabel
 instance TauDownOpen OpenLabel
 
 instance Tau ClosedLabel
-instance TauOpen ClosedLabel
 instance TauClosed ClosedLabel
 instance TauLabel ClosedLabel
 instance TauDown ClosedLabel
@@ -80,7 +79,6 @@ instance TauDown OpenOnion
 instance TauDownOpen OpenOnion
 
 instance Tau ClosedOnion
-instance TauOpen ClosedOnion
 instance TauClosed ClosedOnion
 instance TauOnion ClosedOnion
 instance TauDown ClosedOnion
@@ -119,3 +117,4 @@ instance Tau UpperFunc
 instance TauUp UpperFunc
 instance TauOpen UpperFunc
 instance TauClosed UpperFunc
+
