@@ -5,6 +5,9 @@ module Types
 ) where
 
 -------------------------------------------------------------------------------
+-- *Classes
+-- $Classes
+--
 -- Declaring type classes to categorize the different concrete types used to
 -- represent type values in the Big Bang system.
 
@@ -38,6 +41,8 @@ class (TauClosed a, TauDown a) => TauDownClosed a
 class (TauClosed a, TauUp a) => TauUpClosed a
 
 ------------------------------------------------------------------------------
+-- *Auxiliary Types
+-- $AuxiliaryTypes
 -- Declaring types in preparation for the concrete types below.
 
 -- |A distinguished type for labels.
@@ -53,6 +58,8 @@ data TauChi where
     ChiFun :: Alpha -> TauChi
 
 ------------------------------------------------------------------------------
+-- *Concrete Types
+-- $ConcreteTypes
 -- Concrete types representing types in Big Bang
 
 -- |A concrete type representing deeply open labels.
@@ -94,6 +101,8 @@ data UpperFunc where
     UpperFunc :: AlphaUp -> Alpha -> UpperFunc
 
 ------------------------------------------------------------------------------
+-- *Constraints
+-- $Constraints
 -- Declaring types to represent Big Bang constraints.
 
 -- |A type alias defining the form of constraints.
