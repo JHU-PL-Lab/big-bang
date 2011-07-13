@@ -110,3 +110,81 @@ data Constraint =
 -- |A type representing guards in Big Bang case constraints.
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord)
+
+-------------------------------------------------------------------------------
+-- *Conversion Type Classes
+-- $ConversionTypeClasses
+--
+-- Type classes used for conversion between the different Haskell types
+-- representing Big Bang types.  The conversions to the open forms evaluate to a
+-- Maybe type; if a closed tau which contains an intermediate alpha is converted
+-- to an open tau, those conversions evaluate to None.
+
+class TauUpOpenConvertible a where
+    toTauUpOpen :: a -> Maybe TauUpOpen
+
+class TauUpClosedConvertible a where
+    toTauUpClosed :: a -> TauUpClosed
+
+class TauDownOpenConvertible a where
+    toTauDownOpen :: a -> Maybe TauDownOpen
+
+class TauDownClosedConvertible a where
+    toTauDownClosed :: a -> TauDownClosed
+
+-------------------------------------------------------------------------------
+-- *Conversion Type Class Instances
+-- $ConversionTypeClassInstances
+--
+-- Type class instances for conversion between the type forms.
+
+instance TauUpOpenConvertible TauUpOpen where
+    toTauUpOpen x = Just x
+
+instance TauUpClosedConvertible TauUpOpen where
+    toTauUpClosed x =
+        case x of
+             TuoPrim p -> TucPrim p
+             TuoFunc ua a -> TucFunc ua a
+             TuoUpAlpha ua -> TucUpAlpha ua
+
+instance  TauUpOpenConvertible TauUpClosed where
+    toTauUpOpen x =
+        case x of
+             TucPrim p -> Just $ TuoPrim p
+             TucFunc ua a -> Just $ TuoFunc ua a
+             TucUpAlpha ua -> Just $ TuoUpAlpha ua
+             TucAlpha a -> Nothing
+
+instance TauUpClosedConvertible TauUpClosed where
+    toTauUpClosed x = x
+
+instance TauDownOpenConvertible TauDownOpen where
+    toTauDownOpen x = Just x
+
+instance TauDownClosedConvertible TauDownOpen where
+    toTauDownClosed x =
+        case x of
+             TdoPrim p -> TdcPrim p
+             TdoLabel lbl t -> TdcLabel lbl (toTauDownClosed t)
+             TdoOnion t1 t2 ->
+                TdcOnion (toTauDownClosed t1) (toTauDownClosed t2)
+             TdoFunc vs ua a c -> TdcFunc vs ua a c
+
+instance TauDownOpenConvertible TauDownClosed where
+    toTauDownOpen x =
+        case x of
+             TdcPrim p -> Just $ TdoPrim p
+             TdcLabel lbl t ->
+                case (toTauDownOpen t) of
+                     Just t' -> Just $ TdoLabel lbl t'
+                     Nothing -> Nothing
+             TdcOnion t1 t2 ->
+                case (toTauDownOpen t1, toTauDownOpen t2) of
+                     (Just t1', Just t2') -> Just $ TdoOnion t1' t2'
+                     otherwise -> Nothing
+             TdcFunc vs ua a c -> Just $ TdoFunc vs ua a c
+             TdcAlpha a -> Nothing
+
+instance TauDownClosedConvertible TauDownClosed where
+    toTauDownClosed x = x
