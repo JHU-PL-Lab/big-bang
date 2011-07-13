@@ -174,19 +174,20 @@ instance TauDownClosedConvertible TauDownOpen where
              TdoFunc vs ua a c -> TdcFunc vs ua a c
 
 instance TauDownOpenConvertible TauDownClosed where
-    toTauDownOpen x =
+    toTauDownOpen x = do
         case x of
-             TdcPrim p -> Just $ TdoPrim p
+             TdcPrim p -> return $ TdoPrim p
              TdcLabel lbl t ->
-                case (toTauDownOpen t) of
-                     Just t' -> Just $ TdoLabel lbl t'
-                     Nothing -> Nothing
+                t' <- toTauDownOpen t
+                return $ TdoLabel t'
              TdcOnion t1 t2 ->
-                case (toTauDownOpen t1, toTauDownOpen t2) of
-                     (Just t1', Just t2') -> Just $ TdoOnion t1' t2'
-                     otherwise -> Nothing
-             TdcFunc vs ua a c -> Just $ TdoFunc vs ua a c
-             TdcAlpha a -> Nothing
+                t1' <- toTauDownOpen t1
+                t2' <- toTauDownOpen t2
+                return $ TdoOnion t1' t2'
+             TdcFunc vs ua a c ->
+                return TdoFunc vs ua a c
+             TdcAlpha a ->
+                Nothing
 
 instance TauDownClosedConvertible TauDownClosed where
     toTauDownClosed x = x
