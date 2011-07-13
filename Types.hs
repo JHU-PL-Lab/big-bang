@@ -1,5 +1,20 @@
 module Types 
-(
+( UpAlpha
+, Alpha
+, AnyAlpha
+, TauUpOpen
+, TauUpClosed
+, TauDownOpen
+, TauDownClosed
+, PrimitiveType
+, TauChi
+, Constraints
+, Constraint
+, Guard
+, toTauUpOpen
+, toTauUpClosed
+, toTauDownOpen
+, toTauDownClosed
 ) where
 
 import Data.Set (Set)
