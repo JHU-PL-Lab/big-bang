@@ -88,7 +88,7 @@ labelName s = LabelName s
 -- |A type representing the patterns produced by guards.
 data TauChi =
       ChiPrim PrimitiveType
-    | ChiLabel Label Alpha
+    | ChiLabel LabelName Alpha
     | ChiOnion Alpha Alpha
     | ChiFun Alpha
     deriving (Eq, Ord)
