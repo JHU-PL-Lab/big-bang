@@ -5,6 +5,8 @@ module Types
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import UtilTypes (LabelName)
+
 -------------------------------------------------------------------------------
 -- *Big Bang Types
 -- $BigBangTypes
@@ -66,18 +68,6 @@ data PrimitiveType =
     | PrimUnit
     deriving (Eq, Ord)
 
-
--------------------------------------------------------------------------------
--- *Auxiliary Types
--- $AuxiliaryTypes
---
--- These types are used in the definition of Big Bang types.
-
--- |A distinguished type for labels.
-newtype LabelName = LabelName { unLabelName :: String }
-    deriving (Eq, Ord)
-{- TODO: smarter constructor -}
-labelName s = LabelName s
 
 -------------------------------------------------------------------------------
 -- *Type Pattern Types
