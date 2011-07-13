@@ -150,7 +150,7 @@ instance TauUpClosedConvertible TauUpOpen where
              TuoFunc ua a -> TucFunc ua a
              TuoUpAlpha ua -> TucUpAlpha ua
 
-instance  TauUpOpenConvertible TauUpClosed where
+instance TauUpOpenConvertible TauUpClosed where
     toTauUpOpen x =
         case x of
              TucPrim p -> Just $ TuoPrim p
