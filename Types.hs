@@ -27,36 +27,36 @@ data TVar = TAlpha Alpha | TUpAlpha UpAlpha
 
 -- |The datatype used to represent upper bound types.
 data TauUpOpen =
-      TouPrim PrimitiveType
-    | TouFunc UpAlpha Alpha
-    | TouUpAlpha UpAlpha
+      TuoPrim PrimitiveType
+    | TuoFunc UpAlpha Alpha
+    | TuoUpAlpha UpAlpha
     deriving (Eq, Ord)
 
 -- |The datatype used to represent types which are either upper bound or
 --  intermediate.
 data TauUpClosed =
-      TcuPrim PrimitiveType
-    | TcuFunc UpAlpha Alpha
-    | TcuUpAlpha UpAlpha
-    | TcuAlpha Alpha
+      TucPrim PrimitiveType
+    | TucFunc UpAlpha Alpha
+    | TucUpAlpha UpAlpha
+    | TucAlpha Alpha
     deriving (Eq, Ord)
 
 -- |The datatype used to represent lower bound types.
 data TauDownOpen =
-      TodPrim PrimitiveType
-    | TodLabel String TauDownOpen
-    | TodOnion TauDownOpen TauDownOpen
-    | TodFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
+      TdoPrim PrimitiveType
+    | TdoLabel String TauDownOpen
+    | TdoOnion TauDownOpen TauDownOpen
+    | TdoFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
     deriving (Eq, Ord)
 
 -- |The datatype used to represent types which are either lower bound or
 --  intermediate.
 data TauDownClosed =
-      TcdPrim PrimitiveType
-    | TcdLabel String TauDownClosed
-    | TcdOnion TauDownClosed TauDownClosed
-    | TcdFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
-    | TcdAlpha Alpha
+      TdcPrim PrimitiveType
+    | TdcLabel String TauDownClosed
+    | TdcOnion TauDownClosed TauDownClosed
+    | TdcFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
+    | TdcAlpha Alpha
     deriving (Eq, Ord)
 
 -- |The datatype enumerating the primitives in the Big Bang type system.
@@ -96,6 +96,7 @@ data TauChi =
 ------------------------------------------------------------------------------
 -- *Constraints
 -- $Constraints
+--
 -- Declaring types to represent Big Bang constraints.
 
 -- |A type alias defining the form of constraints.
