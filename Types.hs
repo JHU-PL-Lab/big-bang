@@ -16,13 +16,15 @@ import qualified Data.Set as Set
 -- |The datatype used to represent upper bound type variables.
 data UpAlpha = UpAlpha Integer
     deriving (Eq, Ord)
+    -- TODO: include data representing debugging hints etc. and rewrite Eq & Ord
 
 -- |The datatype used to represent intermediate type variables.
 data Alpha = Alpha Integer
     deriving (Eq, Ord)
+    -- TODO: include data representing debugging hints etc. and rewrite Eq & Ord
 
 -- |A wrapper datatype used to represent type variables.
-data TVar = TAlpha Alpha | TUpAlpha UpAlpha
+data AnyAlpha = TAlpha Alpha | TUpAlpha UpAlpha
     deriving (Eq, Ord)
 
 -- |The datatype used to represent upper bound types.
@@ -44,18 +46,18 @@ data TauUpClosed =
 -- |The datatype used to represent lower bound types.
 data TauDownOpen =
       TdoPrim PrimitiveType
-    | TdoLabel String TauDownOpen
+    | TdoLabel LabelName TauDownOpen
     | TdoOnion TauDownOpen TauDownOpen
-    | TdoFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
+    | TdoFunc (Set AnyAlpha) UpAlpha Alpha Constraints -- TODO: alias Set AnyAlpha?
     deriving (Eq, Ord)
 
 -- |The datatype used to represent types which are either lower bound or
 --  intermediate.
 data TauDownClosed =
       TdcPrim PrimitiveType
-    | TdcLabel String TauDownClosed
+    | TdcLabel LabelName TauDownClosed
     | TdcOnion TauDownClosed TauDownClosed
-    | TdcFunc (Set TVar) UpAlpha Alpha Constraints -- TODO: alias Set TVar?
+    | TdcFunc (Set AnyAlpha) UpAlpha Alpha Constraints -- TODO: alias Set AnyAlpha?
     | TdcAlpha Alpha
     deriving (Eq, Ord)
 
@@ -74,10 +76,10 @@ data PrimitiveType =
 -- These types are used in the definition of Big Bang types.
 
 -- |A distinguished type for labels.
-newtype Label = Label { unLabel :: String }
+newtype LabelName = LabelName { unLabelName :: String }
     deriving (Eq, Ord)
 {- TODO: smarter constructor -}
-label s = Label s
+labelName s = LabelName s
 
 -------------------------------------------------------------------------------
 -- *Type Pattern Types
