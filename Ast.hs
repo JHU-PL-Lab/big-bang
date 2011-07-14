@@ -1,5 +1,8 @@
 module Ast
-(
+( Expr(..)
+, Chi(..)
+, Branches
+, Branch
 ) where
 
 import qualified Types as T
