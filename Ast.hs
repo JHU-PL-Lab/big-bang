@@ -22,6 +22,8 @@ data Expr =
     | Plus Expr Expr
     | Minus Expr Expr
     | Equal Expr Expr
+    -- TODO: should String be a primitive?
+    deriving (Show)
 
 -- |Data type describing type patterns for case expressions.
 data Chi =
@@ -29,6 +31,7 @@ data Chi =
     | ChiLabel LabelName Ident
     | ChiOnion Ident Ident
     | ChiFun
+    deriving (Show)
 
 -- |Alias for case branches
 type Branches = [Branch]
