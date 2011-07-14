@@ -23,6 +23,7 @@ data EvalError =
     deriving (Show)
 
 data ErrorOrSuccess a b = VLeft a | VRight b
+    deriving (Show)
 
 instance Monad (ErrorOrSuccess a) where
     VLeft a >>= f = VLeft a
