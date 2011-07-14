@@ -30,24 +30,24 @@ import UtilTypes (LabelName)
 
 -- |The datatype used to represent upper bound type variables.
 data UpAlpha = UpAlpha Integer
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
     -- TODO: include data representing debugging hints etc. and rewrite Eq & Ord
 
 -- |The datatype used to represent intermediate type variables.
 data Alpha = Alpha Integer
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
     -- TODO: include data representing debugging hints etc. and rewrite Eq & Ord
 
 -- |A wrapper datatype used to represent type variables.
 data AnyAlpha = TAlpha Alpha | TUpAlpha UpAlpha
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent upper bound types.
 data TauUpOpen =
       TuoPrim PrimitiveType
     | TuoFunc UpAlpha Alpha
     | TuoUpAlpha UpAlpha
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent types which are either upper bound or
 --  intermediate.
@@ -56,7 +56,7 @@ data TauUpClosed =
     | TucFunc UpAlpha Alpha
     | TucUpAlpha UpAlpha
     | TucAlpha Alpha
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent lower bound types.
 data TauDownOpen =
@@ -64,7 +64,7 @@ data TauDownOpen =
     | TdoLabel LabelName TauDownOpen
     | TdoOnion TauDownOpen TauDownOpen
     | TdoFunc (Set AnyAlpha) UpAlpha Alpha Constraints -- TODO: alias Set AnyAlpha?
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent types which are either lower bound or
 --  intermediate.
@@ -74,14 +74,14 @@ data TauDownClosed =
     | TdcOnion TauDownClosed TauDownClosed
     | TdcFunc (Set AnyAlpha) UpAlpha Alpha Constraints -- TODO: alias Set AnyAlpha?
     | TdcAlpha Alpha
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -- |The datatype enumerating the primitives in the Big Bang type system.
 data PrimitiveType =
       PrimInt
     | PrimString
     | PrimUnit
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 
 -------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ data TauChi =
     | ChiLabel LabelName Alpha
     | ChiOnion Alpha Alpha
     | ChiFun Alpha
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 ------------------------------------------------------------------------------
 -- *Constraints
@@ -111,10 +111,10 @@ data Constraint =
       Subtype TauDownClosed TauUpClosed
     | Case UpAlpha [Guard]
     | Bottom
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 -- |A type representing guards in Big Bang case constraints.
 data Guard = Guard TauChi Constraints
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes
