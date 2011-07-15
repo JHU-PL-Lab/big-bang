@@ -4,7 +4,11 @@
 {- |A module defining a Big Bang interpreter.
 -}
 module Interpreter
-(
+( evalTop
+, eval
+, EvalError
+, ErrorOrSuccess
+, EvalM
 ) where
 
 import Control.Monad.Error -- TODO: pare down the imports from this module
@@ -14,6 +18,9 @@ import Data.Maybe (catMaybes)
 import Ast (Branches, Chi(..), Expr(..))
 import qualified Types as T
 import UtilTypes (Ident, ident, unIdent, LabelName, labelName, unLabelName)
+
+-- TODO: remove
+import Debug.Trace
 
 -- |An error type for evaluation failures.
 data EvalError =
@@ -83,7 +90,7 @@ eval (Appl e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case e1' of
-        Func ident body -> return $ subst e2' ident body
+        Func ident body -> eval $ subst e2' ident body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ PrimInt i

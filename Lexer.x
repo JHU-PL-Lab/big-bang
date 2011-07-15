@@ -1,0 +1,62 @@
+{
+module Lexer
+( Token(..)
+, lexBigBang
+) where
+}
+
+%wrapper "basic"
+
+$digit = 0-9
+$lowerAlpha = [a-z]
+$upperAlpha = [A-Z]
+$alpha = [$lowerAlpha $upperAlpha]
+
+tokens :-
+
+    $white+                             ;
+    `                                   { const TokLabelPrefix }
+    &                                   { const TokOnionCons }
+    \\                                  { const TokLambda }
+    fun                                 { const TokFun }
+    \->                                 { const TokArrow }
+    case                                { const TokCase }
+    of                                  { const TokOf }
+    int                                 { const TokInteger }
+    string                              { const TokString }
+    unit                                { const TokUnit }
+    \(                                  { const TokOpenParen }
+    \)                                  { const TokCloseParen }
+    $digit+                             { TokIntegerLiteral . read }
+    \" ( \\. | ~\" ) * \"               { TokStringLiteral . tail . init }
+    $alpha [$alpha $digit _ ']*         { TokIdentifier }
+    \{                                  { const TokOpenBlock }
+    \}                                  { const TokCloseBlock }
+    \;                                  { const TokSeparator }
+
+{
+lexBigBang :: String -> [Token]
+lexBigBang = alexScanTokens
+
+data Token =
+      TokLabelPrefix
+    | TokOnionCons
+    | TokLambda
+    | TokFun
+    | TokArrow
+    | TokCase
+    | TokOf
+    | TokInteger
+    | TokString
+    | TokUnit
+    | TokOpenParen
+    | TokCloseParen
+    | TokIntegerLiteral Integer
+    | TokStringLiteral String
+    | TokIdentifier String
+    | TokOpenBlock
+    | TokCloseBlock
+    | TokSeparator
+    deriving Show
+}
+    
