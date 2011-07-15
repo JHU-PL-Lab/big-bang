@@ -8,6 +8,7 @@ module Interpreter
 ) where
 
 import Control.Monad.Error -- TODO: pare down the imports from this module
+import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
 import Ast (Branches, Chi(..), Expr(..))
@@ -42,6 +43,25 @@ type EvalM = ErrorOrSuccess EvalError Expr
 -- $EvaluationFunctions
 --
 -- Definitions for functions related to expression evaluation.
+
+-- |Performs top-level evaluation of a Big Bang expression.  This evaluation
+--  routine binds built-in functions (like "plus") to the appropriate
+--  expressions.
+evalTop :: Expr -> EvalM
+evalTop e = do
+    eval $ foldl' applyBuiltin e builtins
+    where applyBuiltin e (name, ast) =
+            subst ast (ident name) e
+          ix = ident "x"
+          iy = ident "y"
+          vx = Var ix
+          vy = Var iy
+          builtins = [
+                ("plus", Func ix $ Func iy $ Plus vx vy)
+              , ("minus", Func ix $ Func iy $ Minus vx vy)
+              , ("equal", Func ix $ Func iy $ Equal vx vy)
+              ]
+
 
 -- |Evaluates a Big Bang expression.
 eval :: Expr -> EvalM
