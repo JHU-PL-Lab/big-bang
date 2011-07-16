@@ -130,17 +130,18 @@ eval (Equal e1 e2) =
     evalBinop e1 e2 coerceToInteger $ \x y ->
             Label (labelName (if x == y then "True" else "False")) PrimUnit
 
-evalBinop :: Expr
-          -> Expr
-          -> (Expr -> Maybe Integer)
-          -> (Integer -> Integer -> Expr)
-          -> EvalM
+-- |Evaluates a binary expression.
+evalBinop :: Expr -- ^The first argument to the binary operator.
+          -> Expr -- ^The second argument to the binary operator.
+          -> (Expr -> Maybe a) -- ^A coercion function for correct arg type
+          -> (a -> a -> Expr) -- ^A function to evaluate coerced arguments
+          -> EvalM -- ^The results of evaluation
 evalBinop e1 e2 c f = do
     e1' <- eval e1
     e2' <- eval e2
     case (c e1', c e2') of
         (Just i1, Just i2) -> return $ f i1 i2
-        _ -> throwError $ DynamicTypeError "expected integer in expression"
+        _ -> throwError $ DynamicTypeError "incorrect type in expression"
 
 -- |Used to obtain an itneger from an expression.  If necessary, this routine
 --  will recurse through onions looking for an integer.
