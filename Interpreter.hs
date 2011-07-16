@@ -7,7 +7,7 @@ module Interpreter
 ( evalTop
 , eval
 , EvalError
-, ErrorOrSuccess
+, EvalResult
 , EvalM
 ) where
 
@@ -30,20 +30,20 @@ data EvalError =
     | UnmatchedCase Expr Branches
     deriving (Show)
 
-data ErrorOrSuccess a b = VLeft a | VRight b
+data EvalResult a b = EvalResultError a | EvalResultSuccess b
     deriving (Show)
 
-instance Monad (ErrorOrSuccess a) where
-    VLeft a >>= f = VLeft a
-    VRight a >>= f = f a
-    return = VRight
+instance Monad (EvalResult a) where
+    EvalResultError a >>= f = EvalResultError a
+    EvalResultSuccess a >>= f = f a
+    return = EvalResultSuccess
 
-instance MonadError EvalError (ErrorOrSuccess EvalError) where
-    throwError = VLeft
-    catchError (VLeft e) handler = handler e
-    catchError (VRight v) _ = VRight v
+instance MonadError EvalError (EvalResult EvalError) where
+    throwError = EvalResultError
+    catchError (EvalResultError e) handler = handler e
+    catchError (EvalResultSuccess v) _ = EvalResultSuccess v
 
-type EvalM = ErrorOrSuccess EvalError Expr
+type EvalM = EvalResult EvalError Expr
 
 ------------------------------------------------------------------------------
 -- *Evaluation Functions
