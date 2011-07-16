@@ -112,30 +112,48 @@ eval (Case e branches) = do
                   (ChiPrim T.PrimString, PrimString _) -> Just branchExpr
                   (ChiPrim T.PrimUnit, PrimUnit) -> Just branchExpr
                   (ChiLabel name ident, Label name' lblExpr) ->
-                      if name == name' then Just $ subst lblExpr ident branchExpr
-                                       else Nothing
+                      if name == name'
+                        then Just $ subst lblExpr ident branchExpr
+                        else Nothing
                   (ChiOnion ident1 ident2, Onion expr1 expr2) ->
                       Just $ subst expr1 ident1 $ subst expr2 ident2 branchExpr
                   (ChiFun, Func i e) -> Just branchExpr
                   _ -> Nothing
 
 eval (Plus e1 e2) =
-    evalIntBinop e1 e2 $ \x y -> PrimInt $ x + y
+    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x + y
 
 eval (Minus e1 e2) =
-    evalIntBinop e1 e2 $ \x y -> PrimInt $ x - y
+    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x - y
 
 eval (Equal e1 e2) =
-    evalIntBinop e1 e2 $ \x y ->
+    evalBinop e1 e2 coerceToInteger $ \x y ->
             Label (labelName (if x == y then "True" else "False")) PrimUnit
 
-evalIntBinop :: Expr -> Expr -> (Integer -> Integer -> Expr) -> EvalM
-evalIntBinop e1 e2 f = do
+evalBinop :: Expr
+          -> Expr
+          -> (Expr -> Maybe Integer)
+          -> (Integer -> Integer -> Expr)
+          -> EvalM
+evalBinop e1 e2 c f = do
     e1' <- eval e1
     e2' <- eval e2
-    case (e1',e2') of
-        (PrimInt i1, PrimInt i2) -> return $ f i1 i2
+    case (c e1', c e2') of
+        (Just i1, Just i2) -> return $ f i1 i2
         _ -> throwError $ DynamicTypeError "expected integer in expression"
+
+-- |Used to obtain an itneger from an expression.  If necessary, this routine
+--  will recurse through onions looking for an integer.
+coerceToInteger :: Expr -> Maybe Integer
+coerceToInteger e =
+    case e of
+        PrimInt i -> Just i
+        Onion a b ->
+            case (coerceToInteger a, coerceToInteger b) of
+                (Just i, _) -> Just i
+                (Nothing, Just j) -> Just j
+                (Nothing, Nothing) -> Nothing
+        _ -> Nothing
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
