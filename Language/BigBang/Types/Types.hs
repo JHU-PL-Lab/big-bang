@@ -1,4 +1,4 @@
-module Types 
+module Language.BigBang.Types.Types 
 ( AlphaContents(..)
 , AlphaUp(..)
 , Alpha(..)
@@ -24,7 +24,7 @@ module Types
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import UtilTypes (LabelName)
+import Language.BigBang.Types.UtilTypes (LabelName)
 
 -------------------------------------------------------------------------------
 -- *Big Bang Types

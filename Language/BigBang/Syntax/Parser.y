@@ -1,12 +1,19 @@
 {
-module Parser
+module Language.BigBang.Syntax.Parser
 ( parseBigBang
 ) where
 
-import qualified Ast as A
-import qualified Lexer as L
-import qualified Types as T
-import UtilTypes (Ident, ident, unIdent, LabelName, labelName, unLabelName)
+import qualified Language.BigBang.Ast as A
+import qualified Language.BigBang.Syntax.Lexer as L
+import qualified Language.BigBang.Types.Types as T
+import Language.BigBang.Types.UtilTypes
+    ( Ident
+    , ident
+    , unIdent
+    , LabelName
+    , labelName
+    , unLabelName
+    )
 
 -- For debugging purposes only
 import System.IO.Unsafe

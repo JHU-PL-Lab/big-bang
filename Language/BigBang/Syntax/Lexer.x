@@ -1,5 +1,5 @@
 {
-module Lexer
+module Language.BigBang.Syntax.Lexer
 ( Token(..)
 , lexBigBang
 ) where
