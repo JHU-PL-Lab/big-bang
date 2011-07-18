@@ -96,7 +96,7 @@ eval (Appl e1 e2) = do
 
 eval (PrimInt i) = return $ PrimInt i
 
-eval (PrimString s) = return $ PrimString s
+eval (PrimChar c) = return $ PrimChar c
 
 eval PrimUnit = return $ PrimUnit
 
@@ -110,7 +110,7 @@ eval (Case e branches) = do
     where evalLabel e' (chi,branchExpr) =
               case (chi,e') of
                   (ChiPrim T.PrimInt, PrimInt _) -> Just branchExpr
-                  (ChiPrim T.PrimString, PrimString _) -> Just branchExpr
+                  (ChiPrim T.PrimChar, PrimChar _) -> Just branchExpr
                   (ChiPrim T.PrimUnit, PrimUnit) -> Just branchExpr
                   (ChiLabel name ident, Label name' lblExpr) ->
                       if name == name'
@@ -214,7 +214,7 @@ subst v x e@(Appl e1 e2) =
 
 subst v x e@(PrimInt i) = e
 
-subst v x e@(PrimString s) = e
+subst v x e@(PrimChar c) = e
 
 subst v x e@(PrimUnit) = e
 

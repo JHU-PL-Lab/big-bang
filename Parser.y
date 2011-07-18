@@ -26,12 +26,12 @@ import System.IO
         case            { L.TokCase }
         of              { L.TokOf }
         int             { L.TokInteger }
-        string          { L.TokString }
+        char            { L.TokChar }
         unit            { L.TokUnit }
         '('             { L.TokOpenParen }
         ')'             { L.TokCloseParen }
         intLit          { L.TokIntegerLiteral $$ }
-        stringLit       { L.TokStringLiteral $$ }
+        charLit         { L.TokCharLiteral $$ }
         ident           { L.TokIdentifier $$ }
         '{'             { L.TokOpenBlock }
         '}'             { L.TokCloseBlock }
@@ -64,8 +64,8 @@ Primary :   ident
                                     { A.Var (ident $1) }
         |   intLit
                                     { A.PrimInt $1 }
-        |   stringLit
-                                    { A.PrimString $1 }
+        |   charLit
+                                    { A.PrimChar $1 }
         |   '(' ')'
                                     { A.PrimUnit }
         |   '`' ident Primary
@@ -89,7 +89,7 @@ Pattern :   PrimitiveType           { A.ChiPrim $1 }
 
 PrimitiveType
         :   int                     { T.PrimInt }
-        |   string                  { T.PrimString }
+        |   char                    { T.PrimChar }
         |   unit                    { T.PrimUnit }
 
 

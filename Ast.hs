@@ -18,14 +18,13 @@ data Expr =
     | Func Ident Expr
     | Appl Expr Expr
     | PrimInt Integer
-    | PrimString String
+    | PrimChar Char
     | PrimUnit
     | Case Expr Branches
     -- Below are the AST forms which cannot be represented as text directly
     | Plus Expr Expr
     | Minus Expr Expr
     | Equal Expr Expr
-    -- TODO: should String be a primitive?
     deriving (Show)
 
 -- |Data type describing type patterns for case expressions.

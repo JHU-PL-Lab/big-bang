@@ -79,7 +79,7 @@ data TauDownClosed =
 -- |The datatype enumerating the primitives in the Big Bang type system.
 data PrimitiveType =
       PrimInt
-    | PrimString
+    | PrimChar
     | PrimUnit
     deriving (Eq, Ord, Show)
 
