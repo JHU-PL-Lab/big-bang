@@ -1,7 +1,11 @@
 module Types 
-( AlphaUp(..)
+( AlphaContents(..)
+, AlphaUp(..)
 , Alpha(..)
 , AnyAlpha(..)
+, construct
+, index
+, callSites
 , TauUpOpen(..)
 , TauUpClosed(..)
 , TauDownOpen(..)
