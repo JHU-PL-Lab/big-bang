@@ -89,8 +89,9 @@ eval (Func i e) = return $ Func i e
 eval (Appl e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
-    case e1' of
-        Func ident body -> eval $ subst e2' ident body
+    let e1'' = coerceToFunction e1'
+    case e1'' of
+        Just (Func ident body) -> eval $ subst e2' ident body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ PrimInt i
@@ -172,6 +173,14 @@ coerceToInteger e =
         simpleIntCoerce (PrimInt i) = Just i
         simpleIntCoerce _ = Nothing
 
+-- |Used to obtain a function from an expression.  If necessary, this routine
+--  will recurse through onions looking for a function.
+coerceToFunction :: Expr -> Maybe Expr
+coerceToFunction e =
+    coerceToType simpleFuncCoerce e
+    where
+        simpleFuncCoerce a@(Func i e') = Just a
+        simpleFuncCoerce _ = Nothing
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
