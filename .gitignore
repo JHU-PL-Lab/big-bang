@@ -1,6 +1,7 @@
 *.o
 *.hi
 .*.swp
+.*.swo
 Lexer.hs
 Parser.hs
 ParserData.hs
