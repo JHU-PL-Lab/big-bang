@@ -47,13 +47,13 @@ Cabal-version:       >=1.2
 
 Executable interpreter
   -- .hs or .lhs file containing the Main module.
-  Main-is:             InterpreterMain.hs
+  Main-is:             Language/BigBang/Interpreter/InterpreterMain.hs
   
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers, mtl
   
   -- Modules not exported by this package.
-  Other-modules:       Ast, Interpreter, Lexer, Parser, UtilTypes, Types
+  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
