@@ -143,18 +143,35 @@ evalBinop e1 e2 c f = do
         (Just i1, Just i2) -> return $ f i1 i2
         _ -> throwError $ DynamicTypeError "incorrect type in expression"
 
--- |Used to obtain an itneger from an expression.  If necessary, this routine
+-- TODO: all of this coercion logic is dynamic; problem?
+
+-- |Used to perform general coercion of values.  This function takes a direct
+--  coercion function (which should be relatively trivial) and applies it
+--  appropriately across onions and other such values.
+coerceToType :: (Expr -> Maybe a) -- ^The trivial coercion function.
+             -> Expr              -- ^The expression to coerce.
+             -> Maybe a           -- ^Just the result or Nothing on failure
+coerceToType f e =
+    case f e of
+        Just a -> Just a
+        Nothing ->
+            case e of
+                Onion a b ->
+                    case (coerceToType f a, coerceToType f b) of
+                        (Just i, _) -> Just i
+                        (Nothing, Just j) -> Just j
+                        (Nothing, Nothing) -> Nothing
+                _ -> Nothing
+
+-- |Used to obtain an integer from an expression.  If necessary, this routine
 --  will recurse through onions looking for an integer.
 coerceToInteger :: Expr -> Maybe Integer
 coerceToInteger e =
-    case e of
-        PrimInt i -> Just i
-        Onion a b ->
-            case (coerceToInteger a, coerceToInteger b) of
-                (Just i, _) -> Just i
-                (Nothing, Just j) -> Just j
-                (Nothing, Nothing) -> Nothing
-        _ -> Nothing
+    coerceToType simpleIntCoerce e
+    where
+        simpleIntCoerce (PrimInt i) = Just i
+        simpleIntCoerce _ = Nothing
+
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
