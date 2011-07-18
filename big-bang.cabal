@@ -50,7 +50,7 @@ Executable big-bang
   Main-is:             InterpreterMain.hs
   
   -- Packages needed in order to build this package.
-  Build-depends:       base
+  Build-depends:       base, array, containers, mtl
   
   -- Modules not exported by this package.
   Other-modules:       Ast, Interpreter, Lexer, Parser, UtilTypes, Types
