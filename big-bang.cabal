@@ -19,7 +19,7 @@ Description:         Big Bang is a statically typed, constraints based programmi
 License:             AllRightsReserved
 
 -- The file containing the license text.
-License-file:        LICENSE
+--License-file:        LICENSE
 
 -- The package author(s).
 Author:              Alex Rozenshteyn
@@ -45,7 +45,7 @@ Stability:           alpha
 Cabal-version:       >=1.2
 
 
-Executable big-bang
+Executable interpreter
   -- .hs or .lhs file containing the Main module.
   Main-is:             InterpreterMain.hs
   
