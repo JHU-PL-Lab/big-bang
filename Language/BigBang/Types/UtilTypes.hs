@@ -1,7 +1,7 @@
 {- |A module containing Haskell types which are used as utilities by other
     modules.
 -}
-module UtilTypes
+module Language.BigBang.Types.UtilTypes
 ( LabelName
 , labelName
 , unLabelName

@@ -3,7 +3,7 @@
 
 {- |A module defining a Big Bang interpreter.
 -}
-module Interpreter
+module Language.BigBang.Interpreter.Interpreter
 ( evalTop
 , eval
 , EvalError
@@ -15,9 +15,16 @@ import Control.Monad.Error -- TODO: pare down the imports from this module
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
-import Ast (Branches, Chi(..), Expr(..))
-import qualified Types as T
-import UtilTypes (Ident, ident, unIdent, LabelName, labelName, unLabelName)
+import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
+import qualified Language.BigBang.Types.Types as T
+import Language.BigBang.Types.UtilTypes
+    ( Ident
+    , ident
+    , unIdent
+    , LabelName
+    , labelName
+    , unLabelName
+    )
 
 -- TODO: remove
 import Debug.Trace

@@ -1,7 +1,11 @@
-module Types 
-( AlphaUp(..)
+module Language.BigBang.Types.Types 
+( AlphaContents(..)
+, AlphaUp(..)
 , Alpha(..)
 , AnyAlpha(..)
+, construct
+, index
+, callSites
 , TauUpOpen(..)
 , TauUpClosed(..)
 , TauDownOpen(..)
@@ -20,7 +24,7 @@ module Types
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import UtilTypes (LabelName)
+import Language.BigBang.Types.UtilTypes (LabelName)
 
 -------------------------------------------------------------------------------
 -- *Big Bang Types
@@ -127,6 +131,10 @@ data Constraint =
 -- |A type representing guards in Big Bang case constraints.
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
+
+-- |An infix function for creating subtype contraints (for convenience).
+(<:) :: TauDownClosed -> TauUpClosed -> Constraint
+(<:) = Subtype
 
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes

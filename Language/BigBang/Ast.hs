@@ -1,12 +1,12 @@
-module Ast
+module Language.BigBang.Ast
 ( Expr(..)
 , Chi(..)
 , Branches
 , Branch
 ) where
 
-import qualified Types as T
-import UtilTypes (LabelName, Ident)
+import qualified Language.BigBang.Types.Types as T
+import Language.BigBang.Types.UtilTypes (LabelName, Ident)
 
 -------------------------------------------------------------------------------
 
