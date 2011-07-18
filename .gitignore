@@ -1,3 +1,9 @@
 *.o
 *.hi
 .*.swp
+.*.swo
+Lexer.hs
+Parser.hs
+ParserData.hs
+Parser.info
+InterpreterMain

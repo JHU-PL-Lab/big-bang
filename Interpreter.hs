@@ -4,15 +4,23 @@
 {- |A module defining a Big Bang interpreter.
 -}
 module Interpreter
-(
+( evalTop
+, eval
+, EvalError
+, EvalResult
+, EvalM
 ) where
 
 import Control.Monad.Error -- TODO: pare down the imports from this module
+import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
 import Ast (Branches, Chi(..), Expr(..))
 import qualified Types as T
 import UtilTypes (Ident, ident, unIdent, LabelName, labelName, unLabelName)
+
+-- TODO: remove
+import Debug.Trace
 
 -- |An error type for evaluation failures.
 data EvalError =
@@ -22,26 +30,45 @@ data EvalError =
     | UnmatchedCase Expr Branches
     deriving (Show)
 
-data ErrorOrSuccess a b = VLeft a | VRight b
+data EvalResult a b = EvalResultError a | EvalResultSuccess b
     deriving (Show)
 
-instance Monad (ErrorOrSuccess a) where
-    VLeft a >>= f = VLeft a
-    VRight a >>= f = f a
-    return = VRight
+instance Monad (EvalResult a) where
+    EvalResultError a >>= f = EvalResultError a
+    EvalResultSuccess a >>= f = f a
+    return = EvalResultSuccess
 
-instance MonadError EvalError (ErrorOrSuccess EvalError) where
-    throwError = VLeft
-    catchError (VLeft e) handler = handler e
-    catchError (VRight v) _ = VRight v
+instance MonadError EvalError (EvalResult EvalError) where
+    throwError = EvalResultError
+    catchError (EvalResultError e) handler = handler e
+    catchError (EvalResultSuccess v) _ = EvalResultSuccess v
 
-type EvalM = ErrorOrSuccess EvalError Expr
+type EvalM = EvalResult EvalError Expr
 
 ------------------------------------------------------------------------------
 -- *Evaluation Functions
 -- $EvaluationFunctions
 --
 -- Definitions for functions related to expression evaluation.
+
+-- |Performs top-level evaluation of a Big Bang expression.  This evaluation
+--  routine binds built-in functions (like "plus") to the appropriate
+--  expressions.
+evalTop :: Expr -> EvalM
+evalTop e = do
+    eval $ foldl' applyBuiltin e builtins
+    where applyBuiltin e (name, ast) =
+            subst ast (ident name) e
+          ix = ident "x"
+          iy = ident "y"
+          vx = Var ix
+          vy = Var iy
+          builtins = [
+                ("plus", Func ix $ Func iy $ Plus vx vy)
+              , ("minus", Func ix $ Func iy $ Minus vx vy)
+              , ("equal", Func ix $ Func iy $ Equal vx vy)
+              ]
+
 
 -- |Evaluates a Big Bang expression.
 eval :: Expr -> EvalM
@@ -63,7 +90,7 @@ eval (Appl e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case e1' of
-        Func ident body -> return $ subst e2' ident body
+        Func ident body -> eval $ subst e2' ident body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ PrimInt i
@@ -85,30 +112,49 @@ eval (Case e branches) = do
                   (ChiPrim T.PrimString, PrimString _) -> Just branchExpr
                   (ChiPrim T.PrimUnit, PrimUnit) -> Just branchExpr
                   (ChiLabel name ident, Label name' lblExpr) ->
-                      if name == name' then Just $ subst lblExpr ident branchExpr
-                                       else Nothing
+                      if name == name'
+                        then Just $ subst lblExpr ident branchExpr
+                        else Nothing
                   (ChiOnion ident1 ident2, Onion expr1 expr2) ->
                       Just $ subst expr1 ident1 $ subst expr2 ident2 branchExpr
                   (ChiFun, Func i e) -> Just branchExpr
                   _ -> Nothing
 
 eval (Plus e1 e2) =
-    evalIntBinop e1 e2 $ \x y -> PrimInt $ x + y
+    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x + y
 
 eval (Minus e1 e2) =
-    evalIntBinop e1 e2 $ \x y -> PrimInt $ x - y
+    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x - y
 
 eval (Equal e1 e2) =
-    evalIntBinop e1 e2 $ \x y ->
+    evalBinop e1 e2 coerceToInteger $ \x y ->
             Label (labelName (if x == y then "True" else "False")) PrimUnit
 
-evalIntBinop :: Expr -> Expr -> (Integer -> Integer -> Expr) -> EvalM
-evalIntBinop e1 e2 f = do
+-- |Evaluates a binary expression.
+evalBinop :: Expr -- ^The first argument to the binary operator.
+          -> Expr -- ^The second argument to the binary operator.
+          -> (Expr -> Maybe a) -- ^A coercion function for correct arg type
+          -> (a -> a -> Expr) -- ^A function to evaluate coerced arguments
+          -> EvalM -- ^The results of evaluation
+evalBinop e1 e2 c f = do
     e1' <- eval e1
     e2' <- eval e2
-    case (e1',e2') of
-        (PrimInt i1, PrimInt i2) -> return $ f i1 i2
-        _ -> throwError $ DynamicTypeError "expected integer in expression"
+    case (c e1', c e2') of
+        (Just i1, Just i2) -> return $ f i1 i2
+        _ -> throwError $ DynamicTypeError "incorrect type in expression"
+
+-- |Used to obtain an itneger from an expression.  If necessary, this routine
+--  will recurse through onions looking for an integer.
+coerceToInteger :: Expr -> Maybe Integer
+coerceToInteger e =
+    case e of
+        PrimInt i -> Just i
+        Onion a b ->
+            case (coerceToInteger a, coerceToInteger b) of
+                (Just i, _) -> Just i
+                (Nothing, Just j) -> Just j
+                (Nothing, Nothing) -> Nothing
+        _ -> Nothing
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
