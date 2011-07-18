@@ -23,12 +23,12 @@ tokens :-
     case                                { const TokCase }
     of                                  { const TokOf }
     int                                 { const TokInteger }
-    string                              { const TokString }
+    char                                { const TokChar }
     unit                                { const TokUnit }
     \(                                  { const TokOpenParen }
     \)                                  { const TokCloseParen }
     $digit+                             { TokIntegerLiteral . read }
-    \" ( \\. | ~\" ) * \"               { TokStringLiteral . tail . init }
+    \' ( \\. | ~\' ) \'                 { TokCharLiteral . head . read }
     $alpha [$alpha $digit _ ']*         { TokIdentifier }
     \{                                  { const TokOpenBlock }
     \}                                  { const TokCloseBlock }
@@ -47,12 +47,12 @@ data Token =
     | TokCase
     | TokOf
     | TokInteger
-    | TokString
+    | TokChar
     | TokUnit
     | TokOpenParen
     | TokCloseParen
     | TokIntegerLiteral Integer
-    | TokStringLiteral String
+    | TokCharLiteral Char
     | TokIdentifier String
     | TokOpenBlock
     | TokCloseBlock

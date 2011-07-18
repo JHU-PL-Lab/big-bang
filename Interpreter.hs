@@ -89,13 +89,14 @@ eval (Func i e) = return $ Func i e
 eval (Appl e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
-    case e1' of
-        Func ident body -> eval $ subst e2' ident body
+    let e1'' = coerceToFunction e1'
+    case e1'' of
+        Just (Func ident body) -> eval $ subst e2' ident body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ PrimInt i
 
-eval (PrimString s) = return $ PrimString s
+eval (PrimChar c) = return $ PrimChar c
 
 eval PrimUnit = return $ PrimUnit
 
@@ -109,7 +110,7 @@ eval (Case e branches) = do
     where evalLabel e' (chi,branchExpr) =
               case (chi,e') of
                   (ChiPrim T.PrimInt, PrimInt _) -> Just branchExpr
-                  (ChiPrim T.PrimString, PrimString _) -> Just branchExpr
+                  (ChiPrim T.PrimChar, PrimChar _) -> Just branchExpr
                   (ChiPrim T.PrimUnit, PrimUnit) -> Just branchExpr
                   (ChiLabel name ident, Label name' lblExpr) ->
                       if name == name'
@@ -143,18 +144,43 @@ evalBinop e1 e2 c f = do
         (Just i1, Just i2) -> return $ f i1 i2
         _ -> throwError $ DynamicTypeError "incorrect type in expression"
 
--- |Used to obtain an itneger from an expression.  If necessary, this routine
+-- TODO: all of this coercion logic is dynamic; problem?
+
+-- |Used to perform general coercion of values.  This function takes a direct
+--  coercion function (which should be relatively trivial) and applies it
+--  appropriately across onions and other such values.
+coerceToType :: (Expr -> Maybe a) -- ^The trivial coercion function.
+             -> Expr              -- ^The expression to coerce.
+             -> Maybe a           -- ^Just the result or Nothing on failure
+coerceToType f e =
+    case f e of
+        Just a -> Just a
+        Nothing ->
+            case e of
+                Onion a b ->
+                    case (coerceToType f a, coerceToType f b) of
+                        (Just i, _) -> Just i
+                        (Nothing, Just j) -> Just j
+                        (Nothing, Nothing) -> Nothing
+                _ -> Nothing
+
+-- |Used to obtain an integer from an expression.  If necessary, this routine
 --  will recurse through onions looking for an integer.
 coerceToInteger :: Expr -> Maybe Integer
 coerceToInteger e =
-    case e of
-        PrimInt i -> Just i
-        Onion a b ->
-            case (coerceToInteger a, coerceToInteger b) of
-                (Just i, _) -> Just i
-                (Nothing, Just j) -> Just j
-                (Nothing, Nothing) -> Nothing
-        _ -> Nothing
+    coerceToType simpleIntCoerce e
+    where
+        simpleIntCoerce (PrimInt i) = Just i
+        simpleIntCoerce _ = Nothing
+
+-- |Used to obtain a function from an expression.  If necessary, this routine
+--  will recurse through onions looking for a function.
+coerceToFunction :: Expr -> Maybe Expr
+coerceToFunction e =
+    coerceToType simpleFuncCoerce e
+    where
+        simpleFuncCoerce a@(Func i e') = Just a
+        simpleFuncCoerce _ = Nothing
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
@@ -188,7 +214,7 @@ subst v x e@(Appl e1 e2) =
 
 subst v x e@(PrimInt i) = e
 
-subst v x e@(PrimString s) = e
+subst v x e@(PrimChar c) = e
 
 subst v x e@(PrimUnit) = e
 
