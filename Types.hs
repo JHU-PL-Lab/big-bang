@@ -132,6 +132,10 @@ data Constraint =
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
 
+-- |An infix function for creating subtype contraints (for convenience).
+(<:) :: TauDownClosed -> TauUpClosed -> Constraint
+(<:) = Subtype
+
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes
 -- $ConversionTypeClasses
