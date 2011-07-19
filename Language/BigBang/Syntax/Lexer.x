@@ -57,6 +57,6 @@ data Token =
     | TokOpenBlock
     | TokCloseBlock
     | TokSeparator
-    deriving Show
+    deriving (Eq, Show)
 }
     
