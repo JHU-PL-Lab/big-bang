@@ -7,11 +7,10 @@ module Language.BigBang.Interpreter.Interpreter
 ( evalTop
 , eval
 , EvalError
-, EvalResult
 , EvalM
 ) where
 
-import Control.Monad.Error -- TODO: pare down the imports from this module
+import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
@@ -36,21 +35,10 @@ data EvalError =
     | NotClosed Ident
     | UnmatchedCase Expr Branches
     deriving (Show)
+instance Error EvalError where
+    strMsg = error
 
-data EvalResult a b = EvalResultError a | EvalResultSuccess b
-    deriving (Show)
-
-instance Monad (EvalResult a) where
-    EvalResultError a >>= f = EvalResultError a
-    EvalResultSuccess a >>= f = f a
-    return = EvalResultSuccess
-
-instance MonadError EvalError (EvalResult EvalError) where
-    throwError = EvalResultError
-    catchError (EvalResultError e) handler = handler e
-    catchError (EvalResultSuccess v) _ = EvalResultSuccess v
-
-type EvalM = EvalResult EvalError Expr
+type EvalM = Either EvalError Expr
 
 ------------------------------------------------------------------------------
 -- *Evaluation Functions
