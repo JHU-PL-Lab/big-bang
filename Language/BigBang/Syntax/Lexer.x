@@ -28,7 +28,7 @@ tokens :-
     \(                                  { const TokOpenParen }
     \)                                  { const TokCloseParen }
     $digit+                             { TokIntegerLiteral . read }
-    \' ( \\. | ~\' ) \'                 { TokCharLiteral . head . read }
+    \' ( \\. | ~\' ) \'                 { TokCharLiteral . head . tail }
     $alpha [$alpha $digit _ ']*         { TokIdentifier }
     \{                                  { const TokOpenBlock }
     \}                                  { const TokCloseBlock }
