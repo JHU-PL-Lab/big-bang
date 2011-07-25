@@ -1,5 +1,4 @@
---module LexerTest where
-module Main where
+module LexerTest where
 
 import Language.BigBang.Syntax.Lexer
 import Test.HUnit
@@ -161,5 +160,47 @@ testPerverse = TestCase $ assertEqual
   [TokOpenBlock, TokLabelPrefix, TokOpenParen, TokInteger, TokOnionCons, TokUnit, TokCloseBlock, TokOnionCons, TokChar, TokCloseParen]
   (lexBigBang "{`(int & unit} & char)")
 
-tests = TestList [edgeCases, individualTokenCases, simplePrograms]
+testVariations = TestList [testPerverseNoSpaces2, testPerverseNoSpaces3, testPerverseNoSpaces4, testPerverseNoSpaces5, testPerverseNoSpaces, testUnitNoSpaces, testLambdaNoSpaces, testOnionConsNoSpaces]
+
+testLambdaNoSpaces =  TestCase $ assertEqual
+  "Variation of lambda test with no spaces"
+  [TokOpenParen, TokLambda, TokIdentifier "x", TokArrow, TokIdentifier "x", TokCloseParen]
+  (lexBigBang "(\\x->x)")
+
+testOnionConsNoSpaces = TestCase $ assertEqual
+  "Variation of onion cons test with no spaces"
+  [TokIdentifier "a", TokOnionCons, TokOpenParen, TokIdentifier "b", TokOnionCons, TokIdentifier "c", TokCloseParen]
+  (lexBigBang "a&(b&c)")
+
+testUnitNoSpaces = TestCase $ assertEqual
+  "Variation of unit test with no spaces"
+  [TokLabelPrefix, TokIdentifier "True", TokOpenParen, TokCloseParen]
+  (lexBigBang "`True()")
+
+testPerverseNoSpaces = TestCase $ assertEqual
+  "Variation of perverse test with no spaces"
+  [TokOpenParen, TokIntegerLiteral 1, TokSeparator, TokIdentifier "xyz", TokSeparator, TokOpenBlock, TokCharLiteral 'c', TokSeparator, TokCloseParen, TokCloseBlock]
+  (lexBigBang "(1;xyz;{\'c\';)}")
+
+testPerverseNoSpaces2 = TestCase $ assertEqual
+  "Test lexing of \"1\'c\'xyz\""
+  [TokIntegerLiteral 1, TokCharLiteral 'c', TokIdentifier "xyz"]
+  (lexBigBang "1\'c\'xyz")
+
+testPerverseNoSpaces3 = TestCase $ assertEqual
+  "Test lexing of \"1xyz\'c\'\""
+  [TokIntegerLiteral 1, TokIdentifier "xyz\'c\'"]
+  (lexBigBang "1xyz\'c\'")
+
+testPerverseNoSpaces4 = TestCase $ assertEqual
+  "Test lexing of \"xyz\'c\'1\""
+  [TokIdentifier "xyz\'c\'1"]
+  (lexBigBang "xyz\'c\'1")
+
+testPerverseNoSpaces5 = TestCase $ assertEqual
+  "Test lexing of \"xyz1\'c\'\""
+  [TokIdentifier "xyz1\'c\'"]
+  (lexBigBang "xyz1\'c\'")
+
+tests = TestList [edgeCases, individualTokenCases, simplePrograms, testVariations]
 main = runTestTT tests

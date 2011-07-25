@@ -1,5 +1,6 @@
-module Main where
+module ParserTest where
 
+import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Ast
 import Language.BigBang.Types.UtilTypes
 import Language.BigBang.Syntax.Lexer
@@ -15,7 +16,7 @@ testParseEmptyString = TestCase $ do
       evaluate (parseBigBang $ lexBigBang "")
       assertFailure "Input of \"\" should throw a parse error"
 
-simpleCases = TestList [testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool]
+simpleCases = TestList [testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool, testIgnoreNewLines, testCaseOfBlock]
 testParseInt = TestCase $ assertEqual
   "Input of 1234567890 should return PrimInt 1234567890"
   (PrimInt 1234567890)
@@ -45,6 +46,17 @@ testFakeBool = TestCase $ assertEqual
   "Testing \"fake\" boolean"
   (Label (labelName "true") PrimUnit)
   (parseBigBang $ lexBigBang "`true ()")
+
+
+testCaseOfBlock = TestCase $ assertEqual
+  "Testing case...of block"
+  (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiOnion (ident "a") (ident "b"), Label (labelName "True") PrimUnit), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
+  (parseBigBang $ lexBigBang "case x of {\nint -> 5;\nchar -> \'a\';\na&b -> `True ();\nunit -> ();\n`True a -> `False ();fun -> (\\x -> x)}")
+
+testIgnoreNewLines = TestCase $ assertEqual
+  "Test if parser ignores newlines correctly"
+  (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
+  (parseBigBang $ lexBigBang "(\\x->x)\n(\\x->x)")
 
 testCases = TestList [edgeCases, simpleCases]
 main = runTestTT testCases
