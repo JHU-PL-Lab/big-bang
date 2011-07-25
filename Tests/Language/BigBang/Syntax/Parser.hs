@@ -1,4 +1,6 @@
-module ParserTest where
+module Tests.Language.BigBang.Syntax.Parser 
+( testCases
+) where
 
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Ast
@@ -59,4 +61,3 @@ testIgnoreNewLines = TestCase $ assertEqual
   (parseBigBang $ lexBigBang "(\\x->x)\n(\\x->x)")
 
 testCases = TestList [edgeCases, simpleCases]
-main = runTestTT testCases

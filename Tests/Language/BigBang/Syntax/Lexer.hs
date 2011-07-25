@@ -1,4 +1,6 @@
-module LexerTest where
+module Tests.Language.BigBang.Syntax.Lexer
+( testCases
+) where
 
 import Language.BigBang.Syntax.Lexer
 import Test.HUnit
@@ -202,5 +204,4 @@ testPerverseNoSpaces5 = TestCase $ assertEqual
   [TokIdentifier "xyz1\'c\'"]
   (lexBigBang "xyz1\'c\'")
 
-tests = TestList [edgeCases, individualTokenCases, simplePrograms, testVariations]
-main = runTestTT tests
+testCases = TestList [edgeCases, individualTokenCases, simplePrograms, testVariations]

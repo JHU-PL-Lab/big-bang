@@ -50,10 +50,24 @@ Executable interpreter
   Main-is:             Language/BigBang/Interpreter/InterpreterMain.hs
   
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers, mtl
-  
+  Build-depends:       base >= 4, array, containers, mtl
+ 
   -- Modules not exported by this package.
   Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types
+  
+  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
+  Build-tools:         alex, happy
+
+
+Executable test-suite
+  -- Main module
+  Main-is:             Tests/Test.hs
+
+  -- Packages needed in order to build this package.
+  Build-depends:       base >= 4, array, containers, mtl, HUnit
+  
+  -- Modules not exported by this package.
+  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types, Tests.Language.BigBang.Syntax.Lexer, Tests.Language.BigBang.Syntax.Parser
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
