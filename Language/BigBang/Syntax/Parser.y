@@ -90,7 +90,6 @@ Branch  :   Pattern '->' Exp        { ($1,$3) }
 
 Pattern :   PrimitiveType           { A.ChiPrim $1 }
         |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
-        |   ident '&' ident         { A.ChiOnion (ident $1) (ident $3) }
         |   fun                     { A.ChiFun }
 
 

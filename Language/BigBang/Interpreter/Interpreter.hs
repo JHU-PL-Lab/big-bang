@@ -111,8 +111,6 @@ eval (Case e branches) = do
                       if name == name'
                         then Just $ subst lblExpr ident branchExpr
                         else Nothing
-                  (ChiOnion ident1 ident2, Onion expr1 expr2) ->
-                      Just $ subst expr1 ident1 $ subst expr2 ident2 branchExpr
                   (ChiFun, Func i e) -> Just branchExpr
                   _ -> Nothing
 
@@ -221,7 +219,6 @@ subst v x e@(Case expr branches) =
                     case chi of
                         ChiPrim _ -> []
                         ChiLabel _ i -> [i]
-                        ChiOnion i1 i2 -> [i1,i2]
                         ChiFun -> []
             in
             if elem x boundIdents then branch
