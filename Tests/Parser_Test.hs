@@ -8,7 +8,7 @@ import Language.BigBang.Syntax.Parser
 import Test.HUnit hiding (Label)
 import Control.Exception
 
-edgeCases = TestList [testParseEmptyString]
+edgeCases = TestList [testParseEmptyString, testUnbalancedParens, testSemicolonEOL, testSemicolonCaseBlock]
  
 testParseEmptyString = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
@@ -16,11 +16,39 @@ testParseEmptyString = TestCase $ do
       evaluate (parseBigBang $ lexBigBang "")
       assertFailure "Input of \"\" should throw a parse error"
 
-simpleCases = TestList [testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool, testIgnoreNewLines, testCaseOfBlock]
+testUnbalancedParens = TestCase $ do
+  handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
+    performCall = do
+      evaluate (parseBigBang $ lexBigBang "(expr")
+      assertFailure "Unbalanced parens should throw a parse error"
+
+testSemicolonEOL = TestCase $ do
+  handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
+    performCall = do
+      evaluate (parseBigBang $ lexBigBang "square x;")
+      assertFailure "Semicolon at end of line should throw a parse error"
+
+testSemicolonCaseBlock = TestCase $ do
+  handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
+    performCall = do
+      evaluate (parseBigBang $ lexBigBang "case x of {\nint -> 3;}")
+      assertFailure "Semicolon before close brace in case...of block should throw a parse error"
+
+simpleCases = TestList [testParseChar, testParseUnit, testFuncAppl, testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool, testIgnoreNewLines, testCaseOfBlock]
 testParseInt = TestCase $ assertEqual
   "Input of 1234567890 should return PrimInt 1234567890"
   (PrimInt 1234567890)
   (parseBigBang $ lexBigBang "1234567890")
+
+testParseChar = TestCase $ assertEqual
+  "Input of \'a\' should return PrimChar \'a\'"
+  (PrimChar 'a')
+  (parseBigBang $ lexBigBang "\'a\'")
+
+testParseUnit = TestCase $ assertEqual
+  "Input of () should return PrimUnit"
+  PrimUnit
+  (parseBigBang $ lexBigBang "()")
 
 testLambdaExpr = TestCase $ assertEqual
   "Identity function: (\\x -> x)"
@@ -58,5 +86,10 @@ testIgnoreNewLines = TestCase $ assertEqual
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
   (parseBigBang $ lexBigBang "(\\x->x)\n(\\x->x)")
 
-testCases = TestList [edgeCases, simpleCases]
-main = runTestTT testCases
+testFuncAppl = TestCase $ assertEqual
+  "Test parsing of a function application"
+  (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
+  (parseBigBang $ lexBigBang "plus 2 2")
+
+tests = TestList [edgeCases, simpleCases]
+main = runTestTT tests
