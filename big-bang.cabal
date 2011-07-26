@@ -50,7 +50,7 @@ Executable interpreter
   Main-is:             Language/BigBang/Interpreter/InterpreterMain.hs
   
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers, mtl
+  Build-depends:       base, array, containers, mtl, split
   
   -- Modules not exported by this package.
   Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types
