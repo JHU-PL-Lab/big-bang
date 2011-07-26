@@ -30,7 +30,7 @@ testNonexhaustiveCases = TestCase $ assertEqual
   (Left (UnmatchedCase (PrimInt 1) [(ChiPrim T.PrimChar,PrimInt 0)])) 
   (evalTop $ parseBigBang $ lexBigBang "case 1 of {\nchar -> 0}")
 
-simpleCases = TestList [testCaseChar, testCaseInt, testCaseFun, testCaseLambda, testCaseUnit, testInterpretInt, testInterpretChar, testPlusInt, testLambdaAppl, testFuncAppl]
+simpleCases = TestList [testCaseLabel, testCaseOnion, testCaseChar, testCaseInt, testCaseFun, testCaseLambda, testCaseUnit, testInterpretInt, testInterpretChar, testPlusInt, testLambdaAppl, testFuncAppl]
 
 testInterpretInt = TestCase $ assertEqual
   "Test if input 1234567890 is interpreted correctly"
@@ -81,6 +81,16 @@ testCaseUnit = TestCase $ assertEqual
   "Test if case matches units correctly"
   (Right (PrimInt 0))
   (evalTop $ parseBigBang $ lexBigBang "case () of {\nunit -> 0}")
+
+testCaseOnion = TestCase $ assertEqual
+  "Test if case matches onions correctly"
+  (Right (PrimInt 0))
+  (evalTop $ parseBigBang $ lexBigBang "case 1&1  of {\na&b -> 0}")
+
+testCaseLabel = TestCase $ assertEqual
+  "Test if case matches labels correctly"
+  (Right (PrimInt 0))
+  (evalTop $ parseBigBang $ lexBigBang "case `Test () of {\n`Test a -> 0}")
 
 tests = TestList [edgeCases, simpleCases]
 main = runTestTT tests
