@@ -8,7 +8,7 @@ import Language.BigBang.Syntax.Parser
 import Test.HUnit hiding (Label)
 import Control.Exception
 
-edgeCases = TestList [testParseEmptyString, testUnbalancedParens, testSemicolonEOL, testSemicolonCaseBlock]
+edgeCases = TestList [testEmptyCaseBlock, testParseEmptyString, testUnbalancedParens, testSemicolonEOL, testSemicolonCaseBlock]
  
 testParseEmptyString = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
@@ -33,6 +33,12 @@ testSemicolonCaseBlock = TestCase $ do
     performCall = do
       evaluate (parseBigBang $ lexBigBang "case x of {\nint -> 3;}")
       assertFailure "Semicolon before close brace in case...of block should throw a parse error"
+
+testEmptyCaseBlock = TestCase $ do
+  handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
+    performCall = do
+      evaluate (parseBigBang $ lexBigBang "case x of {}")
+      assertFailure "Empty case...of block should throw a parse error"
 
 simpleCases = TestList [testParseChar, testParseUnit, testFuncAppl, testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool, testIgnoreNewLines, testCaseOfBlock]
 testParseInt = TestCase $ assertEqual
