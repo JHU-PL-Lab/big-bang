@@ -34,7 +34,7 @@ data EvalError =
     | DynamicTypeError String -- TODO: figure out what goes here
     | NotClosed Ident
     | UnmatchedCase Expr Branches
-    deriving (Show)
+    deriving (Eq, Show)
 instance Error EvalError where
     strMsg = error
 
