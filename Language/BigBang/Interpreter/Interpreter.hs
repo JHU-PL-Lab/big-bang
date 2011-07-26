@@ -6,7 +6,7 @@
 module Language.BigBang.Interpreter.Interpreter
 ( evalTop
 , eval
-, EvalError
+, EvalError(..)
 , EvalM
 ) where
 
