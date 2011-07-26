@@ -1,4 +1,6 @@
-module ParserTest where
+module Tests.Language.BigBang.Syntax.Parser 
+( testCases
+) where
 
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Ast
@@ -84,8 +86,8 @@ testFakeBool = TestCase $ assertEqual
 
 testCaseOfBlock = TestCase $ assertEqual
   "Testing case...of block"
-  (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiOnion (ident "a") (ident "b"), Label (labelName "True") PrimUnit), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
-  (parseBigBang $ lexBigBang "case x of {\nint -> 5;\nchar -> \'a\';\na&b -> `True ();\nunit -> ();\n`True a -> `False ();fun -> (\\x -> x)}")
+  (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
+  (parseBigBang $ lexBigBang "case x of {\nint -> 5;\nchar -> \'a\';\nunit -> ();\n`True a -> `False ();fun -> (\\x -> x)}")
 
 testIgnoreNewLines = TestCase $ assertEqual
   "Test if parser ignores newlines correctly"
@@ -97,5 +99,5 @@ testFuncAppl = TestCase $ assertEqual
   (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
   (parseBigBang $ lexBigBang "plus 2 2")
 
-tests = TestList [edgeCases, simpleCases]
-main = runTestTT tests
+testCases = TestList [edgeCases, simpleCases]
+

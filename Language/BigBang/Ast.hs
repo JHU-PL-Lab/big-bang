@@ -31,7 +31,6 @@ data Expr =
 data Chi =
       ChiPrim (T.PrimitiveType)
     | ChiLabel LabelName Ident
-    | ChiOnion Ident Ident
     | ChiFun
     deriving (Eq, Show)
 
