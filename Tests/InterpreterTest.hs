@@ -7,8 +7,22 @@ import Language.BigBang.Interpreter.Interpreter
 import Language.BigBang.Syntax.Parser
 import Language.BigBang.Syntax.Lexer
 
-edgeCases = TestList []
+edgeCases = TestList [testUnbound, testTypeMismatch, testInvalidApplication]
 
+testUnbound = TestCase $ assertEqual
+  "Test if evaluation of free variable causes error"
+  (Left (NotClosed (ident "x")))
+  (evalTop $ parseBigBang $ lexBigBang "x")
+
+testTypeMismatch = TestCase $ assertEqual
+  "Test if type mismatch in function appl throws an error"
+  (Left (DynamicTypeError "incorrect type in expression"))
+  (evalTop $ parseBigBang $ lexBigBang "plus 2 \'x\'")
+
+testInvalidApplication = TestCase $ assertEqual
+  "Test if trying to apply something that is not a function throws an error"
+  (Left (ApplNotFunction (PrimInt 1) (PrimChar 'x')))
+  (evalTop $ parseBigBang $ lexBigBang "1 \'x\'")
 
 simpleCases = TestList [testInterpretInt, testInterpretChar, testPlusInt, testLambdaAppl, testFuncAppl]
 
