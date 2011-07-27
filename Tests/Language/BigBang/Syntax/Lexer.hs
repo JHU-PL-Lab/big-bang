@@ -1,11 +1,11 @@
 module Tests.Language.BigBang.Syntax.Lexer
-( testCases
+( tests
 ) where
 
 import Language.BigBang.Syntax.Lexer
 import Test.HUnit
 
-edgeCases = TestLabel "Edge cases" ( TestList [testEmptyString, testWhitespace] )
+edgeCases = TestLabel "Edge cases" ( TestList [testEmptyString, testWhitespace, testNegativeZero] )
 
 testEmptyString = TestCase $ assertBool 
   "Should get [] from an empty string" 
@@ -24,7 +24,7 @@ testNegativeZero = TestCase $ assertEqual
   [TokIntegerLiteral 0]
   (lexBigBang "-0")
 
-individualTokenCases = TestLabel "Individual tokens" ( TestList [testPositiveIntegerLiteral, testLambda, testArrow, testLabelPrefix, testFun, testCase, testOnionCons, testOpenParen, testCloseParen, testOpenBlock, testCloseBlock, testSeparator, testOf, testInt, testChar, testUnit, testCharLiteral] )
+individualTokenCases = TestLabel "Individual tokens" ( TestList [testNegativeIntegerLiteral, testPositiveIntegerLiteral, testLambda, testArrow, testLabelPrefix, testFun, testCase, testOnionCons, testOpenParen, testCloseParen, testOpenBlock, testCloseBlock, testSeparator, testOf, testInt, testChar, testUnit, testCharLiteral] )
 
 testPositiveIntegerLiteral = TestCase $ assertEqual
   "Test with input 1234567890"
@@ -204,4 +204,4 @@ testPerverseNoSpaces5 = TestCase $ assertEqual
   [TokIdentifier "xyz1\'c\'"]
   (lexBigBang "xyz1\'c\'")
 
-testCases = TestList [edgeCases, individualTokenCases, simplePrograms, testVariations]
+tests = TestList [edgeCases, individualTokenCases, simplePrograms, testVariations]
