@@ -58,6 +58,9 @@ Executable interpreter
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
 
+  -- Enable compiler warnings
+  ghc-options:         -Wall
+
 
 Executable test-suite
   -- Main module
@@ -71,4 +74,7 @@ Executable test-suite
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
+
+  -- Enable compiler warnings
+  ghc-options:         -Wall
   

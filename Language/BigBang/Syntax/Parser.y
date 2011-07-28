@@ -1,4 +1,6 @@
 {
+{-# OPTIONS_GHC -w #-}
+
 module Language.BigBang.Syntax.Parser
 ( parseBigBang
 ) where
