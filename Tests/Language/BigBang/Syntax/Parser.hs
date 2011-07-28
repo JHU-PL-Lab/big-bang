@@ -1,5 +1,5 @@
 module Tests.Language.BigBang.Syntax.Parser 
-( testCases
+( tests
 ) where
 
 import qualified Language.BigBang.Types.Types as T
@@ -102,5 +102,5 @@ testFuncAppl = TestCase $ assertEqual
   (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
   (parseBigBang $ lexBigBang "plus 2 2")
 
-testCases = TestList [edgeCases, simpleCases]
+tests = TestList [edgeCases, simpleCases]
 

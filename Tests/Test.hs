@@ -2,9 +2,10 @@ module Main where
 
 import qualified Tests.Language.BigBang.Syntax.Lexer as TL
 import qualified Tests.Language.BigBang.Syntax.Parser as TP
+import qualified Tests.Language.BigBang.Interpreter.Interpreter as TI
 import Test.HUnit (Test(..), runTestTT)
 
-testCases = TestList [TL.testCases,TP.testCases]
+tests = TestList [TL.tests,TP.tests, TI.tests]
 
-main = runTestTT testCases
+main = runTestTT tests
 
