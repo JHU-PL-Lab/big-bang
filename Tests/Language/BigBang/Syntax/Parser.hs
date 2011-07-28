@@ -1,5 +1,5 @@
 module Tests.Language.BigBang.Syntax.Parser 
-( testCases
+( tests
 ) where
 
 import qualified Language.BigBang.Types.Types as T
@@ -10,36 +10,39 @@ import Language.BigBang.Syntax.Parser
 import Test.HUnit hiding (Label)
 import Control.Exception
 
+-- TODO: remove
+import System.IO
+
 edgeCases = TestList [testEmptyCaseBlock, testParseEmptyString, testUnbalancedParens, testSemicolonEOL, testSemicolonCaseBlock]
  
 testParseEmptyString = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      evaluate (parseBigBang $ lexBigBang "")
+      evaluate (parseBigBang $! lexBigBang "")
       assertFailure "Input of \"\" should throw a parse error"
 
 testUnbalancedParens = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      evaluate (parseBigBang $ lexBigBang "(expr")
+      evaluate (parseBigBang $! lexBigBang "(expr")
       assertFailure "Unbalanced parens should throw a parse error"
 
 testSemicolonEOL = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      evaluate (parseBigBang $ lexBigBang "square x;")
+      evaluate (parseBigBang $! lexBigBang "square x;")
       assertFailure "Semicolon at end of line should throw a parse error"
 
 testSemicolonCaseBlock = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      evaluate (parseBigBang $ lexBigBang "case x of {\nint -> 3;}")
+      evaluate (parseBigBang $! lexBigBang "case x of {\nint -> 3;}")
       assertFailure "Semicolon before close brace in case...of block should throw a parse error"
 
 testEmptyCaseBlock = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      evaluate (parseBigBang $ lexBigBang "case x of {}")
+      evaluate (parseBigBang $! lexBigBang "case x of {}")
       assertFailure "Empty case...of block should throw a parse error"
 
 simpleCases = TestList [testParseChar, testParseUnit, testFuncAppl, testParseInt, testLambdaExpr, testPerverseFunction, testFakeString, testTernaryOnion, testFakeBool, testIgnoreNewLines, testCaseOfBlock]
@@ -99,5 +102,5 @@ testFuncAppl = TestCase $ assertEqual
   (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
   (parseBigBang $ lexBigBang "plus 2 2")
 
-testCases = TestList [edgeCases, simpleCases]
+tests = TestList [edgeCases, simpleCases]
 

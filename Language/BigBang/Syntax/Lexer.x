@@ -33,7 +33,7 @@ tokens :-
     unit                                { const TokUnit }
     \(                                  { const TokOpenParen }
     \)                                  { const TokCloseParen }
-    $digit+                             { TokIntegerLiteral . read }
+    \-?$digit+                          { TokIntegerLiteral . read }
     \' ( \\. | ~\' ) \'                 { TokCharLiteral . head . tail }
     $alpha [$alpha $digit _ ']*         { TokIdentifier }
     \{                                  { const TokOpenBlock }
