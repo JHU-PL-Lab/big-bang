@@ -45,6 +45,7 @@ import System.IO
         '{'             { L.TokOpenBlock }
         '}'             { L.TokCloseBlock }
         ';'             { L.TokSeparator }
+        '_'             { L.TokUnder }
 
 %right      '->'
 %right      '&'
@@ -93,6 +94,7 @@ Branch  :   Pattern '->' Exp        { ($1,$3) }
 Pattern :   PrimitiveType           { A.ChiPrim $1 }
         |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
         |   fun                     { A.ChiFun }
+        |   '_'                     { A.ChiTop }
 
 
 PrimitiveType

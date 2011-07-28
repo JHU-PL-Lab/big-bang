@@ -62,6 +62,7 @@ type CallSites = Set CallSite
 data TauUpOpen =
       TuoPrim PrimitiveType
     | TuoFunc AlphaUp Alpha
+    | TuoTop
     | TuoAlphaUp AlphaUp
     deriving (Eq, Ord, Show)
 
@@ -70,6 +71,7 @@ data TauUpOpen =
 data TauUpClosed =
       TucPrim PrimitiveType
     | TucFunc AlphaUp Alpha
+    | TucTop
     | TucAlphaUp AlphaUp
     | TucAlpha Alpha
     deriving (Eq, Ord, Show)
@@ -80,6 +82,7 @@ data TauDownOpen =
     | TdoLabel LabelName TauDownOpen
     | TdoOnion TauDownOpen TauDownOpen
     | TdoFunc (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
+    | TdoTop
     deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent types which are either lower bound or
@@ -89,6 +92,7 @@ data TauDownClosed =
     | TdcLabel LabelName TauDownClosed
     | TdcOnion TauDownClosed TauDownClosed
     | TdcFunc (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
+    | TdcTop
     | TdcAlpha Alpha
     deriving (Eq, Ord, Show)
 
@@ -112,6 +116,7 @@ data TauChi =
     | ChiLabel LabelName Alpha
     | ChiOnion Alpha Alpha
     | ChiFun Alpha
+    | ChiTop
     deriving (Eq, Ord, Show)
 
 ------------------------------------------------------------------------------

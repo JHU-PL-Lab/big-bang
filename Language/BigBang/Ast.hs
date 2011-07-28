@@ -32,6 +32,7 @@ data Chi =
       ChiPrim (T.PrimitiveType)
     | ChiLabel LabelName Ident
     | ChiFun
+    | ChiTop
     deriving (Eq, Show)
 
 -- |Alias for case branches

@@ -40,6 +40,7 @@ tokens :-
     \{                                  { const TokOpenBlock }
     \}                                  { const TokCloseBlock }
     \;                                  { const TokSeparator }
+    _                                   { const TokUnder }
 
 {
 lexBigBang :: String -> [Token]
@@ -56,6 +57,7 @@ data Token =
     | TokInteger
     | TokChar
     | TokUnit
+    | TokUnder
     | TokOpenParen
     | TokCloseParen
     | TokIntegerLiteral Integer

@@ -112,6 +112,7 @@ eval (Case e branches) = do
                         then Just $ subst lblExpr ident branchExpr
                         else Nothing
                   (ChiFun, Func i e) -> Just branchExpr
+                  (ChiTop, _) -> Just branchExpr
                   _ -> Nothing
 
 eval (Plus e1 e2) =
@@ -220,6 +221,7 @@ subst v x e@(Case expr branches) =
                         ChiPrim _ -> []
                         ChiLabel _ i -> [i]
                         ChiFun -> []
+                        ChiTop -> []
             in
             if elem x boundIdents then branch
                                   else (chi, subst v x branchExpr)
