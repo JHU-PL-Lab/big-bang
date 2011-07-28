@@ -1,4 +1,4 @@
-module Tests.Language.BigBang.Interpreter.Interpreter
+module Language.BigBang.Interpreter.InterpreterTest
 ( tests
 ) where
 

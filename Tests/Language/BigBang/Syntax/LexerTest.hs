@@ -1,4 +1,4 @@
-module Tests.Language.BigBang.Syntax.Lexer
+module Language.BigBang.Syntax.LexerTest
 ( tests
 ) where
 

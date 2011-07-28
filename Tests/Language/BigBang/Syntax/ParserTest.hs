@@ -1,4 +1,4 @@
-module Tests.Language.BigBang.Syntax.Parser 
+module Language.BigBang.Syntax.ParserTest
 ( tests
 ) where
 

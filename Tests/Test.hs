@@ -1,8 +1,8 @@
 module Main where
 
-import qualified Tests.Language.BigBang.Syntax.Lexer as TL
-import qualified Tests.Language.BigBang.Syntax.Parser as TP
-import qualified Tests.Language.BigBang.Interpreter.Interpreter as TI
+import qualified Language.BigBang.Syntax.LexerTest as TL
+import qualified Language.BigBang.Syntax.ParserTest as TP
+import qualified Language.BigBang.Interpreter.InterpreterTest as TI
 import Test.HUnit (Test(..), runTestTT)
 
 tests = TestList [TL.tests,TP.tests, TI.tests]
