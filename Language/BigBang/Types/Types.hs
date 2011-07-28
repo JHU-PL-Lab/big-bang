@@ -15,10 +15,12 @@ module Language.BigBang.Types.Types
 , Constraints
 , Constraint(..)
 , Guard(..)
+, toSomeAlpha
 , toTauUpOpen
 , toTauUpClosed
 , toTauDownOpen
 , toTauDownClosed
+, (<:)
 ) where
 
 import Data.Set (Set)
@@ -94,6 +96,7 @@ data TauDownClosed =
     | TdcFunc (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
     | TdcTop
     | TdcAlpha Alpha
+    | TdcAlphaUp AlphaUp
     deriving (Eq, Ord, Show)
 
 -- |The datatype enumerating the primitives in the Big Bang type system.
@@ -113,9 +116,8 @@ data PrimitiveType =
 -- |A type representing the patterns produced by guards.
 data TauChi =
       ChiPrim PrimitiveType
-    | ChiLabel LabelName Alpha
-    | ChiOnion Alpha Alpha
-    | ChiFun Alpha
+    | ChiLabel LabelName AlphaUp
+    | ChiFun
     | ChiTop
     deriving (Eq, Ord, Show)
 
@@ -162,6 +164,9 @@ class TauDownOpenConvertible a where
 class TauDownClosedConvertible a where
     toTauDownClosed :: a -> TauDownClosed
 
+class AlphaConvertible a where
+    toSomeAlpha :: a -> Maybe AnyAlpha
+
 -------------------------------------------------------------------------------
 -- *Conversion Type Class Instances
 -- $ConversionTypeClassInstances
@@ -178,6 +183,9 @@ instance TauUpClosedConvertible TauUpOpen where
              TuoFunc ua a -> TucFunc ua a
              TuoAlphaUp ua -> TucAlphaUp ua
 
+instance AlphaConvertible TauUpOpen where
+    toSomeAlpha = const Nothing
+
 instance TauUpOpenConvertible TauUpClosed where
     toTauUpOpen x =
         case x of
@@ -188,6 +196,13 @@ instance TauUpOpenConvertible TauUpClosed where
 
 instance TauUpClosedConvertible TauUpClosed where
     toTauUpClosed x = x
+
+instance AlphaConvertible TauUpClosed where
+    toSomeAlpha x =
+        case x of
+            TucAlpha a -> Just $ SomeAlpha a
+            TucAlphaUp a -> Just $ SomeAlphaUp a
+            _ -> Nothing
 
 instance TauDownOpenConvertible TauDownOpen where
     toTauDownOpen x = Just x
@@ -200,6 +215,9 @@ instance TauDownClosedConvertible TauDownOpen where
              TdoOnion t1 t2 ->
                 TdcOnion (toTauDownClosed t1) (toTauDownClosed t2)
              TdoFunc vs ua a c -> TdcFunc vs ua a c
+
+instance AlphaConvertible TauDownOpen where
+    toSomeAlpha = const Nothing
 
 instance TauDownOpenConvertible TauDownClosed where
     toTauDownOpen x = do
@@ -219,6 +237,13 @@ instance TauDownOpenConvertible TauDownClosed where
 
 instance TauDownClosedConvertible TauDownClosed where
     toTauDownClosed x = x
+
+instance AlphaConvertible TauDownClosed where
+    toSomeAlpha x =
+        case x of
+            TdcAlpha a -> Just $ SomeAlpha a
+            TdcAlphaUp a -> Just $ SomeAlphaUp a
+            _ -> Nothing
 
 -------------------------------------------------------------------------------
 -- *Projection Type Classes

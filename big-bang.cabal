@@ -53,7 +53,7 @@ Executable interpreter
   Build-depends:       base, array, containers, mtl, split
   
   -- Modules not exported by this package.
-  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types
+  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types, Language.BigBang.Types.TypeInference
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
@@ -70,7 +70,7 @@ Executable test-suite
   Build-depends:       base, array, containers, mtl, HUnit
   
   -- Modules not exported by this package.
-  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types, Tests.Language.BigBang.Syntax.Lexer, Tests.Language.BigBang.Syntax.Parser
+  Other-modules:       Language.BigBang.Ast, Language.BigBang.Interpreter.Interpreter, Language.BigBang.Syntax.Lexer, Language.BigBang.Syntax.Parser, Language.BigBang.Types.UtilTypes, Language.BigBang.Types.Types, Language.BigBang.Types.TypeInference, Tests.Language.BigBang.Syntax.Lexer, Tests.Language.BigBang.Syntax.Parser
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
