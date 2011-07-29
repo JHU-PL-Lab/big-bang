@@ -45,6 +45,8 @@ Stability:           alpha
 Cabal-version:       >=1.8
 
 Library
+  hs-source-dirs:      src
+
   Exposed-Modules:     Language.BigBang.Syntax.Parser
                        Language.BigBang.Syntax.Lexer
                        Language.BigBang.Ast
@@ -58,9 +60,9 @@ Library
   ghc-options:         -Wall
 
 Executable interpreter
-  hs-source-dirs:      Language/BigBang/Interpreter
+  hs-source-dirs:      executables/interpreter
   -- .hs or .lhs file containing the Main module.
-  Main-is:             InterpreterMain.hs
+  Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers, mtl, split, big-bang
@@ -73,7 +75,7 @@ Executable interpreter
 
 
 Executable test-suite
-  hs-source-dirs:      Tests
+  hs-source-dirs:      executables/tests
 
   -- Main module
   Main-is:             Test.hs

@@ -1,5 +1,5 @@
 module Language.BigBang.Types.TypeInference
-(
+( inferType
 ) where
 
 import Control.Monad (liftM, mapM, mapAndUnzipM, zipWithM)
@@ -30,6 +30,7 @@ type NextFreshVar = Integer
 data TypeInferenceError =
     -- |Indicates that an expression contained an unbound variable.
       NotClosed Ident
+    deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
 
