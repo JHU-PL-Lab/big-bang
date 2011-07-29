@@ -50,6 +50,7 @@ Library
   Exposed-Modules:     
         Language.BigBang.Ast
         Language.BigBang.Interpreter.Interpreter
+        Language.BigBang.Render.Display
         Language.BigBang.Render.PrettyPrint
         Language.BigBang.Syntax.Parser
         Language.BigBang.Syntax.Lexer
@@ -57,7 +58,7 @@ Library
         Language.BigBang.Types.TypeInference
         Language.BigBang.Types.UtilTypes
 
-  Build-depends:       base, array, containers, mtl, pretty 
+  Build-depends:       base, array, containers, mtl, pretty, template-haskell 
 
   ghc-options:         -Wall
 
