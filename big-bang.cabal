@@ -54,8 +54,9 @@ Library
                        Language.BigBang.Types.TypeInference
                        Language.BigBang.Types.UtilTypes
                        Language.BigBang.Interpreter.Interpreter
+                       Language.BigBang.Render.PrettyPrint
 
-  Build-depends:       base, array, containers, mtl
+  Build-depends:       base, array, containers, mtl, pretty 
 
   ghc-options:         -Wall
 
