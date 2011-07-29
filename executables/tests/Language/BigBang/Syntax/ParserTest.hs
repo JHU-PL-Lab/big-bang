@@ -44,7 +44,7 @@ testParseBool = TestCase $ do
   assertEqual
     "Test parsing of `False ()"
     (Label (labelName "False") PrimUnit)
-    (parseBigBang $ lexBigBang "`True ()")
+    (parseBigBang $ lexBigBang "`False ()")
 
 
 -- Test cases that check correctness in parsing function definitions and application
