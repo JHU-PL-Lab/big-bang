@@ -58,9 +58,9 @@ Library
   ghc-options:         -Wall
 
 Executable interpreter
-  hs-source-dirs:      Language/BigBang/Interpreter
+  hs-source-dirs:      Interpreter
   -- .hs or .lhs file containing the Main module.
-  Main-is:             InterpreterMain.hs
+  Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers, mtl, split, big-bang
