@@ -7,32 +7,40 @@
 --  meant to be easy to parse rather than a Haskell expression which can be
 --  used to reconstruct the data structure.
 module Language.BigBang.Render.Display
-( Display, display, displayList
+( Display
+, display
+, displayList
+, module Text.PrettyPrint
 ) where
 
 import Control.Monad (liftM)
 import Data.List (intercalate)
 import Language.Haskell.TH (mkName, Type(ConT))
+import Text.PrettyPrint
 
 class Display a where
     display :: a -> String
     displayList :: [a] -> String
-    displayList lst =
-        "[" ++ (intercalate ", " (map display lst)) ++ "]"
+    makeDoc :: a -> Doc
+    makeListDoc :: [a] -> Doc
+    display = render . makeDoc
+    displayList = render . makeListDoc
+    makeListDoc lst =
+        lbrack <> (hcat $ punctuate (text ", ") $ map makeDoc lst) <> rbrack
 
 instance Display Char where
-    display = show
-    displayList lst = "\"" ++ lst ++ "\""
+    makeDoc = char
+    makeListDoc = doubleQuotes . text
 
 instance (Display a) => Display [a] where
-    display = displayList
+    makeDoc = makeListDoc
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
         showInstance n =
             [d|
                 instance Display $(return $ ConT $ mkName n) where
-                    display = show
+                    makeDoc = text . show
              |]
     in liftM concat $ mapM showInstance typeNames
  )
