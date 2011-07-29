@@ -45,6 +45,8 @@ Stability:           alpha
 Cabal-version:       >=1.8
 
 Library
+  hs-source-dirs:      src
+
   Exposed-Modules:     Language.BigBang.Syntax.Parser
                        Language.BigBang.Syntax.Lexer
                        Language.BigBang.Ast
@@ -58,7 +60,7 @@ Library
   ghc-options:         -Wall
 
 Executable interpreter
-  hs-source-dirs:      Interpreter
+  hs-source-dirs:      executables/interpreter
   -- .hs or .lhs file containing the Main module.
   Main-is:             Interpreter.hs
 
@@ -73,7 +75,7 @@ Executable interpreter
 
 
 Executable test-suite
-  hs-source-dirs:      Tests
+  hs-source-dirs:      executables/tests
 
   -- Main module
   Main-is:             Test.hs
