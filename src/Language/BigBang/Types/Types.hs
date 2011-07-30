@@ -32,6 +32,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.BigBang.Types.UtilTypes (LabelName)
+import Language.BigBang.Render.Display
 
 -------------------------------------------------------------------------------
 -- *Big Bang Types
@@ -289,3 +290,92 @@ instance TAlpha AlphaUp where
     getIndex (AlphaUp c) = getIndex c
     getCallSites (AlphaUp c) = getCallSites c
     construct i c = AlphaUp (AlphaContents i c)
+
+-------------------------------------------------------------------------------
+-- *Display Type Classes
+-- $DisplayTypeClasses
+--
+-- Implementations of display routines for type structures.
+
+instance Display AlphaContents where
+    makeDoc (AlphaContents i callSites) =
+        char '\'' <> makeDoc i <> (
+            let doc = makeDoc callSites in
+            if not $ isEmpty doc
+                then char '^' <> doc
+                else empty)
+
+instance Display AlphaUp where
+    makeDoc (AlphaUp ac) = makeDoc ac
+
+instance Display Alpha where
+    makeDoc (Alpha ac) = makeDoc ac
+
+instance Display AnyAlpha where
+    makeDoc a = case a of
+        SomeAlpha a -> makeDoc a
+        SomeAlphaUp a -> makeDoc a
+
+instance Display CallSites where
+    makeDoc sites =
+        let siteList = unCallSites sites in
+        if length siteList == 0
+            then empty
+            else brackets $ hcat $ punctuate (text ", ") $ map sDoc siteList
+      where sDoc (CallSite set) =
+                if Set.size set == 1
+                    then makeDoc $ Set.findMin set
+                    else makeDoc set
+      
+instance Display TauUpOpen where
+    makeDoc tau = makeDoc $ toTauUpClosed tau
+
+instance Display TauUpClosed where
+    makeDoc tau = case tau of
+        TucPrim p -> makeDoc p
+        TucFunc au a -> makeDoc au <+> text "->" <+> makeDoc a
+        TucTop -> text "top"
+        TucAlphaUp a -> makeDoc a
+        TucAlpha a -> makeDoc a
+
+instance Display TauDownOpen where
+    makeDoc tau = makeDoc $ toTauDownClosed tau
+
+instance Display TauDownClosed where
+    makeDoc tau = case tau of
+        TdcPrim p -> makeDoc p
+        TdcLabel n t -> char '`' <> makeDoc n <+> makeDoc t
+        TdcOnion t1 t2 -> makeDoc t1 <+> char '&' <+> makeDoc t2
+        TdcFunc alphas alphaUp alpha constraints ->
+            (if Set.size alphas > 0
+                then text "all" <+> (parens $ makeDoc alphas)
+                else empty) <+>
+            makeDoc alphaUp <+> text "->" <+> makeDoc alpha <+>
+            char '\\' <+> (parens $ makeDoc constraints)
+        TdcTop -> text "top"
+        TdcAlpha a -> makeDoc a
+        TdcAlphaUp a -> makeDoc a
+
+instance Display PrimitiveType where
+    makeDoc p = case p of
+        PrimInt -> text "int"
+        PrimChar -> text "char"
+        PrimUnit -> text "unit"
+
+instance Display TauChi where
+    makeDoc tauChi = case tauChi of
+        ChiPrim p -> makeDoc p
+        ChiLabel n au -> char '`' <> makeDoc n <+> makeDoc au
+        ChiFun -> text "fun"
+        ChiTop -> text "_"
+
+instance Display Constraint where
+    makeDoc c = case c of
+        Subtype a b -> makeDoc a <+> text "<:" <+> makeDoc b
+        Case alphaUp guards ->
+                    text "case" <+> makeDoc alphaUp <+> text "of" <+> lbrace $+$
+                    (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
+                    $+$ rbrace
+        Bottom -> text "_|_"
+      where gDoc (Guard tauChi constraints) =
+                makeDoc tauChi <+> text "->" <+> makeDoc constraints

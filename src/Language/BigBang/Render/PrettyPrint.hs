@@ -5,11 +5,7 @@ module Language.BigBang.Render.PrettyPrint
 import qualified Language.BigBang.Ast as A
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
-import Text.PrettyPrint
-
--- |Defines the indentation used by the pretty printer
-indentSize :: Int
-indentSize = 4
+import Language.BigBang.Render.Display
 
 -- |Creates a textual representation of the provided Big Bang AST.
 pretty :: A.Expr -> String

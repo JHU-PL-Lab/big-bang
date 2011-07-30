@@ -10,13 +10,21 @@ module Language.BigBang.Render.Display
 ( Display
 , display
 , displayList
+, makeDoc
+, makeListDoc
+, indentSize
 , module Text.PrettyPrint
 ) where
 
 import Control.Monad (liftM)
-import Data.List (intercalate)
+import qualified Data.Set as Set
+import Data.Set (Set)
 import Language.Haskell.TH (mkName, Type(ConT))
 import Text.PrettyPrint
+
+-- |Defines the indentation used by the pretty printer
+indentSize :: Int
+indentSize = 4
 
 class Display a where
     display :: a -> String
@@ -26,7 +34,7 @@ class Display a where
     display = render . makeDoc
     displayList = render . makeListDoc
     makeListDoc lst =
-        lbrack <> (hcat $ punctuate (text ", ") $ map makeDoc lst) <> rbrack
+        brackets $ hcat $ punctuate (text ", ") $ map makeDoc lst
 
 instance Display Char where
     makeDoc = char
@@ -34,6 +42,10 @@ instance Display Char where
 
 instance (Display a) => Display [a] where
     makeDoc = makeListDoc
+
+instance (Display a) => Display (Set a) where
+    makeDoc set =
+        braces $ hcat $ punctuate (text ", ") $ map makeDoc $ Set.toList set
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
