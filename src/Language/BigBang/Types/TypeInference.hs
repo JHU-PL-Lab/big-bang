@@ -191,6 +191,6 @@ freshVar :: (T.AlphaContents -> a) -> TIM a
 freshVar constr = do
     idx <- get
     put $ idx + 1
-    return $ constr $ T.AlphaContents idx $ Set.empty
+    return $ constr $ T.AlphaContents idx $ T.callSites []
 
 

@@ -1,11 +1,16 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+
+
 module Language.BigBang.Types.Types 
 ( AlphaContents(..)
 , AlphaUp(..)
 , Alpha(..)
 , AnyAlpha(..)
 , construct
-, index
+, getIndex
+, getCallSites
 , callSites
+, unCallSites
 , TauUpOpen(..)
 , TauUpClosed(..)
 , TauDownOpen(..)
@@ -55,10 +60,17 @@ data AnyAlpha = SomeAlpha Alpha | SomeAlphaUp AlphaUp
 
 -- |A data structure representing function call sites.  The call site of a
 --  function application is defined by the type parameter used as the domain
---  of the function type upper bounding the function in that application.
-data CallSite = CallSite AlphaUp (Maybe AlphaUp)
+--  of the function type upper bounding the function in that application.  In
+--  the event of recursion, a set of call sites may be grouped together.  For
+--  instance, the variable '1^['2,'3,'4,'3] will be regrouped as the variable
+--  '1^['2,{'3,'4}].  Note that, in this case, the use of single variables in
+--  the call site list is a notational sugar for singleton sets.
+data CallSite = CallSite (Set AlphaUp)
     deriving (Eq, Ord, Show)
-type CallSites = Set CallSite
+newtype CallSites = CallSites { unCallSites :: [CallSite] }
+    deriving (Eq, Ord, Show)
+callSites :: [CallSite] -> CallSites
+callSites lst = CallSites lst
 
 -- |The datatype used to represent upper bound types.
 data TauUpOpen =
@@ -253,8 +265,8 @@ instance AlphaConvertible TauDownClosed where
 -- representations.
 
 class TAlpha a where
-    index :: a -> Integer
-    callSites :: a -> CallSites
+    getIndex :: a -> Integer
+    getCallSites :: a -> CallSites
     construct :: Integer -> CallSites -> a
 
 -------------------------------------------------------------------------------
@@ -264,16 +276,16 @@ class TAlpha a where
 -- Implementations of projection type classes for type representations.
 
 instance TAlpha AlphaContents where
-    index (AlphaContents i _) = i
-    callSites (AlphaContents _ c) = c
+    getIndex (AlphaContents i _) = i
+    getCallSites (AlphaContents _ c) = c
     construct i c = AlphaContents i c
 
 instance TAlpha Alpha where
-    index (Alpha c) = index c
-    callSites (Alpha c) = callSites c
+    getIndex (Alpha c) = getIndex c
+    getCallSites (Alpha c) = getCallSites c
     construct i c = Alpha (AlphaContents i c)
 
 instance TAlpha AlphaUp where
-    index (AlphaUp c) = index c
-    callSites (AlphaUp c) = callSites c
+    getIndex (AlphaUp c) = getIndex c
+    getCallSites (AlphaUp c) = getCallSites c
     construct i c = AlphaUp (AlphaContents i c)
