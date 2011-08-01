@@ -42,9 +42,10 @@ makeDocForDocList
 
 makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
 makeCommaSeparatedDocForList lst =
-    makeDocForList
-        (\x -> if elem ',' x then vcat else hcat)
-        ", " lst
+    makeDocForList catByComma ", " lst 
+
+catByComma :: String -> [Doc] -> Doc
+catByComma x = if elem ',' x then vcat else hcat
 
 class Display a where
     display :: a -> String
@@ -64,6 +65,10 @@ instance (Display a) => Display [a] where
 
 instance (Display a) => Display (Set a) where
     makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
+
+instance (Display a, Display b) => Display (a,b) where
+    makeDoc (a,b) = parens $ makeDocForDocList catByComma ", " docList
+      where docList = [makeDoc a, makeDoc b]
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
