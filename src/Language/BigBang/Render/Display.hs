@@ -43,9 +43,7 @@ makeDocForDocList
 makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
 makeCommaSeparatedDocForList lst =
     makeDocForList
-        (\x -> if elem ',' $ render $ hcat $ map makeDoc lst
-                 then vcat
-                 else hcat)
+        (\x -> if elem ',' x then vcat else hcat)
         ", " lst
 
 class Display a where
