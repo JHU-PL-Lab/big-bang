@@ -1,6 +1,3 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-
-
 module Language.BigBang.Types.Types 
 ( AlphaContents(..)
 , AlphaUp(..)
