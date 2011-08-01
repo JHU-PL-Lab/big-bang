@@ -47,15 +47,18 @@ Cabal-version:       >=1.8
 Library
   hs-source-dirs:      src
 
-  Exposed-Modules:     Language.BigBang.Syntax.Parser
-                       Language.BigBang.Syntax.Lexer
-                       Language.BigBang.Ast
-                       Language.BigBang.Types.Types
-                       Language.BigBang.Types.TypeInference
-                       Language.BigBang.Types.UtilTypes
-                       Language.BigBang.Interpreter.Interpreter
+  Exposed-Modules:     
+        Language.BigBang.Ast
+        Language.BigBang.Interpreter.Interpreter
+        Language.BigBang.Render.Display
+        Language.BigBang.Render.PrettyPrint
+        Language.BigBang.Syntax.Parser
+        Language.BigBang.Syntax.Lexer
+        Language.BigBang.Types.Types
+        Language.BigBang.Types.TypeInference
+        Language.BigBang.Types.UtilTypes
 
-  Build-depends:       base, array, containers, mtl
+  Build-depends:       base, array, containers, mtl, pretty, template-haskell 
 
   ghc-options:         -Wall
 

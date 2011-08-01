@@ -10,14 +10,25 @@ module Language.BigBang.Types.UtilTypes
 , unIdent
 ) where
 
+import Language.BigBang.Render.Display
+
 -- |A distinguished type for labels.
 newtype LabelName = LabelName { unLabelName :: String }
     deriving (Eq, Ord, Show)
+labelName :: String -> LabelName
 {- TODO: smarter constructor -}
 labelName s = LabelName s
 
 -- |A distinguished type for identifiers.
 newtype Ident = Ident { unIdent :: String }
     deriving (Eq, Ord, Show)
+ident :: String -> Ident
 {- TODO: smarter constructor -}
 ident s = Ident s
+
+instance Display LabelName where
+    makeDoc = text . unLabelName
+
+instance Display Ident where
+    makeDoc = text . unIdent
+
