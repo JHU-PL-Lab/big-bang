@@ -30,13 +30,14 @@ indentSize = 4
 --  adjust the appearance of the list based on its parameters.
 makeDocForList :: (Display a)
                => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
-makeDocForList
+makeDocForList f s lst = makeDocForDocList f s $ map makeDoc lst
+
+makeDocForDocList :: (String -> [Doc] -> Doc) -> String -> [Doc] -> Doc 
+makeDocForDocList
         catF -- ^The function producing the document concatenator
         punc -- ^The punctuation to place between each document
-        displayables -- ^The documents to display
-  = let docs = map makeDoc displayables
-        dcat = catF $ render $ hcat docs
-    in
+        docs -- ^The documents to display
+  = let dcat = catF $ render $ hcat docs in
     dcat $ punctuate (text punc) docs
 
 makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
