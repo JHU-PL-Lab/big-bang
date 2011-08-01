@@ -1,13 +1,14 @@
 module Language.BigBang.Types.TypeInference
 ( inferType
+, runTIM
 ) where
 
 import Control.Monad (liftM, mapM, mapAndUnzipM, zipWithM)
 import Control.Monad.Reader (ask, asks, local)
 import Control.Monad.Writer (censor, listen, tell)
 import Control.Monad.State (get, put)
-import Control.Monad.RWS (RWS, runRWS)
-import Control.Monad.Error (Error, ErrorT, strMsg, throwError)
+import Control.Monad.RWS (RWS, evalRWS)
+import Control.Monad.Error (Error, ErrorT, strMsg, throwError, runErrorT)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -38,6 +39,10 @@ instance Error TypeInferenceError where
 type TIM a = ErrorT TypeInferenceError
                     (RWS Gamma InferredConstraints NextFreshVar)
                     a
+
+runTIM :: TIM a -> Gamma -> NextFreshVar
+       -> (Either TypeInferenceError a, InferredConstraints)
+runTIM t r s = evalRWS (runErrorT t) r s
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM T.TauDownClosed
