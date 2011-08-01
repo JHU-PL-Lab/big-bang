@@ -19,7 +19,7 @@ module Language.BigBang.Render.Display
 import Control.Monad (liftM)
 import qualified Data.Set as Set
 import Data.Set (Set)
-import Language.Haskell.TH (mkName, Type(ConT))
+import Language.Haskell.TH
 import Text.PrettyPrint
 
 -- |Defines the indentation used by the pretty printer
@@ -66,10 +66,6 @@ instance (Display a) => Display [a] where
 instance (Display a) => Display (Set a) where
     makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
 
-instance (Display a, Display b) => Display (a,b) where
-    makeDoc (a,b) = parens $ makeDocForDocList catByComma ", " docList
-      where docList = [makeDoc a, makeDoc b]
-
 $(
     let typeNames = ["Int","Integer","Float","Double"]
         showInstance n =
@@ -80,3 +76,26 @@ $(
     in liftM concat $ mapM showInstance typeNames
  )
 
+$(
+    let showInstance n =
+            let tvars = map ("a"++) $ map show $ [0..(n-1)]
+                context = map
+                    (\n -> ClassP (mkName "Display") [VarT $ mkName n]) tvars
+                tAppNm t s = AppT t $ VarT $ mkName s
+                typ = foldl tAppNm (TupleT n) tvars
+                params = map (VarP . mkName) tvars
+                lstExpr = ListE $ map
+                    (\n -> AppE (VarE $ mkName "makeDoc") (VarE $ mkName n))
+                    tvars
+                makeDocFunClauses = [clause ([tupP $ map return params])
+                    (normalB [| makeDocForDocList catByComma ", " $(return lstExpr) |])
+                    []]
+                makeDocFun = funD (mkName "makeDoc") makeDocFunClauses
+                decl = instanceD (return context)
+                    (appT (conT $ mkName "Display") $ return typ)
+                    [makeDocFun]
+            in
+            decl
+    in
+    mapM showInstance [2..9]
+ )
