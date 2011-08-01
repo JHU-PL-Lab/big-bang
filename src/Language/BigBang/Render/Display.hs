@@ -26,6 +26,27 @@ import Text.PrettyPrint
 indentSize :: Int
 indentSize = 4
 
+-- |A simple function for displaying a list of elements.  This function will
+--  adjust the appearance of the list based on its parameters.
+makeDocForList :: (Display a)
+               => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
+makeDocForList
+        catF -- ^The function producing the document concatenator
+        punc -- ^The punctuation to place between each document
+        displayables -- ^The documents to display
+  = let docs = map makeDoc displayables
+        dcat = catF $ render $ hcat docs
+    in
+    dcat $ punctuate (text punc) docs
+
+makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
+makeCommaSeparatedDocForList lst =
+    makeDocForList
+        (\x -> if elem ',' $ render $ hcat $ map makeDoc lst
+                 then vcat
+                 else hcat)
+        ", " lst
+
 class Display a where
     display :: a -> String
     displayList :: [a] -> String
@@ -33,8 +54,7 @@ class Display a where
     makeListDoc :: [a] -> Doc
     display = render . makeDoc
     displayList = render . makeListDoc
-    makeListDoc lst =
-        brackets $ hcat $ punctuate (text ", ") $ map makeDoc lst
+    makeListDoc = brackets . makeCommaSeparatedDocForList
 
 instance Display Char where
     makeDoc = char
@@ -44,8 +64,7 @@ instance (Display a) => Display [a] where
     makeDoc = makeListDoc
 
 instance (Display a) => Display (Set a) where
-    makeDoc set =
-        braces $ hcat $ punctuate (text ", ") $ map makeDoc $ Set.toList set
+    makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
