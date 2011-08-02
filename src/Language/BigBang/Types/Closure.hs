@@ -1,7 +1,6 @@
 module Language.BigBang.Types.Closure
 (
-)
-where
+) where
 
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:))
