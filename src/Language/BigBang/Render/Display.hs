@@ -17,6 +17,8 @@ module Language.BigBang.Render.Display
 ) where
 
 import Control.Monad (liftM)
+import qualified Data.Map as Map
+import Data.Map (Map)
 import qualified Data.Set as Set
 import Data.Set (Set)
 import Language.Haskell.TH
@@ -26,11 +28,18 @@ import Text.PrettyPrint
 indentSize :: Int
 indentSize = 4
 
--- |A simple function for displaying a list of elements.  This function will
---  adjust the appearance of the list based on its parameters.
 makeDocForList :: (Display a)
                => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
-makeDocForList f s lst = makeDocForDocList f s $ map makeDoc lst
+makeDocForList = makeDocForListBy makeDoc
+
+-- |A function for displaying a list of elements.  This function will
+--  adjust the appearance of the list based on its parameters.
+makeDocForListBy :: (a -> Doc)
+                 -> (String -> [Doc] -> Doc)
+                 -> String
+                 -> [a]
+                 -> Doc
+makeDocForListBy toDoc f s lst = makeDocForDocList f s $ map toDoc lst
 
 makeDocForDocList :: (String -> [Doc] -> Doc) -> String -> [Doc] -> Doc 
 makeDocForDocList
@@ -65,6 +74,11 @@ instance (Display a) => Display [a] where
 
 instance (Display a) => Display (Set a) where
     makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
+
+instance (Display k, Display v) => Display (Map k v) where
+    makeDoc = braces . (makeDocForListBy mappingToDoc catByComma ", ")
+                     . Map.toList
+      where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
