@@ -47,6 +47,14 @@ findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toAscList
               Map.singleton a $ Set.singleton (lbl, b)
             _ -> Map.empty
 
+findAlphaAmpPairs :: Constraints -> Map (T.Alpha, T.Alpha) (Set T.TauUpClosed)
+findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toAscList
+  where fn c =
+          case c of
+            T.Subtype (T.TdcOnion (T.TdcAlpha a) (T.TdcAlpha b)) c ->
+              Map.singleton (a,b) $ Set.singleton c
+            _ -> Map.empty
+
 transitivity :: Constraints -> Constraints
 transitivity cs = Set.fromList $
                   concat $
@@ -69,3 +77,17 @@ labels cs = Set.fromList $
         fn xs ys =
           [ T.TdcLabel lbl x <: y | x <- Set.toList xs, (lbl, y) <- Set.toList ys ]
 
+amps :: Constraints -> Constraints
+amps cs = Set.fromList $ allTrans lefts $ Map.toList rights
+  where tdoCs  = findTauDownOpen cs
+        lefts  = findAlphaOnRight tdoCs
+        rights = findAlphaAmpPairs cs
+        tryTrans alphas ((a1, a2), tucs) = do
+          t1 <- Map.lookup a1 alphas
+          t2 <- Map.lookup a2 alphas
+          return
+            [ T.TdcOnion t1' t2' <: tuc |
+              t1' <- Set.toList t1,
+              t2' <- Set.toList t2,
+              tuc <- Set.toList tucs]
+        allTrans alphas amps = concat $ catMaybes $ map (tryTrans alphas) amps
