@@ -52,13 +52,20 @@ transitivity cs = Set.fromList $
                   concat $
                   Map.elems $
                   Map.intersectionWith subtypeCrossProduct lefts rights
-  where relevantCs = findTauDownOpen cs
-        lefts      = findAlphaOnRight relevantCs
-        rights     = findAlphaOnLeft  cs
+  where tdoCs  = findTauDownOpen cs
+        lefts  = findAlphaOnRight tdoCs
+        rights = findAlphaOnLeft cs
         subtypeCrossProduct xs ys =
           [ x <: y | x <- Set.toList xs, y <- Set.toList ys ]
 
---labels :: Constraints -> Constraints
---labels cs = 
---  where relevantCs = findTauDownOpen cs
---        lefts      = findAlphaOnRight relevantCs
+labels :: Constraints -> Constraints
+labels cs = Set.fromList $
+            concat $
+            Map.elems $
+            Map.intersectionWith fn lefts rights
+  where tdoCs    = findTauDownOpen cs
+        lefts    = findAlphaOnRight tdoCs
+        rights   = findLblAlphaOnLeft cs
+        fn xs ys =
+          [ T.TdcLabel lbl x <: y | x <- Set.toList xs, (lbl, y) <- Set.toList ys ]
+
