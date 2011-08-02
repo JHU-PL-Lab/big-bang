@@ -22,8 +22,8 @@ findTauDownOpen :: Constraints -> Constraints
 findTauDownOpen = Set.fromAscList . catMaybes . map fn . Set.toAscList
   where fn c =
           case c of
-            T.Subtype (T.TdcAlpha _) _ -> Nothing
-            _                          -> Just c
+            T.Subtype a b -> fmap (const c) $ T.toTauDownOpen a
+            _             -> Just c
 
 findAlphaOnRight :: Constraints -> Map T.Alpha (Set T.TauDownClosed)
 findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
