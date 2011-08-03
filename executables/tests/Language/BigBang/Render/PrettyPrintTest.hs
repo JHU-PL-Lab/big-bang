@@ -24,7 +24,7 @@ testPrintNegativeInt :: Test
 testPrintNegativeInt = TestCase $ assertEqual
   "Test if input -1234567890 is printed correctly"
   "-1234567890" 
-  (pretty (PrimInt (-123456789)))
+  (pretty (PrimInt (-1234567890)))
 
 testPrintChar :: Test
 testPrintChar = TestCase $ assertEqual
