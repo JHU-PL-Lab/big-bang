@@ -21,7 +21,7 @@ pp a = case a of
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> pp e
     A.Appl e1 e2 -> pp e1 <+> pp e2
     A.PrimInt i -> integer i
-    A.PrimChar c -> char c
+    A.PrimChar c -> quotes $ char c
     A.PrimUnit -> parens empty
     A.Case e brs -> text "case" <+> pp e <+> text "of" <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map ppBranch brs)
