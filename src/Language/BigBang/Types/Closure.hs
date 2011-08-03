@@ -1,5 +1,5 @@
 module Language.BigBang.Types.Closure
-(
+( calculateClosure
 ) where
 
 import qualified Language.BigBang.Types.Types as T
@@ -8,6 +8,7 @@ import Language.BigBang.Types.Types (Constraints)
 import Language.BigBang.Types.UtilTypes (LabelName)
 import Data.List.Utils (safeHead)
 import Data.Maybe.Utils (justIf)
+import Data.Function.Utils (leastFixedPoint)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -142,4 +143,16 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
                           Set.toList tauDownOpens ]
             in
             maybe (Set.singleton T.Bottom) id $ safeHead resultConstraints
+
+closeAll :: Constraints -> Constraints
+closeAll c =
+    Set.unions $ map ($ c)
+            [ id
+            , closeTransitivity
+            , closeLabels
+            , closeOnions
+            , closeCases]
+
+calculateClosure :: Constraints -> Constraints
+calculateClosure c = leastFixedPoint closeAll c
 
