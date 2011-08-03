@@ -6,7 +6,8 @@ import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:))
 import Language.BigBang.Types.Types (Constraints)
 import Language.BigBang.Types.UtilTypes (LabelName)
-import Data.Maybe.Utils (justIf, safeHead)
+import Data.List.Utils (safeHead)
+import Data.Maybe.Utils (justIf)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
