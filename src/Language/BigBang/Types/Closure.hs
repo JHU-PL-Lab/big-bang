@@ -18,7 +18,7 @@ topLevelAssignable :: T.TauDownClosed -> T.TauChi -> Bool
 topLevelAssignable tau chi = True
 
 findTauDownOpen :: Constraints -> Constraints
-findTauDownOpen = Set.fromAscList . catMaybes . map fn . Set.toAscList
+findTauDownOpen = Set.fromList . catMaybes . map fn . Set.toList
   where fn c =
           case c of
             T.Subtype a b -> fmap (const c) $ T.toTauDownOpen a
@@ -32,14 +32,14 @@ findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
             _                          -> Map.empty
 
 findAlphaOnLeft :: Constraints -> Map T.Alpha (Set T.TauUpClosed)
-findAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toAscList
+findAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
   where fn c = 
           case c of
             T.Subtype (T.TdcAlpha a) b -> Map.singleton a $ Set.singleton b
             _                          -> Map.empty
 
 findLblAlphaOnLeft :: Constraints -> Map T.Alpha (Set (LabelName, T.TauUpClosed))
-findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toAscList
+findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
   where fn c = 
           case c of
             T.Subtype (T.TdcLabel lbl (T.TdcAlpha a)) b ->
@@ -47,7 +47,7 @@ findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toAscList
             _ -> Map.empty
 
 findAlphaAmpPairs :: Constraints -> Map (T.Alpha, T.Alpha) (Set T.TauUpClosed)
-findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toAscList
+findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
             T.Subtype (T.TdcOnion (T.TdcAlpha a) (T.TdcAlpha b)) c ->
