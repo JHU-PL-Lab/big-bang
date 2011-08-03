@@ -54,6 +54,7 @@ Library
         Language.BigBang.Render.PrettyPrint
         Language.BigBang.Syntax.Parser
         Language.BigBang.Syntax.Lexer
+        Language.BigBang.Types.Closure
         Language.BigBang.Types.Types
         Language.BigBang.Types.TypeInference
         Language.BigBang.Types.UtilTypes
