@@ -57,17 +57,23 @@ testPrintBoolean = TestCase $ do
 
 -- Test cases that check pretty printing of function definitions and applications
 printFuncTests :: Test
-printFuncTests = TestList [testPrintFunction, testPrintFuncAppl, testPrintPerverse]
+printFuncTests = TestList [testPrintFunction1, testPrintFunction2, testPrintFuncAppl, testPrintPerverse, testPrintFunction3]
 
-testPrintFunction :: Test
-testPrintFunction = TestCase $ assertEqual
-  "Test if function is printed correctly"
+testPrintFunction1 :: Test
+testPrintFunction1 = TestCase $ assertEqual
+  "Test if I combinator is printed correctly"
   "(fun x -> x)"
   (pretty (Func (ident "x") (Var (ident "x"))))
 
+testPrintFunction2 :: Test
+testPrintFunction2 = TestCase $ assertEqual
+  "Test if K combinator is printed correctly"
+  "(fun x -> (fun y -> x))"
+  (pretty (Func (ident "x") (Func (ident "y") (Var (ident "x")))))
+
 testPrintFuncAppl :: Test
 testPrintFuncAppl = TestCase $ assertEqual
-  "Test if function aprettylication is printed correctly"
+  "Test if function application is printed correctly"
   "plus 2 2"
   (pretty (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2)))
 
@@ -76,6 +82,12 @@ testPrintPerverse = TestCase $ assertEqual
   "Test if perverse function aprettylication is printed correctly"
   "(fun x -> x x) (fun x -> x x)"
   (pretty (Appl (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x")))) (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x"))))))
+
+testPrintFunction3 :: Test
+testPrintFunction3 = TestCase $ assertEqual
+  "Test if S combinator is pretty printed correctly"
+  "(fun x -> (fun y -> (fun z -> x z y z)))"
+  (pretty (Func (ident "x") (Func (ident "y") (Func (ident "z") (Appl (Appl (Var (ident "x")) (Var (ident "z"))) (Appl (Var (ident "y")) (Var (ident "z"))))))))
 
 
 -- Test cases that check pretty printing of onions
