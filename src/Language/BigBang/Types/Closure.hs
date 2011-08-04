@@ -32,7 +32,7 @@ createMatchConstraints tau chi =
         (T.TdoLabel n t, T.ChiLabel n' a) ->
             let constraint = (T.toTauDownClosed t <: T.TucAlphaUp a) in
             (Set.singleton constraint) `justIf` (n == n')
-        (T.TdoFunc _ _ _ _, T.ChiFun) -> Just Set.empty
+        (T.TdoFunc _, T.ChiFun) -> Just Set.empty
         (T.TdoOnion t t', _) ->
             let mc1 = createMatchConstraints t chi in
             let mc2 = createMatchConstraints t' chi in
@@ -73,6 +73,16 @@ findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
             T.Subtype (T.TdcLabel lbl (T.TdcAlpha a)) b ->
               Map.singleton a $ Set.singleton (lbl, b)
             _ -> Map.empty
+
+findPolyFuncs :: Constraints -> Map T.AlphaUp (T.Alpha, T.PolyFuncData)
+findPolyFuncs = Map.unionsWith uError . map fn . Set.toList
+  where fn c =
+          case c of
+            T.Subtype (T.TdcFunc pfd) (T.TucFunc au a) ->
+                Map.singleton au (a, pfd)
+            _ -> Map.empty
+        uError = error
+            "two different polymorphic applications with same domain variable"
 
 findAlphaAmpPairs :: Constraints -> Map (T.Alpha, T.Alpha) (Set T.TauUpClosed)
 findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
@@ -144,6 +154,19 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
             in
             maybe (Set.singleton T.Bottom) id $ safeHead resultConstraints
 
+closeApplications :: Constraints -> Constraints
+closeApplications cs =
+    Set.unions $ map pickPolyConstraints $ Map.toList premiseDataByAlphaUp
+  where concretes = findAlphaUpOnRight $ findTauDownOpen cs
+        polyfuncs = findPolyFuncs cs
+        premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
+        pickPolyConstraints (alphaUp,(tauDownOpens , (alpha,
+                T.PolyFuncData forallVars polyAlphaUp polyAlpha polyC))) =
+            Set.empty -- TODO... seriously
+
+processRecursiveClosureLoops :: Constraints -> Constraints
+processRecursiveClosureLoops = id -- TODO... quite seriously
+
 closeAll :: Constraints -> Constraints
 closeAll c =
     Set.unions $ map ($ c)
@@ -151,8 +174,9 @@ closeAll c =
             , closeTransitivity
             , closeLabels
             , closeOnions
-            , closeCases]
+            , closeCases
+            , closeApplications]
 
 calculateClosure :: Constraints -> Constraints
-calculateClosure c = leastFixedPoint closeAll c
+calculateClosure c = leastFixedPoint (processRecursiveClosureLoops . closeAll) c
 

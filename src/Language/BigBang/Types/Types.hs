@@ -12,6 +12,7 @@ module Language.BigBang.Types.Types
 , TauUpClosed(..)
 , TauDownOpen(..)
 , TauDownClosed(..)
+, PolyFuncData(..)
 , PrimitiveType(..)
 , TauChi(..)
 , Constraints
@@ -56,15 +57,18 @@ data Alpha = Alpha AlphaContents
 data AnyAlpha = SomeAlpha Alpha | SomeAlphaUp AlphaUp
     deriving (Eq, Ord, Show)
 
--- |A data structure representing function call sites.  The call site of a
---  function application is defined by the type parameter used as the domain
---  of the function type upper bounding the function in that application.  In
---  the event of recursion, a set of call sites may be grouped together.  For
---  instance, the variable '1^['2,'3,'4,'3] will be regrouped as the variable
---  '1^['2,{'3,'4}].  Note that, in this case, the use of single variables in
---  the call site list is a notational sugar for singleton sets.
+-- |A data structure representing a single call site.
 data CallSite = CallSite (Set AlphaUp)
     deriving (Eq, Ord, Show)
+-- |A data structure representing function call sites.  The call site of a
+--  function application is defined by the type parameter used as the domain
+--  of the function type upper bounding the function in that application.  The
+--  list of call sites is stored in reverse order; that is, the variable
+--  '1^['2,'3] represents a1^{a3^{a2}}.  In the event of recursion, a set of
+--  multiple call sites is grouped together.  For instance, the variable
+--  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
+--  that, in this case, the use of single variables in the call site list is a
+--  notational sugar for singleton sets.
 newtype CallSites = CallSites { unCallSites :: [CallSite] }
     deriving (Eq, Ord, Show)
 callSites :: [CallSite] -> CallSites
@@ -93,7 +97,7 @@ data TauDownOpen =
       TdoPrim PrimitiveType
     | TdoLabel LabelName TauDownOpen
     | TdoOnion TauDownOpen TauDownOpen
-    | TdoFunc (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
+    | TdoFunc PolyFuncData
     | TdoTop
     deriving (Eq, Ord, Show)
 
@@ -103,10 +107,15 @@ data TauDownClosed =
       TdcPrim PrimitiveType
     | TdcLabel LabelName TauDownClosed
     | TdcOnion TauDownClosed TauDownClosed
-    | TdcFunc (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
+    | TdcFunc PolyFuncData
     | TdcTop
     | TdcAlpha Alpha
     | TdcAlphaUp AlphaUp
+    deriving (Eq, Ord, Show)
+
+-- |A wrapper type containing the polymorphic function type information.
+data PolyFuncData =
+    PolyFuncData (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
     deriving (Eq, Ord, Show)
 
 -- |The datatype enumerating the primitives in the Big Bang type system.
@@ -224,7 +233,7 @@ instance TauDownClosedConvertible TauDownOpen where
              TdoLabel lbl t -> TdcLabel lbl (toTauDownClosed t)
              TdoOnion t1 t2 ->
                 TdcOnion (toTauDownClosed t1) (toTauDownClosed t2)
-             TdoFunc vs ua a c -> TdcFunc vs ua a c
+             TdoFunc pfd -> TdcFunc pfd
 
 instance AlphaConvertible TauDownOpen where
     toSomeAlpha = const Nothing
@@ -240,8 +249,8 @@ instance TauDownOpenConvertible TauDownClosed where
                 t1' <- toTauDownOpen t1
                 t2' <- toTauDownOpen t2
                 return $ TdoOnion t1' t2'
-             TdcFunc vs ua a c ->
-                return $ TdoFunc vs ua a c
+             TdcFunc pfd ->
+                return $ TdoFunc pfd
              TdcAlpha a ->
                 Nothing
 
@@ -315,7 +324,7 @@ instance Display AnyAlpha where
 
 instance Display CallSites where
     makeDoc sites =
-        let siteList = unCallSites sites in
+        let siteList = reverse $ unCallSites sites in
         if length siteList == 0
             then empty
             else brackets $ hcat $ punctuate (text ", ") $ map sDoc siteList
@@ -343,15 +352,18 @@ instance Display TauDownClosed where
         TdcPrim p -> makeDoc p
         TdcLabel n t -> char '`' <> makeDoc n <+> makeDoc t
         TdcOnion t1 t2 -> makeDoc t1 <+> char '&' <+> makeDoc t2
-        TdcFunc alphas alphaUp alpha constraints ->
-            (if Set.size alphas > 0
-                then text "all" <+> (parens $ makeDoc alphas)
-                else empty) <+>
-            makeDoc alphaUp <+> text "->" <+> makeDoc alpha <+>
-            char '\\' <+> (parens $ makeDoc constraints)
+        TdcFunc polyFuncData -> makeDoc polyFuncData
         TdcTop -> text "top"
         TdcAlpha a -> makeDoc a
         TdcAlphaUp a -> makeDoc a
+
+instance Display PolyFuncData where
+    makeDoc (PolyFuncData alphas alphaUp alpha constraints) =
+        (if Set.size alphas > 0
+            then text "all" <+> (parens $ makeDoc alphas)
+            else empty) <+>
+        makeDoc alphaUp <+> text "->" <+> makeDoc alpha <+>
+        char '\\' <+> (parens $ makeDoc constraints)
 
 instance Display PrimitiveType where
     makeDoc p = case p of

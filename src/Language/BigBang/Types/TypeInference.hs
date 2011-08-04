@@ -76,7 +76,8 @@ inferType e =
                         (Set.fromList $ map T.SomeAlphaUp (Map.elems dict))
               let constraints' =
                     Set.insert (tau <: T.TucAlpha alpha') constraints
-              let funcType = T.TdcFunc vars alphaUp alpha' constraints'
+              let funcType = T.TdcFunc
+                    (T.PolyFuncData vars alphaUp alpha' constraints')
               tell1 $ funcType <: T.TucAlpha alpha
               ralpha alpha
         A.Appl e1 e2 ->
