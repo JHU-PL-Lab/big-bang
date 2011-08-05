@@ -18,10 +18,12 @@ import qualified Data.Sequence as Seq
 import Data.Sequence (Seq, (<|), (|>), (><))
 import qualified Data.Set as Set
 import Data.Set (Set, (\\))
+
 import qualified Language.BigBang.Ast as A
+import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
 import Language.BigBang.Types.Types ((<:))
+import Language.BigBang.Types.UtilTypes
 
 type Gamma = Map Ident T.AlphaUp
 type InferredConstraints = Set T.Constraint
@@ -161,8 +163,8 @@ extractConstraintTypeVars c =
                     maybeInsert (T.toSomeAlpha tdc1) $
                         maybeInsert (T.toSomeAlpha tdc2) set
                 T.Case alphaUp guards ->
-                    let set = Set.insert (T.SomeAlphaUp alphaUp) set in
-                    foldl foldGuards set guards
+                    let set' = Set.insert (T.SomeAlphaUp alphaUp) set in
+                    foldl foldGuards set' guards
                 T.Bottom -> set
           foldGuards set (T.Guard tauChi constraints) =
             Set.union set $ addChiAlpha tauChi $

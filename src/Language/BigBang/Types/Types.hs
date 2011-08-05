@@ -319,8 +319,8 @@ instance Display Alpha where
 
 instance Display AnyAlpha where
     makeDoc a = case a of
-        SomeAlpha a -> makeDoc a
-        SomeAlphaUp a -> makeDoc a
+        SomeAlpha b -> makeDoc b
+        SomeAlphaUp b -> makeDoc b
 
 instance Display CallSites where
     makeDoc sites =
