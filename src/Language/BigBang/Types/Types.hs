@@ -5,6 +5,7 @@ module Language.BigBang.Types.Types
 , AnyAlpha(..)
 , construct
 , getIndex
+, CallSite(..)
 , getCallSites
 , callSites
 , unCallSites
@@ -252,6 +253,8 @@ instance TauDownOpenConvertible TauDownClosed where
              TdcFunc pfd ->
                 return $ TdoFunc pfd
              TdcAlpha a ->
+                Nothing
+             TdcAlphaUp a ->
                 Nothing
 
 instance TauDownClosedConvertible TauDownClosed where

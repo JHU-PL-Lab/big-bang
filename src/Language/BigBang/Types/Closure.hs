@@ -2,20 +2,24 @@ module Language.BigBang.Types.Closure
 ( calculateClosure
 ) where
 
+import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:))
 import Language.BigBang.Types.Types (Constraints)
 import Language.BigBang.Types.UtilTypes (LabelName)
+
 import Data.List.Utils (safeHead)
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (catMaybes, maybe, mapMaybe)
+import Data.Maybe (catMaybes, fromJust, maybe, mapMaybe)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Monoid (mappend)
+
+import Debug.Trace
 
 -- |A function which checks immediate compatability and produces an appropriate
 --  constraint set for matches.  This function takes the type of a value, the
@@ -101,6 +105,36 @@ findCases = Map.unionsWith uError . map fn . Set.toList
         uError = error
             "constraint set contains two case constraints with same alphaUp"
 
+-- |A function which performs substitution on a set of constraints.  All
+--  variables in the alpha set are replaced with corresponding versions that
+--  have the specified alpha up in their call sites list.
+substituteVars :: Constraints -> Set T.AnyAlpha -> T.AlphaUp -> Constraints
+substituteVars constraints forallVars alphaUp = substituteAlpha f constraints
+  where separate sa = case sa of
+            T.SomeAlpha (T.Alpha (T.AlphaContents i sites)) ->
+                (T.SomeAlpha . T.Alpha, i, sites)
+            T.SomeAlphaUp (T.AlphaUp (T.AlphaContents i sites)) ->
+                (T.SomeAlphaUp . T.AlphaUp, i, sites)
+        calculateReplacement i sites =
+            T.AlphaContents i $
+                let sitesList = T.unCallSites sites in
+                let sitesList' = map (\(T.CallSite a) -> a) sitesList in
+                let totals = zip sitesList' $
+                        scanl Set.union Set.empty sitesList' in
+                let rest = dropWhile
+                        (\(a,b) -> not $ Set.member alphaUp b) totals in
+                case rest of
+                    [] -> T.callSites $
+                            (T.CallSite $ Set.singleton alphaUp):sitesList
+                    (_,group):tail ->
+                        T.callSites $ (T.CallSite group)
+                                :(map (T.CallSite . fst) tail)
+        f sa =
+            let (constr,i,sites) = separate sa in
+            if Set.member sa forallVars
+                then constr $ calculateReplacement i sites
+                else sa
+
 closeTransitivity :: Constraints -> Constraints
 closeTransitivity cs = Set.fromList $
                   concat $
@@ -135,7 +169,7 @@ closeOnions cs = Set.fromList $ allTrans lefts $ Map.toList rights
             [ T.TdcOnion t1' t2' <: tuc |
               t1' <- Set.toList t1,
               t2' <- Set.toList t2,
-              tuc <- Set.toList tucs]
+              tuc <- Set.toList tucs ]
         allTrans alphas amps = concat $ catMaybes $ map (tryTrans alphas) amps
 
 closeCases :: Constraints -> Constraints
@@ -156,16 +190,20 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs =
-    Set.unions $ map pickPolyConstraints $ Map.toList premiseDataByAlphaUp
+    Set.unions $ map pickPolyConstraints $ concatMap expandIntoCases $
+            Map.toList premiseDataByAlphaUp
   where concretes = findAlphaUpOnRight $ findTauDownOpen cs
         polyfuncs = findPolyFuncs cs
         premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
-        pickPolyConstraints (alphaUp,(tauDownOpens , (alpha,
+        expandIntoCases (val, (set, val')) =
+                [ (val, (el,val')) | el <- Set.toList set ]
+        pickPolyConstraints (alphaUp,(tauDownOpen, (alpha,
                 T.PolyFuncData forallVars polyAlphaUp polyAlpha polyC))) =
-            Set.empty -- TODO... seriously
-
-processRecursiveClosureLoops :: Constraints -> Constraints
-processRecursiveClosureLoops = id -- TODO... quite seriously
+            let polyC' = Set.union polyC $ Set.fromList
+                    [T.toTauDownClosed tauDownOpen <: T.TucAlphaUp polyAlphaUp,
+                     T.TdcAlpha polyAlpha <: T.TucAlpha alpha]
+            in
+            substituteVars polyC' forallVars alphaUp
 
 closeAll :: Constraints -> Constraints
 closeAll c =
@@ -177,6 +215,95 @@ closeAll c =
             , closeCases
             , closeApplications]
 
+-- |Calculates the transitive closure of a set of type constraints.
 calculateClosure :: Constraints -> Constraints
-calculateClosure c = leastFixedPoint (processRecursiveClosureLoops . closeAll) c
+calculateClosure c = leastFixedPoint closeAll c
+
+
+-- |A typeclass for entities which can substitute their type variables.
+class AlphaSubstitutable a where
+    substituteAlpha :: (T.AnyAlpha -> T.AnyAlpha) -> a -> a
+
+instance AlphaSubstitutable T.AlphaUp where
+    substituteAlpha f au =
+        case substituteAlpha f $ T.SomeAlphaUp au of
+            T.SomeAlphaUp au -> au
+            _ -> error "substituteAlpha function argument produced bad output"
+
+instance AlphaSubstitutable T.Alpha where
+    substituteAlpha f au =
+        case substituteAlpha f $ T.SomeAlpha au of
+            T.SomeAlpha au -> au
+            _ -> error "substituteAlpha function argument produced bad output"
+
+instance AlphaSubstitutable T.AnyAlpha where
+    substituteAlpha f = f
+
+instance AlphaSubstitutable T.TauUpOpen where
+    substituteAlpha f x =
+        -- The toTauUpOpen will never give Nothing here.  We have that
+        -- T.toTauUpOpen . T.toTauUpClosed is equivalent to Just and the
+        -- substituteAlpha routine will not insert any alphas where there
+        -- were not alphas before.
+        fromJust $ T.toTauUpOpen $ substituteAlpha f $ T.toTauUpClosed x
+
+instance AlphaSubstitutable T.TauUpClosed where
+    substituteAlpha f x = case x of
+        T.TucPrim p -> T.TucPrim $ substituteAlpha f p
+        T.TucFunc au a ->
+                T.TucFunc (substituteAlpha f au) $ substituteAlpha f a
+        T.TucTop -> T.TucTop
+        T.TucAlphaUp a -> T.TucAlphaUp $ substituteAlpha f a
+        T.TucAlpha a -> T.TucAlpha $ substituteAlpha f a
+
+instance AlphaSubstitutable T.TauDownOpen where
+    substituteAlpha f x =
+        -- fromJust is safe here for the same reasons as in TauUpOpen
+        fromJust $ T.toTauDownOpen $ substituteAlpha f $ T.toTauDownClosed x
+
+instance AlphaSubstitutable T.TauDownClosed where
+    substituteAlpha f x = case x of
+        T.TdcPrim p -> T.TdcPrim $ substituteAlpha f p
+        T.TdcLabel n t -> T.TdcLabel n $ substituteAlpha f t
+        T.TdcOnion t1 t2 -> T.TdcOnion (substituteAlpha f t1) $
+                substituteAlpha f t2
+        T.TdcFunc pfd -> T.TdcFunc $ substituteAlpha f pfd
+        T.TdcTop -> T.TdcTop
+        T.TdcAlpha a -> T.TdcAlpha $ substituteAlpha f a
+        T.TdcAlphaUp a -> T.TdcAlphaUp $ substituteAlpha f a
+
+instance AlphaSubstitutable T.PolyFuncData where
+    substituteAlpha f (T.PolyFuncData alphas alphaUp alpha constraints) =
+        T.PolyFuncData (substituteAlpha f alphas) (substituteAlpha f alphaUp)
+                (substituteAlpha f alpha) (substituteAlpha f constraints)
+
+instance AlphaSubstitutable T.PrimitiveType where
+    substituteAlpha f p = p
+
+instance AlphaSubstitutable T.Constraint where
+    substituteAlpha f c = case c of
+        T.Subtype tdc tuc -> T.Subtype (substituteAlpha f tdc) $
+                substituteAlpha f tuc
+        T.Case au guards -> T.Case (substituteAlpha f au) $
+                substituteAlpha f guards
+        T.Bottom -> T.Bottom
+
+instance AlphaSubstitutable T.Guard where
+    substituteAlpha f (T.Guard tauChi constraints) =
+        T.Guard (substituteAlpha f tauChi) $ substituteAlpha f constraints
+
+instance AlphaSubstitutable T.TauChi where
+    substituteAlpha f c = case c of
+        T.ChiPrim p -> T.ChiPrim $ substituteAlpha f p
+        T.ChiLabel n au -> T.ChiLabel n $ substituteAlpha f au
+        T.ChiFun -> T.ChiFun
+        T.ChiTop -> T.ChiTop
+
+instance (AlphaSubstitutable a) => AlphaSubstitutable [a] where
+    substituteAlpha = map . substituteAlpha
+
+instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
+    substituteAlpha = Set.map . substituteAlpha
+
+
 
