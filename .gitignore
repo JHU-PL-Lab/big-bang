@@ -8,3 +8,9 @@ Language/BigBang/Syntax/Parser.hs
 Language/BigBang/Syntax/ParserData.hs
 Parser.info
 InterpreterMain
+
+*.backup
+documentation/Type_System_Rules.pdf
+*.aux
+*.log
+
