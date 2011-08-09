@@ -1,0 +1,74 @@
+\usepackage{amsmath,amssymb}
+\usepackage{mathpartir}
+\usepackage{graphicx}
+\usepackage{rotate}
+
+%%% Layout Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% vstack - Command for placing one symbol above or below another.
+%   #1 - Amount to lower first symbol
+%   #2 - First symbol
+%   #3 - Amount to lower second symbol
+%   #4 - Second symbol
+\newcommand{\vstackAtom}[5]{%
+    \rlap{%
+        \lower #2\hbox{\ensuremath{#1#3}}%
+    }{%
+        \lower #4\hbox{\ensuremath{#1#5}}%
+    }}
+\newcommand*{\vstack}[4]{%
+    \ensuremath{%
+        \mathchoice%
+            {\vstackAtom{\displaystyle}{#1}{#2}{#3}{#4}}%
+            {\vstackAtom{\textstyle}{#1}{#2}{#3}{#4}}%
+            {\vstackAtom{\scriptstyle}{#1}{#2}{#3}{#4}}%
+            {\vstackAtom{\scriptscriptstyle}{#1}{#2}{#3}{#4}}%
+        }%
+    }
+
+% shrinks text in math mode
+\newcommand{\mathsmaller}{\mathchoice{\scriptstyle}{\scriptstyle}{\scriptscriptstyle}{\scriptscriptstyle}}
+
+%%% Notation Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\DeclareMathOperator{\fto}{\rightarrow}
+
+\newcommand{\alphaUp}{\vstack{0em}{\alpha}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\vartriangle}}}}
+\newcommand{\alphaList}{\bar{\alpha}}
+
+\newcommand{\tauUpOpen}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\vartriangle}}}}
+\newcommand{\tauUpClosed}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\blacktriangle}}}}
+\newcommand{\tauDownOpen}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\triangledown}}}}
+\newcommand{\tauDownClosed}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\blacktriangledown}}}}
+\newcommand{\tauChi}{\ensuremath{\tau^\chi}}
+
+%%% Grammar Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\DeclareMathOperator{\gOr}{\vert}
+\DeclareMathOperator{\tprim}{\textrm{tprim}}
+\DeclareMathOperator{\lbl}{\textrm{lbl}}
+\DeclareMathOperator{\subtype}{\textrm{subtype}}
+\DeclareMathOperator{\constraint}{\textrm{constraint}}
+\DeclareMathOperator{\guard}{\textrm{guard}}
+\DeclareMathOperator{\cSeparator}{\backslash}
+\DeclareMathOperator{\constraintList}{\textrm{C}}
+\newcommand{\C}{\ensuremath\constraintList}
+
+\DeclareMathOperator{\gtAmp}{\texttt{\char`\&}}
+\DeclareMathOperator{\gtFun}{\texttt{fun}}
+\DeclareMathOperator{\gtInt}{\texttt{int}}
+\DeclareMathOperator{\gtChar}{\texttt{char}}
+\DeclareMathOperator{\gtUnit}{\texttt{unit}}
+\DeclareMathOperator{\gtTop}{\texttt{top}}
+\DeclareMathOperator{\gtBt}{\texttt{`}}
+\DeclareMathOperator{\gtCase}{\texttt{case}}
+\DeclareMathOperator{\gtOf}{\texttt{of}}
+\DeclareMathOperator{\gtBottom}{\ensuremath{\bot}}
+
+%%% Rule Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\context}{\ensuremath{\Gamma}}
+
+\newcommand{\typeRel}[4]{\ensuremath{#1 \vdash #2 : #3 \cSeparator #4}}
+
+\newcommand{\bbrule}[3]{\inferrule*[lab=#1]{#2}{#3}}

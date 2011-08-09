@@ -1,0 +1,157 @@
+\documentclass{article}
+
+\usepackage{BigBang}
+\usepackage{mathpartir}
+\usepackage{cancel}
+
+\begin{document}
+
+\section*{Type System Grammar}
+
+\begin{eqnarray*}
+    \tauUpOpen      &::=&       \tprim
+                           \gOr \gtTop
+                           \gOr \alphaUp \fto \alpha
+                           \gOr \alphaUp
+\\
+    \tauDownOpen    &::=&       \tprim
+                           \gOr \gtTop
+                           \gOr \lbl \tauDownOpen
+                           \gOr \tauDownOpen \gtAmp \tauDownOpen
+                           \gOr \forall \alphaList. \alphaUp \fto \alpha \cSeparator \constraintList
+\\
+    \tauUpClosed    &::=&       \tauUpOpen
+                           \gOr \alpha
+\\
+    \tauDownClosed  &::=&       \tprim
+                           \gOr \gtTop
+                           \gOr \lbl \tauDownClosed
+                           \gOr \tauDownClosed \gtAmp \tauDownClosed
+                           \gOr \forall \alphaList. \alphaUp \fto \alpha \cSeparator \constraintList
+                           \gOr \alpha
+\\
+    \tauChi         &::=&       \tprim
+                           \gOr \gtTop
+                           \gOr \lbl \alpha
+                           \gOr \gtFun
+\\
+    \tprim          &::=&       \gtInt
+                           \gOr \gtChar
+                           \gOr \gtUnit
+\\
+    \lbl            &::=&       \gtBt [\texttt{a-zA-Z0-9}]^*
+\\
+    \subtype        &::=&       \tauDownClosed <: \tauUpClosed
+\\
+    \constraint     &::=&       \subtype
+                           \gOr \gtCase \alphaUp \gtOf \guard^*
+                           \gOr \gtBottom
+\\
+    \guard          &::=&       \tauChi \fto \constraint
+\\
+    \constraintList &::=&       \constraint^*
+\end{eqnarray*}
+
+\section*{Type Inference Rules}
+
+\begin{mathpar}
+    \bbrule{Application}{
+        \typeRel{\context}{e}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context}{e'}{\tauDownClosed_2}{\C_2}7
+    }{
+        \typeRel{\context}{e e'}{\alpha}{\{\tauDownClosed_1 <: \alphaUp \fto \alpha, \tauDownClosed_2 <: \alphaUp\} \cup \C_1 \cup \C_2}
+    }
+    
+    \bbrule{Onion}{
+        \typeRel{\context}{e_1}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context}{e_2}{\tauDownClosed_2}{\C_2}
+    }{
+        \typeRel{\context}{e_1 \gtAmp e_2}{\alpha_1 \gtAmp \alpha_2}{\{\tauDownClosed_1 <: \alpha_1, \tauDownClosed_2 <: \alpha_2\} \cup \C_1 \cup \C_2}
+    }
+    
+    \bbrule{Function}{
+        \typeRel{\context,x:\alpha_2}{e}{\tauDownClosed}{\C}
+    }{
+        \typeRel{\context}{\lambda x.\ e}{\alpha_1}{
+            \{(\forall \alphaList. \alpha_2 \fto \alpha_3 \cSeparator \{\tauDownClosed <: \alpha_3\} \cup \C) <: \alpha_1\}}
+    }
+    
+    \bbrule{Case}{
+        \typeRel{\context}{e}{\tauDownClosed}{\C} \\
+        \overline{\gamma_n,\tauChi_n = \kappa(\chi_n)} \\
+        \overline{\typeRel{\context,\gamma_n}{e_n}{\tauDownClosed_n}{\C_n}}
+    }{
+        \typeRel{\context}{\gtCase e \gtOf \overline{\chi_n \fto e_n}}{\alpha}{\C \cup \{\tauDownClosed <: \alphaUp,
+            \gtCase \alphaUp \gtOf \overline{\tauChi_n \fto (\C_n \cup \{\tauDownClosed_n <: \alpha\})}\}}
+    }
+    
+    \bbrule{Label}{
+        \typeRel{\context}{e}{\tauDownClosed}{\C}
+    }{
+        \typeRel{\context}{\lbl e}{\lbl \alpha}{\{\tauDownClosed <: \alpha\} \cup \C}
+    }
+\end{mathpar}
+
+\section*{Constraint Closure Rules}
+
+\begin{mathpar}
+    \bbrule{Transitivity}{
+        \tauDownOpen <: \alpha \\
+        \alpha <: \tauUpClosed
+    }{
+        \tauDownOpen <: \tauUpClosed
+    }
+    
+    \bbrule{Label Construction}{
+        \tauDownOpen <: \alpha \\
+        \lbl \alpha <: \tauUpClosed
+    }{
+        \lbl \tauDownOpen <: \tauUpClosed
+    }
+    
+    \bbrule{Onion Construction}{
+        \tauDownOpen_1 <: \alpha_1 \\
+        \tauDownOpen_2 <: \alpha_2 \\
+        \alpha_1 \gtAmp \alpha_2 <: \tauUpClosed
+    }{
+        \tauDownOpen_1 \gtAmp \tauDownOpen_2 <: \tauUpClosed
+    }
+    
+    \bbrule{Case Analysis}{
+        \tauDownOpen <: \alphaUp \\
+        \tauDownOpen <:: \tauChi_i \\
+        \forall j<i. \tauDownOpen \cancel{<::} \tauChi_j \\
+        \gtCase \alphaUp \gtOf \ldots \vert \tauChi_i \fto \C_i \vert \ldots
+    }{
+        \C_i \cup \mu(\tauDownOpen, \tauChi_i)
+    }
+    
+    \bbrule{Application}{
+        (\forall \alphaList. \alphaUp \fto \alpha \cSeparator \C) <: \alphaUp' \fto \alpha' \\
+        \tauDownOpen <: \alphaUp'
+    }{
+        \varphi(\alphaList, \C \cup \{\tauDownOpen <: \alphaUp, \alpha <: \alpha'\}, \alphaUp')
+    }
+\end{mathpar}
+
+\subsection*{Immediate Compatibility Rules}
+
+\begin{mathpar}
+    \bbrule{Top Compatibility}{ }{\tauUpOpen <:: \gtTop}
+    
+    \bbrule{Primitive Compatibility}{ }{\tprim <:: \tprim}
+    
+    \bbrule{Label Compatibility}{ }{\lbl \tauUpOpen <:: \lbl \alpha}
+    
+    \bbrule{Function Compatibility}{ }{\forall \alphaList. \alphaUp \fto \alpha \cSeparator \C <:: \gtFun}
+    
+    \bbrule{Onion Compatibility}{
+        \tauUpOpen_1 <:: \tauChi \vee \tauUpOpen_2 <:: \tauChi
+    }{
+        \tauUpOpen_1 \gtAmp \tauUpOpen_2 <:: \tauChi
+    }
+\end{mathpar}
+
+
+
+\end{document}
