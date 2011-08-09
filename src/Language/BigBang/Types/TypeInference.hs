@@ -25,7 +25,7 @@ import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:))
 import Language.BigBang.Types.UtilTypes
 
-type Gamma = Map Ident T.AlphaUp
+type Gamma = Map Ident T.Alpha
 type InferredConstraints = Set T.Constraint
 type NextFreshVar = Integer
 
@@ -51,7 +51,7 @@ inferType :: A.Expr -> TIM T.TauDownClosed
 inferType e =
     case e of
         A.Var x ->
-            maybe (throwError $ NotClosed x) (return . T.TdcAlphaUp) =<<
+            maybe (throwError $ NotClosed x) (return . T.TdcAlpha) =<<
                     (asks $ Map.lookup x)
         A.Label n e ->
             return . T.TdcLabel n . T.TdcAlpha =<< inferTypeOverFreshInter e
@@ -62,26 +62,26 @@ inferType e =
               return $ T.TdcOnion a1 a2
         A.Func i e ->
             do
-              alpha <- freshInterVar
-              alpha' <- freshInterVar
-              alphaUp <- freshUpperVar
-              (tau, constraints) <- capture (Map.insert i alphaUp) e
+              alpha1 <- freshInterVar
+              alpha2 <- freshInterVar
+              alpha3 <- freshInterVar
+              (tau, constraints) <- capture (Map.insert i alpha3) e
               vars <- do
                     dict <- ask
                     return $
                         (
                             Set.union (extractConstraintTypeVars constraints) $
-                            Set.fromList [T.SomeAlpha alpha'
-                                         ,T.SomeAlphaUp alphaUp]
+                            Set.fromList [T.SomeAlpha alpha2
+                                         ,T.SomeAlpha alpha3]
                         )
                         \\ -- set subtraction
-                        (Set.fromList $ map T.SomeAlphaUp (Map.elems dict))
+                        (Set.fromList $ map T.SomeAlpha (Map.elems dict))
               let constraints' =
-                    Set.insert (tau <: T.TucAlpha alpha') constraints
+                    Set.insert (tau <: T.TucAlpha alpha2) constraints
               let funcType = T.TdcFunc
-                    (T.PolyFuncData vars alphaUp alpha' constraints')
-              tell1 $ funcType <: T.TucAlpha alpha
-              ralpha alpha
+                    (T.PolyFuncData vars alpha3 alpha2 constraints')
+              tell1 $ funcType <: T.TucAlpha alpha1
+              ralpha alpha1
         A.Appl e1 e2 ->
             do
               alphaUp <- freshUpperVar
@@ -139,13 +139,13 @@ inferType e =
 --  assumption for typechecking the corresponding branch expression.
 extractBranchAssumptionAndChi
     :: A.Branch
-    -> TIM (Map Ident T.AlphaUp, T.TauChi)
+    -> TIM (Map Ident T.Alpha, T.TauChi)
 extractBranchAssumptionAndChi (chi,_) =
     case chi of
         A.ChiPrim p -> return (Map.empty, T.ChiPrim p)
         A.ChiLabel n i -> do
-            alphaUp <- freshUpperVar
-            return (Map.singleton i alphaUp, T.ChiLabel n alphaUp)
+            alpha <- freshInterVar
+            return (Map.singleton i alpha, T.ChiLabel n alpha)
         A.ChiFun -> return (Map.empty, T.ChiFun)
         A.ChiTop -> return (Map.empty, T.ChiTop)
         
@@ -172,7 +172,7 @@ extractConstraintTypeVars c =
           addChiAlpha tauChi set =
             case tauChi of
                 T.ChiPrim p -> set
-                T.ChiLabel n a -> Set.insert (T.SomeAlphaUp a) set
+                T.ChiLabel n a -> Set.insert (T.SomeAlpha a) set
                 T.ChiFun -> set
                 T.ChiTop -> set
 

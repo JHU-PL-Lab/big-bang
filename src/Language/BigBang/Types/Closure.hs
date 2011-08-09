@@ -34,7 +34,7 @@ createMatchConstraints tau chi =
         (_,T.ChiTop) -> Just Set.empty
         (T.TdoPrim p, T.ChiPrim p') -> Set.empty `justIf` (p == p')
         (T.TdoLabel n t, T.ChiLabel n' a) ->
-            let constraint = (T.toTauDownClosed t <: T.TucAlphaUp a) in
+            let constraint = (T.toTauDownClosed t <: T.TucAlpha a) in
             (Set.singleton constraint) `justIf` (n == n')
         (T.TdoFunc _, T.ChiFun) -> Just Set.empty
         (T.TdoOnion t t', _) ->
@@ -124,7 +124,9 @@ substituteVars constraints forallVars alphaUp = substituteAlpha f constraints
                 let rest = dropWhile
                         (\(a,b) -> not $ Set.member alphaUp b) totals in
                 case rest of
-                    [] -> T.callSites $
+                    [] -> -- TODO: is this the wrong behavior? This produces
+                          -- things like '10^['5^['0]] instead of '10^['0,'5]
+                        T.callSites $
                             (T.CallSite $ Set.singleton alphaUp):sitesList
                     (_,group):tail ->
                         T.callSites $ (T.CallSite group)
@@ -135,11 +137,14 @@ substituteVars constraints forallVars alphaUp = substituteAlpha f constraints
                 then constr $ calculateReplacement i sites
                 else sa
 
+-- |Calculates the constraints produced from a given constraint set by the
+--  transitivity rules.  This rule performs transitivity for both alphas and
+--  alpha-ups.
 closeTransitivity :: Constraints -> Constraints
 closeTransitivity cs = Set.fromList $
-                  concat $
-                  Map.elems $
-                  Map.intersectionWith subtypeCrossProduct lefts rights
+                  concat $ 
+                      Map.elems $
+                      Map.intersectionWith subtypeCrossProduct lefts rights
   where tdoCs  = findTauDownOpen cs
         lefts  = findAlphaOnRight tdoCs
         rights = findAlphaOnLeft cs
@@ -197,13 +202,13 @@ closeApplications cs =
         premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
         expandIntoCases (val, (set, val')) =
                 [ (val, (el,val')) | el <- Set.toList set ]
-        pickPolyConstraints (alphaUp,(tauDownOpen, (alpha,
-                T.PolyFuncData forallVars polyAlphaUp polyAlpha polyC))) =
+        pickPolyConstraints (alphaIn,(tauDownOpen, (alphaOut,
+                T.PolyFuncData forallVars polyAlphaIn polyAlphaOut polyC))) =
             let polyC' = Set.union polyC $ Set.fromList
-                    [T.toTauDownClosed tauDownOpen <: T.TucAlphaUp polyAlphaUp,
-                     T.TdcAlpha polyAlpha <: T.TucAlpha alpha]
+                    [T.toTauDownClosed tauDownOpen <: T.TucAlpha polyAlphaIn,
+                     T.TdcAlpha polyAlphaOut <: T.TucAlpha alphaOut]
             in
-            substituteVars polyC' forallVars alphaUp
+            substituteVars polyC' forallVars alphaIn
 
 closeAll :: Constraints -> Constraints
 closeAll c =
@@ -270,7 +275,6 @@ instance AlphaSubstitutable T.TauDownClosed where
         T.TdcFunc pfd -> T.TdcFunc $ substituteAlpha f pfd
         T.TdcTop -> T.TdcTop
         T.TdcAlpha a -> T.TdcAlpha $ substituteAlpha f a
-        T.TdcAlphaUp a -> T.TdcAlphaUp $ substituteAlpha f a
 
 instance AlphaSubstitutable T.PolyFuncData where
     substituteAlpha f (T.PolyFuncData alphas alphaUp alpha constraints) =

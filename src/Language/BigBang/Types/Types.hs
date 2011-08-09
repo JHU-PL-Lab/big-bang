@@ -111,12 +111,11 @@ data TauDownClosed =
     | TdcFunc PolyFuncData
     | TdcTop
     | TdcAlpha Alpha
-    | TdcAlphaUp AlphaUp
     deriving (Eq, Ord, Show)
 
 -- |A wrapper type containing the polymorphic function type information.
 data PolyFuncData =
-    PolyFuncData (Set AnyAlpha) AlphaUp Alpha Constraints -- TODO: alias Set AnyAlpha?
+    PolyFuncData (Set AnyAlpha) Alpha Alpha Constraints -- TODO: alias Set AnyAlpha?
     deriving (Eq, Ord, Show)
 
 -- |The datatype enumerating the primitives in the Big Bang type system.
@@ -136,7 +135,7 @@ data PrimitiveType =
 -- |A type representing the patterns produced by guards.
 data TauChi =
       ChiPrim PrimitiveType
-    | ChiLabel LabelName AlphaUp
+    | ChiLabel LabelName Alpha
     | ChiFun
     | ChiTop
     deriving (Eq, Ord, Show)
@@ -184,8 +183,13 @@ class TauDownOpenConvertible a where
 class TauDownClosedConvertible a where
     toTauDownClosed :: a -> TauDownClosed
 
+-- |A type class for converting types (such as TauDownClosed) to AnyAlphas
 class AlphaConvertible a where
     toSomeAlpha :: a -> Maybe AnyAlpha
+
+-- |A type class for converting type variables (such as AlphaUp) to AnyAlphas
+class AnyAlphaConvertible a where
+    toAnyAlpha :: a -> AnyAlpha
 
 -------------------------------------------------------------------------------
 -- *Conversion Type Class Instances
@@ -243,6 +247,7 @@ instance TauDownOpenConvertible TauDownClosed where
     toTauDownOpen x = do
         case x of
              TdcPrim p -> return $ TdoPrim p
+             TdcTop -> return TdoTop
              TdcLabel lbl t -> do
                 t' <- toTauDownOpen t
                 return $ TdoLabel lbl t'
@@ -252,9 +257,7 @@ instance TauDownOpenConvertible TauDownClosed where
                 return $ TdoOnion t1' t2'
              TdcFunc pfd ->
                 return $ TdoFunc pfd
-             TdcAlpha a ->
-                Nothing
-             TdcAlphaUp a ->
+             TdcAlpha _ ->
                 Nothing
 
 instance TauDownClosedConvertible TauDownClosed where
@@ -264,8 +267,13 @@ instance AlphaConvertible TauDownClosed where
     toSomeAlpha x =
         case x of
             TdcAlpha a -> Just $ SomeAlpha a
-            TdcAlphaUp a -> Just $ SomeAlphaUp a
             _ -> Nothing
+
+instance AnyAlphaConvertible Alpha where
+    toAnyAlpha = SomeAlpha
+
+instance AnyAlphaConvertible AlphaUp where
+    toAnyAlpha = SomeAlphaUp
 
 -------------------------------------------------------------------------------
 -- *Projection Type Classes
@@ -358,14 +366,13 @@ instance Display TauDownClosed where
         TdcFunc polyFuncData -> makeDoc polyFuncData
         TdcTop -> text "top"
         TdcAlpha a -> makeDoc a
-        TdcAlphaUp a -> makeDoc a
 
 instance Display PolyFuncData where
-    makeDoc (PolyFuncData alphas alphaUp alpha constraints) =
+    makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
         (if Set.size alphas > 0
             then text "all" <+> (parens $ makeDoc alphas)
             else empty) <+>
-        makeDoc alphaUp <+> text "->" <+> makeDoc alpha <+>
+        makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
         char '\\' <+> (parens $ makeDoc constraints)
 
 instance Display PrimitiveType where
