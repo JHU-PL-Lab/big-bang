@@ -102,7 +102,10 @@ $(
                     (\n -> AppE (VarE $ mkName "makeDoc") (VarE $ mkName n))
                     tvars
                 makeDocFunClauses = [clause ([tupP $ map return params])
-                    (normalB [| makeDocForDocList catByComma ", " $(return lstExpr) |])
+                    (normalB [|
+                        char '(' <>
+                        makeDocForDocList catByComma ", " $(return lstExpr) <>
+                        char ')' |])
                     []]
                 makeDocFun = funD (mkName "makeDoc") makeDocFunClauses
                 decl = instanceD (return context)
