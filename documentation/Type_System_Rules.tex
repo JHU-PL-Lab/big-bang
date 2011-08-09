@@ -127,10 +127,10 @@
     }
     
     \bbrule{Application}{
-        (\forall \alphaList. \alpha_1 \fto \alpha_2 \cSeparator \C) <: \alpha_1' \fto \alpha_2' \\
-        \tauDownOpen <: \alpha_1'
+        (\forall \alphaList. \alpha_1 \fto \alpha_2 \cSeparator \C) <: \alphaUp \fto \alpha_3 \\
+        \tauDownOpen <: \alphaUp
     }{
-        \varphi(\alphaList, \C \cup \{\tauDownOpen <: \alpha_1, \alpha_2 <: \alpha_2'\}, \alpha_1')
+        \varphi(\alphaList, \C \cup \{\tauDownOpen <: \alpha_1, \alpha_2 <: \alpha_3\}, \alphaUp)
     }
 \end{mathpar}
 
