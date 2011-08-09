@@ -20,6 +20,7 @@ module Language.BigBang.Types.Types
 , Constraint(..)
 , Guard(..)
 , toSomeAlpha
+, toAnyAlpha
 , toTauUpOpen
 , toTauUpClosed
 , toTauDownOpen
@@ -70,6 +71,7 @@ data CallSite = CallSite (Set AlphaUp)
 --  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
 --  that, in this case, the use of single variables in the call site list is a
 --  notational sugar for singleton sets.
+-- TODO: are we actually using reverse order?  Resolve this!
 newtype CallSites = CallSites { unCallSites :: [CallSite] }
     deriving (Eq, Ord, Show)
 callSites :: [CallSite] -> CallSites
@@ -343,6 +345,9 @@ instance Display CallSites where
                 if Set.size set == 1
                     then makeDoc $ Set.findMin set
                     else makeDoc set
+
+instance Display CallSite where
+    makeDoc (CallSite set) = makeDoc set
       
 instance Display TauUpOpen where
     makeDoc tau = makeDoc $ toTauUpClosed tau

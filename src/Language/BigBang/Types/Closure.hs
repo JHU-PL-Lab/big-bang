@@ -12,6 +12,7 @@ import Data.List.Utils (safeHead)
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)
 
+import Control.Exception(assert)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Maybe (catMaybes, fromJust, maybe, mapMaybe)
@@ -109,33 +110,49 @@ findCases = Map.unionsWith uError . map fn . Set.toList
 --  variables in the alpha set are replaced with corresponding versions that
 --  have the specified alpha up in their call sites list.
 substituteVars :: Constraints -> Set T.AnyAlpha -> T.AlphaUp -> Constraints
-substituteVars constraints forallVars alphaUp = substituteAlpha f constraints
-  where separate sa = case sa of
+substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
+  where (replIdx,replSites) = (T.getIndex replAlpha, T.getCallSites replAlpha)
+        siteAlpha = T.AlphaUp $ T.AlphaContents replIdx $ T.callSites []
+        -- |Separates an AnyAlpha into an (AlphaContents -> AnyAlpha) and the
+        --  parts of an AlphaContents
+        separate sa = case sa of
             T.SomeAlpha (T.Alpha (T.AlphaContents i sites)) ->
                 (T.SomeAlpha . T.Alpha, i, sites)
             T.SomeAlphaUp (T.AlphaUp (T.AlphaContents i sites)) ->
                 (T.SomeAlphaUp . T.AlphaUp, i, sites)
-        calculateReplacement i sites =
-            T.AlphaContents i $
-                let sitesList = T.unCallSites sites in
-                let sitesList' = map (\(T.CallSite a) -> a) sitesList in
-                let totals = zip sitesList' $
-                        scanl Set.union Set.empty sitesList' in
-                let rest = dropWhile
-                        (\(a,b) -> not $ Set.member alphaUp b) totals in
-                case rest of
-                    [] -> -- TODO: is this the wrong behavior? This produces
-                          -- things like '10^['5^['0]] instead of '10^['0,'5]
-                        T.callSites $
-                            (T.CallSite $ Set.singleton alphaUp):sitesList
-                    (_,group):tail ->
-                        T.callSites $ (T.CallSite group)
-                                :(map (T.CallSite . fst) tail)
+        -- This function performs addition on a call site list.  Consider the
+        -- type '1^('2^'3) or the type '1^('2^('1^'4)).  Given the inputs
+        -- '1 and ['2,'3] (or '1 and ['2,'1,'4]), this function will return
+        -- an appropriate call site list to place on another type variable
+        -- (such as ['1,'2,'3] or [{'1,'2},'4]).
+        calculateCallSites idx sites =
+            let siteList = T.unCallSites sites
+                siteList' = map (\(T.CallSite a) -> a) siteList
+                totals = zip siteList' $
+                        tail $ scanl Set.union Set.empty siteList'
+                rest = dropWhile (\(a,b) ->
+                        not $ Set.member siteAlpha b) totals
+            in
+            T.callSites $
+            -- All following code describes the resulting list of call sites
+            case rest of
+                    [] -> -- In this case, this call site has not been seen before
+                        (T.CallSite $ Set.singleton siteAlpha):siteList
+                    (_,cycle):tail -> -- In this case, we found a cycle
+                        (T.CallSite cycle):(map (T.CallSite . fst) tail)
         f sa =
             let (constr,i,sites) = separate sa in
-            if Set.member sa forallVars
-                then constr $ calculateReplacement i sites
-                else sa
+            if not $ Set.member sa $ forallVars
+                then sa
+                -- The variable we are substituting should never have marked
+                -- call sites.  The only places where polymorphic function
+                -- constraints (forall constraints) are built are by the
+                -- inference rules themselves (which have no notion of call
+                -- sites) and the type replacement function (which does not
+                -- replace forall-ed elements within a forall constraint).
+                else assert ((length $ T.unCallSites sites) == 0) $
+                     constr $ T.AlphaContents i $
+                            calculateCallSites replIdx replSites
 
 -- |Calculates the constraints produced from a given constraint set by the
 --  transitivity rules.  This rule performs transitivity for both alphas and
@@ -211,14 +228,13 @@ closeApplications cs =
             substituteVars polyC' forallVars alphaIn
 
 closeAll :: Constraints -> Constraints
-closeAll c =
-    Set.unions $ map ($ c)
-            [ id
-            , closeTransitivity
-            , closeLabels
-            , closeOnions
-            , closeCases
-            , closeApplications]
+closeAll c = Set.unions $ map ($ c)
+        [ id
+        , closeTransitivity
+        , closeLabels
+        , closeOnions
+        , closeCases
+        , closeApplications]
 
 -- |Calculates the transitive closure of a set of type constraints.
 calculateClosure :: Constraints -> Constraints
@@ -277,9 +293,14 @@ instance AlphaSubstitutable T.TauDownClosed where
         T.TdcAlpha a -> T.TdcAlpha $ substituteAlpha f a
 
 instance AlphaSubstitutable T.PolyFuncData where
-    substituteAlpha f (T.PolyFuncData alphas alphaUp alpha constraints) =
-        T.PolyFuncData (substituteAlpha f alphas) (substituteAlpha f alphaUp)
-                (substituteAlpha f alpha) (substituteAlpha f constraints)
+    substituteAlpha f (T.PolyFuncData alphas alphaIn alphaOut constraints) =
+        -- The variables described by the forall list should never be replaced
+        T.PolyFuncData alphas (substituteAlpha f' alphaIn)
+                (substituteAlpha f' alphaOut) (substituteAlpha f' constraints)
+      where f' aa =
+                if aa `Set.member` alphas
+                    then aa
+                    else f aa
 
 instance AlphaSubstitutable T.PrimitiveType where
     substituteAlpha f p = p
