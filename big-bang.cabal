@@ -47,7 +47,10 @@ Cabal-version:       >=1.8
 Library
   hs-source-dirs:      src
 
-  Exposed-Modules:     
+  Exposed-Modules:
+        Data.Function.Utils
+        Data.List.Utils
+        Data.Maybe.Utils
         Language.BigBang.Ast
         Language.BigBang.Interpreter.Interpreter
         Language.BigBang.Render.Display
