@@ -94,6 +94,8 @@
 
 \section*{Constraint Closure Rules}
 
+\subsection*{General Constraint Closure Rules}
+
 \begin{mathpar}
     \bbrule{Transitivity}{
         \tauDownOpen <: \alpha \\
@@ -119,9 +121,9 @@
     
     \bbrule{Case Analysis}{
         \tauDownOpen <: \alphaUp \\
+        \gtCase \alphaUp \gtOf \ldots \vert \tauChi_i \fto \C_i \vert \ldots \\
         \tauDownOpen <:: \tauChi_i \\
-        \forall j<i. \tauDownOpen \cancel{<::} \tauChi_j \\
-        \gtCase \alphaUp \gtOf \ldots \vert \tauChi_i \fto \C_i \vert \ldots
+        \forall j<i. \tauDownOpen \cancel{<::} \tauChi_j
     }{
         \C_i \cup \mu(\tauDownOpen, \tauChi_i)
     }
@@ -132,6 +134,38 @@
     }{
         \varphi(\alphaList, \C \cup \{\tauDownOpen <: \alpha_1, \alpha_2 <: \alpha_3\}, \alphaUp)
     }
+\end{mathpar}
+
+\subsection*{Contradiction Rules}
+
+\begin{mathpar}
+    \bbrule{Case Contradiction}{
+        \tauDownOpen <: \alphaUp \\
+        \gtCase \alphaUp \gtOf \ldots \vert \tauChi_i \fto \C_i \vert \ldots \\
+        \forall i. \tauDownOpen \cancel{<::} \tauChi_i
+    }{ \gtBottom }
+    
+    \bbrule{Mismatched Primitives}{
+        \tprim <: \tprim' \\
+        \tprim \neq \tprim'
+    }{ \gtBottom }
+    
+    \bbrule{L-P Subtype}{
+        \lbl \tauDownOpen <: \tprim
+    }{ \gtBottom }
+    
+    \bbrule{P-F Subtype}{
+        \tprim <: \alphaUp \fto \alpha
+    }{ \gtBottom }
+    
+    \bbrule{F-P Subtype}{
+        (\forall \alphaList. \alpha_1 \fto \alpha_2 \cSeparator \C) <: \tprim
+    }{ \gtBottom }
+    
+    \bbrule{L-F Subtype}{
+        \lbl \tauDownOpen <: \alphaUp \fto \alpha
+    }{ \gtBottom }
+    
 \end{mathpar}
 
 \subsection*{Immediate Compatibility Rules}
@@ -151,7 +185,5 @@
         \tauUpOpen_1 \gtAmp \tauUpOpen_2 <:: \tauChi
     }
 \end{mathpar}
-
-
 
 \end{document}
