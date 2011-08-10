@@ -240,7 +240,6 @@ closeSingleContradictions cs = Set.fromList $ catMaybes $
     ]
   where
     checkSubtype (a,b) = case (a,b) of
-        -- tprim <: tprim', tprim != tprim'
         (T.TdcPrim p, T.TucPrim p')        -> T.Bottom `justIf` (p /= p')
         (T.TdcLabel _ _, T.TucPrim _)      -> Just T.Bottom
         (T.TdcPrim _, T.TucFunc _ _)       -> Just T.Bottom
