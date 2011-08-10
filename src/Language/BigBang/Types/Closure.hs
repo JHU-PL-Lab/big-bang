@@ -227,6 +227,27 @@ closeApplications cs =
             in
             substituteVars polyC' forallVars alphaIn
 
+-- |This closure calculation function produces appropriate bottom values for
+--  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
+closeSingleContradictions :: Constraints -> Constraints
+closeSingleContradictions cs = Set.fromList $ catMaybes $
+    [
+        case x of
+            (T.Subtype a b) -> checkSubtype (a,b)
+            _ -> Nothing
+    |
+        x <- Set.toList cs
+    ]
+  where
+    checkSubtype (a,b) = case (a,b) of
+        -- tprim <: tprim', tprim != tprim'
+        (T.TdcPrim p, T.TucPrim p')        -> T.Bottom `justIf` (p /= p')
+        (T.TdcLabel _ _, T.TucPrim _)      -> Just T.Bottom
+        (T.TdcPrim _, T.TucFunc _ _)       -> Just T.Bottom
+        (T.TdcFunc _, T.TucPrim _)         -> Just T.Bottom
+        (T.TdcLabel _ _, T.TucFunc _ _)    -> Just T.Bottom
+        _                                  -> Nothing
+
 closeAll :: Constraints -> Constraints
 closeAll c = Set.unions $ map ($ c)
         [ id
@@ -234,7 +255,8 @@ closeAll c = Set.unions $ map ($ c)
         , closeLabels
         , closeOnions
         , closeCases
-        , closeApplications]
+        , closeApplications
+        , closeSingleContradictions ]
 
 -- |Calculates the transitive closure of a set of type constraints.
 calculateClosure :: Constraints -> Constraints
