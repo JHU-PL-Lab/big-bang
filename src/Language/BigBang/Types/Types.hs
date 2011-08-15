@@ -449,11 +449,12 @@ instance Display TauChi where
 
 instance Display Constraint where
     makeDoc c = case c of
-        Subtype a b -> makeDoc a <+> text "<:" <+> makeDoc b
-        Case alphaUp guards ->
+    --TODO: FIXME display history or remove this comment
+        Subtype a b _ -> makeDoc a <+> text "<:" <+> makeDoc b
+        Case alphaUp guards _ ->
                     text "case" <+> makeDoc alphaUp <+> text "of" <+> lbrace $+$
                     (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
                     $+$ rbrace
-        Bottom -> text "_|_"
+        Bottom _ -> text "_|_"
       where gDoc (Guard tauChi constraints) =
                 makeDoc tauChi <+> text "->" <+> makeDoc constraints
