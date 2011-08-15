@@ -217,8 +217,14 @@ data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
 
 -- |An infix function for creating subtype contraints (for convenience).
+--  meant to be used in conjunction with '(.:)'
 (<:) :: TauDownClosed -> TauUpClosed -> ConstraintHistory -> Constraint
 (<:) = Subtype
+
+-- |An alias for application with precedence set so that @a <: b .: c@ creates
+--  a subtype constraint with history @c@
+(.:) :: (ConstraintHistory -> Constraint) -> ConstraintHistory -> Constraint
+(.:) = ($)
 
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes
