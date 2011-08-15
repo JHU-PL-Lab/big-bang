@@ -27,7 +27,7 @@ data Expr =
     | Plus Expr Expr
     | Minus Expr Expr
     | Equal Expr Expr
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
 data Chi =
@@ -35,7 +35,7 @@ data Chi =
     | ChiLabel LabelName Ident
     | ChiFun
     | ChiTop
-    deriving (Eq, Show)
+    deriving (Eq, Ord, Show)
 
 -- |Alias for case branches
 type Branches = [Branch]
