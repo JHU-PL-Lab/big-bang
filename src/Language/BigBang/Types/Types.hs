@@ -18,6 +18,7 @@ module Language.BigBang.Types.Types
 , TauChi(..)
 , Constraints
 , Constraint(..)
+, ConstraintHistory(..)
 , Guard(..)
 , toSomeAlpha
 , toAnyAlpha
@@ -208,6 +209,7 @@ data ConstraintHistory
   -- | The first argument is a tdo <: alphaUp.
   --   The second argument is a forall-quantified function <: alphaUp -> alpha.
   | ClosureApplication  Constraint Constraint
+  -- TODO: Add contradiction constructors
   deriving (Eq, Ord, Show)
 
 -- |A type representing guards in Big Bang case constraints.
