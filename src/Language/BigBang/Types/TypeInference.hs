@@ -1,6 +1,7 @@
 module Language.BigBang.Types.TypeInference
 ( inferType
 , runTIM
+, Gamma
 ) where
 
 import Control.Monad (liftM, mapM, mapAndUnzipM, zipWithM)
