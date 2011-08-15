@@ -33,8 +33,8 @@ import qualified Data.Set as Set
 
 import Language.BigBang.Types.UtilTypes (LabelName)
 import Language.BigBang.Render.Display
-import Language.BigBang.Types.TypeInference (Gamma)
-import qualified Language.BigBang.Ast as A
+import {-# SOURCE #-} Language.BigBang.Types.TypeInference (Gamma)
+import {-# SOURCE #-} qualified Language.BigBang.Ast as A
 
 -------------------------------------------------------------------------------
 -- *Big Bang Types
