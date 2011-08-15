@@ -27,14 +27,15 @@ module Language.BigBang.Types.Types
 , toTauDownOpen
 , toTauDownClosed
 , (<:)
+, (.:)
 ) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Map (Map)
 
-import Language.BigBang.Types.UtilTypes (LabelName)
+import Language.BigBang.Types.UtilTypes (LabelName, Ident)
 import Language.BigBang.Render.Display
-import {-# SOURCE #-} Language.BigBang.Types.TypeInference (Gamma)
 import {-# SOURCE #-} qualified Language.BigBang.Ast as A
 
 -------------------------------------------------------------------------------
@@ -192,7 +193,7 @@ instance Ord Constraint where
 -- |A type describing the which rule generated a constraint and why.
 data ConstraintHistory
   -- | Takes an AST nod and the environment local to that node
-  = Inferred            A.Expr     Gamma
+  = Inferred            A.Expr     (Map Ident Alpha)
   -- | The first argument is a tdo <: alpha.
   --   The second argument is an alpha <: tuc.
   | ClosureTransitivity Constraint Constraint
