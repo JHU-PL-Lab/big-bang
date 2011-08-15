@@ -226,6 +226,8 @@ data Guard = Guard TauChi Constraints
 (.:) :: (ConstraintHistory -> Constraint) -> ConstraintHistory -> Constraint
 (.:) = ($)
 
+infix 1 .:
+
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes
 -- $ConversionTypeClasses
