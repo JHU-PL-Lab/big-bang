@@ -189,7 +189,25 @@ instance Ord Constraint where
   compare (Bottom  _    ) (Case    _ _ _) = GT
 
 -- |A type describing the which rule generated a constraint and why.
-data ConstraintHistory --TODO
+data ConstraintHistory
+  -- | Takes an AST nod and the environment local to that node
+  = Inferred            A.Expr     Gamma
+  -- | The first argument is a tdo <: alpha.
+  --   The second argument is an alpha <: tuc.
+  | ClosureTransitivity Constraint Constraint
+  -- | The first argument is a tdo <: alpha.
+  --   The second argument is a label alpha <: tuc.
+  | ClosureLabel        Constraint Constraint
+  -- | The first argument is a tdo <: alpha1.
+  --   The second argument is a tdo <: alpha2.
+  --   The third argument is an alpha1 & alpha2 <: tuc.
+  | ClosureOnion        Constraint Constraint Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a case constraint.
+  | ClosureCase         Constraint Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a forall-quantified function <: alphaUp -> alpha.
+  | ClosureApplication  Constraint Constraint
   deriving (Eq, Ord, Show)
 
 -- |A type representing guards in Big Bang case constraints.
