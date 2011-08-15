@@ -152,10 +152,15 @@ data TauChi =
 type Constraints = Set Constraint
 -- |A type describing constraints in Big Bang.
 data Constraint =
-      Subtype TauDownClosed TauUpClosed
-    | Case AlphaUp [Guard]
-    | Bottom
+      Subtype TauDownClosed TauUpClosed ConstraintHistory
+    | Case AlphaUp [Guard] ConstraintHistory
+    | Bottom ConstraintHistory
     deriving (Eq, Ord, Show)
+
+-- |A type describing the which rule generated a constraint and why.
+data ConstraintHistory --TODO
+  deriving (Eq, Ord, Show)
+
 -- |A type representing guards in Big Bang case constraints.
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
