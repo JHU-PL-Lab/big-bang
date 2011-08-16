@@ -57,7 +57,7 @@ testPrintBoolean = TestCase $ do
 
 -- Test cases that check pretty printing of function definitions and applications
 printFuncTests :: Test
-printFuncTests = TestList [testPrintFunction1, testPrintFunction2, testPrintFuncAppl, testPrintPerverse, testPrintFunction3]
+printFuncTests = TestList [testPrintFunction1, testPrintFunction2, testPrintFuncAppl1, testPrintFuncAppl2, testPrintPerverse, testPrintFunction3]
 
 testPrintFunction1 :: Test
 testPrintFunction1 = TestCase $ assertEqual
@@ -71,11 +71,18 @@ testPrintFunction2 = TestCase $ assertEqual
   "(fun x -> (fun y -> x))"
   (pretty (Func (ident "x") (Func (ident "y") (Var (ident "x")))))
 
-testPrintFuncAppl :: Test
-testPrintFuncAppl = TestCase $ assertEqual
+testPrintFuncAppl1 :: Test
+testPrintFuncAppl1 = TestCase $ assertEqual
   "Test if function application is printed correctly"
   "plus 2 2"
   (pretty (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2)))
+
+testPrintFuncAppl2 :: Test
+testPrintFuncAppl2 = TestCase $ assertEqual
+  "Test if printing function with variables and characters displays correctly"
+  "plus x \'x\'"
+  (pretty (Appl (Appl (Var (ident "plus")) (Var (ident "x"))) (PrimChar 'x')))
+
 
 testPrintPerverse :: Test
 testPrintPerverse = TestCase $ assertEqual

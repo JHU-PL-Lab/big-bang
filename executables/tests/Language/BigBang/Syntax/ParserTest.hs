@@ -73,7 +73,8 @@ testFuncIgnoreNewLines :: Test
 testFuncIgnoreNewLines = TestCase $ assertEqual
   "Test if parser ignores newlines correctly"
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
-  (parseBigBang $ lexBigBang "(\\x->x)\n(\\x->x)")
+  (parseBigBang $ lexBigBang "(\\x->x)\
+                             \(\\x->x)")
 
 
 -- Test cases for simple programs that should parse correctly (but may not have any interpreted meaning or use)
@@ -90,7 +91,12 @@ testCaseOfBlock :: Test
 testCaseOfBlock = TestCase $ assertEqual
   "Testing case...of block"
   (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
-  (parseBigBang $ lexBigBang "case x of {\nint -> 5;\nchar -> \'a\';\nunit -> ();\n`True a -> `False ();fun -> (\\x -> x)}")
+  (parseBigBang $ lexBigBang "case x of {\
+                             \    int -> 5;\
+                             \    char -> \'a\';\
+                             \    unit -> ();\
+                             \    `True a -> `False ();\
+                             \    fun -> (\\x -> x)}")
 
 testTernaryOnion :: Test
 testTernaryOnion = TestCase $ assertEqual

@@ -166,7 +166,8 @@ testCaseDef :: Test
 testCaseDef = TestCase $ assertEqual
   "case val of\n  x -> x"
   [TokCase, TokIdentifier "val", TokOf, TokIdentifier "x", TokArrow, TokIdentifier "x"]
-  (lexBigBang "case val of\n  x -> x")
+  (lexBigBang "case val of\ 
+              \    x -> x")
 
 testPerverse :: Test
 testPerverse = TestCase $ assertEqual

@@ -15,19 +15,13 @@ tests = TestList [literalsCases, functionCases, onionCases, equalCases, caseCase
 
 -- Test cases that ensure that primitive literals are interpereted correctly
 literalsCases :: Test
-literalsCases = TestList [testInterpretPositiveInt, testInterpretNegativeInt, testInterpretChar]
+literalsCases = TestList [testInterpretInt, testInterpretChar]
 
-testInterpretPositiveInt :: Test
-testInterpretPositiveInt = TestCase $ assertEqual
+testInterpretInt :: Test
+testInterpretInt = TestCase $ assertEqual
   "Test if input 1234567890 is interpreted correctly"
   (Right (PrimInt 1234567890))
   (evalTop $ parseBigBang $ lexBigBang "1234567890")
-
-testInterpretNegativeInt :: Test
-testInterpretNegativeInt = TestCase $ assertEqual
-  "Test if input -1234567890 is interpreted correctly"
-  (Right (PrimInt (-1234567890)))
-  (evalTop $ parseBigBang $ lexBigBang "-1234567890")
 
 testInterpretChar :: Test
 testInterpretChar = TestCase $ assertEqual
@@ -37,7 +31,7 @@ testInterpretChar = TestCase $ assertEqual
 
 -- Test cases that check function application and evaluation works as expected
 functionCases :: Test
-functionCases = TestList [testFuncAppl, testLambdaAppl, testPlusInt, testMinusInt, testPlusNegInt, testMinusNegInt, testFunctionNesting]
+functionCases = TestList [testFuncAppl, testLambdaAppl, testPlusInt, testMinusInt, testMinusNegInt, testFunctionNesting]
 
 testFuncAppl :: Test
 testFuncAppl = TestCase $ assertEqual
@@ -62,12 +56,6 @@ testMinusInt = TestCase $ assertEqual
   "Test if function minus works correctly on integers"
   (Right (PrimInt 0))
   (evalTop $ parseBigBang $ lexBigBang "minus 2 2")
-
-testPlusNegInt :: Test
-testPlusNegInt = TestCase $ assertEqual
-  "Test if plus works correctly when the secong arg is a negative integer"
-  (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "plus 2 -2")
 
 testMinusNegInt :: Test
 testMinusNegInt = TestCase $ assertEqual
@@ -178,37 +166,43 @@ testCaseChar :: Test
 testCaseChar = TestCase $ assertEqual
   "Test if case matches characters correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case 'a' of {\nchar -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case 'a' of {\
+                                       \    char -> 0}")
 
 testCaseInt :: Test
 testCaseInt = TestCase $ assertEqual
   "Test if case matches integers correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case 1234567890 of {\nint -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case 1234567890 of {\
+                                       \    int -> 0}")
 
 testCaseFun :: Test
 testCaseFun = TestCase $ assertEqual
   "Test if case matches functions correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case (fun x -> x) of {\nfun -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case (fun x -> x) of {\
+                                       \    fun -> 0}")
 
 testCaseLambda :: Test
 testCaseLambda = TestCase $ assertEqual
   "Test if case matches lambdas correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case (\\x -> x) of {\nfun -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case (\\x -> x) of {\
+                                       \    fun -> 0}")
 
 testCaseUnit :: Test
 testCaseUnit = TestCase $ assertEqual
   "Test if case matches units correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case () of {\nunit -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case () of {\
+                                       \    unit -> 0}")
 
 testCaseLabel :: Test
 testCaseLabel = TestCase $ assertEqual
   "Test if case matches labels correctly"
   (Right (PrimInt 0))
-  (evalTop $ parseBigBang $ lexBigBang "case `Test () of {\n`Test a -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case `Test () of {\
+                                       \    `Test a -> 0}")
 
 
 -- Test cases that should return errors
