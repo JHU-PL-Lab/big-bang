@@ -104,7 +104,7 @@ testCaseLabelMismatch = TestCase $ assertBool
 
 -- Tests that ensure function applications typecheck correctly
 functionCases :: Test
-functionCases = TestList [testFunctionDef, testFuncApply, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator]
+functionCases = TestList [testFunctionDef, testFuncApply, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator, testYCombinatorAppl]
 
 testFunctionDef :: Test
 testFunctionDef = TestCase $ assertBool
@@ -134,16 +134,34 @@ testYCombinator = TestCase $ assertBool
 testYCombinatorAppl :: Test
 testYCombinatorAppl = TestCase $ assertBool
                   "YCombinator application failed to typecheck"
-                  (typecheckSourceString "(\\f -> (\\x -> f (x x))) (\\x -> f (x x)) (\\f -> \
-         (\\n -> \
-             case (equal n 0) of {\
-                 `True () -> 1;\
-                 `False () -> (plus n (f (minus n 1)))}))")
-
+                  (typecheckAst (Appl 
+                      (Appl 
+                          (Func 
+                              (ident "f") 
+                              (Func 
+                                  (ident "x") 
+                                  (Appl 
+                                      (Var (ident "f")) 
+                                          (Appl 
+                                              (Var (ident "x")) 
+                                              (Var (ident "x"))))))
+                      (Func 
+                          (ident "x") 
+                          (Appl 
+                              (Var (ident "f")) 
+                              (Appl 
+                              (Var (ident "x")) 
+                              (Var (ident "x"))))))
+                      (Func 
+                          (ident "x")
+                              (Case 
+                                  (Var (ident "x"))
+                                  [(ChiLabel (labelName "True") (ident "a"), PrimInt 1), (ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))))
+                  -- (typecheckSourceString "(\\f -> (\\x -> f (x x))) (\\x -> f (x x)) (\\f -> (\\n -> case (equal n 0) of {`True () -> 1;\n`False () -> (plus n (f (minus n 1)))}))")
 
 -- Tests that ensure checks for equality typecheck correctly
 equalityCases :: Test
-equalityCases = TestList [testEqualInt, testEqualChar, testEqualIntChar, testEqualTrue, testEqualTrueFalse, testEqualFunction, testEqualLabel, testEqualLabelMismatch, testEqualUnit]
+equalityCases = TestList [testEqualInt, testEqualChar, testEqualIntChar, testEqualIntUnit, testEqualTrue, testEqualTrueFalse, testEqualFunction, testEqualLabel, testEqualLabelMismatch, testEqualUnit]
 
 testEqualInt :: Test
 testEqualInt = TestCase $ assertBool
@@ -159,6 +177,11 @@ testEqualIntChar :: Test
 testEqualIntChar = TestCase $ assertBool
                    "Testing for equality of integer and character typechecked"
                    (not $ typecheckAst (Equal (PrimInt 1) (PrimChar 'a')))
+
+testEqualIntUnit :: Test
+testEqualIntUnit = TestCase $ assertBool
+                   "Testing for equality of integer and unit typechecked"
+                   (not $ typecheckAst (Equal (PrimInt 1) PrimUnit))
 
 testEqualTrue :: Test
 testEqualTrue = TestCase $ assertBool

@@ -49,7 +49,7 @@ testParseBool = TestCase $ do
 
 -- Test cases that check correctness in parsing function definitions and application
 functionsCases :: Test
-functionsCases = TestList [testLambdaExpr, testFuncAppl, testPerverseFunction, testFuncIgnoreNewLines]
+functionsCases = TestList [testLambdaExpr, testFuncAppl, testPerverseFunction, testFuncIgnoreNewLines, testCaseFunc]
 
 testLambdaExpr :: Test
 testLambdaExpr = TestCase $ assertEqual
@@ -75,6 +75,15 @@ testFuncIgnoreNewLines = TestCase $ assertEqual
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
   (parseBigBang $ lexBigBang "(\\x->x)\
                              \(\\x->x)")
+
+testCaseFunc :: Test
+testCaseFunc = TestCase $ assertEqual
+               "Test if case block in function is parsed correctly"
+               (Func (ident "x") (Case (Var (ident "x")) [(ChiLabel (labelName "True") (ident "a"), PrimInt 1), (ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))
+               (parseBigBang $ lexBigBang "(fun x -> case x of {\
+                                                    \    `True a -> 1;\
+                                                    \    `False a -> 0})")
+                                          
 
 
 -- Test cases for simple programs that should parse correctly (but may not have any interpreted meaning or use)
