@@ -193,24 +193,56 @@ instance Ord Constraint where
 -- |A type describing the which rule generated a constraint and why.
 data ConstraintHistory
   -- | Takes an AST nod and the environment local to that node
-  = Inferred            A.Expr     (Map Ident Alpha)
+  = Inferred
+      A.Expr
+      (Map Ident Alpha)
   -- | The first argument is a tdo <: alpha.
   --   The second argument is an alpha <: tuc.
-  | ClosureTransitivity Constraint Constraint
+  | ClosureTransitivity
+      Constraint
+      Constraint
   -- | The first argument is a tdo <: alpha.
   --   The second argument is a label alpha <: tuc.
-  | ClosureLabel        Constraint Constraint
+  | ClosureLabel
+      Constraint
+      Constraint
   -- | The first argument is a tdo <: alpha1.
   --   The second argument is a tdo <: alpha2.
   --   The third argument is an alpha1 & alpha2 <: tuc.
-  | ClosureOnion        Constraint Constraint Constraint
+  | ClosureOnion
+      Constraint
+      Constraint
+      Constraint
   -- | The first argument is a tdo <: alphaUp.
   --   The second argument is a case constraint.
-  | ClosureCase         Constraint Constraint
+  | ClosureCase
+      Constraint
+      Constraint
   -- | The first argument is a tdo <: alphaUp.
   --   The second argument is a forall-quantified function <: alphaUp -> alpha.
-  | ClosureApplication  Constraint Constraint
-  -- TODO: Add contradiction constructors
+  | ClosureApplication
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a case constraint.
+  | ContradictionCase
+      Constraint
+      Constraint
+  -- | The argument is a prim1 <: prim2 where prim1 /= prim2.
+  | ContradictionPrimMismatch
+      Constraint
+  -- | The argument is a lbl tdo <: prim.
+  | ContradictionLabelPrim
+      Constraint
+  -- | The argument is a prim <: alphaUp -> alpha.
+  | ContradictionPrimFunc
+      Constraint
+  -- | The argument is a forall-quantified function <: prim.
+  | ContradictionFuncPrim
+      Constraint
+  -- | The argument is a lbl tdo <: alphaUp -> alpha.
+  | ContradictionLabelFunc
+      Constraint
   deriving (Eq, Ord, Show)
 
 -- |A type representing guards in Big Bang case constraints.
