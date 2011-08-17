@@ -86,7 +86,7 @@ testPlusIntBad = TestCase $ assertBool
 
 -- Test cases that ensure that case expressions resolve types correctly
 caseCases :: Test
-caseCases = TestList [testCaseLabel, testCaseLabelMismatch]
+caseCases = TestList [testCaseLabel, testCaseLabelMismatch, testCaseReturnTypeMismatch]
 
 testCaseLabel :: Test
 testCaseLabel = TestCase $ assertBool 
@@ -99,8 +99,16 @@ testCaseLabelMismatch :: Test
 testCaseLabelMismatch = TestCase $ assertBool
                         "Casing over mismatched labels typechecked"      
                          (not $ typecheckSourceString
-                                    " case `A 4 of                  \
-                                    \   { `B x -> x }               ")
+                                    "case `A 4 of                  \
+                                    \    { `B x -> x }               ")
+
+testCaseReturnTypeMismatch :: Test
+testCaseReturnTypeMismatch = TestCase $ assertBool
+                             "Case with return type mismatch typechecked"
+                             (not $ typecheckSourceString
+                                        "case x of {\
+                                        \    int -> 0;\
+                                        \    char -> 'a'}")
 
 -- Tests that ensure function applications typecheck correctly
 functionCases :: Test

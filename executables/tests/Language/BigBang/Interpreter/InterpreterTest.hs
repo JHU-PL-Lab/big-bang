@@ -207,7 +207,8 @@ testCaseLabel = TestCase $ assertEqual
 
 -- Test cases that should return errors
 errorCases :: Test
-errorCases = TestList [testUnbound, testTypeMismatch, testEqualTypeMismatch, testInvalidApplication, testNonexhaustiveCases, testEqualUnit]
+errorCases = TestList [testUnbound, testTypeMismatch, testAddFunction, testEqualTypeMismatch, testInvalidApplication, testNonexhaustiveCases, testEqualUnit]
+
 testUnbound :: Test
 testUnbound = TestCase $ assertEqual
   "Test if evaluation of free variable causes error"
@@ -219,6 +220,12 @@ testTypeMismatch = TestCase $ assertEqual
   "Test if type mismatch in function appl throws an error"
   (Left (DynamicTypeError "incorrect type in expression"))
   (evalTop $ parseBigBang $ lexBigBang "plus 2 \'x\'")
+
+testAddFunction :: Test
+testAddFunction = TestCase $ assertEqual
+  "Test if using a function definition in plus throws an error"
+  (Left (DynamicTypeError "incorrect type in expression"))
+  (evalTop $ parseBigBang $ lexBigBang "plus 1 (fun x -> x)")
 
 testEqualTypeMismatch :: Test
 testEqualTypeMismatch = TestCase $ assertEqual
@@ -236,7 +243,8 @@ testNonexhaustiveCases :: Test
 testNonexhaustiveCases = TestCase $ assertEqual
   "Test if nonexhaustive cases throws an error"
   (Left (UnmatchedCase (PrimInt 1) [(ChiPrim T.PrimChar,PrimInt 0)])) 
-  (evalTop $ parseBigBang $ lexBigBang "case 1 of {\nchar -> 0}")
+  (evalTop $ parseBigBang $ lexBigBang "case 1 of {\
+                                       \    char -> 0}")
 
 testEqualUnit :: Test
 testEqualUnit = TestCase $ assertEqual
