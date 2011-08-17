@@ -155,9 +155,8 @@ testYCombinatorAppl = TestCase $ assertBool
                       (Func 
                           (ident "x")
                               (Case 
-                                  (Var (ident "x"))
-                                  [(ChiLabel (labelName "True") (ident "a"), PrimInt 1), (ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))))
-                  -- (typecheckSourceString "(\\f -> (\\x -> f (x x))) (\\x -> f (x x)) (\\f -> (\\n -> case (equal n 0) of {`True () -> 1;\n`False () -> (plus n (f (minus n 1)))}))")
+                                  (Equal (Var (ident "x")) (PrimInt 0))
+                                  [(ChiLabel (labelName "True") (ident "a"), PrimInt 0), (ChiLabel (labelName "False") (ident "a"), (Plus (Var (ident "x")) (Appl (Var (ident "f")) (Minus (Var (ident "x")) (PrimInt 1)))))]))))
 
 -- Tests that ensure checks for equality typecheck correctly
 equalityCases :: Test
