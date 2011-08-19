@@ -2,11 +2,9 @@ module Language.BigBang.Types.TypesTest
 ( tests
 ) where
 
-import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map as Map 
 
-import Data.Set (Set)
-import qualified Data.Set as Set
+import qualified Data.Set as Set 
 import Test.HUnit hiding (Label)
 
 import Language.BigBang.Ast
@@ -14,12 +12,11 @@ import qualified Language.BigBang.Types.Types as T
 import qualified Language.BigBang.Types.TypeInference as I
 import qualified Language.BigBang.Types.Closure as C
 import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Interpreter.Interpreter
 import Language.BigBang.Syntax.Parser
 import Language.BigBang.Syntax.Lexer
 
 tests :: Test
-tests = TestList [primitiveBuiltinCases, caseCases, functionCases, equalityCases, onionCases]
+tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, equalityCases, onionCases]
 
 {- 
   A utility function which generates a typechecking result for source code.
@@ -36,6 +33,35 @@ typecheckAst expr =
         C.calculateClosure $ snd $ (\x -> I.runTIM x Map.empty 0) $
             I.inferType expr
 
+
+-- Test cases that check almost trivial typechecker functionality
+basicCases :: Test
+basicCases = TestList [testInt, testChar, testVar, testUnit, testLabel]
+
+testInt :: Test
+testInt = TestCase $ assertBool
+          "Single integer failed to typecheck"
+          (typecheckAst (PrimInt 1234567890))
+
+testChar :: Test
+testChar = TestCase $ assertBool
+           "Single character failed to typecheck"
+           (typecheckAst (PrimChar 'x'))
+
+testVar :: Test
+testVar = TestCase $ assertBool
+          "Single variable failed to typecheck"
+          (typecheckAst (Var (ident "x")))
+
+testUnit :: Test
+testUnit = TestCase $ assertBool
+           "Single unit failed to typecheck"
+           (typecheckAst PrimUnit)
+
+testLabel :: Test
+testLabel = TestCase $ assertBool
+            "Single label failed to typecheck"
+            (typecheckAst (Label (labelName "A") PrimUnit))
 
 -- Test cases that ensure that built-in primitive operations typecheck on their
 -- appropriate values
@@ -112,7 +138,7 @@ testCaseReturnTypeMismatch = TestCase $ assertBool
 
 -- Tests that ensure function applications typecheck correctly
 functionCases :: Test
-functionCases = TestList [testFunctionDef, testFuncApply, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator, testYCombinatorAppl]
+functionCases = TestList [testFunctionDef, testFuncApply, testFuncApplyVar, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator, testYCombinatorAppl]
 
 testFunctionDef :: Test
 testFunctionDef = TestCase $ assertBool
@@ -123,6 +149,11 @@ testFuncApply :: Test
 testFuncApply = TestCase $ assertBool
                 "\"(fun x -> plus x 1) 1\" failed to typecheck"
                  (typecheckAst (Appl (Func (ident "x") (Plus (Var (ident "x")) (PrimInt 1))) (PrimInt 1))) 
+
+testFuncApplyVar :: Test
+testFuncApplyVar = TestCase $ assertBool
+                   "\"(fun n -> plus n 2) x\" failed to typecheck"
+                   (typecheckAst (Appl (Func (ident "n") (Plus (Var (ident "n")) (PrimInt 2))) (Var (ident "x"))))
 
 testFuncApplyMismatch :: Test
 testFuncApplyMismatch = TestCase $ assertBool
