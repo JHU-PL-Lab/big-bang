@@ -35,7 +35,7 @@ testInterpretChar = TestCase $ assertEqual
 
 -- Test cases that check function application and evaluation works as expected
 functionCases :: Test
-functionCases = TestList [testFuncAppl, testLambdaAppl, testPlusInt, testMinusInt, testMinusNegInt, testFunctionNesting]
+functionCases = TestList [testFuncAppl, testLambdaAppl, testPlusInt, testMinusInt, testMinusNegInt, testFunctionNesting, testYCombinatorAppl]
 
 testFuncAppl :: Test
 testFuncAppl = TestCase $ assertEqual
@@ -72,6 +72,16 @@ testFunctionNesting = TestCase $ assertEqual
   "Test if function nesting works correctly"
   (Right (PrimInt 4))
   (interpret "plus (minus 1 -1) (minus 1 -1)")
+
+testYCombinatorAppl :: Test
+testYCombinatorAppl = TestCase $ assertEqual
+  "Test if recursive application using the y-combinator works correctly"
+  (Right (PrimInt 15))
+  (evalTop ast') 
+  where
+    yAst = parseBigBang $ lexBigBang "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
+    ast = Appl yAst $ Func (ident "this") $ Func (ident "x") $ (Case (Equal (Var $ ident "x") (PrimInt 0)) [(ChiLabel (labelName "True") (ident "z"), (PrimInt 0)), (ChiLabel (labelName "False") (ident "z"), (Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))))])
+    ast' = Appl ast $ PrimInt $ 5
 
 
 -- Test cases that check functionality of Onions

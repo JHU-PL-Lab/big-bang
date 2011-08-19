@@ -198,34 +198,13 @@ testSelfApplyApplication = TestCase $ assertBool
 testYCombinator :: Test
 testYCombinator = TestCase $ assertBool
                   "YCombinator failed to typecheck"
-                  (typecheckSourceString "(\\f -> (\\x -> f (x x))) (\\x -> f (x x))")
+                  (typecheckSourceString "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)")
+ 
 
 testYCombinatorAppl :: Test
 testYCombinatorAppl = TestCase $ assertBool
                   "YCombinator application failed to typecheck"
-                  (typecheckAst (Appl 
-                      (Appl 
-                          (Func 
-                              (ident "f") 
-                              (Func 
-                                  (ident "x") 
-                                  (Appl 
-                                      (Var (ident "f")) 
-                                          (Appl 
-                                              (Var (ident "x")) 
-                                              (Var (ident "x"))))))
-                      (Func 
-                          (ident "x") 
-                          (Appl 
-                              (Var (ident "f")) 
-                              (Appl 
-                              (Var (ident "x")) 
-                              (Var (ident "x"))))))
-                      (Func 
-                          (ident "x")
-                              (Case 
-                                  (Equal (Var (ident "x")) (PrimInt 0))
-                                  [(ChiLabel (labelName "True") (ident "a"), PrimInt 0), (ChiLabel (labelName "False") (ident "a"), (Plus (Var (ident "x")) (Appl (Var (ident "f")) (Minus (Var (ident "x")) (PrimInt 1)))))]))))
+                  (typecheckAst (Appl (Appl (Func (ident "body") (Appl (Func (ident "f") (Func (ident "arg") (Appl (Appl (Var (ident "f")) (Var (ident "f"))) (Var (ident "arg"))))) (Func (ident "this") (Func (ident "arg") (Appl (Appl (Var (ident "body")) (Appl (Var (ident "this")) (Var (ident "this")))) (Var (ident "arg"))))))) (Func (ident "this") (Func (ident "x") (Case (Equal (Var (ident "x")) (PrimInt 0)) [(ChiLabel (labelName "True") (ident "z"),PrimInt 0),(ChiLabel (labelName "False") (ident "z"),Plus (Var (ident "x")) (Appl (Var (ident "this")) (Minus (Var (ident "x")) (PrimInt 1))))])))) (PrimInt 5)))
 
 -- Tests that ensure checks for equality typecheck correctly
 equalityCases :: Test
