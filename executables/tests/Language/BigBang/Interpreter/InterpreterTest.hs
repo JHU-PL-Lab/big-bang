@@ -72,7 +72,7 @@ testFunctionNesting = TestCase $ assertEqual
 
 -- Test cases that check functionality of Onions
 onionCases :: Test
-onionCases = TestList [testOnionIsomorphism, testOnionNotEqual, testOnionNotEqual2, testOnionNotEqual3]
+onionCases = TestList [testOnionIsomorphism, testOnionNotEqual, testOnionNotEqual2, testOnionNotEqual3, testCaseOnion, testSubOnionPlus, testOnionFuncApply]
 
 testOnionIsomorphism :: Test
 testOnionIsomorphism = TestCase $ do
@@ -103,6 +103,24 @@ testOnionNotEqual3 = TestCase $ assertEqual
   (Right (Label (labelName "False") PrimUnit))
   (evalTop $ parseBigBang $ lexBigBang "equal (1 & 2) (2 & 1)")
 
+testCaseOnion :: Test
+testCaseOnion = TestCase $ assertEqual
+  "case `A 5 & `A \'a\' of {\n    A x -> x} should return 5 & \'a\'"
+  (Right (Onion (PrimInt 5) (PrimChar 'a')))
+  (evalTop $ parseBigBang $ lexBigBang "case `A 5 & `A \'a\' of {\
+                                       \    `A x -> x}")
+
+testSubOnionPlus :: Test
+testSubOnionPlus = TestCase $ assertEqual
+  "plus (1 & \'a\') (\'a\' & 1 & ()) should return 2"
+  (Right (PrimInt 2))
+  (evalTop $ parseBigBang $ lexBigBang "plus (1 & \'a\') (\'a\' & 1 & ())")
+
+testOnionFuncApply :: Test
+testOnionFuncApply = TestCase $ assertEqual
+  "\"(1 & (fun x -> x)) 1\" should return 1"
+  (Right (PrimInt 1))
+  (evalTop $ parseBigBang $ lexBigBang "(1 & (fun x -> x)) 1")
 
 -- Test cases that check equality works as expected
 equalCases :: Test
@@ -160,7 +178,7 @@ testEqualLabel2 = TestCase $ assertEqual
 
 -- Test cases that check type pattern matching in case...of blocks
 caseCases :: Test
-caseCases = TestList [testCaseChar, testCaseInt, testCaseFun, testCaseLambda, testCaseUnit, testCaseLabel]
+caseCases = TestList [testCaseChar, testCaseInt, testCaseFun, testCaseLambda, testCaseUnit, testCaseLabel, testCaseLabel2, testCaseLabel3, testCaseFirstApplicable]
 
 testCaseChar :: Test
 testCaseChar = TestCase $ assertEqual
@@ -204,6 +222,28 @@ testCaseLabel = TestCase $ assertEqual
   (evalTop $ parseBigBang $ lexBigBang "case `Test () of {\
                                        \    `Test a -> 0}")
 
+testCaseLabel2 :: Test
+testCaseLabel2 = TestCase $ assertEqual
+  "Test if case matches correct label"
+  (Right (PrimInt 1))
+  (evalTop $ parseBigBang $ lexBigBang "case `B 2 of {\
+                                       \    `A x -> 0;\
+                                       \    `B y -> 1}")
+
+testCaseLabel3 :: Test
+testCaseLabel3 = TestCase $ assertEqual
+  "Test if case returns matched variable part of label"                
+  (Right (PrimInt 0))
+  (evalTop $ parseBigBang $ lexBigBang "case `A 0 of {\
+                                         \    `A n -> n}")
+
+testCaseFirstApplicable :: Test
+testCaseFirstApplicable = TestCase $ assertEqual
+  "Test if casing matches the first applicable pattern"
+  (Right (PrimInt 1))
+  (evalTop $ parseBigBang $ lexBigBang "case `A 1 of {\
+                                         \    `A a -> 1;\
+                                         \    `A n -> 0}")
 
 -- Test cases that should return errors
 errorCases :: Test

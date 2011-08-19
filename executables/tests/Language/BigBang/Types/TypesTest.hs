@@ -67,7 +67,7 @@ testLabel = TestCase $ assertBool
 -- appropriate values
 
 primitiveBuiltinCases :: Test
-primitiveBuiltinCases = TestList [testPlusInt, testMinusInt, testCompoundInt, testPlusIntChar, testPlusChar, testPlusUnit, testMinusIntChar, testMinusChar, testMinusUnit]
+primitiveBuiltinCases = TestList [testPlusInt, testMinusInt, testCompoundInt, testPlusIntChar, testPlusIntUnit, testPlusChar, testPlusUnit, testMinusIntChar, testMinusIntUnit, testMinusChar, testMinusUnit]
 
 testPlusInt :: Test
 testPlusInt = TestCase $ assertBool
@@ -100,6 +100,11 @@ testPlusIntChar = TestCase $ assertBool
                   "Addition of integer and char typechecked"
                   (not $ typecheckAst (Plus (PrimInt 1) (PrimChar 'a')))
 
+testPlusIntUnit :: Test
+testPlusIntUnit = TestCase $ assertBool
+                  "Addition of integer and unit typechecked"
+                  (not $ typecheckAst (Plus (PrimInt 1) PrimUnit))
+
 testPlusChar :: Test
 testPlusChar = TestCase $ assertBool
                "Addition of characters typechecked"
@@ -114,6 +119,11 @@ testMinusIntChar :: Test
 testMinusIntChar = TestCase $ assertBool
                    "Subtraction of integer and char typechecked"
                    (not $ typecheckAst (Minus (PrimInt 1) (PrimChar 'a')))
+
+testMinusIntUnit :: Test
+testMinusIntUnit = TestCase $ assertBool
+                   "Subtraction of integer and unit typechecked"
+                   (not $ typecheckAst (Minus (PrimInt 1) PrimUnit))
 
 testMinusChar :: Test
 testMinusChar = TestCase $ assertBool
@@ -273,7 +283,7 @@ testEqualUnit = TestCase $ assertBool
 
 -- Tests that ensure onions typecheck correctly
 onionCases :: Test
-onionCases = TestList [testOnionPlus, testOnionPlusNoInt]
+onionCases = TestList [testOnionPlus, testOnionPlusNoInt, testOnionOnionPlus, testCompoundOnionPlus, testSubOnionPlus, testOnionFuncApply]
 
 testOnionPlus :: Test
 testOnionPlus = TestCase $ assertBool
@@ -284,3 +294,23 @@ testOnionPlusNoInt :: Test
 testOnionPlusNoInt = TestCase $ assertBool
                      "Adding onion with no integer component and integer typechecked"
                      (typecheckAst (Plus (Onion (Label (labelName "True") PrimUnit) (PrimChar 'z')) (PrimInt 2)))
+
+testOnionOnionPlus :: Test
+testOnionOnionPlus = TestCase $ assertBool
+                     "Adding two onions with integer components failed to typecheck"
+                     (typecheckAst (Plus (Onion (PrimInt 2) (PrimChar 'x')) (Onion (PrimChar 'y') (PrimInt 2))))
+
+testCompoundOnionPlus :: Test
+testCompoundOnionPlus = TestCase $ assertBool
+                        "Adding compound onions with integer components failed to typecheck"
+                        (typecheckAst (Plus (Onion (PrimInt 2) (Onion (PrimChar 'a') PrimUnit)) (Onion (Onion (PrimInt 2) (PrimChar 'b')) PrimUnit)))
+
+testSubOnionPlus :: Test
+testSubOnionPlus = TestCase $ assertBool
+                   "Adding onion and subonion with integers components failed to typecheck"
+                   (typecheckAst (Plus (Onion (PrimInt 1) (Onion (PrimChar 'a') PrimUnit)) (Onion (PrimChar 'a') (Onion (PrimInt 1) PrimUnit))))
+
+testOnionFuncApply :: Test
+testOnionFuncApply = TestCase $ assertBool
+                    "Application of function component within onion failed to typecheck"
+                    (typecheckSourceString "(1 & (fun x -> x)) 1")
