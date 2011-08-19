@@ -67,7 +67,7 @@ testLabel = TestCase $ assertBool
 -- appropriate values
 
 primitiveBuiltinCases :: Test
-primitiveBuiltinCases = TestList [testPlusInt, testMinusInt, testCompoundInt, testPlusIntBad, testPlusIntChar, testPlusChar]
+primitiveBuiltinCases = TestList [testPlusInt, testMinusInt, testCompoundInt, testPlusIntChar, testPlusChar, testPlusUnit, testMinusIntChar, testMinusChar, testMinusUnit]
 
 testPlusInt :: Test
 testPlusInt = TestCase $ assertBool
@@ -105,10 +105,25 @@ testPlusChar = TestCase $ assertBool
                "Addition of characters typechecked"
                (not $ typecheckAst (Plus (PrimChar 'a') (PrimChar 'a')))
 
-testPlusIntBad :: Test
-testPlusIntBad = TestCase $ assertBool
+testPlusUnit :: Test
+testPlusUnit = TestCase $ assertBool
                  "Addition of units typechecked"
                  (not $ typecheckAst (Plus PrimUnit PrimUnit))
+
+testMinusIntChar :: Test
+testMinusIntChar = TestCase $ assertBool
+                   "Subtraction of integer and char typechecked"
+                   (not $ typecheckAst (Minus (PrimInt 1) (PrimChar 'a')))
+
+testMinusChar :: Test
+testMinusChar = TestCase $ assertBool
+                "Subtraction of characters typechecked"
+                (not $ typecheckAst (Minus (PrimChar 'a') (PrimChar 'a')))
+
+testMinusUnit :: Test
+testMinusUnit = TestCase $ assertBool
+                "Subtraction of units typechecked"
+                (not $ typecheckAst (Minus PrimUnit PrimUnit))
 
 -- Test cases that ensure that case expressions resolve types correctly
 caseCases :: Test
@@ -138,12 +153,17 @@ testCaseReturnTypeMismatch = TestCase $ assertBool
 
 -- Tests that ensure function applications typecheck correctly
 functionCases :: Test
-functionCases = TestList [testFunctionDef, testFuncApply, testFuncApplyVar, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator, testYCombinatorAppl]
+functionCases = TestList [testFunctionDef, testIdentityApplication, testFuncApply, testFuncApplyVar, testFuncApplyMismatch, testSelfApplyApplication, testYCombinator, testYCombinatorAppl]
 
 testFunctionDef :: Test
 testFunctionDef = TestCase $ assertBool
                   "Function definition failed to typecheck"
                   (typecheckSourceString "(fun x -> x)")
+
+testIdentityApplication :: Test
+testIdentityApplication = TestCase $ assertBool
+                          "Application of identity function to itself failed to typecheck"
+                          (typecheckSourceString "(fun x -> x) (fun x -> x)")
 
 testFuncApply :: Test
 testFuncApply = TestCase $ assertBool
@@ -158,7 +178,7 @@ testFuncApplyVar = TestCase $ assertBool
 testFuncApplyMismatch :: Test
 testFuncApplyMismatch = TestCase $ assertBool
                         "\"(fun x -> plus x 1) \'a\'\" typechecked"
-                         (not $ typecheckAst (Appl (Func (ident "x") (Plus (Var (ident "x")) (PrimInt 1))) (PrimChar 'a'))) 
+                         (not $ typecheckAst (Appl (Func (ident "x") (Plus (Var (ident "x")) (PrimInt 1))) (PrimChar 'a')))
 
 testSelfApplyApplication :: Test
 testSelfApplyApplication = TestCase $ assertBool
