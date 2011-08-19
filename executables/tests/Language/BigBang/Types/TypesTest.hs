@@ -19,7 +19,7 @@ import Language.BigBang.Syntax.Parser
 import Language.BigBang.Syntax.Lexer
 
 tests :: Test
-tests = TestList [primitiveBuiltinCases, caseCases, functionCases, equalityCases]
+tests = TestList [primitiveBuiltinCases, caseCases, functionCases, equalityCases, onionCases]
 
 {- 
   A utility function which generates a typechecking result for source code.
@@ -55,7 +55,7 @@ testMinusInt = TestCase $ assertBool
 
 testCompoundInt :: Test
 testCompoundInt = TestCase $ assertBool
-                  "Compound statement involving integers failed to typeCheck"  
+                  "Compound statement involving integers failed to typecheck"  
                   (typecheckAst
                       (Plus
                           (Minus
@@ -104,11 +104,11 @@ testCaseLabelMismatch = TestCase $ assertBool
 
 testCaseReturnTypeMismatch :: Test
 testCaseReturnTypeMismatch = TestCase $ assertBool
-                             "Case with return type mismatch typechecked"
-                             (not $ typecheckSourceString
-                                        "case x of {\
-                                        \    int -> 0;\
-                                        \    char -> 'a'}")
+                             "Case with return type mismatch failed to typecheck"
+                             (typecheckSourceString
+                                 "case x of {\
+                                 \    int -> 0;\
+                                 \    char -> 'a'}")
 
 -- Tests that ensure function applications typecheck correctly
 functionCases :: Test
@@ -219,3 +219,17 @@ testEqualUnit :: Test
 testEqualUnit = TestCase $ assertBool
                 "Testing equality of unit typedchecked"
                 (not $ typecheckAst (Equal PrimUnit PrimUnit))
+
+-- Tests that ensure onions typecheck correctly
+onionCases :: Test
+onionCases = TestList [testOnionPlus, testOnionPlusNoInt]
+
+testOnionPlus :: Test
+testOnionPlus = TestCase $ assertBool
+                "Adding onion with integer component and integer failed to typecheck"
+                (typecheckAst (Plus (Onion (PrimInt 2) (PrimChar 'b')) (PrimInt 2)))
+
+testOnionPlusNoInt :: Test
+testOnionPlusNoInt = TestCase $ assertBool
+                     "Adding onion with no integer component and integer typechecked"
+                     (typecheckAst (Plus (Onion (Label (labelName "True") PrimUnit) (PrimChar 'z')) (PrimInt 2)))
