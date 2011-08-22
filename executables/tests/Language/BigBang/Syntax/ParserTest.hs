@@ -49,7 +49,7 @@ testParseBool = TestCase $ do
 
 -- Test cases that check correctness in parsing function definitions and application
 functionsCases :: Test
-functionsCases = TestList [testLambdaExpr, testFuncAppl, testPerverseFunction, testFuncIgnoreNewLines]
+functionsCases = TestList [testLambdaExpr, testFuncAppl, testPerverseFunction, testFuncIgnoreNewLines, testCaseFunc]
 
 testLambdaExpr :: Test
 testLambdaExpr = TestCase $ assertEqual
@@ -73,7 +73,17 @@ testFuncIgnoreNewLines :: Test
 testFuncIgnoreNewLines = TestCase $ assertEqual
   "Test if parser ignores newlines correctly"
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
-  (parseBigBang $ lexBigBang "(\\x->x)\n(\\x->x)")
+  (parseBigBang $ lexBigBang "(\\x->x)\
+                             \(\\x->x)")
+
+testCaseFunc :: Test
+testCaseFunc = TestCase $ assertEqual
+               "Test if case block in function is parsed correctly"
+               (Func (ident "x") (Case (Var (ident "x")) [(ChiLabel (labelName "True") (ident "a"), PrimInt 1), (ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))
+               (parseBigBang $ lexBigBang "(fun x -> case x of {\
+                                                    \    `True a -> 1;\
+                                                    \    `False a -> 0})")
+                                          
 
 
 -- Test cases for simple programs that should parse correctly (but may not have any interpreted meaning or use)
@@ -90,7 +100,12 @@ testCaseOfBlock :: Test
 testCaseOfBlock = TestCase $ assertEqual
   "Testing case...of block"
   (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
-  (parseBigBang $ lexBigBang "case x of {\nint -> 5;\nchar -> \'a\';\nunit -> ();\n`True a -> `False ();fun -> (\\x -> x)}")
+  (parseBigBang $ lexBigBang "case x of {\
+                             \    int -> 5;\
+                             \    char -> \'a\';\
+                             \    unit -> ();\
+                             \    `True a -> `False ();\
+                             \    fun -> (\\x -> x)}")
 
 testTernaryOnion :: Test
 testTernaryOnion = TestCase $ assertEqual
