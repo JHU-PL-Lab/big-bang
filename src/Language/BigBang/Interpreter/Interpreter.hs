@@ -129,11 +129,13 @@ eval (Equal e1 e2) = do
     case (e1', e2') of
         (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
         (PrimChar _, PrimChar _) -> evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (Label x1 y1, Label x2 y2) -> 
-            if x1 == x2 then
-                return $ Label (labelName (if y1 == y2 then "True" else "False")) PrimUnit else
+        (Label name1 expr1, Label name2 expr2) -> 
+            if name1 == name2 then
+                return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit else
                  throwError $ DynamicTypeError "incorrect type in expression"
-        _ -> throwError $ DynamicTypeError "incorrect type in expression" 
+        (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
+        (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
+        _ -> error "Internal state error" 
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
