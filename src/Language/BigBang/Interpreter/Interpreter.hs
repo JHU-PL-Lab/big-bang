@@ -14,8 +14,6 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
-import Debug.Trace (trace)
-
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
@@ -135,7 +133,8 @@ eval (Equal e1 e2) = do
                  throwError $ DynamicTypeError "incorrect type in expression"
         (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
         (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
-        _ -> error "Internal state error" 
+        -- ((Onion e1 e2), (Onion e3 e4)) -> ...
+        _ -> return $ Label (labelName "False") PrimUnit 
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
