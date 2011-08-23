@@ -126,7 +126,8 @@ eval (Equal e1 e2) = do
     e2' <- eval e1
     case (e1', e2') of
         (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-         
+        (PrimChar _, PrimChar _) -> evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
@@ -169,6 +170,17 @@ coerceToInteger e =
     where
         simpleIntCoerce (PrimInt i) = Just i
         simpleIntCoerce _ = Nothing
+
+-- |Used to obtain a character from an expression.  If necessary, this routine
+--  will recurse through onions looking for a character.
+coerceToCharacter :: Expr -> Maybe Char
+coerceToCharacter e =
+    coerceToType simpleCharCoerce e
+    where
+        simpleCharCoerce (PrimChar i) = Just i
+        simpleCharCoerce _ = Nothing
+
+
 
 -- |Used to obtain a function from an expression.  If necessary, this routine
 --  will recurse through onions looking for a function.
