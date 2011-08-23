@@ -14,6 +14,8 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
+import Debug.Trace (trace)
+
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
@@ -123,10 +125,14 @@ eval (Minus e1 e2) =
 
 eval (Equal e1 e2) = do
     e1' <- eval e1
-    e2' <- eval e1
+    e2' <- eval e2
     case (e1', e2') of
         (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
         (PrimChar _, PrimChar _) -> evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        (Label x1 y1, Label x2 y2) -> 
+            if x1 == x2 then
+                return $ Label (labelName (if y1 == y2 then "True" else "False")) PrimUnit else
+                 throwError $ DynamicTypeError "incorrect type in expression"
         _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 -- |Evaluates a binary expression.
