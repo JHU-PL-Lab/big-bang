@@ -1,11 +1,15 @@
+{-# LANGUAGE TupleSections #-}
 module Language.BigBang.Types.Closure
 ( calculateClosure
 ) where
 
 import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ((<:))
-import Language.BigBang.Types.Types (Constraints)
+import Language.BigBang.Types.Types ( (<:)
+                                    , (.:)
+                                    , Constraints
+                                    , Constraint
+                                    )
 import Language.BigBang.Types.UtilTypes (LabelName)
 
 import Data.List.Utils (safeHead)
@@ -29,79 +33,94 @@ import Debug.Trace
 --  provided should be added to the constraint set if this branch is chosen.
 --  This function corresponds both to the relation <:: and to the mu function
 --  in the notation.
-createMatchConstraints :: T.TauDownOpen -> T.TauChi -> Maybe Constraints
-createMatchConstraints tau chi =
+createMatchConstraints :: T.ConstraintHistory
+                       -> T.TauDownOpen
+                       -> T.TauChi
+                       -> Maybe Constraints
+createMatchConstraints history tau chi =
     case (tau,chi) of
         (_,T.ChiTop) -> Just Set.empty
         (T.TdoPrim p, T.ChiPrim p') -> Set.empty `justIf` (p == p')
         (T.TdoLabel n t, T.ChiLabel n' a) ->
-            let constraint = (T.toTauDownClosed t <: T.TucAlpha a) in
+            let constraint = (T.toTauDownClosed t <: T.TucAlpha a .: history) in
             (Set.singleton constraint) `justIf` (n == n')
         (T.TdoFunc _, T.ChiFun) -> Just Set.empty
         (T.TdoOnion t t', _) ->
-            let mc1 = createMatchConstraints t chi in
-            let mc2 = createMatchConstraints t' chi in
+            let mc1 = createMatchConstraints history t chi in
+            let mc2 = createMatchConstraints history t' chi in
             maybe mc2 Just mc1
 
 findTauDownOpen :: Constraints -> Constraints
 findTauDownOpen = Set.fromList . catMaybes . map fn . Set.toList
   where fn c =
           case c of
-            T.Subtype a b -> fmap (const c) $ T.toTauDownOpen a
-            _             -> Just c
+            T.Subtype a _ _ -> fmap (const c) $ T.toTauDownOpen a
+            _               -> Just c
 
-findAlphaOnRight :: Constraints -> Map T.Alpha (Set T.TauDownClosed)
+findAlphaOnRight :: Constraints
+                 -> Map T.Alpha (Set (T.TauDownClosed, Constraint))
 findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
-            T.Subtype a (T.TucAlpha b) -> Map.singleton b $ Set.singleton a
-            _                          -> Map.empty
+            T.Subtype a (T.TucAlpha b) _ -> Map.singleton b $
+                                              Set.singleton (a, c)
+            _                            -> Map.empty
 
-findAlphaUpOnRight :: Constraints -> Map T.AlphaUp (Set T.TauDownClosed)
+findAlphaUpOnRight :: Constraints
+                   -> Map T.AlphaUp (Set (T.TauDownClosed, Constraint))
 findAlphaUpOnRight = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
-            T.Subtype a (T.TucAlphaUp b) -> Map.singleton b $ Set.singleton a
-            _                            -> Map.empty
+            T.Subtype a (T.TucAlphaUp b) _ -> Map.singleton b $
+                                                Set.singleton (a, c)
+            _                              -> Map.empty
 
-findAlphaOnLeft :: Constraints -> Map T.Alpha (Set T.TauUpClosed)
+findAlphaOnLeft :: Constraints
+                -> Map T.Alpha (Set (T.TauUpClosed, Constraint))
 findAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
   where fn c = 
           case c of
-            T.Subtype (T.TdcAlpha a) b -> Map.singleton a $ Set.singleton b
-            _                          -> Map.empty
+            T.Subtype (T.TdcAlpha a) b _ -> Map.singleton a $
+                                              Set.singleton (b, c)
+            _                            -> Map.empty
 
-findLblAlphaOnLeft :: Constraints -> Map T.Alpha (Set (LabelName, T.TauUpClosed))
+findLblAlphaOnLeft :: Constraints
+                   -> Map T.Alpha (Set ( LabelName
+                                       , T.TauUpClosed
+                                       , Constraint))
 findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
   where fn c = 
           case c of
-            T.Subtype (T.TdcLabel lbl (T.TdcAlpha a)) b ->
-              Map.singleton a $ Set.singleton (lbl, b)
+            T.Subtype (T.TdcLabel lbl (T.TdcAlpha a)) b _ ->
+              Map.singleton a $ Set.singleton (lbl, b, c)
             _ -> Map.empty
 
-findPolyFuncs :: Constraints -> Map T.AlphaUp (T.Alpha, T.PolyFuncData)
+findPolyFuncs :: Constraints
+              -> Map T.AlphaUp (T.Alpha, T.PolyFuncData, Constraint)
 findPolyFuncs = Map.unionsWith uError . map fn . Set.toList
   where fn c =
           case c of
-            T.Subtype (T.TdcFunc pfd) (T.TucFunc au a) ->
-                Map.singleton au (a, pfd)
+            T.Subtype (T.TdcFunc pfd) (T.TucFunc au a) _ ->
+                Map.singleton au (a, pfd, c)
             _ -> Map.empty
         uError = error
             "two different polymorphic applications with same domain variable"
 
-findAlphaAmpPairs :: Constraints -> Map (T.Alpha, T.Alpha) (Set T.TauUpClosed)
+findAlphaAmpPairs :: Constraints
+                  -> Map (T.Alpha, T.Alpha) (Set ( T.TauUpClosed
+                                                 , Constraint))
 findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
-            T.Subtype (T.TdcOnion (T.TdcAlpha a) (T.TdcAlpha b)) c ->
-              Map.singleton (a,b) $ Set.singleton c
+            T.Subtype (T.TdcOnion (T.TdcAlpha a) (T.TdcAlpha b)) d _ ->
+              Map.singleton (a,b) $ Set.singleton (d, c)
             _ -> Map.empty
 
-findCases :: Constraints -> Map T.AlphaUp [T.Guard]
+findCases :: Constraints -> Map T.AlphaUp ([T.Guard], Constraint)
 findCases = Map.unionsWith uError . map fn . Set.toList
   where fn c =
           case c of
-            T.Case au gs -> Map.singleton au gs
+            T.Case au gs _ -> Map.singleton au (gs, c)
             _ -> Map.empty
         uError = error
             "constraint set contains two case constraints with same alphaUp"
@@ -166,7 +185,8 @@ closeTransitivity cs = Set.fromList $
         lefts  = findAlphaOnRight tdoCs
         rights = findAlphaOnLeft cs
         subtypeCrossProduct xs ys =
-          [ x <: y | x <- Set.toList xs, y <- Set.toList ys ]
+          [ x <: y .: T.ClosureTransitivity xc yc |
+            (x, xc) <- Set.toList xs, (y, yc) <- Set.toList ys ]
 
 closeLabels :: Constraints -> Constraints
 closeLabels cs = Set.fromList $
@@ -177,7 +197,8 @@ closeLabels cs = Set.fromList $
         lefts    = findAlphaOnRight tdoCs
         rights   = findLblAlphaOnLeft cs
         fn xs ys =
-          [ T.TdcLabel lbl x <: y | x <- Set.toList xs, (lbl, y) <- Set.toList ys ]
+          [ T.TdcLabel lbl x <: y .: T.ClosureLabel xc yc |
+            (x, xc) <- Set.toList xs, (lbl, y, yc) <- Set.toList ys ]
 
 closeOnions :: Constraints -> Constraints
 closeOnions cs = Set.fromList $ allTrans lefts $ Map.toList rights
@@ -188,27 +209,34 @@ closeOnions cs = Set.fromList $ allTrans lefts $ Map.toList rights
           t1 <- Map.lookup a1 alphas
           t2 <- Map.lookup a2 alphas
           return
-            [ T.TdcOnion t1' t2' <: tuc |
-              t1' <- Set.toList t1,
-              t2' <- Set.toList t2,
-              tuc <- Set.toList tucs ]
+            [ T.TdcOnion t1' t2' <: tuc .: T.ClosureOnion c1 c2 c3 |
+              (t1', c1) <- Set.toList t1,
+              (t2', c2) <- Set.toList t2,
+              (tuc, c3) <- Set.toList tucs ]
         allTrans alphas amps = concat $ catMaybes $ map (tryTrans alphas) amps
 
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
   where lefts = findAlphaUpOnRight $ findTauDownOpen cs
         cases = findCases cs
-        tausToGuards = Map.elems $
-                Map.intersectionWith (,) lefts cases
-        pickGuardConstraints (tauDownOpens, guards) =
+        tausToGuards = filterOpens $ concat $ Map.elems $
+                Map.intersectionWith
+                  (\set c -> map (,c) $ Set.toList set)
+                  lefts
+                  cases
+        filterOpens xs = mapMaybe f xs
+          where f ((tdc, a), (b, c)) =
+                  T.toTauDownOpen tdc >>= return . (\x -> ((x, a), (b, c)))
+        pickGuardConstraints ((tauDownOpen, tdoc), (guards, gc)) =
             let resultConstraints = catMaybes
                     [ fmap (Set.union constr) $
-                          createMatchConstraints tauDownOpen pat
-                    | T.Guard pat constr <- guards
-                    , tauDownOpen <- mapMaybe T.toTauDownOpen $
-                          Set.toList tauDownOpens ]
+                          createMatchConstraints (T.ClosureCase tdoc gc)
+                                                 tauDownOpen
+                                                 pat
+                    | T.Guard pat constr <- guards]
             in
-            maybe (Set.singleton T.Bottom) id $ safeHead resultConstraints
+            maybe (Set.singleton $ T.Bottom $ T.ContradictionCase tdoc gc) id $
+                  safeHead resultConstraints
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs =
@@ -217,13 +245,24 @@ closeApplications cs =
   where concretes = findAlphaUpOnRight $ findTauDownOpen cs
         polyfuncs = findPolyFuncs cs
         premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
-        expandIntoCases (val, (set, val')) =
-                [ (val, (el,val')) | el <- Set.toList set ]
-        pickPolyConstraints (alphaIn,(tauDownOpen, (alphaOut,
-                T.PolyFuncData forallVars polyAlphaIn polyAlphaOut polyC))) =
-            let polyC' = Set.union polyC $ Set.fromList
-                    [T.toTauDownClosed tauDownOpen <: T.TucAlpha polyAlphaIn,
-                     T.TdcAlpha polyAlphaOut <: T.TucAlpha alphaOut]
+        expandIntoCases (alphaUp, (set, y)) =
+                [ (alphaUp, el, y) | el <- Set.toList set ]
+        pickPolyConstraints ( alphaIn
+                            , (tauDownOpen, tdoc)
+                              , ( alphaOut
+                                , T.PolyFuncData
+                                    forallVars
+                                    polyAlphaIn
+                                    polyAlphaOut
+                                    polyC 
+                                , pfc
+                                )
+                            ) =
+            let polyC' = Set.union polyC $
+                         Set.fromList $
+                         map ( .: T.ClosureApplication tdoc pfc)
+                    [ T.toTauDownClosed tauDownOpen <: T.TucAlpha polyAlphaIn,
+                      T.TdcAlpha polyAlphaOut <: T.TucAlpha alphaOut]
             in
             substituteVars polyC' forallVars alphaIn
 
@@ -233,19 +272,30 @@ closeSingleContradictions :: Constraints -> Constraints
 closeSingleContradictions cs = Set.fromList $ catMaybes $
     [
         case x of
-            (T.Subtype a b) -> checkSubtype (a,b)
+            T.Subtype a b _ -> checkSubtype x (a,b)
             _ -> Nothing
     |
         x <- Set.toList cs
     ]
   where
-    checkSubtype (a,b) = case (a,b) of
-        (T.TdcPrim p, T.TucPrim p')        -> T.Bottom `justIf` (p /= p')
-        (T.TdcLabel _ _, T.TucPrim _)      -> Just T.Bottom
-        (T.TdcPrim _, T.TucFunc _ _)       -> Just T.Bottom
-        (T.TdcFunc _, T.TucPrim _)         -> Just T.Bottom
-        (T.TdcLabel _ _, T.TucFunc _ _)    -> Just T.Bottom
-        _                                  -> Nothing
+    checkSubtype constraint (a,b) = case (a,b) of
+        (T.TdcPrim p, T.TucPrim p')        ->
+          T.Bottom (T.ContradictionPrimMismatch constraint) `justIf` (p /= p')
+
+        (T.TdcLabel _ _, T.TucPrim _)      ->
+          Just $ T.Bottom $ T.ContradictionLabelPrim constraint
+
+        (T.TdcPrim _, T.TucFunc _ _)       ->
+          Just $ T.Bottom $ T.ContradictionPrimFunc constraint
+
+        (T.TdcFunc _, T.TucPrim _)         ->
+          Just $ T.Bottom $ T.ContradictionFuncPrim constraint
+
+        (T.TdcLabel _ _, T.TucFunc _ _)    ->
+          Just $ T.Bottom $ T.ContradictionLabelFunc constraint
+
+        _                                  ->
+          Nothing
 
 closeAll :: Constraints -> Constraints
 closeAll c = Set.unions $ map ($ c)
@@ -328,11 +378,17 @@ instance AlphaSubstitutable T.PrimitiveType where
 
 instance AlphaSubstitutable T.Constraint where
     substituteAlpha f c = case c of
-        T.Subtype tdc tuc -> T.Subtype (substituteAlpha f tdc) $
-                substituteAlpha f tuc
-        T.Case au guards -> T.Case (substituteAlpha f au) $
-                substituteAlpha f guards
-        T.Bottom -> T.Bottom
+        T.Subtype tdc tuc hist ->
+          T.Subtype
+            (substituteAlpha f tdc)
+            (substituteAlpha f tuc)
+            hist
+        T.Case au guards hist ->
+          T.Case
+            (substituteAlpha f au)
+            (substituteAlpha f guards)
+            hist
+        T.Bottom hist -> T.Bottom hist
 
 instance AlphaSubstitutable T.Guard where
     substituteAlpha f (T.Guard tauChi constraints) =
