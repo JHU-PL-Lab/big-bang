@@ -121,9 +121,12 @@ eval (Plus e1 e2) =
 eval (Minus e1 e2) =
     evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x - y
 
-eval (Equal e1 e2) =
-    evalBinop e1 e2 coerceToInteger $ \x y ->
-            Label (labelName (if x == y then "True" else "False")) PrimUnit
+eval (Equal e1 e2) = do
+    e1' <- eval e1
+    e2' <- eval e1
+    case (e1', e2') of
+        (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+         
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
