@@ -117,7 +117,7 @@ findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
             _ -> Map.empty
 
 findCases :: Constraints -> Map T.AlphaUp (Set ([T.Guard], Constraint))
-findCases = Map.unionsWith Set.union . map fn . Set.toList
+findCases = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
             T.Case au gs _ -> Map.singleton au $ Set.singleton (gs, c)
