@@ -29,9 +29,11 @@ typecheckSourceString src = typecheckAst $ parseBigBang $ lexBigBang src
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =
-    not $ Set.member T.Bottom $
+    Set.null $ Set.filter isBottom $
         C.calculateClosure $ snd $ (\x -> I.runTIM x Map.empty 0) $
             I.inferType expr
+    where isBottom (T.Bottom _) = True
+          isBottom _            = False
 
 
 -- Test cases that check almost trivial typechecker functionality

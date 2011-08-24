@@ -18,6 +18,7 @@ module Language.BigBang.Types.Types
 , TauChi(..)
 , Constraints
 , Constraint(..)
+, ConstraintHistory(..)
 , Guard(..)
 , toSomeAlpha
 , toAnyAlpha
@@ -26,13 +27,16 @@ module Language.BigBang.Types.Types
 , toTauDownOpen
 , toTauDownClosed
 , (<:)
+, (.:)
 ) where
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Map (Map)
 
-import Language.BigBang.Types.UtilTypes (LabelName)
+import Language.BigBang.Types.UtilTypes (LabelName, Ident)
 import Language.BigBang.Render.Display
+import {-# SOURCE #-} qualified Language.BigBang.Ast as A
 
 -------------------------------------------------------------------------------
 -- *Big Bang Types
@@ -152,17 +156,110 @@ data TauChi =
 type Constraints = Set Constraint
 -- |A type describing constraints in Big Bang.
 data Constraint =
-      Subtype TauDownClosed TauUpClosed
-    | Case AlphaUp [Guard]
-    | Bottom
-    deriving (Eq, Ord, Show)
+      Subtype TauDownClosed TauUpClosed ConstraintHistory
+    | Case AlphaUp [Guard] ConstraintHistory
+    | Bottom ConstraintHistory
+    deriving (Show)
+
+instance Eq Constraint where
+  -- For Subtype and case constraints, ignore history
+  (==) (Subtype a b _) (Subtype c d _) = (a, b) == (c, d)
+  (==) (Case a b _   ) (Case c d _   ) = (a, b) == (c, d)
+  
+  -- For bottom constraints, differentiate by history
+  (==) (Bottom a     ) (Bottom b     ) = a == b
+  
+  -- Constraints are only equal to others with the same constructor
+  _ == _ = False
+
+instance Ord Constraint where
+  -- For Subtype and case constraints, ignore history
+  compare (Subtype a b _) (Subtype c d _) = compare (a, b) (c, d)
+  compare (Case a b _   ) (Case c d _   ) = compare (a, b) (c, d)
+  
+  -- For bottom constraints, differentiate by history
+  compare (Bottom a     ) (Bottom b     ) = compare a b
+  
+  -- Compare constraints with different constructors an arbitrary ordering
+  compare (Subtype _ _ _) (Case    _ _ _) = LT
+  compare (Case    _ _ _) (Subtype _ _ _) = GT
+
+  compare (Subtype _ _ _) (Bottom  _    ) = LT
+  compare (Bottom  _    ) (Subtype _ _ _) = GT
+
+  compare (Case    _ _ _) (Bottom  _    ) = LT
+  compare (Bottom  _    ) (Case    _ _ _) = GT
+
+-- |A type describing the which rule generated a constraint and why.
+data ConstraintHistory
+  -- | Takes an AST nod and the environment local to that node
+  = Inferred
+      A.Expr
+      (Map Ident Alpha)
+  -- | The first argument is a tdo <: alpha.
+  --   The second argument is an alpha <: tuc.
+  | ClosureTransitivity
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alpha.
+  --   The second argument is a label alpha <: tuc.
+  | ClosureLabel
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alpha1.
+  --   The second argument is a tdo <: alpha2.
+  --   The third argument is an alpha1 & alpha2 <: tuc.
+  | ClosureOnion
+      Constraint
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a case constraint.
+  | ClosureCase
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a forall-quantified function <: alphaUp -> alpha.
+  | ClosureApplication
+      Constraint
+      Constraint
+  -- | The first argument is a tdo <: alphaUp.
+  --   The second argument is a case constraint.
+  | ContradictionCase
+      Constraint
+      Constraint
+  -- | The argument is a prim1 <: prim2 where prim1 /= prim2.
+  | ContradictionPrimMismatch
+      Constraint
+  -- | The argument is a lbl tdo <: prim.
+  | ContradictionLabelPrim
+      Constraint
+  -- | The argument is a prim <: alphaUp -> alpha.
+  | ContradictionPrimFunc
+      Constraint
+  -- | The argument is a forall-quantified function <: prim.
+  | ContradictionFuncPrim
+      Constraint
+  -- | The argument is a lbl tdo <: alphaUp -> alpha.
+  | ContradictionLabelFunc
+      Constraint
+  deriving (Eq, Ord, Show)
+
 -- |A type representing guards in Big Bang case constraints.
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
 
 -- |An infix function for creating subtype contraints (for convenience).
-(<:) :: TauDownClosed -> TauUpClosed -> Constraint
+--  meant to be used in conjunction with '(.:)'
+(<:) :: TauDownClosed -> TauUpClosed -> ConstraintHistory -> Constraint
 (<:) = Subtype
+
+-- |An alias for application with precedence set so that @a <: b .: c@ creates
+--  a subtype constraint with history @c@
+(.:) :: (ConstraintHistory -> Constraint) -> ConstraintHistory -> Constraint
+(.:) = ($)
+
+infix 1 .:
 
 -------------------------------------------------------------------------------
 -- *Conversion Type Classes
@@ -395,11 +492,12 @@ instance Display TauChi where
 
 instance Display Constraint where
     makeDoc c = case c of
-        Subtype a b -> makeDoc a <+> text "<:" <+> makeDoc b
-        Case alphaUp guards ->
+    --TODO: FIXME display history or remove this comment
+        Subtype a b _ -> makeDoc a <+> text "<:" <+> makeDoc b
+        Case alphaUp guards _ ->
                     text "case" <+> makeDoc alphaUp <+> text "of" <+> lbrace $+$
                     (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
                     $+$ rbrace
-        Bottom -> text "_|_"
+        Bottom _ -> text "_|_"
       where gDoc (Guard tauChi constraints) =
                 makeDoc tauChi <+> text "->" <+> makeDoc constraints

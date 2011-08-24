@@ -1,6 +1,7 @@
 module Language.BigBang.Types.TypeInference
 ( inferType
 , runTIM
+, Gamma
 ) where
 
 import Control.Monad (liftM, mapM, mapAndUnzipM, zipWithM)
@@ -22,7 +23,7 @@ import Data.Set (Set, (\\))
 import qualified Language.BigBang.Ast as A
 import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ((<:))
+import Language.BigBang.Types.Types ((<:), (.:))
 import Language.BigBang.Types.UtilTypes
 
 type Gamma = Map Ident T.Alpha
@@ -48,8 +49,8 @@ runTIM t r s = evalRWS (runErrorT t) r s
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM T.TauDownClosed
-inferType e =
-    case e of
+inferType expr =
+    case expr of
         A.Var x ->
             maybe (throwError $ NotClosed x) (return . T.TdcAlpha) =<<
                     (asks $ Map.lookup x)
@@ -66,8 +67,8 @@ inferType e =
               alpha2 <- freshInterVar
               alpha3 <- freshInterVar
               (tau, constraints) <- capture (Map.insert i alpha3) e
+              gamma <- ask
               vars <- do
-                    dict <- ask
                     return $
                         (
                             Set.union (extractConstraintTypeVars constraints) $
@@ -75,12 +76,13 @@ inferType e =
                                          ,T.SomeAlpha alpha3]
                         )
                         \\ -- set subtraction
-                        (Set.fromList $ map T.SomeAlpha (Map.elems dict))
+                        (Set.fromList $ map T.SomeAlpha (Map.elems gamma))
               let constraints' =
-                    Set.insert (tau <: T.TucAlpha alpha2) constraints
+                    Set.insert (tau <: T.TucAlpha alpha2 .: T.Inferred expr gamma)
+                               constraints
               let funcType = T.TdcFunc
                     (T.PolyFuncData vars alpha3 alpha2 constraints')
-              tell1 $ funcType <: T.TucAlpha alpha1
+              tell1 $ funcType <: T.TucAlpha alpha1 .: T.Inferred expr gamma
               ralpha alpha1
         A.Appl e1 e2 ->
             do
@@ -88,8 +90,9 @@ inferType e =
               alpha <- freshInterVar
               t1 <- inferType e1
               t2 <- inferType e2
-              tell1 $ t1 <: T.TucFunc alphaUp alpha
-              tell1 $ t2 <: T.TucAlphaUp alphaUp
+              gamma <- ask
+              tell1 $ t1 <: T.TucFunc alphaUp alpha .: T.Inferred expr gamma
+              tell1 $ t2 <: T.TucAlphaUp alphaUp .: T.Inferred expr gamma
               ralpha alpha
         A.PrimInt _ -> rprim T.PrimInt
         A.PrimChar _ -> rprim T.PrimChar
@@ -105,34 +108,48 @@ inferType e =
               let fs = map Map.union brAssump
               (taus, constraints) <- liftM unzip $ zipWithM capture fs $
                                          map snd brs
-              tell1 $ t <: T.TucAlphaUp alphaUp
-              tell1 $ T.Case alphaUp $
-                    zipWith3 (buildGuard alpha) tauChis constraints taus
+              tell1 $ t <: T.TucAlphaUp alphaUp .: T.Inferred expr gamma
+              tell1 $ T.Case alphaUp
+                    (zipWith3 (buildGuard expr gamma alpha) tauChis constraints taus)
+                    $ T.Inferred expr gamma
               ralpha alpha
-        A.Plus e1 e2 ->
-              naryOp [e1,e2] (T.TucPrim T.PrimInt) (T.TdcPrim T.PrimInt)
-        A.Minus e1 e2 ->
-              naryOp [e1,e2] (T.TucPrim T.PrimInt) (T.TdcPrim T.PrimInt)
+        A.Plus e1 e2 -> do
+              gamma <- ask
+              naryOp expr gamma [e1,e2]
+                                (T.TucPrim T.PrimInt)
+                                (T.TdcPrim T.PrimInt)
+        A.Minus e1 e2 -> do
+              gamma <- ask
+              naryOp expr gamma [e1,e2]
+                                (T.TucPrim T.PrimInt)
+                                (T.TdcPrim T.PrimInt)
         A.Equal e1 e2 -> do
               alpha <- freshInterVar
               alpha' <- freshInterVar
-              tell $ Set.fromList $ map (<: T.TucAlpha alpha') $ map
+              gamma <- ask
+              tell $ Set.fromList $ map (.: T.Inferred expr gamma) $
+                    map (<: T.TucAlpha alpha') $ map
                     (\x -> T.TdcLabel (labelName x) $ T.TdcPrim T.PrimUnit)
                     ["True","False"]
-              naryOp [e1,e2] (T.TucAlpha alpha) (T.TdcAlpha alpha')
+              naryOp expr gamma [e1,e2] (T.TucAlpha alpha) (T.TdcAlpha alpha')
     where rprim = return . T.TdcPrim
           ralpha = return . T.TdcAlpha
+          tell1 :: T.Constraint -> TIM ()
           tell1 = tell . Set.singleton
           capture f e = censor (const mempty) $ listen $
                 local f $ inferType e
-          buildGuard alpha tauChi constraints tau =
+          buildGuard expr gamma alpha tauChi constraints tau =
                 T.Guard tauChi $
-                        Set.insert (tau <: T.TucAlpha alpha) constraints
-          naryOp es tIn tOut = do
+                        Set.insert
+                          (tau <: T.TucAlpha alpha .: T.Inferred expr gamma)
+                          constraints
+          naryOp expr gamma es tIn tOut = do
                 ts <- mapM inferType es
-                tell $ Set.fromList $ map (<: tIn) ts
+                tell $ Set.fromList $
+                  map (.: T.Inferred expr gamma) $
+                  map (<: tIn) ts
                 alpha <- freshInterVar
-                tell1 $ tOut <: T.TucAlpha alpha
+                tell1 $ tOut <: T.TucAlpha alpha .: T.Inferred expr gamma
                 ralpha alpha
 
 -- |Accepts a branch and the case expression type and produces an appropriate
@@ -159,13 +176,13 @@ extractConstraintTypeVars c =
     Foldable.foldl foldConstraints Set.empty c
     where foldConstraints set el =
             case el of
-                T.Subtype tdc1 tdc2 ->
+                T.Subtype tdc1 tdc2 _ ->
                     maybeInsert (T.toSomeAlpha tdc1) $
                         maybeInsert (T.toSomeAlpha tdc2) set
-                T.Case alphaUp guards ->
+                T.Case alphaUp guards _ ->
                     let set' = Set.insert (T.SomeAlphaUp alphaUp) set in
                     foldl foldGuards set' guards
-                T.Bottom -> set
+                T.Bottom _ -> set
           foldGuards set (T.Guard tauChi constraints) =
             Set.union set $ addChiAlpha tauChi $
                 extractConstraintTypeVars constraints
@@ -183,7 +200,8 @@ inferTypeOverFreshInter :: A.Expr -> TIM T.Alpha
 inferTypeOverFreshInter e = do
     tau <- inferType e
     alpha <- freshInterVar
-    tell $ Set.singleton $ tau <: T.TucAlpha alpha
+    gamma <- ask
+    tell $ Set.singleton $ tau <: T.TucAlpha alpha .: T.Inferred e gamma
     return $ alpha
 
 -- |Creates a fresh intermediate type variable for the type inference engine.
