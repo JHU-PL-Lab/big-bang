@@ -51,18 +51,27 @@ type EvalM = Either EvalError Expr
 --  expressions.
 evalTop :: Expr -> EvalM
 evalTop e = do
-    eval $ foldl' applyBuiltin e builtins
-    where applyBuiltin e (name, ast) =
-            subst ast (ident name) e
-          ix = ident "x"
-          iy = ident "y"
-          vx = Var ix
-          vy = Var iy
-          builtins = [
-                ("plus", Func ix $ Func iy $ Plus vx vy)
-              , ("minus", Func ix $ Func iy $ Minus vx vy)
-              , ("equal", Func ix $ Func iy $ Equal vx vy)
-              ]
+    eval $ applyBuiltins e
+
+-- |Wraps an expression in a context where builtin names are bound
+applyBuiltins e =
+  wrapper e
+  where ix = ident "x"
+        iy = ident "y"
+        vx = Var ix
+        vy = Var iy
+        builtins = [
+              ("plus", Func ix $ Func iy $ Plus vx vy)
+            , ("minus", Func ix $ Func iy $ Minus vx vy)
+            , ("equal", Func ix $ Func iy $ Equal vx vy)
+            ]
+        -- Takes the builtins as defined above and returns a list of functions
+        -- which use let encoding to bind the name as given above to the
+        -- definition as given above.
+        wrappedBuiltins :: [Expr -> Expr]
+        wrappedBuiltins = map (\(x,y) z -> Appl (Func (ident x) z) y) builtins
+        wrapper :: Expr -> Expr
+        wrapper = foldl1 (.) wrappedBuiltins
 
 
 -- |Evaluates a Big Bang expression.
