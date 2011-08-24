@@ -45,6 +45,7 @@
 \\
     \constraint     &::=&       \subtype
                            \gOr \gtCase \alphaUp \gtOf \guard^*
+                           \gOr \equatable{\alpha}{\alpha}
                            \gOr \gtBottom
 \\
     \guard          &::=&       \tauChi \fto \constraint
@@ -89,6 +90,20 @@
         \typeRel{\context}{e}{\tauDownClosed}{\C}
     }{
         \typeRel{\context}{\lbl e}{\lbl \alpha}{\{\tauDownClosed <: \alpha\} \cup \C}
+    }
+    
+    \bbrule{Equality}{
+        \typeRel{\context}{e_1}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context}{e_2}{\tauDownClosed_2}{\C_2}
+    }{
+        \typeRel{\context}{e_1 \gtEq e_2}{\alpha}%
+                {\{%
+                    \texttt{\char`\`True ()} <: \alpha,%
+                    \texttt{\char`\`False ()} <: \alpha,%
+                    \tauDownClosed_1 <: \alpha_1,
+                    \tauDownClosed_2 <: \alpha_2,
+                    \equatable{\alpha_1}{\alpha_2}
+                 \} \cup \C_1 \cup \C_2}
     }
 \end{mathpar}
 
@@ -166,6 +181,12 @@
         \lbl \tauDownOpen <: \alphaUp \fto \alpha
     }{ \gtBottom }
     
+    \bbrule{Equality}{
+        \equatable{\alpha_1}{\alpha_2} \\
+        \tauDownOpen_1 <: \alpha_1 \\
+        \tauDownOpen_2 <: \alpha_2 \\
+        \neg \concreteEquatable{\tauDownOpen_1}{\tauDownOpen_2}
+    }{ \gtBottom }
 \end{mathpar}
 
 \subsection*{Immediate Compatibility Rules}
@@ -184,6 +205,37 @@
     }{
         \tauUpOpen_1 \gtAmp \tauUpOpen_2 <:: \tauChi
     }
+\end{mathpar}
+
+\subsection*{Concrete Equatability}
+
+$$
+\flatten{\tauDownOpen} =
+    \begin{cases}
+        \textrm{the concatenation of }\flatten{\tauDownOpen_1}\textrm{ and }\flatten{\tauDownOpen_2} & \textrm{if }\tauDownOpen = \tauDownOpen_1 \gtAmp \tauDownOpen_2 \\
+        [\tauDownOpen] & \textrm{otherwise}
+    \end{cases}
+$$
+
+\begin{mathpar}
+
+    \bbrule{Primitive Equatability}{ }{\concreteEquatable{\tprim}{\tprim}}
+    
+    \bbrule{Label Equatability}{
+        \concreteEquatable{\tauDownOpen_1}{\tauDownOpen_2}
+    }{
+        \concreteEquatable{\lbl \tauDownOpen_1}{\lbl \tauDownOpen_2}
+    }
+    
+    \bbrule{Onion Equatability}{
+        \flatten{\tauDownOpen_1 \gtAmp \tauDownOpen_2} = [\tauDownOpen_{1,1},\ldots,\tauDownOpen_{1,n}] \\
+        \flatten{\tauDownOpen'_1 \gtAmp \tauDownOpen'_2} = [\tauDownOpen_{2,1},\ldots,\tauDownOpen_{2,m}] \\
+        \forall i \in \{1..n\} \exists j \in \{1..m\}. \concreteEquatable{\tauDownOpen_i}{\tauDownOpen_j'} \\
+        \forall j \in \{1..m\} \exists i \in \{1..n\}. \concreteEquatable{\tauDownOpen_i}{\tauDownOpen_j'}
+    }{
+        \concreteEquatable{\tauDownOpen_1 \gtAmp \tauDownOpen_2}{\tauDownOpen'_1 \gtAmp \tauDownOpen'_2}
+    }
+
 \end{mathpar}
 
 \end{document}

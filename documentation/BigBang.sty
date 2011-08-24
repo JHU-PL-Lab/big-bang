@@ -42,12 +42,19 @@
 \newcommand{\tauDownClosed}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\blacktriangledown}}}}
 \newcommand{\tauChi}{\ensuremath{\tau^\chi}}
 
+\DeclareMathOperator{\zConcreteEquatable}{\ensuremath{\Xi}}
+\newcommand{\concreteEquatable}[2]{\zConcreteEquatable(#1,#2)}
+
+\newcommand{\flatten}[1]{\ensuremath{\theta(#1)}}
+
 %%% Grammar Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \DeclareMathOperator{\gOr}{\vert}
 \DeclareMathOperator{\tprim}{\textrm{tprim}}
 \DeclareMathOperator{\lbl}{\textrm{lbl}}
 \DeclareMathOperator{\subtype}{\textrm{subtype}}
+\DeclareMathOperator{\zEquatable}{\ensuremath{\xi}}
+\newcommand{\equatable}[2]{\zEquatable(#1,#2)}
 \DeclareMathOperator{\constraint}{\textrm{constraint}}
 \DeclareMathOperator{\guard}{\textrm{guard}}
 \DeclareMathOperator{\cSeparator}{\backslash}
@@ -55,6 +62,8 @@
 \newcommand{\C}{\ensuremath\constraintList}
 
 \DeclareMathOperator{\gtAmp}{\texttt{\char`\&}}
+\DeclareMathOperator{\gtEq}{%
+        \ensuremath{\vstack{0em}{\scalebox{1}[1]{\ensuremath{\square}}}{-0.1em}{\scalebox{0.7}[1]{\ensuremath{\mkern2.75mu=}}}}}
 \DeclareMathOperator{\gtFun}{\texttt{fun}}
 \DeclareMathOperator{\gtInt}{\texttt{int}}
 \DeclareMathOperator{\gtChar}{\texttt{char}}
@@ -72,3 +81,4 @@
 \newcommand{\typeRel}[4]{\ensuremath{#1 \vdash #2 : #3 \cSeparator #4}}
 
 \newcommand{\bbrule}[3]{\inferrule*[lab=#1]{#2}{#3}}
+
