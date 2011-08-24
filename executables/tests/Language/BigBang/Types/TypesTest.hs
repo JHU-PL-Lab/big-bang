@@ -30,8 +30,7 @@ typecheckSourceString src = typecheckAst $ parseBigBang $ lexBigBang src
 typecheckAst :: Expr -> Bool
 typecheckAst expr =
     Set.null $ Set.filter isBottom $
-        C.calculateClosure $ snd $ (\x -> I.runTIM x Map.empty 0) $
-            I.inferType expr
+        C.calculateClosure $ snd $ I.inferTypeTop expr
     where isBottom (T.Bottom _) = True
           isBottom _            = False
 
