@@ -134,7 +134,7 @@ eval (Equal e1 e2) = do
         (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
         (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
         -- ((Onion e1 e2), (Onion e3 e4)) -> ...
-        _ -> return $ Label (labelName "False") PrimUnit 
+        _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
