@@ -1,6 +1,7 @@
 module Language.BigBang.Types.TypeInference
 ( inferType
 , runTIM
+, inferTypeTop
 , Gamma
 ) where
 
