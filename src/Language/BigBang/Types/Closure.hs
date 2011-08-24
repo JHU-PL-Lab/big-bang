@@ -96,15 +96,13 @@ findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
             _ -> Map.empty
 
 findPolyFuncs :: Constraints
-              -> Map T.AlphaUp (T.Alpha, T.PolyFuncData, Constraint)
-findPolyFuncs = Map.unionsWith uError . map fn . Set.toList
+              -> Map T.AlphaUp (Set (T.Alpha, T.PolyFuncData, Constraint))
+findPolyFuncs = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
             T.Subtype (T.TdcFunc pfd) (T.TucFunc au a) _ ->
-                Map.singleton au (a, pfd, c)
+                Map.singleton au $ Set.singleton (a, pfd, c)
             _ -> Map.empty
-        uError = error
-            "two different polymorphic applications with same domain variable"
 
 findAlphaAmpPairs :: Constraints
                   -> Map (T.Alpha, T.Alpha) (Set ( T.TauUpClosed
@@ -243,8 +241,8 @@ closeApplications cs =
   where concretes = findAlphaUpOnRight $ findTauDownOpen cs
         polyfuncs = findPolyFuncs cs
         premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
-        expandIntoCases (alphaUp, (set, y)) =
-                [ (alphaUp, el, y) | el <- Set.toList set ]
+        expandIntoCases (alphaUp, (cs, pfs)) =
+                [ (alphaUp, el, y) | el <- Set.toList cs, y <- Set.toList pfs]
         pickPolyConstraints ( alphaIn
                             , (tauDownOpen, tdoc)
                               , ( alphaOut
