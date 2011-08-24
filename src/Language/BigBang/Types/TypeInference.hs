@@ -25,6 +25,7 @@ import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:), (.:))
 import Language.BigBang.Types.UtilTypes
+import Language.BigBang.Interpreter.Interpreter (applyBuiltins)
 
 type Gamma = Map Ident T.Alpha
 type InferredConstraints = Set T.Constraint
@@ -46,6 +47,12 @@ type TIM a = ErrorT TypeInferenceError
 runTIM :: TIM a -> Gamma -> NextFreshVar
        -> (Either TypeInferenceError a, InferredConstraints)
 runTIM t r s = evalRWS (runErrorT t) r s
+
+inferTypeTop :: A.Expr
+             -> ( Either TypeInferenceError T.TauDownClosed
+                , InferredConstraints
+                )
+inferTypeTop expr = runTIM (inferType $ applyBuiltins expr) Map.empty 0
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM T.TauDownClosed
