@@ -116,14 +116,12 @@ findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
               Map.singleton (a,b) $ Set.singleton (d, c)
             _ -> Map.empty
 
-findCases :: Constraints -> Map T.AlphaUp ([T.Guard], Constraint)
-findCases = Map.unionsWith uError . map fn . Set.toList
+findCases :: Constraints -> Map T.AlphaUp (Set ([T.Guard], Constraint))
+findCases = Map.unionsWith Set.union . map fn . Set.toList
   where fn c =
           case c of
-            T.Case au gs _ -> Map.singleton au (gs, c)
+            T.Case au gs _ -> Map.singleton au $ Set.singleton (gs, c)
             _ -> Map.empty
-        uError = error
-            "constraint set contains two case constraints with same alphaUp"
 
 -- |A function which performs substitution on a set of constraints.  All
 --  variables in the alpha set are replaced with corresponding versions that
@@ -221,7 +219,7 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
         cases = findCases cs
         tausToGuards = filterOpens $ concat $ Map.elems $
                 Map.intersectionWith
-                  (\set c -> map (,c) $ Set.toList set)
+                  (\ls cs -> [(l,c) | l <- Set.toList ls, c <- Set.toList cs])
                   lefts
                   cases
         filterOpens xs = mapMaybe f xs
