@@ -8,6 +8,7 @@ module Language.BigBang.Interpreter.Interpreter
 , eval
 , EvalError(..)
 , EvalM
+, applyBuiltins
 ) where
 
 import Control.Monad.Error (Error, strMsg, throwError)
