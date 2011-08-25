@@ -14,6 +14,8 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
 import Data.Maybe (catMaybes)
 
+import qualified Data.Set as Set
+
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
@@ -132,25 +134,66 @@ eval (Equal e1 e2) = do
             (PrimChar _, PrimChar _) -> returnVal
             ((Func _ _), (Func _ _)) -> returnVal
 
+            (Label name1 expr1, Label name2 expr2) -> 
+                if name1 == name2 
+                  then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
+                  else throwError $ DynamicTypeError "incorrect type in expression"
+
+            (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
+
+            (o1@(Onion _ _), o2@(Onion _ _)) -> return $ Label (labelName (if (equalOnion s1 s2) then "True" else "False")) PrimUnit
+                                                  where
+                                                      s1 = recurseOnion o1
+                                                      s2 = recurseOnion o2
+
             ((Case _ _), _) -> errorMsg
             (_, (Case _ _)) -> errorMsg
             ((Appl _ _), _) -> errorMsg
             (_, (Appl _ _)) -> errorMsg
             ((Var _), _) -> errorMsg
             (_, (Var _)) -> errorMsg
-
---evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
---evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-
-            (Label name1 expr1, Label name2 expr2) -> 
-                if name1 == name2 
-                then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
-                else throwError $ DynamicTypeError "incorrect type in expression"
-            (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
-
-                -- ((Onion e1 e2), (Onion e3 e4)) -> ...
-
             _ -> throwError $ DynamicTypeError "incorrect type in expression" 
+
+recurseOnion :: Expr -> [Expr]
+recurseOnion (Onion e1 e2) = recurseOnion e1 ++ recurseOnion e2
+recurseOnion x = [x]
+
+removeType :: Expr -> [Expr] -> [Expr]
+removeType _ [] = []
+removeType e@(Var _) ((Var _):xs) = removeType e xs
+removeType e@(Label _ _) ((Label _ _):xs) = removeType e xs
+removeType e@(Func _ _) ((Func _ _):xs) = removeType e xs
+removeType e@(Appl _ _) ((Appl _ _):xs) = removeType e xs
+removeType e@(PrimInt _) ((PrimInt _):xs) = removeType e xs
+removeType e@(PrimChar _) ((PrimChar _):xs) = removeType e xs
+removeType e@PrimUnit (PrimUnit:xs) = removeType e xs
+removeType e@(Case _ _) ((Case _ _):xs) = removeType e xs
+removeType _ ((Onion _ _):_) = error "Internal state error"
+removeType e (x:xs) = x : removeType e xs 
+
+firstOfType :: Expr -> [Expr] -> Maybe Expr
+firstOfType _ [] = Nothing
+firstOfType (Var _) (x@(Var _):_) = Just x
+firstOfType (Label _ _) (x@(Label _ _):_) = Just x
+firstOfType (Func _ _) (x@(Func _ _):_) = Just x
+firstOfType (Appl _ _) (x@(Appl _ _):_) = Just x
+firstOfType (PrimInt _) (x@(PrimInt _):_) = Just x
+firstOfType (PrimChar _) (x@(PrimChar _):_) = Just x
+firstOfType PrimUnit (x@PrimUnit:_) = Just x
+firstOfType (Case _ _) (x@(Case _ _):_) = Just x
+firstOfType _ ((Onion _ _):_) = error "Internal state error"
+firstOfType e (_:xs) = firstOfType e xs
+
+equalOnion :: [Expr] -> [Expr] -> Bool
+equalOnion [] [] = True
+equalOnion [] _ = False
+equalOnion _ [] = False
+equalOnion (x:xs) ys = let ys' = removeType x ys
+                           xs' = removeType x xs
+                           v = firstOfType x ys
+                       in case v of
+                         Nothing -> False
+                         Just y -> ((x == y) && equalOnion xs' ys')
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
