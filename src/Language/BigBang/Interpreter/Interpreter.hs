@@ -186,17 +186,6 @@ coerceToInteger e =
         simpleIntCoerce (PrimInt i) = Just i
         simpleIntCoerce _ = Nothing
 
--- |Used to obtain a character from an expression.  If necessary, this routine
---  will recurse through onions looking for a character.
-coerceToCharacter :: Expr -> Maybe Char
-coerceToCharacter e =
-    coerceToType simpleCharCoerce e
-    where
-        simpleCharCoerce (PrimChar i) = Just i
-        simpleCharCoerce _ = Nothing
-
-
-
 -- |Used to obtain a function from an expression.  If necessary, this routine
 --  will recurse through onions looking for a function.
 coerceToFunction :: Expr -> Maybe Expr
