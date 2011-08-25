@@ -144,6 +144,12 @@ eval (Equal e1 e2) = do
         (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
         (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
         -- ((Onion e1 e2), (Onion e3 e4)) -> ...
+        ((Case _ _), _) -> error "Internal state error"
+        (_, (Case _ _)) -> error "Internal state error"
+        ((Appl _ _), _) -> error "Internal state error"
+        (_, (Appl _ _)) -> error "Internal state error"
+        ((Var _), _) -> error "Internal state error"
+        (_, (Var _)) -> error "Internal state error"
         _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 -- |Evaluates a binary expression.
