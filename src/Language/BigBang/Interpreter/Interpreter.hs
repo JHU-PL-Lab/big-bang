@@ -19,14 +19,14 @@ import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
     ( Ident
     , ident
-    , unIdent
-    , LabelName
+--    , unIdent
+--    , LabelName
     , labelName
-    , unLabelName
+--    , unLabelName
     )
 
 -- TODO: remove
-import Debug.Trace
+-- import Debug.Trace
 
 -- |An error type for evaluation failures.
 data EvalError =
@@ -111,7 +111,7 @@ eval (Case e branches) = do
                       if name == name'
                         then Just $ subst lblExpr ident branchExpr
                         else Nothing
-                  (ChiFun, Func i e) -> Just branchExpr
+                  (ChiFun, Func _ _) -> Just branchExpr
                   (ChiTop, _) -> Just branchExpr
                   _ -> Nothing
 
@@ -125,14 +125,16 @@ eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case (e1', e2') of
-        (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (PrimChar _, PrimChar _) -> evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        (PrimInt _, PrimInt _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+--evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        (PrimChar _, PrimChar _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+--evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
         (Label name1 expr1, Label name2 expr2) -> 
-            if name1 == name2 then
-                return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit else
-                 throwError $ DynamicTypeError "incorrect type in expression"
+            if name1 == name2 
+            then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
+            else throwError $ DynamicTypeError "incorrect type in expression"
         (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
-        (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
+        ((Func _ _), (Func _ _)) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
         -- ((Onion e1 e2), (Onion e3 e4)) -> ...
         ((Case _ _), _) -> error "Internal state error"
         (_, (Case _ _)) -> error "Internal state error"
@@ -201,7 +203,7 @@ coerceToFunction :: Expr -> Maybe Expr
 coerceToFunction e =
     coerceToType simpleFuncCoerce e
     where
-        simpleFuncCoerce a@(Func i e') = Just a
+        simpleFuncCoerce a@(Func _ _) = Just a
         simpleFuncCoerce _ = Nothing
 
 -------------------------------------------------------------------------------
@@ -221,26 +223,26 @@ subst v x e@(Var i)
     | i == x      = v
     | otherwise   = e
 
-subst v x e@(Label name expr) =
+subst v x (Label name expr) =
     Label name $ subst v x expr
 
-subst v x e@(Onion e1 e2) =
+subst v x (Onion e1 e2) =
     Onion (subst v x e1) (subst v x e2)
 
 subst v x e@(Func i body)
     | i == x      = e
     | otherwise   = Func i $ subst v x body
 
-subst v x e@(Appl e1 e2) =
+subst v x (Appl e1 e2) =
     Appl (subst v x e1) (subst v x e2)
 
-subst v x e@(PrimInt i) = e
+subst _ _ e@(PrimInt _) = e
 
-subst v x e@(PrimChar c) = e
+subst _ _ e@(PrimChar _) = e
 
-subst v x e@(PrimUnit) = e
+subst _ _ e@(PrimUnit) = e
 
-subst v x e@(Case expr branches) =
+subst v x (Case expr branches) =
     let expr' = subst v x expr in
     Case expr' $ map substBranch branches
     where substBranch branch@(chi,branchExpr) =
@@ -254,12 +256,12 @@ subst v x e@(Case expr branches) =
             if elem x boundIdents then branch
                                   else (chi, subst v x branchExpr)
 
-subst v x e@(Plus e1 e2) =
+subst v x (Plus e1 e2) =
     Plus (subst v x e1) (subst v x e2)
 
-subst v x e@(Minus e1 e2) =
+subst v x (Minus e1 e2) =
     Minus (subst v x e1) (subst v x e2)
 
-subst v x e@(Equal e1 e2) =
+subst v x (Equal e1 e2) =
     Equal (subst v x e1) (subst v x e2)
 
