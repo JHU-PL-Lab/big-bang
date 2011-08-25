@@ -126,33 +126,35 @@ eval (Minus e1 e2) =
 eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
-    let
-        returnVal = return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
-        errorMsg = error "Internal state error"
-        in case (e1', e2') of
-            (PrimInt _, PrimInt _) -> returnVal
-            (PrimChar _, PrimChar _) -> returnVal
-            ((Func _ _), (Func _ _)) -> returnVal
-
-            (Label name1 expr1, Label name2 expr2) -> 
-                if name1 == name2 
-                  then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
-                  else throwError $ DynamicTypeError "incorrect type in expression"
-
-            (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
-
-            (o1@(Onion _ _), o2@(Onion _ _)) -> return $ Label (labelName (if (equalOnion s1 s2) then "True" else "False")) PrimUnit
-                                                  where
-                                                      s1 = recurseOnion o1
-                                                      s2 = recurseOnion o2
-
-            ((Case _ _), _) -> errorMsg
-            (_, (Case _ _)) -> errorMsg
-            ((Appl _ _), _) -> errorMsg
-            (_, (Appl _ _)) -> errorMsg
-            ((Var _), _) -> errorMsg
-            (_, (Var _)) -> errorMsg
-            _ -> throwError $ DynamicTypeError "incorrect type in expression" 
+    case (e1', e2') of
+        (PrimInt _, PrimInt _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        (PrimChar _, PrimChar _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        ((Func _ _), (Func _ _)) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        (Label name1 expr1, Label name2 expr2) -> if name1 == name2 
+                                                    then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
+                                                    else throwError $ DynamicTypeError "incorrect type in expression"
+        (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
+        (o1@(Onion _ _), o2@(Onion _ _)) -> return $ Label (labelName (if (equalOnion s1 s2) then "True" else "False")) PrimUnit
+                                            where
+                                              s1 = recurseOnion o1
+                                              s2 = recurseOnion o2
+        ((Case _ _), _) -> error "Internal state error"
+        (_, (Case _ _)) -> error "Internal state error"
+        ((Appl _ _), _) -> error "Internal state error"
+        (_, (Appl _ _)) -> error "Internal state error"
+        ((Var _), _) -> error "Internal state error"
+        (_, (Var _)) -> error "Internal state error"
+        (o1@(Onion _ _), _) -> if (null $ removeType e2' s1)
+                                 then return $ Label (labelName (if (equalOnion s1 [e2']) then "True" else "False")) PrimUnit
+                                 else throwError $ DynamicTypeError "incorrect type in expression" 
+                               where
+                                   s1 = recurseOnion o1
+        (_, o2@(Onion _ _)) -> if (null $ removeType e1' s2)
+                                 then return $ Label (labelName (if (equalOnion [e1'] s2) then "True" else "False")) PrimUnit
+                                 else throwError $ DynamicTypeError "incorrect type in expression" 
+                               where
+                                   s2 = recurseOnion o2
+        _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 recurseOnion :: Expr -> [Expr]
 recurseOnion (Onion e1 e2) = recurseOnion e1 ++ recurseOnion e2
