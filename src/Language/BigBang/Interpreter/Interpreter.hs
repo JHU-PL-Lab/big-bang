@@ -124,25 +124,33 @@ eval (Minus e1 e2) =
 eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
-    case (e1', e2') of
-        (PrimInt _, PrimInt _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+    let
+        returnVal = return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        errorMsg = error "Internal state error"
+        in case (e1', e2') of
+            (PrimInt _, PrimInt _) -> returnVal
+            (PrimChar _, PrimChar _) -> returnVal
+            ((Func _ _), (Func _ _)) -> returnVal
+
+            ((Case _ _), _) -> errorMsg
+            (_, (Case _ _)) -> errorMsg
+            ((Appl _ _), _) -> errorMsg
+            (_, (Appl _ _)) -> errorMsg
+            ((Var _), _) -> errorMsg
+            (_, (Var _)) -> errorMsg
+
 --evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (PrimChar _, PrimChar _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
 --evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (Label name1 expr1, Label name2 expr2) -> 
-            if name1 == name2 
-            then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
-            else throwError $ DynamicTypeError "incorrect type in expression"
-        (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
-        ((Func _ _), (Func _ _)) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
-        -- ((Onion e1 e2), (Onion e3 e4)) -> ...
-        ((Case _ _), _) -> error "Internal state error"
-        (_, (Case _ _)) -> error "Internal state error"
-        ((Appl _ _), _) -> error "Internal state error"
-        (_, (Appl _ _)) -> error "Internal state error"
-        ((Var _), _) -> error "Internal state error"
-        (_, (Var _)) -> error "Internal state error"
-        _ -> throwError $ DynamicTypeError "incorrect type in expression" 
+
+            (Label name1 expr1, Label name2 expr2) -> 
+                if name1 == name2 
+                then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
+                else throwError $ DynamicTypeError "incorrect type in expression"
+            (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
+
+                -- ((Onion e1 e2), (Onion e3 e4)) -> ...
+
+            _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
