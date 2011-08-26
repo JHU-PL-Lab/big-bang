@@ -172,6 +172,8 @@ testEqualBoolean = TestCase $ do
     "equal `True () `True () should return true"
     (Right (Label (labelName "True") PrimUnit))
     (interpret "equal `True () `True ()")
+  -- TODO: the following test case is broken; we should expect a dynamic type
+  -- error
   assertEqual
     "equal `True () `False () should return false"
     (Right (Label (labelName "True") PrimUnit))
@@ -302,6 +304,6 @@ testNonexhaustiveCases = TestCase $ assertEqual
 
 testEqualUnit :: Test
 testEqualUnit = TestCase $ assertEqual
-  "equal () () should throw a type error"
-  (Left (DynamicTypeError "incorrect type in expression"))
+  "equal () () should return true"
+  (Right (Label (labelName "True") PrimUnit))
   (interpret "equal () ()")
