@@ -15,19 +15,21 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
 import Data.Maybe (catMaybes, maybeToList)
 
+import qualified Data.Set as Set
+
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
     ( Ident
     , ident
-    , unIdent
+--    , unIdent
     , LabelName
     , labelName
-    , unLabelName
+--    , unLabelName
     )
 
 -- TODO: remove
-import Debug.Trace
+-- import Debug.Trace
 
 -- |An error type for evaluation failures.
 data EvalError =
@@ -135,7 +137,6 @@ eval (Case e branches) = do
                  ChiTop -> Just
                  _ -> const Nothing
 
-
 eval (Plus e1 e2) =
     evalBinop e1 e2 tryExtractInteger $ \x y -> PrimInt $ x + y
 
@@ -146,22 +147,75 @@ eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case (e1', e2') of
-        (PrimInt _, PrimInt _) -> evalBinop e1 e2 tryExtractInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (PrimChar _, PrimChar _) -> evalBinop e1 e2 tryExtractCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (Label name1 expr1, Label name2 expr2) -> 
-            if name1 == name2 then
-                return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit else
-                 throwError $ DynamicTypeError "incorrect type in expression"
+        (PrimInt _, PrimInt _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        (PrimChar _, PrimChar _) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        ((Func _ _), (Func _ _)) -> return $ Label (labelName (if e1' == e2' then "True" else "False")) PrimUnit
+        (Label name1 expr1, Label name2 expr2) -> if name1 == name2 
+                                                    then return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit 
+                                                    else throwError $ DynamicTypeError "incorrect type in expression"
         (PrimUnit, PrimUnit) -> return $ Label (labelName "True") PrimUnit
-        (f1@(Func _ _), f2@(Func _ _)) -> return $ Label (labelName (if f1 == f2 then "True" else "False")) PrimUnit
-        -- ((Onion e1 e2), (Onion e3 e4)) -> ...
+        (o1@(Onion _ _), o2@(Onion _ _)) -> return $ Label (labelName (if (equalOnion s1 s2) then "True" else "False")) PrimUnit
+                                            where
+                                              s1 = recurseOnion o1
+                                              s2 = recurseOnion o2
         ((Case _ _), _) -> error "Internal state error"
         (_, (Case _ _)) -> error "Internal state error"
         ((Appl _ _), _) -> error "Internal state error"
         (_, (Appl _ _)) -> error "Internal state error"
         ((Var _), _) -> error "Internal state error"
         (_, (Var _)) -> error "Internal state error"
+        (o1@(Onion _ _), _) -> if (null $ removeType e2' s1)
+                                 then return $ Label (labelName (if (equalOnion s1 [e2']) then "True" else "False")) PrimUnit
+                                 else throwError $ DynamicTypeError "incorrect type in expression" 
+                               where
+                                   s1 = recurseOnion o1
+        (_, o2@(Onion _ _)) -> if (null $ removeType e1' s2)
+                                 then return $ Label (labelName (if (equalOnion [e1'] s2) then "True" else "False")) PrimUnit
+                                 else throwError $ DynamicTypeError "incorrect type in expression" 
+                               where
+                                   s2 = recurseOnion o2
         _ -> throwError $ DynamicTypeError "incorrect type in expression" 
+
+recurseOnion :: Expr -> [Expr]
+recurseOnion (Onion e1 e2) = recurseOnion e1 ++ recurseOnion e2
+recurseOnion x = [x]
+
+removeType :: Expr -> [Expr] -> [Expr]
+removeType _ [] = []
+removeType e@(Var _) ((Var _):xs) = removeType e xs
+removeType e@(Label _ _) ((Label _ _):xs) = removeType e xs
+removeType e@(Func _ _) ((Func _ _):xs) = removeType e xs
+removeType e@(Appl _ _) ((Appl _ _):xs) = removeType e xs
+removeType e@(PrimInt _) ((PrimInt _):xs) = removeType e xs
+removeType e@(PrimChar _) ((PrimChar _):xs) = removeType e xs
+removeType e@PrimUnit (PrimUnit:xs) = removeType e xs
+removeType e@(Case _ _) ((Case _ _):xs) = removeType e xs
+removeType _ ((Onion _ _):_) = error "Internal state error"
+removeType e (x:xs) = x : removeType e xs 
+
+firstOfType :: Expr -> [Expr] -> Maybe Expr
+firstOfType _ [] = Nothing
+firstOfType (Var _) (x@(Var _):_) = Just x
+firstOfType (Label _ _) (x@(Label _ _):_) = Just x
+firstOfType (Func _ _) (x@(Func _ _):_) = Just x
+firstOfType (Appl _ _) (x@(Appl _ _):_) = Just x
+firstOfType (PrimInt _) (x@(PrimInt _):_) = Just x
+firstOfType (PrimChar _) (x@(PrimChar _):_) = Just x
+firstOfType PrimUnit (x@PrimUnit:_) = Just x
+firstOfType (Case _ _) (x@(Case _ _):_) = Just x
+firstOfType _ ((Onion _ _):_) = error "Internal state error"
+firstOfType e (_:xs) = firstOfType e xs
+
+equalOnion :: [Expr] -> [Expr] -> Bool
+equalOnion [] [] = True
+equalOnion [] _ = False
+equalOnion _ [] = False
+equalOnion (x:xs) ys = let ys' = removeType x ys
+                           xs' = removeType x xs
+                           v = firstOfType x ys
+                       in case v of
+                         Nothing -> False
+                         Just y -> ((x == y) && equalOnion xs' ys')
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr -- ^The first argument to the binary operator.
@@ -252,7 +306,7 @@ coerceToFunction :: Expr -> Maybe Expr
 coerceToFunction e =
     coerceToType simpleFuncCoerce e
     where
-        simpleFuncCoerce a@(Func i e') = Just a
+        simpleFuncCoerce a@(Func _ _) = Just a
         simpleFuncCoerce _ = Nothing
 
 -------------------------------------------------------------------------------
@@ -272,26 +326,26 @@ subst v x e@(Var i)
     | i == x      = v
     | otherwise   = e
 
-subst v x e@(Label name expr) =
+subst v x (Label name expr) =
     Label name $ subst v x expr
 
-subst v x e@(Onion e1 e2) =
+subst v x (Onion e1 e2) =
     Onion (subst v x e1) (subst v x e2)
 
 subst v x e@(Func i body)
     | i == x      = e
     | otherwise   = Func i $ subst v x body
 
-subst v x e@(Appl e1 e2) =
+subst v x (Appl e1 e2) =
     Appl (subst v x e1) (subst v x e2)
 
-subst v x e@(PrimInt i) = e
+subst _ _ e@(PrimInt _) = e
 
-subst v x e@(PrimChar c) = e
+subst _ _ e@(PrimChar _) = e
 
-subst v x e@(PrimUnit) = e
+subst _ _ e@(PrimUnit) = e
 
-subst v x e@(Case expr branches) =
+subst v x (Case expr branches) =
     let expr' = subst v x expr in
     Case expr' $ map substBranch branches
     where substBranch branch@(mident, chi, branchExpr) =
@@ -306,12 +360,12 @@ subst v x e@(Case expr branches) =
             if elem x boundIdents then branch
                                   else (mident, chi, subst v x branchExpr)
 
-subst v x e@(Plus e1 e2) =
+subst v x (Plus e1 e2) =
     Plus (subst v x e1) (subst v x e2)
 
-subst v x e@(Minus e1 e2) =
+subst v x (Minus e1 e2) =
     Minus (subst v x e1) (subst v x e2)
 
-subst v x e@(Equal e1 e2) =
+subst v x (Equal e1 e2) =
     Equal (subst v x e1) (subst v x e2)
 
