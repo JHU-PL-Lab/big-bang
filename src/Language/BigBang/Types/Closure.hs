@@ -3,7 +3,6 @@ module Language.BigBang.Types.Closure
 ( calculateClosure
 ) where
 
-import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ( (<:)
                                     , (.:)
@@ -12,19 +11,16 @@ import Language.BigBang.Types.Types ( (<:)
                                     )
 import Language.BigBang.Types.UtilTypes (LabelName)
 
-import Data.List.Utils (safeHead)
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)
 
 import Control.Exception(assert)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (catMaybes, fromJust, maybe, mapMaybe)
+import Data.Maybe (catMaybes, fromJust, mapMaybe, listToMaybe)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Monoid (mappend)
-
-import Debug.Trace
 
 -- |A function which checks immediate compatability and produces an appropriate
 --  constraint set for matches.  This function takes the type of a value, the
@@ -49,6 +45,7 @@ createMatchConstraints history tau chi =
             let mc1 = createMatchConstraints history t chi in
             let mc2 = createMatchConstraints history t' chi in
             maybe mc2 Just mc1
+        _ -> Nothing
 
 findTauDownOpen :: Constraints -> Constraints
 findTauDownOpen = Set.fromList . catMaybes . map fn . Set.toList
@@ -145,7 +142,7 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
                 siteList' = map (\(T.CallSite a) -> a) siteList
                 totals = zip siteList' $
                         tail $ scanl Set.union Set.empty siteList'
-                rest = dropWhile (\(a,b) ->
+                rest = dropWhile (\(_,b) ->
                         not $ Set.member siteAlpha b) totals
             in
             T.callSites $
@@ -153,8 +150,8 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
             case rest of
                     [] -> -- In this case, this call site has not been seen before
                         (T.CallSite $ Set.singleton siteAlpha):siteList
-                    (_,cycle):tail -> -- In this case, we found a cycle
-                        (T.CallSite cycle):(map (T.CallSite . fst) tail)
+                    (_,cyc):tl -> -- In this case, we found a cycle
+                        (T.CallSite cyc):(map (T.CallSite . fst) tl)
         f sa =
             let (constr,i,sites) = separate sa in
             if not $ Set.member sa $ forallVars
@@ -217,7 +214,8 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
         cases = findCases cs
         tausToGuards = filterOpens $ concat $ Map.elems $
                 Map.intersectionWith
-                  (\ls cs -> [(l,c) | l <- Set.toList ls, c <- Set.toList cs])
+                  (\lEnts cEnts -> [(l,c)
+                    | l <- Set.toList lEnts, c <- Set.toList cEnts])
                   lefts
                   cases
         filterOpens xs = mapMaybe f xs
@@ -232,7 +230,7 @@ closeCases cs = Set.unions $ map pickGuardConstraints tausToGuards
                     | T.Guard pat constr <- guards]
             in
             maybe (Set.singleton $ T.Bottom $ T.ContradictionCase tdoc gc) id $
-                  safeHead resultConstraints
+                  listToMaybe resultConstraints
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs =
@@ -241,8 +239,8 @@ closeApplications cs =
   where concretes = findAlphaUpOnRight $ findTauDownOpen cs
         polyfuncs = findPolyFuncs cs
         premiseDataByAlphaUp = Map.intersectionWith (,) concretes polyfuncs
-        expandIntoCases (alphaUp, (cs, pfs)) =
-                [ (alphaUp, el, y) | el <- Set.toList cs, y <- Set.toList pfs]
+        expandIntoCases (alphaUp, (cs', pfs)) =
+                [ (alphaUp, el, y) | el <- Set.toList cs', y <- Set.toList pfs]
         pickPolyConstraints ( alphaIn
                             , (tauDownOpen, tdoc)
                               , ( alphaOut
@@ -315,13 +313,13 @@ class AlphaSubstitutable a where
 instance AlphaSubstitutable T.AlphaUp where
     substituteAlpha f au =
         case substituteAlpha f $ T.SomeAlphaUp au of
-            T.SomeAlphaUp au -> au
+            T.SomeAlphaUp au' -> au'
             _ -> error "substituteAlpha function argument produced bad output"
 
 instance AlphaSubstitutable T.Alpha where
-    substituteAlpha f au =
-        case substituteAlpha f $ T.SomeAlpha au of
-            T.SomeAlpha au -> au
+    substituteAlpha f a =
+        case substituteAlpha f $ T.SomeAlpha a of
+            T.SomeAlpha a' -> a'
             _ -> error "substituteAlpha function argument produced bad output"
 
 instance AlphaSubstitutable T.AnyAlpha where
@@ -370,7 +368,7 @@ instance AlphaSubstitutable T.PolyFuncData where
                     else f aa
 
 instance AlphaSubstitutable T.PrimitiveType where
-    substituteAlpha f p = p
+    substituteAlpha _ p = p
 
 instance AlphaSubstitutable T.Constraint where
     substituteAlpha f c = case c of

@@ -2,8 +2,6 @@ module Language.BigBang.Types.TypesTest
 ( tests
 ) where
 
-import qualified Data.Map as Map 
-
 import qualified Data.Set as Set 
 import Test.HUnit hiding (Label)
 

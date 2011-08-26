@@ -49,7 +49,6 @@ Library
 
   Exposed-Modules:
         Data.Function.Utils
-        Data.List.Utils
         Data.Maybe.Utils
         Language.BigBang.Ast
         Language.BigBang.Interpreter.Interpreter

@@ -94,12 +94,12 @@ $(
     let showInstance n =
             let tvars = map ("a"++) $ map show $ [0..(n-1)]
                 context = map
-                    (\n -> ClassP (mkName "Display") [VarT $ mkName n]) tvars
+                    (\nm -> ClassP (mkName "Display") [VarT $ mkName nm]) tvars
                 tAppNm t s = AppT t $ VarT $ mkName s
                 typ = foldl tAppNm (TupleT n) tvars
                 params = map (VarP . mkName) tvars
                 lstExpr = ListE $ map
-                    (\n -> AppE (VarE $ mkName "makeDoc") (VarE $ mkName n))
+                    (\nm -> AppE (VarE $ mkName "makeDoc") (VarE $ mkName nm))
                     tvars
                 makeDocFunClauses = [clause ([tupP $ map return params])
                     (normalB [|

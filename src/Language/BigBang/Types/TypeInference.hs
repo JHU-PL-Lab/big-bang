@@ -5,7 +5,7 @@ module Language.BigBang.Types.TypeInference
 , Gamma
 ) where
 
-import Control.Monad (liftM, mapM, mapAndUnzipM, zipWithM)
+import Control.Monad (liftM, mapAndUnzipM, zipWithM)
 import Control.Monad.Reader (ask, asks, local)
 import Control.Monad.Writer (censor, listen, tell)
 import Control.Monad.State (get, put)
@@ -14,15 +14,11 @@ import Control.Monad.Error (Error, ErrorT, strMsg, throwError, runErrorT)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.Maybe (maybe)
-import Data.Monoid (Monoid, mempty, mappend)
-import qualified Data.Sequence as Seq
-import Data.Sequence (Seq, (<|), (|>), (><))
+import Data.Monoid (Monoid, mempty)
 import qualified Data.Set as Set
 import Data.Set (Set, (\\))
 
 import qualified Language.BigBang.Ast as A
-import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:), (.:))
 import Language.BigBang.Types.UtilTypes
@@ -146,18 +142,18 @@ inferType expr =
           tell1 = tell . Set.singleton
           capture f e = censor (const mempty) $ listen $
                 local f $ inferType e
-          buildGuard expr gamma alpha tauChi constraints tau =
+          buildGuard expr' gamma alpha tauChi constraints tau =
                 T.Guard tauChi $
                         Set.insert
-                          (tau <: T.TucAlpha alpha .: T.Inferred expr gamma)
+                          (tau <: T.TucAlpha alpha .: T.Inferred expr' gamma)
                           constraints
-          naryOp expr gamma es tIn tOut = do
+          naryOp expr' gamma es tIn tOut = do
                 ts <- mapM inferType es
                 tell $ Set.fromList $
                   map (.: T.Inferred expr gamma) $
                   map (<: tIn) ts
                 alpha <- freshInterVar
-                tell1 $ tOut <: T.TucAlpha alpha .: T.Inferred expr gamma
+                tell1 $ tOut <: T.TucAlpha alpha .: T.Inferred expr' gamma
                 ralpha alpha
 
 -- |Accepts a branch and the case expression type and produces an appropriate
@@ -196,8 +192,8 @@ extractConstraintTypeVars c =
                 extractConstraintTypeVars constraints
           addChiAlpha tauChi set =
             case tauChi of
-                T.ChiPrim p -> set
-                T.ChiLabel n a -> Set.insert (T.SomeAlpha a) set
+                T.ChiPrim _ -> set
+                T.ChiLabel _ a -> Set.insert (T.SomeAlpha a) set
                 T.ChiFun -> set
                 T.ChiTop -> set
 

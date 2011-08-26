@@ -304,6 +304,7 @@ instance TauUpClosedConvertible TauUpOpen where
         case x of
              TuoPrim p -> TucPrim p
              TuoFunc ua a -> TucFunc ua a
+             TuoTop -> TucTop
              TuoAlphaUp ua -> TucAlphaUp ua
 
 instance AlphaConvertible TauUpOpen where
@@ -314,8 +315,9 @@ instance TauUpOpenConvertible TauUpClosed where
         case x of
              TucPrim p -> Just $ TuoPrim p
              TucFunc ua a -> Just $ TuoFunc ua a
+             TucTop -> Just TuoTop
              TucAlphaUp ua -> Just $ TuoAlphaUp ua
-             TucAlpha a -> Nothing
+             TucAlpha _ -> Nothing
 
 instance TauUpClosedConvertible TauUpClosed where
     toTauUpClosed x = x
@@ -338,6 +340,7 @@ instance TauDownClosedConvertible TauDownOpen where
              TdoOnion t1 t2 ->
                 TdcOnion (toTauDownClosed t1) (toTauDownClosed t2)
              TdoFunc pfd -> TdcFunc pfd
+             TdoTop -> TdcTop
 
 instance AlphaConvertible TauDownOpen where
     toSomeAlpha = const Nothing
@@ -414,9 +417,9 @@ instance TAlpha AlphaUp where
 -- Implementations of display routines for type structures.
 
 instance Display AlphaContents where
-    makeDoc (AlphaContents i callSites) =
+    makeDoc (AlphaContents i cSites) =
         char '\'' <> makeDoc i <> (
-            let doc = makeDoc callSites in
+            let doc = makeDoc cSites in
             if not $ isEmpty doc
                 then char '^' <> doc
                 else empty)

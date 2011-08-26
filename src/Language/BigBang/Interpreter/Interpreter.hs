@@ -12,10 +12,7 @@ module Language.BigBang.Interpreter.Interpreter
 ) where
 
 import Control.Monad.Error (Error, strMsg, throwError)
-import Data.List (foldl')
 import Data.Maybe (catMaybes, maybeToList)
-
-import qualified Data.Set as Set
 
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
@@ -57,6 +54,7 @@ evalTop e = do
     eval $ applyBuiltins e
 
 -- |Wraps an expression in a context where builtin names are bound
+applyBuiltins :: Expr -> Expr
 applyBuiltins e =
   wrapper e
   where ix = ident "x"
@@ -98,7 +96,7 @@ eval (Appl e1 e2) = do
     e2' <- eval e2
     let e1'' = coerceToFunction e1'
     case e1'' of
-        Just (Func ident body) -> eval $ subst e2' ident body
+        Just (Func i body) -> eval $ subst e2' i body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ PrimInt i
@@ -124,8 +122,8 @@ eval (Case e branches) = do
              case (chi, mexpr) of
                  -- We don't care about the matching the names because it was
                  -- ensured to be correct earlier.
-                 (ChiLabel _ ident, Just (Label _ lblExpr)) ->
-                   fmap (subst lblExpr ident) boundExpr
+                 (ChiLabel _ i, Just (Label _ lblExpr)) ->
+                   fmap (subst lblExpr i) boundExpr
                  _ -> boundExpr
           coerce chi =
              case chi of
@@ -135,7 +133,6 @@ eval (Case e branches) = do
                  ChiLabel name _ -> coerceToLabel name
                  ChiFun -> coerceToFunction
                  ChiTop -> Just
-                 _ -> const Nothing
 
 eval (Plus e1 e2) =
     evalBinop e1 e2 tryExtractInteger $ \x y -> PrimInt $ x + y
@@ -263,7 +260,10 @@ coerceToInteger e =
 --  coerceToInteger.
 tryExtractInteger :: Expr -> Maybe Integer 
 tryExtractInteger e =
-  fmap (\(PrimInt i) -> i) $ coerceToInteger e
+    fmap unPrimInt $ coerceToInteger e
+  where unPrimInt e' = case e' of
+            PrimInt i -> i
+            _ -> error "coerceToInteger returned Just non-integer"
 
 -- |Used to obtain a character from an expression.  If necessary, this routine
 --  will recurse through onions looking for a character.
@@ -273,12 +273,6 @@ coerceToCharacter e =
     where
         simpleCharCoerce (PrimChar i) = Just $ PrimChar i
         simpleCharCoerce _ = Nothing
---
--- |Used to obtain a Haskell character from an expression.  Otherwise like
---  coerceToInteger.
-tryExtractCharacter :: Expr -> Maybe Char
-tryExtractCharacter e =
-  fmap (\(PrimChar c) -> c) $ coerceToCharacter e
 
 -- |Used to obtain a unit from an expression.  If necessary, this routine
 --  will recurse through onions looking for a unit.
@@ -291,11 +285,12 @@ coerceToUnit e =
 
 -- |Used to obtain a labeled value from an expression.  If necessary, this
 -- routine will recurse through onions looking for a labeled value.
+-- TODO: fix this -- it doesn't properly project ex. `A x from `A 5 & `A ()
 coerceToLabel :: LabelName -> Expr -> Maybe Expr
 coerceToLabel name e =
   coerceToType simpleLabelCoerce e
   where
-      simpleLabelCoerce lbl@(Label name' e) = if name == name'
+      simpleLabelCoerce lbl@(Label name' _) = if name == name'
                                                  then Just lbl
                                                  else Nothing
       simpleLabelCoerce _ = Nothing
