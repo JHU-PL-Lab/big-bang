@@ -13,7 +13,7 @@ module Language.BigBang.Interpreter.Interpreter
 
 import Control.Monad.Error (Error, strMsg, throwError)
 import Data.List (foldl')
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, maybeToList)
 
 import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
 import qualified Language.BigBang.Types.Types as T
@@ -108,35 +108,46 @@ eval PrimUnit = return $ PrimUnit
 -- TODO: this is dynamic case, not static case!
 eval (Case e branches) = do
     e' <- eval e
-    let answers = catMaybes $ map (evalLabel e') branches
+    let answers = catMaybes $ map (evalBranch e') branches
     case answers of
         [] -> throwError $ UnmatchedCase e' branches
         answer:_ -> eval answer
-    where evalLabel e' (chi,branchExpr) =
-              case (chi,e') of
-                  (ChiPrim T.PrimInt, PrimInt _) -> Just branchExpr
-                  (ChiPrim T.PrimChar, PrimChar _) -> Just branchExpr
-                  (ChiPrim T.PrimUnit, PrimUnit) -> Just branchExpr
-                  (ChiLabel name ident, Label name' lblExpr) ->
-                      if name == name'
-                        then Just $ subst lblExpr ident branchExpr
-                        else Nothing
-                  (ChiFun, Func i e) -> Just branchExpr
-                  (ChiTop, _) -> Just branchExpr
-                  _ -> Nothing
+    where evalBranch e' (mbinder, chi, branchExpr) =
+             let mexpr = coerce chi e'
+                 boundExpr = do
+                   expr <- mexpr
+                   return $ maybe id (\binder -> subst expr binder) mbinder $
+                         branchExpr
+             in
+             case (chi, boundExpr) of
+                 -- We don't care about the matching the names because it was
+                 -- ensured to be correct earlier.
+                 (ChiLabel _ ident, Just (Label _ lblExpr)) ->
+                   fmap (subst lblExpr ident) boundExpr
+                 _ -> boundExpr
+          coerce chi =
+             case chi of
+                 ChiPrim T.PrimInt -> coerceToInteger
+                 ChiPrim T.PrimChar -> coerceToCharacter
+                 ChiPrim T.PrimUnit -> coerceToUnit
+                 ChiLabel name _ -> coerceToLabel name
+                 ChiFun -> coerceToFunction
+                 ChiTop -> Just
+                 _ -> const Nothing
+
 
 eval (Plus e1 e2) =
-    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x + y
+    evalBinop e1 e2 tryExtractInteger $ \x y -> PrimInt $ x + y
 
 eval (Minus e1 e2) =
-    evalBinop e1 e2 coerceToInteger $ \x y -> PrimInt $ x - y
+    evalBinop e1 e2 tryExtractInteger $ \x y -> PrimInt $ x - y
 
 eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case (e1', e2') of
-        (PrimInt _, PrimInt _) -> evalBinop e1 e2 coerceToInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
-        (PrimChar _, PrimChar _) -> evalBinop e1 e2 coerceToCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        (PrimInt _, PrimInt _) -> evalBinop e1 e2 tryExtractInteger $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
+        (PrimChar _, PrimChar _) -> evalBinop e1 e2 tryExtractCharacter $ \x y -> Label (labelName (if x == y then "True" else "False")) PrimUnit
         (Label name1 expr1, Label name2 expr2) -> 
             if name1 == name2 then
                 return $ Label (labelName (if expr1 == expr2 then "True" else "False")) PrimUnit else
@@ -187,23 +198,53 @@ coerceToType f e =
 
 -- |Used to obtain an integer from an expression.  If necessary, this routine
 --  will recurse through onions looking for an integer.
-coerceToInteger :: Expr -> Maybe Integer
+coerceToInteger :: Expr -> Maybe Expr
 coerceToInteger e =
     coerceToType simpleIntCoerce e
     where
-        simpleIntCoerce (PrimInt i) = Just i
+        simpleIntCoerce (PrimInt i) = Just $ PrimInt i
         simpleIntCoerce _ = Nothing
+
+-- |Used to obtain a Haskell integer from an expression.  Otherwise like
+--  coerceToInteger.
+tryExtractInteger :: Expr -> Maybe Integer 
+tryExtractInteger e =
+  fmap (\(PrimInt i) -> i) $ coerceToInteger e
 
 -- |Used to obtain a character from an expression.  If necessary, this routine
 --  will recurse through onions looking for a character.
-coerceToCharacter :: Expr -> Maybe Char
+coerceToCharacter :: Expr -> Maybe Expr
 coerceToCharacter e =
     coerceToType simpleCharCoerce e
     where
-        simpleCharCoerce (PrimChar i) = Just i
+        simpleCharCoerce (PrimChar i) = Just $ PrimChar i
         simpleCharCoerce _ = Nothing
+--
+-- |Used to obtain a Haskell character from an expression.  Otherwise like
+--  coerceToInteger.
+tryExtractCharacter :: Expr -> Maybe Char
+tryExtractCharacter e =
+  fmap (\(PrimChar c) -> c) $ coerceToCharacter e
 
+-- |Used to obtain a unit from an expression.  If necessary, this routine
+--  will recurse through onions looking for a unit.
+coerceToUnit :: Expr -> Maybe Expr
+coerceToUnit e =
+    coerceToType simpleUnitCoerce e
+    where
+        simpleUnitCoerce PrimUnit = Just PrimUnit
+        simpleUnitCoerce _ = Nothing
 
+-- |Used to obtain a labeled value from an expression.  If necessary, this
+-- routine will recurse through onions looking for a labeled value.
+coerceToLabel :: LabelName -> Expr -> Maybe Expr
+coerceToLabel name e =
+  coerceToType simpleLabelCoerce e
+  where
+      simpleLabelCoerce lbl@(Label name' e) = if name == name'
+                                                 then Just lbl
+                                                 else Nothing
+      simpleLabelCoerce _ = Nothing
 
 -- |Used to obtain a function from an expression.  If necessary, this routine
 --  will recurse through onions looking for a function.
@@ -253,8 +294,9 @@ subst v x e@(PrimUnit) = e
 subst v x e@(Case expr branches) =
     let expr' = subst v x expr in
     Case expr' $ map substBranch branches
-    where substBranch branch@(chi,branchExpr) =
+    where substBranch branch@(mident, chi, branchExpr) =
             let boundIdents =
+                    maybeToList mident ++
                     case chi of
                         ChiPrim _ -> []
                         ChiLabel _ i -> [i]
@@ -262,7 +304,7 @@ subst v x e@(Case expr branches) =
                         ChiTop -> []
             in
             if elem x boundIdents then branch
-                                  else (chi, subst v x branchExpr)
+                                  else (mident, chi, subst v x branchExpr)
 
 subst v x e@(Plus e1 e2) =
     Plus (subst v x e1) (subst v x e2)

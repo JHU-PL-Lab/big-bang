@@ -39,4 +39,4 @@ data Chi =
 
 -- |Alias for case branches
 type Branches = [Branch]
-type Branch = (Chi,Expr)
+type Branch = (Maybe Ident, Chi, Expr)

@@ -115,7 +115,7 @@ inferType expr =
                     mapAndUnzipM extractBranchAssumptionAndChi brs
               let fs = map Map.union brAssump
               (taus, constraints) <- liftM unzip $ zipWithM capture fs $
-                                         map snd brs
+                                         map (\(_,_,x) -> x) brs
               tell1 $ t <: T.TucAlphaUp alphaUp .: T.Inferred expr gamma
               tell1 $ T.Case alphaUp
                     (zipWith3 (buildGuard expr gamma alpha) tauChis constraints taus)
@@ -165,7 +165,7 @@ inferType expr =
 extractBranchAssumptionAndChi
     :: A.Branch
     -> TIM (Map Ident T.Alpha, T.TauChi)
-extractBranchAssumptionAndChi (chi,_) =
+extractBranchAssumptionAndChi (_,chi,_) =
     case chi of
         A.ChiPrim p -> return (Map.empty, T.ChiPrim p)
         A.ChiLabel n i -> do

@@ -36,7 +36,8 @@ pp a = case a of
     A.Plus e1 e2 -> pp e1 <+> text "[+]" <+> pp e2
     A.Minus e1 e2 -> pp e1 <+> text "[-]" <+> pp e2
     A.Equal e1 e2 -> pp e1 <+> text "[=]" <+> pp e2
-  where ppBranch (chi,e) =
+  where ppBranch (mident, chi, e) =
+            maybe empty ((<> colon) . text . unIdent) mident <+>
             (case chi of
                 A.ChiPrim p -> ppPrimType p
                 A.ChiLabel n i ->
