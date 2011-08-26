@@ -121,7 +121,7 @@ eval (Case e branches) = do
                    return $ maybe id (\binder -> subst expr binder) mbinder $
                          branchExpr
              in
-             case (chi, boundExpr) of
+             case (chi, mexpr) of
                  -- We don't care about the matching the names because it was
                  -- ensured to be correct earlier.
                  (ChiLabel _ ident, Just (Label _ lblExpr)) ->
