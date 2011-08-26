@@ -76,10 +76,11 @@ testFuncIgnoreNewLines = TestCase $ assertEqual
   (parseBigBang $ lexBigBang "(\\x->x)\
                              \(\\x->x)")
 
+-- TODO: Also test binders
 testCaseFunc :: Test
 testCaseFunc = TestCase $ assertEqual
                "Test if case block in function is parsed correctly"
-               (Func (ident "x") (Case (Var (ident "x")) [(ChiLabel (labelName "True") (ident "a"), PrimInt 1), (ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))
+               (Func (ident "x") (Case (Var (ident "x")) [(Nothing, ChiLabel (labelName "True") (ident "a"), PrimInt 1), (Nothing, ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))
                (parseBigBang $ lexBigBang "(fun x -> case x of {\
                                                     \    `True a -> 1;\
                                                     \    `False a -> 0})")
@@ -99,7 +100,7 @@ testFakeString = TestCase $ assertEqual
 testCaseOfBlock :: Test
 testCaseOfBlock = TestCase $ assertEqual
   "Testing case...of block"
-  (Case (Var (ident "x")) [(ChiPrim T.PrimInt, PrimInt 5), (ChiPrim T.PrimChar, PrimChar 'a'), (ChiPrim T.PrimUnit, PrimUnit), (ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (ChiFun, Func (ident "x") (Var (ident "x")))])
+  (Case (Var (ident "x")) [(Nothing, ChiPrim T.PrimInt, PrimInt 5), (Nothing, ChiPrim T.PrimChar, PrimChar 'a'), (Nothing, ChiPrim T.PrimUnit, PrimUnit), (Nothing, ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (Nothing, ChiFun, Func (ident "x") (Var (ident "x")))])
   (parseBigBang $ lexBigBang "case x of {\
                              \    int -> 5;\
                              \    char -> \'a\';\

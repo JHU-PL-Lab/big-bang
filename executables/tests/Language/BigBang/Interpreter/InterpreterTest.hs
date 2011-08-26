@@ -80,7 +80,7 @@ testYCombinatorAppl = TestCase $ assertEqual
   (evalTop ast') 
   where
     yAst = parseBigBang $ lexBigBang "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
-    ast = Appl yAst $ Func (ident "this") $ Func (ident "x") $ (Case (Equal (Var $ ident "x") (PrimInt 0)) [(ChiLabel (labelName "True") (ident "z"), (PrimInt 0)), (ChiLabel (labelName "False") (ident "z"), (Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))))])
+    ast = Appl yAst $ Func (ident "this") $ Func (ident "x") $ (Case (Equal (Var $ ident "x") (PrimInt 0)) [(Nothing, ChiLabel (labelName "True") (ident "z"), (PrimInt 0)), (Nothing, ChiLabel (labelName "False") (ident "z"), (Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))))])
     ast' = Appl ast $ PrimInt $ 5
 
 
@@ -296,7 +296,7 @@ testInvalidApplication = TestCase $ assertEqual
 testNonexhaustiveCases :: Test
 testNonexhaustiveCases = TestCase $ assertEqual
   "Test if nonexhaustive cases throws an error"
-  (Left (UnmatchedCase (PrimInt 1) [(ChiPrim T.PrimChar,PrimInt 0)])) 
+  (Left (UnmatchedCase (PrimInt 1) [(Nothing, ChiPrim T.PrimChar,PrimInt 0)])) 
   (interpret "case 1 of {\
                                        \    char -> 0}")
 
