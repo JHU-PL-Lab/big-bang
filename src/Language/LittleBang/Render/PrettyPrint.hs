@@ -1,17 +1,17 @@
-module Language.BigBang.Render.PrettyPrint
+module Language.LittleBang.Render.PrettyPrint
 ( pretty
 ) where
 
-import qualified Language.BigBang.Ast as A
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Render.Display
+import qualified Language.LittleBang.Ast as A
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Render.Display
 
--- |Creates a textual representation of the provided Big Bang AST.
+-- |Creates a textual representation of the provided Little Bang AST.
 pretty :: A.Expr -> String
 pretty a = render $ pp a
 
--- |Creates a document representation of the provided Big Bang AST.
+-- |Creates a document representation of the provided Little Bang AST.
 pp :: A.Expr -> Doc
 pp a = case a of
     A.Var i -> text $ unIdent i
@@ -31,7 +31,7 @@ pp a = case a of
        options include:
            * errors on ASTs containing builtin nodes
            * namespacing trick (e.g., Plus translates to
-               "Language.BigBang.Builtins.([+]) e1 e2"
+               "Language.LittleBang.Builtins.([+]) e1 e2"
     -}
     A.Plus e1 e2 -> pp e1 <+> text "[+]" <+> pp e2
     A.Minus e1 e2 -> pp e1 <+> text "[-]" <+> pp e2

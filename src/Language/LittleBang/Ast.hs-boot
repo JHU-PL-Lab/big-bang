@@ -1,4 +1,4 @@
-module Language.BigBang.Ast where
+module Language.LittleBang.Ast where
 
 data Expr
 instance Eq Expr

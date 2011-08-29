@@ -1,17 +1,17 @@
-module Language.BigBang.Types.TypesTest
+module Language.LittleBang.Types.TypesTest
 ( tests
 ) where
 
 import qualified Data.Set as Set 
 import Test.HUnit hiding (Label)
 
-import Language.BigBang.Ast
-import qualified Language.BigBang.Types.Types as T
-import qualified Language.BigBang.Types.TypeInference as I
-import qualified Language.BigBang.Types.Closure as C
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Syntax.Parser
-import Language.BigBang.Syntax.Lexer
+import Language.LittleBang.Ast
+import qualified Language.LittleBang.Types.Types as T
+import qualified Language.LittleBang.Types.TypeInference as I
+import qualified Language.LittleBang.Types.Closure as C
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Syntax.Lexer
 
 tests :: Test
 tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, equalityCases, onionCases]
@@ -23,7 +23,7 @@ tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, e
   failure.
 -}
 typecheckSourceString :: String -> Bool
-typecheckSourceString src = typecheckAst $ parseBigBang $ lexBigBang src
+typecheckSourceString src = typecheckAst $ parseLittleBang $ lexLittleBang src
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =

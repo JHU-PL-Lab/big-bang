@@ -1,8 +1,8 @@
 module Main where
 
-import qualified Language.BigBang.Interpreter.Interpreter as I
-import qualified Language.BigBang.Syntax.Lexer as L
-import qualified Language.BigBang.Syntax.Parser as P
+import qualified Language.LittleBang.Interpreter.Interpreter as I
+import qualified Language.LittleBang.Syntax.Lexer as L
+import qualified Language.LittleBang.Syntax.Parser as P
 
 import Data.List.Split
 
@@ -10,4 +10,4 @@ main :: IO ()
 main = do
     inp <- getContents
     let xs = filter (not . null) $ splitOn "\n\n" inp
-    mapM_ (print . I.evalTop . P.parseBigBang . L.lexBigBang) xs
+    mapM_ (print . I.evalTop . P.parseLittleBang . L.lexLittleBang) xs

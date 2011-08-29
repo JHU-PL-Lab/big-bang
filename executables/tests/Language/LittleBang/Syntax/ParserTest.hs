@@ -1,12 +1,12 @@
-module Language.BigBang.Syntax.ParserTest
+module Language.LittleBang.Syntax.ParserTest
 ( tests
 ) where
 
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Ast
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Syntax.Lexer
-import Language.BigBang.Syntax.Parser
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Ast
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
 import Test.HUnit hiding (Label)
 import Control.Exception
 
@@ -21,30 +21,30 @@ testParseInt :: Test
 testParseInt = TestCase $ assertEqual
   "Input of 1234567890 should return PrimInt 1234567890"
   (PrimInt 1234567890)
-  (parseBigBang $ lexBigBang "1234567890")
+  (parseLittleBang $ lexLittleBang "1234567890")
 
 testParseChar :: Test
 testParseChar = TestCase $ assertEqual
   "Input of \'a\' should return PrimChar \'a\'"
   (PrimChar 'a')
-  (parseBigBang $ lexBigBang "\'a\'")
+  (parseLittleBang $ lexLittleBang "\'a\'")
 
 testParseUnit :: Test
 testParseUnit = TestCase $ assertEqual
   "Input of () should return PrimUnit"
   PrimUnit
-  (parseBigBang $ lexBigBang "()")
+  (parseLittleBang $ lexLittleBang "()")
 
 testParseBool :: Test
 testParseBool = TestCase $ do
   assertEqual
     "Test parsing of `True ()"
     (Label (labelName "True") PrimUnit)
-    (parseBigBang $ lexBigBang "`True ()")
+    (parseLittleBang $ lexLittleBang "`True ()")
   assertEqual
     "Test parsing of `False ()"
     (Label (labelName "False") PrimUnit)
-    (parseBigBang $ lexBigBang "`False ()")
+    (parseLittleBang $ lexLittleBang "`False ()")
 
 
 -- Test cases that check correctness in parsing function definitions and application
@@ -55,25 +55,25 @@ testLambdaExpr :: Test
 testLambdaExpr = TestCase $ assertEqual
   "Identity function: (\\x -> x)"
   (Func (ident "x") (Var (ident "x")))
-  (parseBigBang $ lexBigBang "(\\x -> x)")
+  (parseLittleBang $ lexLittleBang "(\\x -> x)")
 
 testFuncAppl :: Test
 testFuncAppl = TestCase $ assertEqual
   "Test parsing of a function application"
   (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
-  (parseBigBang $ lexBigBang "plus 2 2")
+  (parseLittleBang $ lexLittleBang "plus 2 2")
 
 testPerverseFunction :: Test
 testPerverseFunction = TestCase $ assertEqual
   "(fun x -> x x) (fun x -> x x)"
   (Appl (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x")))) (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x"))))) 
-  (parseBigBang $ lexBigBang "(fun x -> x x) (fun x -> x x)")
+  (parseLittleBang $ lexLittleBang "(fun x -> x x) (fun x -> x x)")
 
 testFuncIgnoreNewLines :: Test
 testFuncIgnoreNewLines = TestCase $ assertEqual
   "Test if parser ignores newlines correctly"
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
-  (parseBigBang $ lexBigBang "(\\x->x)\
+  (parseLittleBang $ lexLittleBang "(\\x->x)\
                              \(\\x->x)")
 
 -- TODO: Also test binders
@@ -81,7 +81,7 @@ testCaseFunc :: Test
 testCaseFunc = TestCase $ assertEqual
                "Test if case block in function is parsed correctly"
                (Func (ident "x") (Case (Var (ident "x")) [(Nothing, ChiLabel (labelName "True") (ident "a"), PrimInt 1), (Nothing, ChiLabel (labelName "False") (ident "a"), PrimInt 0)]))
-               (parseBigBang $ lexBigBang "(fun x -> case x of {\
+               (parseLittleBang $ lexLittleBang "(fun x -> case x of {\
                                                     \    `True a -> 1;\
                                                     \    `False a -> 0})")
                                           
@@ -95,13 +95,13 @@ testFakeString :: Test
 testFakeString = TestCase $ assertEqual
   "Testing \"fake\" strings"
   (Appl (Appl (Appl (Appl (Appl (PrimChar 's') (PrimChar 't')) (PrimChar 'r')) (PrimChar 'i')) (PrimChar 'n')) (PrimChar 'g')) 
-  (parseBigBang $ lexBigBang "'s''t''r''i''n''g'")
+  (parseLittleBang $ lexLittleBang "'s''t''r''i''n''g'")
 
 testCaseOfBlock :: Test
 testCaseOfBlock = TestCase $ assertEqual
   "Testing case...of block"
   (Case (Var (ident "x")) [(Nothing, ChiPrim T.PrimInt, PrimInt 5), (Nothing, ChiPrim T.PrimChar, PrimChar 'a'), (Nothing, ChiPrim T.PrimUnit, PrimUnit), (Nothing, ChiLabel (labelName "True") (ident "a"), Label (labelName "False") PrimUnit), (Nothing, ChiFun, Func (ident "x") (Var (ident "x")))])
-  (parseBigBang $ lexBigBang "case x of {\
+  (parseLittleBang $ lexLittleBang "case x of {\
                              \    int -> 5;\
                              \    char -> \'a\';\
                              \    unit -> ();\
@@ -112,7 +112,7 @@ testTernaryOnion :: Test
 testTernaryOnion = TestCase $ assertEqual
   "Testing ternary onion"
   (Onion (PrimInt 1) (Onion (PrimChar 'x') (Func (ident "x") (Var (ident "x")))))
-  (parseBigBang $ lexBigBang "(1 & ('x' & (\\x -> x)))")
+  (parseLittleBang $ lexLittleBang "(1 & ('x' & (\\x -> x)))")
 
 
 -- Tests cases that should throw a parser error
@@ -123,33 +123,33 @@ testParseEmptyString :: Test
 testParseEmptyString = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      _ <- evaluate (parseBigBang  $! lexBigBang "")
+      _ <- evaluate (parseLittleBang  $! lexLittleBang "")
       assertFailure "Input of \"\" should throw a parse error"
 
 testUnbalancedParens :: Test
 testUnbalancedParens = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      _ <- evaluate (parseBigBang $! lexBigBang "(expr")
+      _ <- evaluate (parseLittleBang $! lexLittleBang "(expr")
       assertFailure "Unbalanced parens should throw a parse error"
 
 testSemicolonEOL :: Test
 testSemicolonEOL = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      _ <- evaluate (parseBigBang $! lexBigBang "square x;")
+      _ <- evaluate (parseLittleBang $! lexLittleBang "square x;")
       assertFailure "Semicolon at end of line should throw a parse error"
 
 testSemicolonCaseBlock :: Test
 testSemicolonCaseBlock = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      _ <- evaluate (parseBigBang $! lexBigBang "case x of {\nint -> 3;}")
+      _ <- evaluate (parseLittleBang $! lexLittleBang "case x of {\nint -> 3;}")
       assertFailure "Semicolon before close brace in case...of block should throw a parse error"
 
 testEmptyCaseBlock :: Test
 testEmptyCaseBlock = TestCase $ do
   handleJust (\(ErrorCall a) -> Just a) (\_ -> return ()) performCall where
     performCall = do
-      _ <- evaluate (parseBigBang $! lexBigBang "case x of {}")
+      _ <- evaluate (parseLittleBang $! lexLittleBang "case x of {}")
       assertFailure "Empty case...of block should throw a parse error"

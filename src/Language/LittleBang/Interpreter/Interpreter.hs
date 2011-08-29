@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{- |A module defining a Big Bang interpreter.
+{- |A module defining a Little Bang interpreter.
 -}
-module Language.BigBang.Interpreter.Interpreter
+module Language.LittleBang.Interpreter.Interpreter
 ( evalTop
 , eval
 , EvalError(..)
@@ -14,9 +14,9 @@ module Language.BigBang.Interpreter.Interpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import Data.Maybe (catMaybes, maybeToList)
 
-import Language.BigBang.Ast (Branches, Chi(..), Expr(..))
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
+import Language.LittleBang.Ast (Branches, Chi(..), Expr(..))
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
     ( Ident
     , ident
 --    , unIdent
@@ -46,7 +46,7 @@ type EvalM = Either EvalError Expr
 --
 -- Definitions for functions related to expression evaluation.
 
--- |Performs top-level evaluation of a Big Bang expression.  This evaluation
+-- |Performs top-level evaluation of a Little Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
 evalTop :: Expr -> EvalM
@@ -75,7 +75,7 @@ applyBuiltins e =
         wrapper = foldl1 (.) wrappedBuiltins
 
 
--- |Evaluates a Big Bang expression.
+-- |Evaluates a Little Bang expression.
 eval :: Expr -> EvalM
 
 eval (Var i) = throwError $ NotClosed i

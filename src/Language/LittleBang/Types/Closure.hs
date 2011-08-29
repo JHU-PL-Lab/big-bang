@@ -1,15 +1,15 @@
 {-# LANGUAGE TupleSections #-}
-module Language.BigBang.Types.Closure
+module Language.LittleBang.Types.Closure
 ( calculateClosure
 ) where
 
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ( (<:)
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.Types ( (<:)
                                     , (.:)
                                     , Constraints
                                     , Constraint
                                     )
-import Language.BigBang.Types.UtilTypes (LabelName)
+import Language.LittleBang.Types.UtilTypes (LabelName)
 
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)

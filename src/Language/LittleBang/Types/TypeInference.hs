@@ -1,4 +1,4 @@
-module Language.BigBang.Types.TypeInference
+module Language.LittleBang.Types.TypeInference
 ( inferType
 , runTIM
 , inferTypeTop
@@ -18,11 +18,11 @@ import Data.Monoid (Monoid, mempty)
 import qualified Data.Set as Set
 import Data.Set (Set, (\\))
 
-import qualified Language.BigBang.Ast as A
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ((<:), (.:))
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Interpreter.Interpreter (applyBuiltins)
+import qualified Language.LittleBang.Ast as A
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.Types ((<:), (.:))
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Interpreter.Interpreter (applyBuiltins)
 
 type Gamma = Map Ident T.Alpha
 type InferredConstraints = Set T.Constraint
@@ -51,7 +51,7 @@ inferTypeTop :: A.Expr
                 )
 inferTypeTop expr = runTIM (inferType $ applyBuiltins expr) Map.empty 0
 
--- |Performs type inference for a given Big Bang expression.
+-- |Performs type inference for a given Little Bang expression.
 inferType :: A.Expr -> TIM T.TauDownClosed
 inferType expr =
     case expr of

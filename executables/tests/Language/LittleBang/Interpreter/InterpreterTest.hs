@@ -1,21 +1,21 @@
-module Language.BigBang.Interpreter.InterpreterTest
+module Language.LittleBang.Interpreter.InterpreterTest
 ( tests
 ) where
 
 import Test.HUnit hiding (Label)
-import Language.BigBang.Ast
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Interpreter.Interpreter
-import Language.BigBang.Syntax.Parser
-import Language.BigBang.Syntax.Lexer
+import Language.LittleBang.Ast
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Interpreter.Interpreter
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Syntax.Lexer
 
 tests :: Test
 tests = TestList [literalsCases, functionCases, onionCases, equalCases, caseCases, errorCases]
 
 -- Helper function
 interpret :: String -> EvalM
-interpret = evalTop . parseBigBang . lexBigBang
+interpret = evalTop . parseLittleBang . lexLittleBang
 
 -- Test cases that ensure that primitive literals are interpereted correctly
 literalsCases :: Test
@@ -79,7 +79,7 @@ testYCombinatorAppl = TestCase $ assertEqual
   (Right (PrimInt 15))
   (evalTop ast') 
   where
-    yAst = parseBigBang $ lexBigBang "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
+    yAst = parseLittleBang $ lexLittleBang "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
     ast = Appl yAst $ Func (ident "this") $ Func (ident "x") $ (Case (Equal (Var $ ident "x") (PrimInt 0)) [(Nothing, ChiLabel (labelName "True") (ident "z"), (PrimInt 0)), (Nothing, ChiLabel (labelName "False") (ident "z"), (Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))))])
     ast' = Appl ast $ PrimInt $ 5
 

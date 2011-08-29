@@ -1,4 +1,4 @@
-module Language.BigBang.Types.Types 
+module Language.LittleBang.Types.Types 
 ( AlphaContents(..)
 , AlphaUp(..)
 , Alpha(..)
@@ -34,15 +34,15 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 
-import Language.BigBang.Types.UtilTypes (LabelName, Ident)
-import Language.BigBang.Render.Display
-import {-# SOURCE #-} qualified Language.BigBang.Ast as A
+import Language.LittleBang.Types.UtilTypes (LabelName, Ident)
+import Language.LittleBang.Render.Display
+import {-# SOURCE #-} qualified Language.LittleBang.Ast as A
 
 -------------------------------------------------------------------------------
--- *Big Bang Types
--- $BigBangTypes
+-- *Little Bang Types
+-- $LittleBangTypes
 --
--- These data types are used to represent Big Bang's type grammar.
+-- These data types are used to represent Little Bang's type grammar.
 
 -- |A datatype used to represent the common contents of all type variables.
 data AlphaContents = AlphaContents Integer CallSites
@@ -124,7 +124,7 @@ data PolyFuncData =
     PolyFuncData (Set AnyAlpha) Alpha Alpha Constraints -- TODO: alias Set AnyAlpha?
     deriving (Eq, Ord, Show)
 
--- |The datatype enumerating the primitives in the Big Bang type system.
+-- |The datatype enumerating the primitives in the Little Bang type system.
 data PrimitiveType =
       PrimInt
     | PrimChar
@@ -136,7 +136,7 @@ data PrimitiveType =
 -- *Type Pattern Types
 -- $TypePatternTypes
 --
--- These types are used to describe type patterns in Big Bang.
+-- These types are used to describe type patterns in Little Bang.
 
 -- |A type representing the patterns produced by guards.
 data TauChi =
@@ -150,11 +150,11 @@ data TauChi =
 -- *Constraints
 -- $Constraints
 --
--- Declaring types to represent Big Bang constraints.
+-- Declaring types to represent Little Bang constraints.
 
 -- |A type alias defining the form of constraints.
 type Constraints = Set Constraint
--- |A type describing constraints in Big Bang.
+-- |A type describing constraints in Little Bang.
 data Constraint =
       Subtype TauDownClosed TauUpClosed ConstraintHistory
     | Case AlphaUp [Guard] ConstraintHistory
@@ -245,7 +245,7 @@ data ConstraintHistory
       Constraint
   deriving (Eq, Ord, Show)
 
--- |A type representing guards in Big Bang case constraints.
+-- |A type representing guards in Little Bang case constraints.
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
 
@@ -266,7 +266,7 @@ infix 1 .:
 -- $ConversionTypeClasses
 --
 -- Type classes used for conversion between the different Haskell types
--- representing Big Bang types.  The conversions to the open forms evaluate to a
+-- representing Little Bang types.  The conversions to the open forms evaluate to a
 -- Maybe type; if a closed tau which contains an intermediate alpha is converted
 -- to an open tau, those conversions evaluate to None.
 
@@ -381,7 +381,7 @@ instance AnyAlphaConvertible AlphaUp where
 -- *Projection Type Classes
 -- $ProjectionTypeClasses
 --
--- Type classes to simplify partial destruction of Big Bang type
+-- Type classes to simplify partial destruction of Little Bang type
 -- representations.
 
 class TAlpha a where
