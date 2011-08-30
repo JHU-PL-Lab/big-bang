@@ -3,7 +3,7 @@
 
 {- |A module defining a Big Bang interpreter.
 -}
-module Language.BigBang.Interpreter.Interpreter
+module Language.LittleBang.Interpreter.Interpreter
 ( evalTop
 , eval
 , EvalError(..)
@@ -14,10 +14,10 @@ module Language.BigBang.Interpreter.Interpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import Data.Maybe (catMaybes, maybeToList)
 
-import Language.BigBang.Ast (Branch(..), Branches, Chi(..), Expr(..))
-import Language.BigBang.Render.Display
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
+import Language.LittleBang.Ast (Branch(..), Branches, Chi(..), Expr(..))
+import Language.LittleBang.Render.Display
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
     ( Ident
     , ident
     , unIdent

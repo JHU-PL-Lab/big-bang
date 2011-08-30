@@ -1,13 +1,13 @@
-module Language.BigBang.Ast
+module Language.LittleBang.Ast
 ( Expr(..)
 , Chi(..)
 , Branches
 , Branch(..)
 ) where
 
-import Language.BigBang.Render.Display
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
+import Language.LittleBang.Render.Display
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
 
 -------------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ instance Display Expr where
            options include:
                * errors on ASTs containing builtin nodes
                * namespacing trick (e.g., Plus translates to
-                   "Language.BigBang.Builtins.([+]) e1 e2"
+                   "Language.LittleBang.Builtins.([+]) e1 e2"
         -}
         Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
         Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2

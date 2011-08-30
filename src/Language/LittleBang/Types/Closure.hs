@@ -1,15 +1,15 @@
 {-# LANGUAGE TupleSections #-}
-module Language.BigBang.Types.Closure
+module Language.LittleBang.Types.Closure
 ( calculateClosure
 ) where
 
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ( (<:)
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.Types ( (<:)
                                     , (.:)
                                     , Constraints
                                     , Constraint
                                     )
-import Language.BigBang.Types.UtilTypes (LabelName)
+import Language.LittleBang.Types.UtilTypes (LabelName)
 
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)
@@ -137,6 +137,8 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
         -- '1 and ['2,'3] (or '1 and ['2,'1,'4]), this function will return
         -- an appropriate call site list to place on another type variable
         -- (such as ['1,'2,'3] or [{'1,'2},'4]).
+        -- TODO: move this function!  it does not need to be done for each
+        --       variable but instead for each substitution
         calculateCallSites idx sites =
             let siteList = T.unCallSites sites
                 siteList' = map (\(T.CallSite a) -> a) siteList

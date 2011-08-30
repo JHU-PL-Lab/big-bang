@@ -1,4 +1,4 @@
-module Language.BigBang.Interpreter.SourceInterpreter
+module Language.LittleBang.Interpreter.SourceInterpreter
 ( evalStringTop
 , EvalStringResult(..)
 ) where
@@ -6,14 +6,14 @@ module Language.BigBang.Interpreter.SourceInterpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
 
-import Language.BigBang.Render.Display
-import qualified Language.BigBang.Ast as A
-import qualified Language.BigBang.Interpreter.Interpreter as I
-import qualified Language.BigBang.Syntax.Lexer as L
-import qualified Language.BigBang.Syntax.Parser as P
-import qualified Language.BigBang.Types.Closure as C
-import qualified Language.BigBang.Types.TypeInference as TI
-import qualified Language.BigBang.Types.Types as T
+import Language.LittleBang.Render.Display
+import qualified Language.LittleBang.Ast as A
+import qualified Language.LittleBang.Interpreter.Interpreter as I
+import qualified Language.LittleBang.Syntax.Lexer as L
+import qualified Language.LittleBang.Syntax.Parser as P
+import qualified Language.LittleBang.Types.Closure as C
+import qualified Language.LittleBang.Types.TypeInference as TI
+import qualified Language.LittleBang.Types.Types as T
 
 -- |A result type for evalStringTop
 data EvalStringResult
@@ -55,14 +55,14 @@ eAll s = do
 
 eLex :: String -> EvalStringM [L.Token]
 eLex s =
-    case L.lexBigBang s of
+    case L.lexLittleBang s of
         Left err -> throwError $ FailureWrapper $ LexFailure err
         Right tokens -> return tokens
 
 eParse :: [L.Token] -> EvalStringM A.Expr
 eParse tokens =
     -- TODO: case this out once parser is monadic
-    let ast = P.parseBigBang tokens in
+    let ast = P.parseLittleBang tokens in
     return ast
 
 eTypeInfer :: A.Expr -> EvalStringM (T.TauDownClosed, T.Constraints)

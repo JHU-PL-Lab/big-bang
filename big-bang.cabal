@@ -50,16 +50,16 @@ Library
   Exposed-Modules:
         Data.Function.Utils
         Data.Maybe.Utils
-        Language.BigBang.Ast
-        Language.BigBang.Interpreter.Interpreter
-        Language.BigBang.Interpreter.SourceInterpreter
-        Language.BigBang.Render.Display
-        Language.BigBang.Syntax.Parser
-        Language.BigBang.Syntax.Lexer
-        Language.BigBang.Types.Closure
-        Language.BigBang.Types.Types
-        Language.BigBang.Types.TypeInference
-        Language.BigBang.Types.UtilTypes
+        Language.LittleBang.Ast
+        Language.LittleBang.Interpreter.Interpreter
+        Language.LittleBang.Render.Display
+        Language.LittleBang.Interpreter.SourceInterpreter
+        Language.LittleBang.Syntax.Parser
+        Language.LittleBang.Syntax.Lexer
+        Language.LittleBang.Types.Closure
+        Language.LittleBang.Types.Types
+        Language.LittleBang.Types.TypeInference
+        Language.LittleBang.Types.UtilTypes
 
   Build-depends:       base, array, containers, mtl, pretty, template-haskell 
 
@@ -90,7 +90,8 @@ Executable test-suite
   Build-depends:       base, array, containers, mtl, big-bang, HUnit
   
   -- Modules not exported by this package.
-  Other-modules:       Language.BigBang.Syntax.LexerTest, Language.BigBang.Syntax.ParserTest
+  Other-modules:       Language.LittleBang.Syntax.LexerTest
+                       Language.LittleBang.Syntax.ParserTest
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy

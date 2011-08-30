@@ -1,4 +1,4 @@
-module Language.BigBang.Types.TypeInference
+module Language.LittleBang.Types.TypeInference
 ( inferType
 , runTIM
 , inferTypeTop
@@ -19,12 +19,12 @@ import Data.Monoid (Monoid, mempty)
 import qualified Data.Set as Set
 import Data.Set (Set, (\\))
 
-import qualified Language.BigBang.Ast as A
-import Language.BigBang.Render.Display
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.Types ((<:), (.:))
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Interpreter.Interpreter (applyBuiltins)
+import qualified Language.LittleBang.Ast as A
+import Language.LittleBang.Render.Display
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.Types ((<:), (.:))
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Interpreter.Interpreter (applyBuiltins)
 
 type Gamma = Map Ident T.Alpha
 type NextFreshVar = Integer

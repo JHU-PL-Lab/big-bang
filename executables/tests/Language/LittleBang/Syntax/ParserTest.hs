@@ -1,26 +1,29 @@
-module Language.BigBang.Syntax.ParserTest
+module Language.LittleBang.Syntax.ParserTest
 ( tests
 ) where
 
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Ast
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Syntax.Lexer
-import Language.BigBang.Syntax.Parser
 import Test.HUnit hiding (Label)
 import Control.Exception
+
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Ast
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Types.UtilTypes
 
 tests :: Test
 tests = TestList [literalsCases, functionsCases, simpleCases, errorCases]
 
 -- TODO: replace once expectation-based testing is established
 doParse :: String -> Expr
-doParse src = case lexBigBang src of
-    Left err -> error "lexer error"
-    Right tokens -> parseBigBang tokens
+doParse src = case lexLittleBang src of
+    Left err -> error $ "lexer error: " ++ err
+    Right tokens -> parseLittleBang tokens
 
 doStrictParse :: String -> Expr
 doStrictParse = doParse
+-- Note: the above does not work at the moment due to strictness problems.
+-- However, it will be neatly corrected by expectation-based testing.
 
 -- Test cases that check parsing of primitive literals works correctly
 literalsCases :: Test

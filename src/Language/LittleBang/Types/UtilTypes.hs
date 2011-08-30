@@ -1,7 +1,7 @@
 {- |A module containing Haskell types which are used as utilities by other
     modules.
 -}
-module Language.BigBang.Types.UtilTypes
+module Language.LittleBang.Types.UtilTypes
 ( LabelName
 , labelName
 , unLabelName
@@ -10,7 +10,7 @@ module Language.BigBang.Types.UtilTypes
 , unIdent
 ) where
 
-import Language.BigBang.Render.Display
+import Language.LittleBang.Render.Display
 
 -- |A distinguished type for labels.
 newtype LabelName = LabelName { unLabelName :: String }

@@ -1,8 +1,8 @@
-module Language.BigBang.Syntax.LexerTest
+module Language.LittleBang.Syntax.LexerTest
 ( tests
 ) where
 
-import Language.BigBang.Syntax.Lexer
+import Language.LittleBang.Syntax.Lexer
 import Test.HUnit hiding (Label)
 
 tests :: Test
@@ -10,7 +10,7 @@ tests = TestList [individualTokenCases, simplePrograms, testNoSpaces, edgeCases]
 
 -- TODO: should be replaced with expectation-based tests
 doLex :: String -> [Token]
-doLex src = case lexBigBang src of
+doLex src = case lexLittleBang src of
     Left err -> error err
     Right tokens -> tokens
 

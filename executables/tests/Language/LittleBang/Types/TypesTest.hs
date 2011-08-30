@@ -1,17 +1,16 @@
-module Language.BigBang.Types.TypesTest
+module Language.LittleBang.Types.TypesTest
 ( tests
 ) where
 
 import qualified Data.Set as Set 
 import Test.HUnit hiding (Label)
 
-import Language.BigBang.Ast
-import qualified Language.BigBang.Types.Types as T
-import qualified Language.BigBang.Types.TypeInference as I
-import qualified Language.BigBang.Types.Closure as C
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Syntax.Parser
-import Language.BigBang.Syntax.Lexer
+import Language.LittleBang.Ast
+import qualified Language.LittleBang.Types.Types as T
+import qualified Language.LittleBang.Types.TypeInference as I
+import qualified Language.LittleBang.Types.Closure as C
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Syntax.Lexer
 
 tests :: Test
 tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, equalityCases, onionCases]
@@ -26,9 +25,9 @@ typecheckSourceString :: String -> Bool
 typecheckSourceString src =
     -- TODO: replace this routine once expectation-based testing is
     -- implemented.
-    case lexBigBang src of
-        Left err -> False
-        Right tokens -> typecheckAst $ parseBigBang tokens
+    case lexLittleBang src of
+        Left _ -> False
+        Right tokens -> typecheckAst $ parseLittleBang tokens
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =

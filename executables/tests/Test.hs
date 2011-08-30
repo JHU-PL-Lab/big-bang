@@ -1,10 +1,10 @@
 module Main where
 
-import qualified Language.BigBang.Interpreter.InterpreterTest as TI
-import qualified Language.BigBang.Render.PrettyPrintTest as TPP
-import qualified Language.BigBang.Syntax.LexerTest as TL
-import qualified Language.BigBang.Syntax.ParserTest as TP
-import qualified Language.BigBang.Types.TypesTest as TT
+import qualified Language.LittleBang.Interpreter.InterpreterTest as TI
+import qualified Language.LittleBang.Render.PrettyPrintTest as TPP
+import qualified Language.LittleBang.Syntax.LexerTest as TL
+import qualified Language.LittleBang.Syntax.ParserTest as TP
+import qualified Language.LittleBang.Types.TypesTest as TT
 import Test.HUnit
 
 tests :: Test

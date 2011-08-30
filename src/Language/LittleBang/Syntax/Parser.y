@@ -1,14 +1,14 @@
 {
 {-# OPTIONS_GHC -w #-}
 
-module Language.BigBang.Syntax.Parser
-( parseBigBang
+module Language.LittleBang.Syntax.Parser
+( parseLittleBang
 ) where
 
-import qualified Language.BigBang.Ast as A
-import qualified Language.BigBang.Syntax.Lexer as L
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
+import qualified Language.LittleBang.Ast as A
+import qualified Language.LittleBang.Syntax.Lexer as L
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
     ( Ident
     , ident
     , unIdent
@@ -22,7 +22,7 @@ import System.IO.Unsafe
 import System.IO
 }
 
-%name parseBigBang
+%name parseLittleBang
 %tokentype { L.Token }
 %error { parseError }
 

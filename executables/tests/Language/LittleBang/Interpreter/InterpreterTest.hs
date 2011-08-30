@@ -1,15 +1,15 @@
-module Language.BigBang.Interpreter.InterpreterTest
+module Language.LittleBang.Interpreter.InterpreterTest
 ( tests
 ) where
 
 import Test.HUnit hiding (Label)
-import Language.BigBang.Ast
-import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes
-import Language.BigBang.Interpreter.Interpreter
-import Language.BigBang.Render.Display
-import Language.BigBang.Syntax.Parser
-import Language.BigBang.Syntax.Lexer
+import Language.LittleBang.Ast
+import qualified Language.LittleBang.Types.Types as T
+import Language.LittleBang.Types.UtilTypes
+import Language.LittleBang.Interpreter.Interpreter
+import Language.LittleBang.Render.Display
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
 
 tests :: Test
 tests = TestList [literalsCases, functionCases, onionCases, equalCases, caseCases, errorCases]
@@ -18,9 +18,9 @@ tests = TestList [literalsCases, functionCases, onionCases, equalCases, caseCase
 interpret :: String -> EvalM
 -- TODO: replace with expectation-based testing
 interpret s =
-    case lexBigBang s of
+    case lexLittleBang s of
         Left err -> error err
-        Right tokens -> evalTop $ parseBigBang tokens
+        Right tokens -> evalTop $ parseLittleBang tokens
 
 -- Test cases that ensure that primitive literals are interpereted correctly
 literalsCases :: Test
