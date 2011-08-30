@@ -7,6 +7,7 @@ import Language.BigBang.Ast
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.UtilTypes
 import Language.BigBang.Interpreter.Interpreter
+import Language.BigBang.Render.Display
 import Language.BigBang.Syntax.Parser
 import Language.BigBang.Syntax.Lexer
 
@@ -15,7 +16,11 @@ tests = TestList [literalsCases, functionCases, onionCases, equalCases, caseCase
 
 -- Helper function
 interpret :: String -> EvalM
-interpret = evalTop . parseBigBang . lexBigBang
+-- TODO: replace with expectation-based testing
+interpret s =
+    case lexBigBang s of
+        Left err -> error err
+        Right tokens -> evalTop $ parseBigBang tokens
 
 -- Test cases that ensure that primitive literals are interpereted correctly
 literalsCases :: Test
@@ -79,8 +84,19 @@ testYCombinatorAppl = TestCase $ assertEqual
   (Right (PrimInt 15))
   (evalTop ast') 
   where
-    yAst = parseBigBang $ lexBigBang "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
-    ast = Appl yAst $ Func (ident "this") $ Func (ident "x") $ (Case (Equal (Var $ ident "x") (PrimInt 0)) [(Nothing, ChiLabel (labelName "True") (ident "z"), (PrimInt 0)), (Nothing, ChiLabel (labelName "False") (ident "z"), (Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))))])
+    yAst =
+        let src = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)" in
+        case interpret src of
+            Left err -> error $ display err
+            Right ans -> ans
+    ast = Appl yAst $
+            Func (ident "this") $
+              Func (ident "x") $
+                Case (Equal (Var $ ident "x") (PrimInt 0))
+                  [ Branch Nothing (ChiLabel (labelName "True") (ident "z")) $ PrimInt 0
+                  , Branch Nothing (ChiLabel (labelName "False") (ident "z")) $
+                        Plus (Var $ ident "x") (Appl (Var $ ident "this") (Minus (Var $ ident "x") $ PrimInt 1))
+                  ]
     ast' = Appl ast $ PrimInt $ 5
 
 
@@ -298,7 +314,7 @@ testInvalidApplication = TestCase $ assertEqual
 testNonexhaustiveCases :: Test
 testNonexhaustiveCases = TestCase $ assertEqual
   "Test if nonexhaustive cases throws an error"
-  (Left (UnmatchedCase (PrimInt 1) [(Nothing, ChiPrim T.PrimChar,PrimInt 0)])) 
+  (Left (UnmatchedCase (PrimInt 1) [Branch Nothing (ChiPrim T.PrimChar) $ PrimInt 0]))
   (interpret "case 1 of {\
                                        \    char -> 0}")
 

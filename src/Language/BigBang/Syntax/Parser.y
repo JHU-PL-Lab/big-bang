@@ -89,9 +89,10 @@ Branches:   Branch ';' Branches     { $1:$3 }
         |   Branch                  { [$1] }
 
 
-Branch  :   Pattern '->' Exp        { (Nothing, $1, $3) }
+Branch  :   Pattern '->' Exp        
+                                    { A.Branch Nothing $1 $3 }
         |   ident ':' Pattern '->' Exp
-                                    { (Just $ ident $1, $3, $5) }
+                                    { A.Branch (Just $ ident $1) $3 $5 }
 
 
 Pattern :   PrimitiveType           { A.ChiPrim $1 }

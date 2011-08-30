@@ -2,11 +2,12 @@ module Language.BigBang.Ast
 ( Expr(..)
 , Chi(..)
 , Branches
-, Branch
+, Branch(..)
 ) where
 
+import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
-import Language.BigBang.Types.UtilTypes (LabelName, Ident)
+import Language.BigBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
 
 -------------------------------------------------------------------------------
 
@@ -39,4 +40,42 @@ data Chi =
 
 -- |Alias for case branches
 type Branches = [Branch]
-type Branch = (Maybe Ident, Chi, Expr)
+data Branch = Branch (Maybe Ident) Chi Expr
+    deriving (Eq, Ord, Show)
+
+instance Display Expr where
+    makeDoc a = case a of
+        Var i -> text $ unIdent i
+        Label n e -> char '`' <> (text $ unLabelName n) <+> makeDoc e
+        Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
+        Func i e -> parens $
+                text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
+        Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
+        PrimInt i -> integer i
+        PrimChar c -> quotes $ char c
+        PrimUnit -> parens empty
+        Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
+                (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
+                $+$ text "}"
+        {-
+           TODO: deal with the fact that the following isn't actually code
+           options include:
+               * errors on ASTs containing builtin nodes
+               * namespacing trick (e.g., Plus translates to
+                   "Language.BigBang.Builtins.([+]) e1 e2"
+        -}
+        Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
+        Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
+        Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
+
+instance Display Branch where
+    makeDoc (Branch mident chi e) =
+        maybe empty ((<> colon) . text . unIdent) mident <+>
+        (case chi of
+            ChiPrim p -> makeDoc p
+            ChiLabel n i ->
+                char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
+            ChiFun -> text "fun"
+            ChiTop -> text "_"
+        ) <+> text "->" <+> makeDoc e
+

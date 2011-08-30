@@ -8,11 +8,14 @@
 
 module Language.BigBang.Syntax.Lexer
 ( Token(..)
+, LexerResult
 , lexBigBang
 ) where
+
+import Control.Monad (liftM)
 }
 
-%wrapper "basic"
+%wrapper "monad"
 
 $digit = 0-9
 $lowerAlpha = [a-z]
@@ -22,30 +25,48 @@ $alpha = [$lowerAlpha $upperAlpha]
 tokens :-
 
     $white+                             ;
-    `                                   { const TokLabelPrefix }
-    &                                   { const TokOnionCons }
-    \\                                  { const TokLambda }
-    fun                                 { const TokFun }
-    \->                                 { const TokArrow }
-    case                                { const TokCase }
-    of                                  { const TokOf }
-    int                                 { const TokInteger }
-    char                                { const TokChar }
-    unit                                { const TokUnit }
-    \(                                  { const TokOpenParen }
-    \)                                  { const TokCloseParen }
-    \-?$digit+                          { TokIntegerLiteral . read }
-    \' ( \\. | ~\' ) \'                 { TokCharLiteral . head . tail }
-    $alpha [$alpha $digit _ ']*         { TokIdentifier }
-    \{                                  { const TokOpenBlock }
-    \}                                  { const TokCloseBlock }
-    \;                                  { const TokSeparator }
-    _                                   { const TokUnder }
-    :                                   { const TokColon }
+    `                                   { constTok TokLabelPrefix }
+    &                                   { constTok TokOnionCons }
+    \\                                  { constTok TokLambda }
+    fun                                 { constTok TokFun }
+    \->                                 { constTok TokArrow }
+    case                                { constTok TokCase }
+    of                                  { constTok TokOf }
+    int                                 { constTok TokInteger }
+    char                                { constTok TokChar }
+    unit                                { constTok TokUnit }
+    \(                                  { constTok TokOpenParen }
+    \)                                  { constTok TokCloseParen }
+    \-?$digit+                          { strTok $ TokIntegerLiteral . read }
+    \' ( \\. | ~\' ) \'                 { strTok $ TokCharLiteral . head . tail }
+    $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
+    \{                                  { constTok TokOpenBlock }
+    \}                                  { constTok TokCloseBlock }
+    \;                                  { constTok TokSeparator }
+    _                                   { constTok TokUnder }
+    :                                   { constTok TokColon }
 
 {
-lexBigBang :: String -> [Token]
-lexBigBang = alexScanTokens
+type LexerResult = Either String [Token]
+
+lexBigBang :: String -> LexerResult
+lexBigBang s = runAlex s tokenList
+    where
+        tokenLists = do
+            tok <- alexMonadScan
+            case tok of
+                [] -> return []
+                _ -> sequence [(return tok), tokenList]
+        tokenList = liftM concat tokenLists
+            
+alexEOF :: Alex [Token]
+alexEOF = return []
+
+constTok :: a -> b -> c -> Alex [a]
+constTok t = const $ const $ return [t]
+
+strTok :: (String -> a) -> (b,c,String) -> Int -> Alex [a]
+strTok f (_,_,s) len = return [f $ take len s]
 
 data Token =
       TokLabelPrefix

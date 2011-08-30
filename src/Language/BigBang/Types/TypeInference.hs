@@ -3,6 +3,7 @@ module Language.BigBang.Types.TypeInference
 , runTIM
 , inferTypeTop
 , Gamma
+, TypeInferenceError
 ) where
 
 import Control.Monad (liftM, mapAndUnzipM, zipWithM)
@@ -19,13 +20,13 @@ import qualified Data.Set as Set
 import Data.Set (Set, (\\))
 
 import qualified Language.BigBang.Ast as A
+import Language.BigBang.Render.Display
 import qualified Language.BigBang.Types.Types as T
 import Language.BigBang.Types.Types ((<:), (.:))
 import Language.BigBang.Types.UtilTypes
 import Language.BigBang.Interpreter.Interpreter (applyBuiltins)
 
 type Gamma = Map Ident T.Alpha
-type InferredConstraints = Set T.Constraint
 type NextFreshVar = Integer
 
 -- |An error type for the type inference routine.
@@ -35,19 +36,22 @@ data TypeInferenceError =
     deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
+instance Display TypeInferenceError where
+    makeDoc err = case err of
+        NotClosed i -> text "not closed:" <+> (text $ unIdent i)
 
 -- |A type alias for the type information monad.
 type TIM a = ErrorT TypeInferenceError
-                    (RWS Gamma InferredConstraints NextFreshVar)
+                    (RWS Gamma T.Constraints NextFreshVar)
                     a
 
 runTIM :: TIM a -> Gamma -> NextFreshVar
-       -> (Either TypeInferenceError a, InferredConstraints)
+       -> (Either TypeInferenceError a, T.Constraints)
 runTIM t r s = evalRWS (runErrorT t) r s
 
 inferTypeTop :: A.Expr
              -> ( Either TypeInferenceError T.TauDownClosed
-                , InferredConstraints
+                , T.Constraints
                 )
 inferTypeTop expr = runTIM (inferType $ applyBuiltins expr) Map.empty 0
 
@@ -111,7 +115,7 @@ inferType expr =
                     mapAndUnzipM extractBranchAssumptionAndChi brs
               let fs = map Map.union brAssump
               (taus, constraints) <- liftM unzip $ zipWithM capture fs $
-                                         map (\(_,_,x) -> x) brs
+                                         map (\(A.Branch _ _ x) -> x) brs
               tell1 $ t <: T.TucAlphaUp alphaUp .: T.Inferred expr gamma
               tell1 $ T.Case alphaUp
                     (zipWith3 (buildGuard expr gamma alpha) tauChis constraints taus)
@@ -161,7 +165,7 @@ inferType expr =
 extractBranchAssumptionAndChi
     :: A.Branch
     -> TIM (Map Ident T.Alpha, T.TauChi)
-extractBranchAssumptionAndChi (_,chi,_) =
+extractBranchAssumptionAndChi (A.Branch _ chi _) =
     case chi of
         A.ChiPrim p -> return (Map.empty, T.ChiPrim p)
         A.ChiLabel n i -> do
@@ -175,7 +179,7 @@ maybeInsert :: (Ord a) => Maybe a -> Set a -> Set a
 maybeInsert v set = maybe id Set.insert v $ set
 
 -- |Extracts all type variables from the provided constraints.
-extractConstraintTypeVars :: InferredConstraints -> Set T.AnyAlpha
+extractConstraintTypeVars :: T.Constraints -> Set T.AnyAlpha
 extractConstraintTypeVars c =
     Foldable.foldl foldConstraints Set.empty c
     where foldConstraints set el =

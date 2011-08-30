@@ -52,8 +52,8 @@ Library
         Data.Maybe.Utils
         Language.BigBang.Ast
         Language.BigBang.Interpreter.Interpreter
+        Language.BigBang.Interpreter.SourceInterpreter
         Language.BigBang.Render.Display
-        Language.BigBang.Render.PrettyPrint
         Language.BigBang.Syntax.Parser
         Language.BigBang.Syntax.Lexer
         Language.BigBang.Types.Closure

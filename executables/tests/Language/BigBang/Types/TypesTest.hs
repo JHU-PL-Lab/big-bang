@@ -23,7 +23,12 @@ tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, e
   failure.
 -}
 typecheckSourceString :: String -> Bool
-typecheckSourceString src = typecheckAst $ parseBigBang $ lexBigBang src
+typecheckSourceString src =
+    -- TODO: replace this routine once expectation-based testing is
+    -- implemented.
+    case lexBigBang src of
+        Left err -> False
+        Right tokens -> typecheckAst $ parseBigBang tokens
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =
