@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{- |A module defining a Little Bang interpreter.
+{- |A module defining a Big Bang interpreter.
 -}
 module Language.LittleBang.Interpreter.Interpreter
 ( evalTop
@@ -14,12 +14,13 @@ module Language.LittleBang.Interpreter.Interpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import Data.Maybe (catMaybes, maybeToList)
 
-import Language.LittleBang.Ast (Branches, Chi(..), Expr(..))
+import Language.LittleBang.Ast (Branch(..), Branches, Chi(..), Expr(..))
+import Language.LittleBang.Render.Display
 import qualified Language.LittleBang.Types.Types as T
 import Language.LittleBang.Types.UtilTypes
     ( Ident
     , ident
---    , unIdent
+    , unIdent
     , LabelName
     , labelName
 --    , unLabelName
@@ -37,6 +38,20 @@ data EvalError =
     deriving (Eq, Show)
 instance Error EvalError where
     strMsg = error
+instance Display EvalError where
+    makeDoc ee = case ee of
+        ApplNotFunction e e' ->
+            text "Attempted to apply" <+> makeDoc e <+> text "to" <+>
+            makeDoc e' <+> text "but the prior is not a function"
+        DynamicTypeError str ->
+            -- TODO: not a string!
+            text "Dynamic type error:" <+> text str
+        NotClosed i ->
+            text "Expression not closed for variable" <+> (text $ unIdent i)
+        UnmatchedCase e brs ->
+            text "Case of" <+> makeDoc e <+>
+            text "cannot be matched by branches" $$
+            (nest 4 $ makeDoc brs)
 
 type EvalM = Either EvalError Expr
 
@@ -46,7 +61,7 @@ type EvalM = Either EvalError Expr
 --
 -- Definitions for functions related to expression evaluation.
 
--- |Performs top-level evaluation of a Little Bang expression.  This evaluation
+-- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
 evalTop :: Expr -> EvalM
@@ -75,7 +90,7 @@ applyBuiltins e =
         wrapper = foldl1 (.) wrappedBuiltins
 
 
--- |Evaluates a Little Bang expression.
+-- |Evaluates a Big Bang expression.
 eval :: Expr -> EvalM
 
 eval (Var i) = throwError $ NotClosed i
@@ -112,7 +127,7 @@ eval (Case e branches) = do
     case answers of
         [] -> throwError $ UnmatchedCase e' branches
         answer:_ -> eval answer
-    where evalBranch e' (mbinder, chi, branchExpr) =
+    where evalBranch e' (Branch mbinder chi branchExpr) =
              let mexpr = coerce chi e'
                  boundExpr = do
                    expr <- mexpr
@@ -358,7 +373,7 @@ subst _ _ e@(PrimUnit) = e
 subst v x (Case expr branches) =
     let expr' = subst v x expr in
     Case expr' $ map substBranch branches
-    where substBranch branch@(mident, chi, branchExpr) =
+    where substBranch branch@(Branch mident chi branchExpr) =
             let boundIdents =
                     maybeToList mident ++
                     case chi of
@@ -367,8 +382,9 @@ subst v x (Case expr branches) =
                         ChiFun -> []
                         ChiTop -> []
             in
-            if elem x boundIdents then branch
-                                  else (mident, chi, subst v x branchExpr)
+            if elem x boundIdents
+                then branch
+                else Branch mident chi $ subst v x branchExpr
 
 subst v x (Plus e1 e2) =
     Plus (subst v x e1) (subst v x e2)

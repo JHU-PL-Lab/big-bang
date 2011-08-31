@@ -9,7 +9,6 @@ import Language.LittleBang.Ast
 import qualified Language.LittleBang.Types.Types as T
 import qualified Language.LittleBang.Types.TypeInference as I
 import qualified Language.LittleBang.Types.Closure as C
-import Language.LittleBang.Types.UtilTypes
 import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.Syntax.Lexer
 
@@ -23,7 +22,12 @@ tests = TestList [basicCases, primitiveBuiltinCases, caseCases, functionCases, e
   failure.
 -}
 typecheckSourceString :: String -> Bool
-typecheckSourceString src = typecheckAst $ parseLittleBang $ lexLittleBang src
+typecheckSourceString src =
+    -- TODO: replace this routine once expectation-based testing is
+    -- implemented.
+    case lexLittleBang src of
+        Left _ -> False
+        Right tokens -> typecheckAst $ parseLittleBang tokens
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =

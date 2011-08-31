@@ -137,6 +137,8 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
         -- '1 and ['2,'3] (or '1 and ['2,'1,'4]), this function will return
         -- an appropriate call site list to place on another type variable
         -- (such as ['1,'2,'3] or [{'1,'2},'4]).
+        -- TODO: move this function!  it does not need to be done for each
+        --       variable but instead for each substitution
         calculateCallSites idx sites =
             let siteList = T.unCallSites sites
                 siteList' = map (\(T.CallSite a) -> a) siteList

@@ -53,7 +53,7 @@ Library
         Language.LittleBang.Ast
         Language.LittleBang.Interpreter.Interpreter
         Language.LittleBang.Render.Display
-        Language.LittleBang.Render.PrettyPrint
+        Language.LittleBang.Interpreter.SourceInterpreter
         Language.LittleBang.Syntax.Parser
         Language.LittleBang.Syntax.Lexer
         Language.LittleBang.Types.Closure
