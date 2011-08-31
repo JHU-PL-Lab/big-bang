@@ -173,6 +173,16 @@ eval (Equal e1 e2) = do
                                    s2 = recurseOnion o2
         _ -> throwError $ DynamicTypeError "incorrect type in expression" 
 
+-- |Flattens onions to a list whose elements are guaranteed not to 
+--  be onions themselves and which appear in the same order as they 
+--  did .in the original onion
+flattenOnion :: Expr -> [Expr]
+flattenOnion e =
+  case e of
+    Onion e1 e2 -> flattenOnion e1 ++ flattenOnion e2
+    Label i e1  -> map (Label i) $ flattenOnion e1
+    _           -> [e]
+
 recurseOnion :: Expr -> [Expr]
 recurseOnion (Onion e1 e2) = recurseOnion e1 ++ recurseOnion e2
 recurseOnion x = [x]
@@ -285,15 +295,20 @@ coerceToUnit e =
 
 -- |Used to obtain a labeled value from an expression.  If necessary, this
 -- routine will recurse through onions looking for a labeled value.
--- TODO: fix this -- it doesn't properly project ex. `A x from `A 5 & `A ()
 coerceToLabel :: LabelName -> Expr -> Maybe Expr
 coerceToLabel name e =
-  coerceToType simpleLabelCoerce e
+  if null coercedList
+     then Nothing
+     else Just coercedOnion
   where
       simpleLabelCoerce lbl@(Label name' _) = if name == name'
                                                  then Just lbl
                                                  else Nothing
       simpleLabelCoerce _ = Nothing
+      coercedList = catMaybes $ map simpleLabelCoerce $ flattenOnion e
+      coercedOnion = Label name $ foldr1 Onion $ map unLabel coercedList
+      unLabel (Label _ e') = e'
+      unLabel _ = error "Found non-label in list of labels"
 
 -- |Used to obtain a function from an expression.  If necessary, this routine
 --  will recurse through onions looking for a function.
