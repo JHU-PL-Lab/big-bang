@@ -23,8 +23,6 @@ data Expr =
     | PrimUnit
     | Case Expr Branches
     -- Below are the AST forms which cannot be represented as text directly
-    -- TODO: rename the following to be monomorphic and primitive (as in
-    --       PrimIntPlus), excepting Equal
     | Plus Expr Expr
     | Minus Expr Expr
     | Equal Expr Expr
