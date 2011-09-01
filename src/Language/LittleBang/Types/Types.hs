@@ -76,7 +76,6 @@ data CallSite = CallSite (Set AlphaUp)
 --  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
 --  that, in this case, the use of single variables in the call site list is a
 --  notational sugar for singleton sets.
--- TODO: are we actually using reverse order?  Resolve this!
 newtype CallSites = CallSites { unCallSites :: [CallSite] }
     deriving (Eq, Ord, Show)
 callSites :: [CallSite] -> CallSites
