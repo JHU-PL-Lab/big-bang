@@ -23,7 +23,7 @@ data EvalStringResult
         -- ^Represents a contradiction appearing in a constraint set.  The
         --  indicated set should contain at least one contradiction.
     | TypecheckFailure TI.TypeInferenceError T.Constraints
-    | ParseFailure -- TODO: add some payload here
+    | ParseFailure P.ParseError
     | LexFailure String
 
 -- |A monadic exception type for the evalStringTop process.
@@ -61,9 +61,9 @@ eLex s =
 
 eParse :: [L.Token] -> EvalStringM A.Expr
 eParse tokens =
-    -- TODO: case this out once parser is monadic
-    let ast = P.parseLittleBang tokens in
-    return ast
+    case P.parseLittleBang tokens of
+        Left err -> throwError $ FailureWrapper $ ParseFailure err
+        Right ast -> return ast
 
 eTypeInfer :: A.Expr -> EvalStringM (T.TauDownClosed, T.Constraints)
 eTypeInfer e =
@@ -95,6 +95,6 @@ instance Display EvalStringResult where
         EvalFailure err -> makeDoc err
         Contradiction cs -> text "Contradiction: " $$ (nest 4 $ makeDoc cs)
         TypecheckFailure err _ -> makeDoc err
-        ParseFailure -> text "parse failure" -- TODO
+        ParseFailure err -> makeDoc err
         LexFailure msg -> text msg
 

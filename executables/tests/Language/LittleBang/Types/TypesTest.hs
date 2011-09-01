@@ -27,7 +27,10 @@ typecheckSourceString src =
     -- implemented.
     case lexLittleBang src of
         Left _ -> False
-        Right tokens -> typecheckAst $ parseLittleBang tokens
+        Right tokens ->
+                case parseLittleBang tokens of
+                        Left _ -> False
+                        Right ast -> typecheckAst ast
 
 typecheckAst :: Expr -> Bool
 typecheckAst expr =

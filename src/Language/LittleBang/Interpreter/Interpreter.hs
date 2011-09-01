@@ -120,7 +120,6 @@ eval (PrimChar c) = return $ PrimChar c
 
 eval PrimUnit = return $ PrimUnit
 
--- TODO: this is dynamic case, not static case!
 eval (Case e branches) = do
     e' <- eval e
     let answers = catMaybes $ map (evalBranch e') branches
@@ -251,8 +250,6 @@ evalBinop e1 e2 c f = do
     case (c e1', c e2') of
         (Just i1, Just i2) -> return $ f i1 i2
         _ -> throwError $ DynamicTypeError "incorrect type in expression"
-
--- TODO: all of this coercion logic is dynamic; problem?
 
 -- |Used to perform general coercion of values.  This function takes a direct
 --  coercion function (which should be relatively trivial) and applies it

@@ -13,6 +13,8 @@ module Language.LittleBang.Syntax.Lexer
 ) where
 
 import Control.Monad (liftM)
+
+import Language.LittleBang.Render.Display
 }
 
 %wrapper "monad"
@@ -90,5 +92,28 @@ data Token =
     | TokSeparator
     | TokColon
     deriving (Eq, Show)
+
+instance Display Token where
+    makeDoc tok = text $ case tok of
+        TokLabelPrefix -> "label prefix"
+        TokOnionCons -> "onion constructor"
+        TokLambda -> "lambda"
+        TokFun -> "fun"
+        TokArrow -> "arrow"
+        TokCase -> "case"
+        TokOf -> "of"
+        TokInteger -> "int"
+        TokChar -> "char"
+        TokUnit -> "unit"
+        TokUnder -> "underscore"
+        TokOpenParen -> "open parenthesis"
+        TokCloseParen -> "close parenthesis"
+        TokIntegerLiteral _ -> "int literal"
+        TokCharLiteral _ -> "char literal"
+        TokIdentifier _ -> "identifier"
+        TokOpenBlock -> "open block"
+        TokCloseBlock -> "close block"
+        TokSeparator -> "separator"
+        TokColon -> "colon"
 }
-    
+

@@ -118,13 +118,34 @@ findCases = Map.unionsWith mappend . map fn . Set.toList
             T.Case au gs _ -> Map.singleton au $ Set.singleton (gs, c)
             _ -> Map.empty
 
+-- |This function transforms a specified alpha up into a call site list.  The
+--  resulting call site list is in the reverse order form dictated by the
+--  CallSites structure; that is, the list [{'3},{'2},{'1}] represents the type
+--  variable with the exponent expression '1^('2^'3).  The resulting call site
+--  list is suitable for use in type variable substitution for polymorphic
+--  functions.
+addToCallSites :: T.AlphaUp -> T.CallSites
+addToCallSites alphaUp =
+    let alphaIdx = T.getIndex alphaUp
+        alphaEntry = T.AlphaUp $ T.AlphaContents alphaIdx $ T.callSites []
+        siteList = T.unCallSites $ T.getCallSites alphaUp
+        siteList' = map (\(T.CallSite a) -> a) siteList
+        totals = zip siteList' $ tail $ scanl Set.union Set.empty siteList'
+        rest = dropWhile (\(_,b) -> not $ Set.member alphaEntry b) totals
+    in
+    T.callSites $
+    case rest of
+            [] -> -- In this case, this call site is new to the list
+                (T.CallSite $ Set.singleton alphaEntry):siteList
+            (_,cyc):tl -> -- In this case, we found a cycle
+                (T.CallSite cyc):(map (T.CallSite . fst) tl)
+
 -- |A function which performs substitution on a set of constraints.  All
 --  variables in the alpha set are replaced with corresponding versions that
 --  have the specified alpha up in their call sites list.
 substituteVars :: Constraints -> Set T.AnyAlpha -> T.AlphaUp -> Constraints
 substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
-  where (replIdx,replSites) = (T.getIndex replAlpha, T.getCallSites replAlpha)
-        siteAlpha = T.AlphaUp $ T.AlphaContents replIdx $ T.callSites []
+  where newCallSites = addToCallSites replAlpha
         -- |Separates an AnyAlpha into an (AlphaContents -> AnyAlpha) and the
         --  parts of an AlphaContents
         separate sa = case sa of
@@ -132,28 +153,6 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
                 (T.SomeAlpha . T.Alpha, i, sites)
             T.SomeAlphaUp (T.AlphaUp (T.AlphaContents i sites)) ->
                 (T.SomeAlphaUp . T.AlphaUp, i, sites)
-        -- This function performs addition on a call site list.  Consider the
-        -- type '1^('2^'3) or the type '1^('2^('1^'4)).  Given the inputs
-        -- '1 and ['2,'3] (or '1 and ['2,'1,'4]), this function will return
-        -- an appropriate call site list to place on another type variable
-        -- (such as ['1,'2,'3] or [{'1,'2},'4]).
-        -- TODO: move this function!  it does not need to be done for each
-        --       variable but instead for each substitution
-        calculateCallSites idx sites =
-            let siteList = T.unCallSites sites
-                siteList' = map (\(T.CallSite a) -> a) siteList
-                totals = zip siteList' $
-                        tail $ scanl Set.union Set.empty siteList'
-                rest = dropWhile (\(_,b) ->
-                        not $ Set.member siteAlpha b) totals
-            in
-            T.callSites $
-            -- All following code describes the resulting list of call sites
-            case rest of
-                    [] -> -- In this case, this call site has not been seen before
-                        (T.CallSite $ Set.singleton siteAlpha):siteList
-                    (_,cyc):tl -> -- In this case, we found a cycle
-                        (T.CallSite cyc):(map (T.CallSite . fst) tl)
         f sa =
             let (constr,i,sites) = separate sa in
             if not $ Set.member sa $ forallVars
@@ -165,8 +164,7 @@ substituteVars constraints forallVars replAlpha = substituteAlpha f constraints
                 -- sites) and the type replacement function (which does not
                 -- replace forall-ed elements within a forall constraint).
                 else assert ((length $ T.unCallSites sites) == 0) $
-                     constr $ T.AlphaContents i $
-                            calculateCallSites replIdx replSites
+                     constr $ T.AlphaContents i $ newCallSites
 
 -- |Calculates the constraints produced from a given constraint set by the
 --  transitivity rules.  This rule performs transitivity for both alphas and
