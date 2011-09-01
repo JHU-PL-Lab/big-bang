@@ -6,6 +6,7 @@ module Language.LittleBang.Types.Types
 , construct
 , getIndex
 , CallSite(..)
+, CallSites
 , getCallSites
 , callSites
 , unCallSites
