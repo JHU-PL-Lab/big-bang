@@ -20,7 +20,10 @@ interpret :: String -> EvalM
 interpret s =
     case lexLittleBang s of
         Left err -> error err
-        Right tokens -> evalTop $ parseLittleBang tokens
+        Right tokens ->
+            case parseLittleBang tokens of
+                Left _ -> error "parse error"
+                Right ast -> evalTop ast
 
 -- Test cases that ensure that primitive literals are interpereted correctly
 literalsCases :: Test

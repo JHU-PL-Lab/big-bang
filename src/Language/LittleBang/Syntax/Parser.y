@@ -3,9 +3,16 @@
 
 module Language.LittleBang.Syntax.Parser
 ( parseLittleBang
+, ParseError
+, ParseM
 ) where
 
+import Control.Monad.Error (ErrorT, runErrorT, Error, strMsg, throwError)
+import Control.Monad.Identity (Identity, runIdentity)
+import Data.Maybe (listToMaybe)
+
 import qualified Language.LittleBang.Ast as A
+import Language.LittleBang.Render.Display
 import qualified Language.LittleBang.Syntax.Lexer as L
 import qualified Language.LittleBang.Types.Types as T
 import Language.LittleBang.Types.UtilTypes
@@ -22,9 +29,10 @@ import System.IO.Unsafe
 import System.IO
 }
 
-%name parseLittleBang
+%name doParseLittleBang
 %tokentype { L.Token }
 %error { parseError }
+%monad { ParseM } { (>>=) } { return }
 
 %token
         '`'             { L.TokLabelPrefix }
@@ -108,6 +116,23 @@ PrimitiveType
 
 
 {
+data ParseError
+        = ParseError [L.Token]
+instance Error ParseError where
+    strMsg = error
+instance Display ParseError where
+    makeDoc err =
+            let desc = case err of
+                        ParseError tokens ->
+                            maybe "<EOS>" display $ listToMaybe tokens
+            in text "unexpected" <+> text desc <+> text "token"
+
+type ParseM a = ErrorT ParseError Identity a
+
 parseError :: [L.Token] -> a
 parseError _ = error "Parse error"
+
+parseLittleBang :: [L.Token] -> Either ParseError A.Expr
+parseLittleBang tokens =
+    runIdentity $ runErrorT $ doParseLittleBang tokens
 }

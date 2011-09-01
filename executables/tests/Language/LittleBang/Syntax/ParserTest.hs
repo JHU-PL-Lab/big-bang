@@ -15,45 +15,51 @@ tests :: Test
 tests = TestList [literalsCases, functionsCases, simpleCases, errorCases]
 
 -- TODO: replace once expectation-based testing is established
-doParse :: String -> Expr
+doParse :: String -> Maybe Expr
 doParse src = case lexLittleBang src of
     Left err -> error $ "lexer error: " ++ err
-    Right tokens -> parseLittleBang tokens
+    Right tokens ->
+            case parseLittleBang tokens of
+                Left _ -> Nothing
+                Right ast -> Just ast
 
-doStrictParse :: String -> Expr
+doStrictParse :: String -> Maybe Expr
 doStrictParse = doParse
 -- Note: the above does not work at the moment due to strictness problems.
 -- However, it will be neatly corrected by expectation-based testing.
+
+checkEqual :: String -> Expr -> Maybe Expr -> Assertion
+checkEqual m a b = assertEqual m (Just a) b
 
 -- Test cases that check parsing of primitive literals works correctly
 literalsCases :: Test
 literalsCases = TestList [testParseInt, testParseChar, testParseUnit, testParseBool]
 
 testParseInt :: Test
-testParseInt = TestCase $ assertEqual
+testParseInt = TestCase $ checkEqual
   "Input of 1234567890 should return PrimInt 1234567890"
   (PrimInt 1234567890)
   (doParse "1234567890")
 
 testParseChar :: Test
-testParseChar = TestCase $ assertEqual
+testParseChar = TestCase $ checkEqual
   "Input of \'a\' should return PrimChar \'a\'"
   (PrimChar 'a')
   (doParse "\'a\'")
 
 testParseUnit :: Test
-testParseUnit = TestCase $ assertEqual
+testParseUnit = TestCase $ checkEqual
   "Input of () should return PrimUnit"
   PrimUnit
   (doParse "()")
 
 testParseBool :: Test
 testParseBool = TestCase $ do
-  assertEqual
+  checkEqual
     "Test parsing of `True ()"
     (Label (labelName "True") PrimUnit)
     (doParse "`True ()")
-  assertEqual
+  checkEqual
     "Test parsing of `False ()"
     (Label (labelName "False") PrimUnit)
     (doParse "`False ()")
@@ -64,25 +70,25 @@ functionsCases :: Test
 functionsCases = TestList [testLambdaExpr, testFuncAppl, testPerverseFunction, testFuncIgnoreNewLines, testCaseFunc]
 
 testLambdaExpr :: Test
-testLambdaExpr = TestCase $ assertEqual
+testLambdaExpr = TestCase $ checkEqual
   "Identity function: (\\x -> x)"
   (Func (ident "x") (Var (ident "x")))
   (doParse "(\\x -> x)")
 
 testFuncAppl :: Test
-testFuncAppl = TestCase $ assertEqual
+testFuncAppl = TestCase $ checkEqual
   "Test parsing of a function application"
   (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2))
   (doParse "plus 2 2")
 
 testPerverseFunction :: Test
-testPerverseFunction = TestCase $ assertEqual
+testPerverseFunction = TestCase $ checkEqual
   "(fun x -> x x) (fun x -> x x)"
   (Appl (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x")))) (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x"))))) 
   (doParse "(fun x -> x x) (fun x -> x x)")
 
 testFuncIgnoreNewLines :: Test
-testFuncIgnoreNewLines = TestCase $ assertEqual
+testFuncIgnoreNewLines = TestCase $ checkEqual
   "Test if parser ignores newlines correctly"
   (Appl (Func (ident "x") (Var (ident "x"))) (Func (ident "x") (Var (ident "x"))))
   (doParse "(\\x->x)\
@@ -90,7 +96,7 @@ testFuncIgnoreNewLines = TestCase $ assertEqual
 
 -- TODO: Also test binders
 testCaseFunc :: Test
-testCaseFunc = TestCase $ assertEqual
+testCaseFunc = TestCase $ checkEqual
                "Test if case block in function is parsed correctly"
                (Func (ident "x")
                  (Case (Var (ident "x"))
@@ -110,13 +116,13 @@ simpleCases :: Test
 simpleCases = TestList [testFakeString, testCaseOfBlock, testTernaryOnion]
 
 testFakeString :: Test
-testFakeString = TestCase $ assertEqual
+testFakeString = TestCase $ checkEqual
   "Testing \"fake\" strings"
   (Appl (Appl (Appl (Appl (Appl (PrimChar 's') (PrimChar 't')) (PrimChar 'r')) (PrimChar 'i')) (PrimChar 'n')) (PrimChar 'g')) 
   (doParse "'s''t''r''i''n''g'")
 
 testCaseOfBlock :: Test
-testCaseOfBlock = TestCase $ assertEqual
+testCaseOfBlock = TestCase $ checkEqual
                   "Testing case...of block"
                   (Case (Var (ident "x"))
                     [ Branch Nothing (ChiPrim T.PrimInt) $ PrimInt 5
@@ -135,7 +141,7 @@ testCaseOfBlock = TestCase $ assertEqual
                        \    fun -> (\\x -> x)}")
 
 testTernaryOnion :: Test
-testTernaryOnion = TestCase $ assertEqual
+testTernaryOnion = TestCase $ checkEqual
   "Testing ternary onion"
   (Onion (PrimInt 1) (Onion (PrimChar 'x') (Func (ident "x") (Var (ident "x")))))
   (doParse "(1 & ('x' & (\\x -> x)))")
