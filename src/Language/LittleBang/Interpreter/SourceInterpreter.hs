@@ -77,8 +77,8 @@ eClose :: T.Constraints -> EvalStringM T.Constraints
 eClose cs =
     let closed = C.calculateClosure cs in
     if Set.null $ Set.filter isBottom closed
-        then throwError $ FailureWrapper $ Contradiction closed
-        else return closed
+        then return closed
+        else throwError $ FailureWrapper $ Contradiction closed
   where isBottom c = case c of
             T.Bottom _ -> True
             _ -> False
