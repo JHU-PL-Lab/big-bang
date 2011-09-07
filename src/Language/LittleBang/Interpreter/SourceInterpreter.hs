@@ -15,14 +15,16 @@ import qualified Language.LittleBang.Types.Closure as C
 import qualified Language.LittleBang.Types.TypeInference as TI
 import qualified Language.LittleBang.Types.Types as T
 
+import Debug.Trace
+
 -- |A result type for evalStringTop
 data EvalStringResult
-    = EvalSuccess A.Expr
-    | EvalFailure I.EvalError
-    | Contradiction T.Constraints
+    = EvalSuccess A.Expr A.Expr
+    | EvalFailure A.Expr I.EvalError
+    | Contradiction A.Expr T.Constraints
         -- ^Represents a contradiction appearing in a constraint set.  The
         --  indicated set should contain at least one contradiction.
-    | TypecheckFailure TI.TypeInferenceError T.Constraints
+    | TypecheckFailure A.Expr TI.TypeInferenceError T.Constraints
     | ParseFailure P.ParseError
     | LexFailure String
 
@@ -42,16 +44,16 @@ evalStringTop s =
     let result = eAll s in
     case result of
         Left (FailureWrapper err) -> err
-        Right answer -> EvalSuccess answer
+        Right answer -> uncurry EvalSuccess answer
 
-eAll :: String -> EvalStringM A.Expr
+eAll :: String -> EvalStringM (A.Expr, A.Expr)
 eAll s = do
     tokens <- eLex s
     ast <- eParse tokens
     (_,cs) <- eTypeInfer ast
-    _ <- eClose cs
+    _ <- eClose ast cs
     val <- eEval ast
-    return val
+    return (ast, val)
 
 eLex :: String -> EvalStringM [L.Token]
 eLex s =
@@ -70,15 +72,15 @@ eTypeInfer e =
     let (res,cs) = TI.inferTypeTop e in
     case res of
         Left err -> throwError $ FailureWrapper $
-                TypecheckFailure err cs
+                TypecheckFailure e err cs
         Right t -> return (t,cs)
 
-eClose :: T.Constraints -> EvalStringM T.Constraints
-eClose cs =
+eClose :: A.Expr -> T.Constraints -> EvalStringM T.Constraints
+eClose e cs =
     let closed = C.calculateClosure cs in
     if Set.null $ Set.filter isBottom closed
         then return closed
-        else throwError $ FailureWrapper $ Contradiction closed
+        else throwError $ FailureWrapper $ Contradiction e closed
   where isBottom c = case c of
             T.Bottom _ -> True
             _ -> False
@@ -86,15 +88,16 @@ eClose cs =
 eEval :: A.Expr -> EvalStringM A.Expr
 eEval e =
     case I.evalTop e of
-        Left err -> throwError $ FailureWrapper $ EvalFailure err
+        Left err -> throwError $ FailureWrapper $ EvalFailure e err
         Right v -> return v
 
 instance Display EvalStringResult where
     makeDoc esr = case esr of
-        EvalSuccess e -> makeDoc e
-        EvalFailure err -> makeDoc err
-        Contradiction cs -> text "Contradiction: " $$ (nest 4 $ makeDoc cs)
-        TypecheckFailure err _ -> makeDoc err
+        EvalSuccess _ e -> makeDoc e
+        EvalFailure ast err -> makeDoc ast $$ makeDoc err
+        Contradiction ast cs -> text "Contradiction: " $$
+                               (nest 4 $ makeDoc ast $$ makeDoc cs)
+        TypecheckFailure ast err _ -> makeDoc ast $$ makeDoc err
         ParseFailure err -> makeDoc err
         LexFailure msg -> text msg
 

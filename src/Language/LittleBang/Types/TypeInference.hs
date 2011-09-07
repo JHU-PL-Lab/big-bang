@@ -3,7 +3,7 @@ module Language.LittleBang.Types.TypeInference
 , runTIM
 , inferTypeTop
 , Gamma
-, TypeInferenceError
+, TypeInferenceError (..)
 ) where
 
 import Control.Monad (liftM, mapAndUnzipM, zipWithM)
