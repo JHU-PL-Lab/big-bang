@@ -11,6 +11,7 @@ Parser.info
 InterpreterMain
 
 *.backup
+documentation/Logic_Rules.pdf
 documentation/Type_System_Rules.pdf
 *.aux
 *.log
