@@ -126,11 +126,13 @@ instance Display ParseError where
                         ParseError tokens ->
                             maybe "<EOS>" display $ listToMaybe tokens
             in text "unexpected" <+> text desc <+> text "token"
+instance Show ParseError where
+    show = display
 
 type ParseM a = ErrorT ParseError Identity a
 
-parseError :: [L.Token] -> a
-parseError _ = error "Parse error"
+parseError :: [L.Token] -> ParseM a
+parseError = throwError . ParseError
 
 parseLittleBang :: [L.Token] -> Either ParseError A.Expr
 parseLittleBang tokens =
