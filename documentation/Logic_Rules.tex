@@ -6,6 +6,36 @@
 
 \begin{document}
 
+\section*{Language Grammar}
+
+\begin{eqnarray*}
+    e               &::=&       v
+                           \gOr x
+                           \gOr e\ e
+                           \gOr \gtBt x\ e
+                           \gOr e \gtAmp e
+                           \gOr \gtCase e \gtOf \texttt{\char`\{} B \texttt{\char`\}}
+\\
+    x               &::=&       [\texttt{a-zA-Z0-9\char`\_}]^+
+\\
+    v               &::=&       [\texttt{0-9}]^+
+                           \gOr \texttt{'}[\texttt{\char`\^\char`\\}]\texttt{'}
+                           \gOr \texttt{'\char`\\\char`\\'}
+                           \gOr \texttt{()}
+                           \gOr \gtFun x\texttt{ -> }e
+\\
+    B               &::=&       b
+                           \gOr b\texttt{\char`\; }B
+\\
+    b               &::=&       \chi\texttt{ -> }e
+                           \gOr x\texttt{:}\chi\texttt{ -> }e
+\\
+    \chi            &::=&       \tprim
+                           \gOr \gtFun
+                           \gOr \gtBt x\ x
+\end{eqnarray*}
+
+
 \section*{Type System Grammar}
 
 \begin{eqnarray*}
@@ -39,7 +69,7 @@
                            \gOr \gtChar
                            \gOr \gtUnit
 \\
-    \lbl            &::=&       \gtBt [\texttt{a-zA-Z0-9}]^*
+    \lbl            &::=&       \gtBt [\texttt{a-zA-Z0-9}]^+
 \\
     \subtype        &::=&       \tauDownClosed <: \tauUpClosed
 \\
