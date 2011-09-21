@@ -61,7 +61,7 @@ Library
         Language.LittleBang.Types.TypeInference
         Language.LittleBang.Types.UtilTypes
 
-  Build-depends:       base, array, containers, mtl, pretty, template-haskell 
+  Build-depends:       base, array, containers >= 0.4.0.0, mtl, pretty, template-haskell 
 
   ghc-options:         -Wall
 
@@ -71,7 +71,7 @@ Executable interpreter
   Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers, mtl, split, big-bang
+  Build-depends:       base, array, containers >= 0.4.0.0 , mtl, split, big-bang
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
@@ -87,7 +87,7 @@ Executable test-suite
   Main-is:             Test.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers, mtl, big-bang, HUnit
+  Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
   
   -- Modules not exported by this package.
   Other-modules:       Language.LittleBang.Syntax.LexerTest

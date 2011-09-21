@@ -1,6 +1,7 @@
 module Language.LittleBang.Interpreter.SourceInterpreter
 ( evalStringTop
 , EvalStringResult(..)
+, EvalSuccessOrFailure(..)
 ) where
 
 import Control.Monad.Error (Error, strMsg, throwError)
@@ -17,10 +18,11 @@ import qualified Language.LittleBang.Types.Types as T
 
 import Debug.Trace
 
+data EvalSuccessOrFailure = EvalSuccess A.Expr | EvalFailure I.EvalError
+
 -- |A result type for evalStringTop
 data EvalStringResult
-    = EvalSuccess A.Expr A.Expr
-    | EvalFailure A.Expr I.EvalError
+    = EvalResult A.Expr EvalSuccessOrFailure
     | Contradiction A.Expr T.Constraints
         -- ^Represents a contradiction appearing in a constraint set.  The
         --  indicated set should contain at least one contradiction.
@@ -44,16 +46,15 @@ evalStringTop s =
     let result = eAll s in
     case result of
         Left (FailureWrapper err) -> err
-        Right answer -> uncurry EvalSuccess answer
+        Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
 
-eAll :: String -> EvalStringM (A.Expr, A.Expr)
+eAll :: String -> EvalStringM A.Expr
 eAll s = do
     tokens <- eLex s
     ast <- eParse tokens
     (_,cs) <- eTypeInfer ast
     _ <- eClose ast cs
-    val <- eEval ast
-    return (ast, val)
+    return ast
 
 eLex :: String -> EvalStringM [L.Token]
 eLex s =
@@ -81,23 +82,29 @@ eClose e cs =
     if Set.null $ Set.filter isBottom closed
         then return closed
         else throwError $ FailureWrapper $ Contradiction e closed
-  where isBottom c = case c of
-            T.Bottom _ -> True
-            _ -> False
 
-eEval :: A.Expr -> EvalStringM A.Expr
+isBottom :: T.Constraint -> Bool
+isBottom c = case c of
+    T.Bottom _ -> True
+    _ -> False
+
+eEval :: A.Expr -> EvalSuccessOrFailure
 eEval e =
     case I.evalTop e of
-        Left err -> throwError $ FailureWrapper $ EvalFailure e err
-        Right v -> return v
+        Left err -> EvalFailure err
+        Right v -> EvalSuccess v
 
 instance Display EvalStringResult where
     makeDoc esr = case esr of
-        EvalSuccess _ e -> makeDoc e
-        EvalFailure ast err -> makeDoc ast $$ makeDoc err
+        EvalResult ast res -> makeDoc ast $$ makeDoc res
         Contradiction ast cs -> text "Contradiction: " $$
-                               (nest 4 $ makeDoc ast $$ makeDoc cs)
+                               (nest 4 $ makeDoc ast $$
+                                         makeDoc (head . filter isBottom . Set.toList $ cs))
         TypecheckFailure ast err _ -> makeDoc ast $$ makeDoc err
         ParseFailure err -> makeDoc err
         LexFailure msg -> text msg
 
+instance Display EvalSuccessOrFailure where
+    makeDoc res = case res of
+        EvalSuccess e -> makeDoc e
+        EvalFailure err -> makeDoc err
