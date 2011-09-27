@@ -211,6 +211,24 @@ $$
     }
 \end{mathpar}
 
+\subsection*{$\mu$ Definition}
+
+$$
+\mu(\tauDownOpen, \tauChi) =
+    \begin{cases}
+        \{ \tauDownOpen' <: \alphaClosed \}             &, \tauChi = \lbl \alphaClosed, \tauDownOpen = \lbl \tauDownOpen' \\
+        \emptyset                                       &, \text{otherwise}
+    \end{cases}
+$$
+
+\subsection*{$\varphi$ Definition}
+
+$$
+\varphi(\alphaList, \C, \alphaUp) = \{ \constraint : \constraint' \in \C, \varphi(\alphaList, \constraint', \alphaUp) = \constraint \}
+$$
+
+% TODO: how best to describe the deep replacement?
+
 \subsection*{Contradiction Rules}
 
 \begin{mathpar}
