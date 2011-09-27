@@ -2,6 +2,7 @@
 \usepackage{mathpartir}
 \usepackage{graphicx}
 \usepackage{rotate}
+\usepackage{textcomp}
 
 %%% Layout Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -34,7 +35,14 @@
 \DeclareMathOperator{\fto}{\rightarrow}
 
 \newcommand{\alphaUp}{\vstack{0em}{\alpha}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\vartriangle}}}}
+\newcommand{\anyAlpha}{\alpha^?}
+\newcommand{\alphaOpen}{\vstack{-0.5em}{\mkern2mu\scalebox{0.8}{\textopenbullet}}{0em}{\alpha}}
+\newcommand{\alphaClosed}{\vstack{-0.5em}{\mkern2mu\scalebox{0.8}{\textbullet}}{0em}{\alpha}}
 \newcommand{\alphaList}{\bar{\alpha}}
+
+\newcommand{\cellDown}[1]{\ensuremath{\vstack{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern3mu\triangledown}}}{0em}{\textrm{cell}}(#1)}}
+\newcommand{\cellUpG}[1]{\ensuremath{\vstack{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern3mu\triangledown}}{0em}{\textrm{cell}}}^G(#1)}}
+\newcommand{\cellUpS}[1]{\ensuremath{\vstack{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern3mu\triangledown}}}{0em}{\textrm{cell}}^S(#1)}}
 
 \newcommand{\tauUpOpen}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\vartriangle}}}}
 \newcommand{\tauUpClosed}{\vstack{0em}{\tau}{-0.5em}{\scalebox{1}[0.5]{\ensuremath{\mkern-1mu\blacktriangle}}}}
@@ -46,6 +54,9 @@
 \newcommand{\concreteEquatable}[2]{\zConcreteEquatable(#1,#2)}
 
 \newcommand{\flatten}[1]{\ensuremath{\theta(#1)}}
+
+\DeclareMathOperator{\immCompat}{<::}
+\DeclareMathOperator{\icSeparator}{\sim}
 
 %%% Grammar Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -63,7 +74,7 @@
 \newcommand{\C}{\ensuremath\constraintList}
 
 \DeclareMathOperator{\gtAmp}{\texttt{\char`\&}}
-\DeclareMathOperator{\gtEq}{%
+\DeclareMathOperator{\gtBEq}{%
         \ensuremath{\vstack{0em}{\scalebox{1}[1]{\ensuremath{\square}}}{-0.1em}{\scalebox{0.7}[1]{\ensuremath{\mkern2.75mu=}}}}}
 \DeclareMathOperator{\gtFun}{\texttt{fun}}
 \DeclareMathOperator{\gtInt}{\texttt{int}}
@@ -74,6 +85,9 @@
 \DeclareMathOperator{\gtCase}{\texttt{case}}
 \DeclareMathOperator{\gtOf}{\texttt{of}}
 \DeclareMathOperator{\gtBottom}{\ensuremath{\bot}}
+\DeclareMathOperator{\gtDef}{\texttt{def}}
+\DeclareMathOperator{\gtEq}{\texttt{=}}
+\DeclareMathOperator{\gtIn}{\texttt{in}}
 
 %%% Rule Macros %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
