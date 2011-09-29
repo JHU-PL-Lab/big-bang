@@ -21,7 +21,7 @@
     x               &::=&       [\texttt{a-zA-Z0-9\char`\_}]^+
 \\
     v               &::=&       [\texttt{0-9}]^+
-                           \gOr \texttt{'}[\texttt{\char`\^\char`\\}]\texttt{'}
+                           \gOr \texttt{'}[\texttt{\textrm{\^{}}\char`\\}]\texttt{'}
                            \gOr \texttt{'\char`\\\char`\\'}
                            \gOr \texttt{()}
                            \gOr \gtFun x\texttt{ -> }e
@@ -29,8 +29,10 @@
     B               &::=&       b
                            \gOr b\texttt{\char`\; }B
 \\
-    b               &::=&       \chi\texttt{ -> }e
-                           \gOr x\texttt{:}\chi\texttt{ -> }e
+    b               &::=&       \hat{b}\ \chi\texttt{ -> }e
+\\
+    \hat{b}         &::=&       x\texttt{:}
+                           \gOr \epsilon
 \\
     \chi            &::=&       \tprim
                            \gOr \gtFun
@@ -133,10 +135,10 @@
     
     \bbrule{Case}{
         \typeRel{\context}{e}{\tauDownClosed}{\C} \\
-        \overline{\gamma_n,\tauChi_n = \kappa(\chi_n)} \\
+        \overline{\gamma_n,\C'_n,\tauChi_n = \kappa(\tauDownClosed, \hat{b},\chi_n)} \\
         \overline{\typeRel{\context,\gamma_n}{e_n}{\tauDownClosed_n}{\C_n}}
     }{
-        \typeRel{\context}{\gtCase e \gtOf \overline{\chi_n \fto e_n}}{\alphaClosed}{\C \cup \{\tauDownClosed <: \alphaUp,
+        \typeRel{\context}{\gtCase e \gtOf \overline{\hat{b}\ \chi_n \fto e_n}}{\alphaClosed}{\C \cup \{\tauDownClosed <: \alphaUp,
             \gtCase \alphaUp \gtOf \overline{\tauChi_n \fto (\C_n \cup \{\tauDownClosed_n <: \alphaClosed\})}\}}
     }
     
@@ -158,14 +160,27 @@
 \subsection*{$\kappa$ Definition}
 
 $$
-\kappa(\chi) =
+\kappa(\tauDownClosed, \hat{b},\chi) =
     \begin{cases}
-        (\{x:\alphaClosed\}, \lbl \alphaClosed)     &, \chi = \lbl x \\
-        (\emptyset, \tprim)                         &, \chi = \tprim \\
-        (\emptyset, \gtFun)                         &, \chi = \gtFun \\
-        (\emptyset, \gtTop)                         &, \chi = \texttt{\char`\_}
+        (\gamma \cup \{x:\alphaClosed\}, \C, \lbl \alphaClosed)     &, \chi = \lbl x \\
+        (\gamma, \C, \tprim)                                        &, \chi = \tprim \\
+        (\gamma, \C, \gtFun)                                        &, \chi = \gtFun \\
+        (\gamma, \C, \gtTop)                                        &, \chi = \texttt{\char`\_}
     \end{cases}
 $$
+where
+\begin{align*}
+\gamma &=
+    \begin{cases}
+        \emptyset                                                   &, \hat{b} = \epsilon \\
+        \{x':\alphaClosed'\}                                        &, \hat{b} = x'\texttt{:}
+    \end{cases}\\
+\C &=
+    \begin{cases}
+        \emptyset                                                   &, \hat{b} = \epsilon \\
+        \{\tauDownClosed <: \alphaClosed'\}                         &, \hat{b} = x'\texttt{:}
+    \end{cases}\\
+\end{align*}
 
 \section*{Constraint Closure Rules}
 
