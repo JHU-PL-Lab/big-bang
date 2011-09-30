@@ -15,8 +15,8 @@
                            \gOr \gtBt x\ e
                            \gOr e \gtAmp e
                            \gOr \gtCase e \gtOf \texttt{\char`\{} B \texttt{\char`\}}
-%                           \gOr \gtDef x \gtEq e \gtIn e
-%                           \gOr x \gtEq e \gtIn e
+                           \gOr \gtDef x \gtEq e \gtIn e
+                           \gOr x \gtEq e \gtIn e
 \\
     x               &::=&       [\texttt{a-zA-Z0-9\char`\_}]^+
 \\
@@ -44,9 +44,6 @@
 \section*{Type System Grammar}
 
 \begin{eqnarray*}
-%     \anyAlpha       &::=&       \alpha
-%                            \gOr \alphaUp
-% \\
     \alpha          &::=&       \alphaOpen
                            \gOr \alphaClosed
 \\
@@ -55,6 +52,8 @@
                            \gOr \alphaUp \fto \alpha
                            \gOr \alphaUp
                            \gOr \alphaOpen
+                           \gOr \cellUpG{\alphaClosed}
+                           \gOr \cellUpS{\alphaClosed}
 \\
     \tauUpClosed    &::=&       \tauUpOpen
                            \gOr \alpha
@@ -65,7 +64,7 @@
                            \gOr \tauDownOpen \gtAmp \tauDownOpen
                            \gOr \forall \alphaList. \alpha \fto \alpha \cSeparator \constraintList
                            \gOr \alphaOpen
-%                           \gOr \cellDown{\anyAlpha}
+                           \gOr \cellDown{\alphaClosed}
 \\
     \tauDownClosed  &::=&       \tprim
                            \gOr \gtTop
@@ -100,16 +99,10 @@
 \section*{Type Inference Rules}
 
 \begin{mathpar}
-    \bbrule{Hypothesis}{
-        x:\alphaClosed \in \context
-    }{
-        \typeRel{\context}{x}{\alphaClosed}{\emptyset}
-    }
-    
     \bbrule{Label}{
         \typeRel{\context}{e}{\tauDownClosed}{\C}
     }{
-        \typeRel{\context}{\lbl e}{\lbl \alphaClosed}{\{\tauDownClosed <: \alphaClosed\} \cup \C}
+        \typeRel{\context}{\lbl e}{\lbl \alphaClosed_1}{\{\cellDown{\alphaClosed_2} <: \alphaClosed_1, \tauDownClosed <: \alphaClosed_2\} \cup \C}
     }
     
     \bbrule{Onion}{
@@ -127,10 +120,11 @@
     }
     
     \bbrule{Application}{
-        \typeRel{\context}{e}{\tauDownClosed_1}{\C_1} \\
-        \typeRel{\context}{e'}{\tauDownClosed_2}{\C_2}
+        \typeRel{\context}{e_1}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context}{e_2}{\tauDownClosed_2}{\C_2}
     }{
-        \typeRel{\context}{e\ e'}{\alphaClosed}{\{\tauDownClosed_1 <: \alphaUp \fto \alphaClosed, \tauDownClosed_2 <: \alphaUp\} \cup \C_1 \cup \C_2}
+        \typeRel{\context}{e_1\ e_2}{\alphaClosed_1}%
+                {\{\tauDownClosed_1 <: \alphaUp_2 \fto \alphaClosed_1, \cellDown{\alphaClosed_3} <: \alphaUp_2, \tauDownClosed_2 <: \alphaUp_3\} \cup \C_1 \cup \C_2} % TODO: add for final:  final \alphaUp_2
     }
     
     \bbrule{Case}{
@@ -139,7 +133,7 @@
         \overline{\typeRel{\context,\gamma_n}{e_n}{\tauDownClosed_n}{\C_n}}
     }{
         \typeRel{\context}{\gtCase e \gtOf \overline{\hat{b}\ \chi_n \fto e_n}}{\alphaClosed}{\C \cup \{\tauDownClosed <: \alphaUp,
-            \gtCase \alphaUp \gtOf \overline{\tauChi_n \fto (\C_n \cup \{\tauDownClosed_n <: \alphaClosed\})}\}}
+            \gtCase \alphaUp \gtOf \overline{\tauChi_n \fto (\C_n \cup \C'_n\cup \{\tauDownClosed_n <: \alphaClosed\})}\}}
     }
     
     \bbrule{Equality}{
@@ -154,6 +148,30 @@
                     \tauDownClosed_2 <: \alphaClosed_2,
                     \equatable{\alphaClosed_1}{\alphaClosed_2}
                  \} \cup \C_1 \cup \C_2}
+    }
+    
+    % TODO: add finality
+    \bbrule{Variable Definition}{
+        \typeRel{\context}{e_1}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context,x:\alphaClosed_1}{e_2}{\tauDownClosed_2}{\C_2}
+    }{
+        \typeRel{\context}{\gtDef x = e_1 \gtIn e_2}{\tauDownClosed_2}%
+                {\C_1 \cup \C_2 \cup \{\cellDown{\alphaClosed_2} <: \alphaClosed_1, \tauDownClosed_1 <: \alphaClosed_2\}}
+    }
+    
+    \bbrule{Variable Assignment}{
+        \typeRel{\context}{e_1}{\tauDownClosed_1}{\C_1} \\
+        \typeRel{\context}{e_2}{\tauDownClosed_2}{\C_2} \\
+        x:\alphaClosed_1 \in \context
+    }{
+        \typeRel{\context}{x = e_1 \gtIn e_2}{\tauDownClosed_2}%
+                {\C_1 \cup \C_2 \cup \{\alphaClosed_1 <: \cellUpS{\alphaClosed_2}, \tauDownClosed_1 <: \alphaClosed_2\}}
+    }
+    
+    \bbrule{Hypothesis}{
+        x:\alphaClosed_1 \in \context
+    }{
+        \typeRel{\context}{x}{\alphaClosed_2}{\{\alphaClosed_1 <: \cellUpG{\alphaClosed_2}\}}
     }
 \end{mathpar}
 
@@ -223,6 +241,20 @@ where
         (\forall \alphaList. \alphaClosed_1 \fto \alphaOpen_2 \cSeparator \C) <: \alphaUp \fto \alphaClosed_3
     }{
         \varphi(\alphaList, \C \cup \{\tauDownOpen <: \alphaClosed_1, \alphaOpen_2 <: \alphaClosed_3\}, \alphaUp)
+    }
+    
+    \bbrule{Backward Cell Propogation}{
+        \cellDown{\alphaClosed_1} <: \cellUpS{\alphaClosed_2} \\
+        \tauDownOpen <: \alphaClosed_2
+    }{
+        \tauDownOpen <: \alphaClosed_1
+    }
+    
+    \bbrule{Forward Cell Propogation}{
+        \cellDown{\alphaClosed_1} <: \cellUpG{\alphaClosed_2} \\
+        \tauDownOpen <: \alphaClosed_1
+    }{
+        \tauDownOpen <: \alphaClosed_2
     }
 \end{mathpar}
 
