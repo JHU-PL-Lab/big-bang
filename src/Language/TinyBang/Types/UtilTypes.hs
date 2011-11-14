@@ -1,7 +1,7 @@
 {- |A module containing Haskell types which are used as utilities by other
     modules.
 -}
-module Language.LittleBang.Types.UtilTypes
+module Language.TinyBang.Types.UtilTypes
 ( LabelName
 , labelName
 , unLabelName
@@ -10,7 +10,7 @@ module Language.LittleBang.Types.UtilTypes
 , unIdent
 ) where
 
-import Language.LittleBang.Render.Display
+import Language.TinyBang.Render.Display
 
 -- |A distinguished type for labels.
 newtype LabelName = LabelName { unLabelName :: String }
@@ -31,4 +31,3 @@ instance Display LabelName where
 
 instance Display Ident where
     makeDoc = text . unIdent
-

@@ -1,11 +1,11 @@
-module Language.LittleBang.Render.PrettyPrintTest
+module Language.TinyBang.Render.PrettyPrintTest
 ( tests
 ) where
 
 import Test.HUnit hiding (Label)
-import Language.LittleBang.Ast
-import Language.LittleBang.Types.UtilTypes
-import Language.LittleBang.Render.Display
+import Language.TinyBang.Ast
+import Language.TinyBang.Types.UtilTypes
+import Language.TinyBang.Render.Display
 
 tests :: Test
 tests = TestList [printPrimCases, printFuncTests, printOnionTests, printOpsTests]

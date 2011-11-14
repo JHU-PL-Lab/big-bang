@@ -1,4 +1,4 @@
-module Language.LittleBang.Types.Types 
+module Language.TinyBang.Types.Types 
 ( AlphaContents(..)
 , AlphaUp(..)
 , Alpha(..)
@@ -35,13 +35,13 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
 
-import Language.LittleBang.Types.UtilTypes (LabelName, Ident)
-import Language.LittleBang.Render.Display
-import {-# SOURCE #-} qualified Language.LittleBang.Ast as A
+import Language.TinyBang.Types.UtilTypes (LabelName, Ident)
+import Language.TinyBang.Render.Display
+import {-# SOURCE #-} qualified Language.TinyBang.Ast as A
 
 -------------------------------------------------------------------------------
 -- *Little Bang Types
--- $LittleBangTypes
+-- $TinyBangTypes
 --
 -- These data types are used to represent Little Bang's type grammar.
 

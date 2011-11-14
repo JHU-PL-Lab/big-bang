@@ -9,4 +9,3 @@ leastFixedPoint :: (Eq a) => (a -> a) -> a -> a
 leastFixedPoint f x =
     let x' = f x in
     if x == x' then x else leastFixedPoint f x'
-

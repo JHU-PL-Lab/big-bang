@@ -50,16 +50,16 @@ Library
   Exposed-Modules:
         Data.Function.Utils
         Data.Maybe.Utils
-        Language.LittleBang.Ast
-        Language.LittleBang.Interpreter.Interpreter
-        Language.LittleBang.Render.Display
-        Language.LittleBang.Interpreter.SourceInterpreter
-        Language.LittleBang.Syntax.Parser
-        Language.LittleBang.Syntax.Lexer
-        Language.LittleBang.Types.Closure
-        Language.LittleBang.Types.Types
-        Language.LittleBang.Types.TypeInference
-        Language.LittleBang.Types.UtilTypes
+        Language.TinyBang.Ast
+        Language.TinyBang.Interpreter.Interpreter
+        Language.TinyBang.Render.Display
+        Language.TinyBang.Interpreter.SourceInterpreter
+        Language.TinyBang.Syntax.Parser
+        Language.TinyBang.Syntax.Lexer
+        Language.TinyBang.Types.Closure
+        Language.TinyBang.Types.Types
+        Language.TinyBang.Types.TypeInference
+        Language.TinyBang.Types.UtilTypes
 
   Build-depends:       base, array, containers >= 0.4.0.0, mtl, pretty, template-haskell 
 

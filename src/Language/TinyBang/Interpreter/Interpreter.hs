@@ -3,7 +3,7 @@
 
 {- |A module defining a Big Bang interpreter.
 -}
-module Language.LittleBang.Interpreter.Interpreter
+module Language.TinyBang.Interpreter.Interpreter
 ( evalTop
 , eval
 , EvalError(..)
@@ -14,10 +14,10 @@ module Language.LittleBang.Interpreter.Interpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import Data.Maybe (catMaybes, maybeToList)
 
-import Language.LittleBang.Ast (Branch(..), Branches, Chi(..), Expr(..))
-import Language.LittleBang.Render.Display
-import qualified Language.LittleBang.Types.Types as T
-import Language.LittleBang.Types.UtilTypes
+import Language.TinyBang.Ast (Branch(..), Branches, Chi(..), Expr(..))
+import Language.TinyBang.Render.Display
+import qualified Language.TinyBang.Types.Types as T
+import Language.TinyBang.Types.UtilTypes
     ( Ident
     , ident
     , unIdent
@@ -391,4 +391,3 @@ subst v x (Minus e1 e2) =
 
 subst v x (Equal e1 e2) =
     Equal (subst v x e1) (subst v x e2)
-

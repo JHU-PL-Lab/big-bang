@@ -1,4 +1,4 @@
-module Language.LittleBang.Types.TypeInference
+module Language.TinyBang.Types.TypeInference
 ( inferType
 , runTIM
 , inferTypeTop
@@ -19,12 +19,12 @@ import Data.Monoid (Monoid, mempty)
 import qualified Data.Set as Set
 import Data.Set (Set, (\\))
 
-import qualified Language.LittleBang.Ast as A
-import Language.LittleBang.Render.Display
-import qualified Language.LittleBang.Types.Types as T
-import Language.LittleBang.Types.Types ((<:), (.:))
-import Language.LittleBang.Types.UtilTypes
-import Language.LittleBang.Interpreter.Interpreter (applyBuiltins)
+import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Render.Display
+import qualified Language.TinyBang.Types.Types as T
+import Language.TinyBang.Types.Types ((<:), (.:))
+import Language.TinyBang.Types.UtilTypes
+import Language.TinyBang.Interpreter.Interpreter (applyBuiltins)
 
 type Gamma = Map Ident T.Alpha
 type NextFreshVar = Integer
@@ -226,5 +226,3 @@ freshVar constr = do
     idx <- get
     put $ idx + 1
     return $ constr $ T.AlphaContents idx $ T.callSites []
-
-

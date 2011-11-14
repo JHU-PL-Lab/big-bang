@@ -6,7 +6,7 @@
 --  Show typeclass in that the expected output is an informal representation
 --  meant to be easy to parse rather than a Haskell expression which can be
 --  used to reconstruct the data structure.
-module Language.LittleBang.Render.Display
+module Language.TinyBang.Render.Display
 ( Display
 , display
 , displayList

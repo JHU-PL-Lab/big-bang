@@ -1,13 +1,13 @@
-module Language.LittleBang.Ast
+module Language.TinyBang.Ast
 ( Expr(..)
 , Chi(..)
 , Branches
 , Branch(..)
 ) where
 
-import Language.LittleBang.Render.Display
-import qualified Language.LittleBang.Types.Types as T
-import Language.LittleBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
+import Language.TinyBang.Render.Display
+import qualified Language.TinyBang.Types.Types as T
+import Language.TinyBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
 
 -------------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ instance Display Expr where
            options include:
                * errors on ASTs containing builtin nodes
                * namespacing trick (e.g., Plus translates to
-                   "Language.LittleBang.Builtins.([+]) e1 e2"
+                   "Language.TinyBang.Builtins.([+]) e1 e2"
         -}
         Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
         Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
@@ -76,4 +76,3 @@ instance Display Branch where
             ChiFun -> text "fun"
             ChiTop -> text "_"
         ) <+> text "->" <+> makeDoc e
-

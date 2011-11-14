@@ -1,8 +1,8 @@
 {
 {-# OPTIONS_GHC -w #-}
 
-module Language.LittleBang.Syntax.Parser
-( parseLittleBang
+module Language.TinyBang.Syntax.Parser
+( parseTinyBang
 , ParseError
 , ParseM
 ) where
@@ -11,11 +11,11 @@ import Control.Monad.Error (ErrorT, runErrorT, Error, strMsg, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
 import Data.Maybe (listToMaybe)
 
-import qualified Language.LittleBang.Ast as A
-import Language.LittleBang.Render.Display
-import qualified Language.LittleBang.Syntax.Lexer as L
-import qualified Language.LittleBang.Types.Types as T
-import Language.LittleBang.Types.UtilTypes
+import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Render.Display
+import qualified Language.TinyBang.Syntax.Lexer as L
+import qualified Language.TinyBang.Types.Types as T
+import Language.TinyBang.Types.UtilTypes
     ( Ident
     , ident
     , unIdent
@@ -29,7 +29,7 @@ import System.IO.Unsafe
 import System.IO
 }
 
-%name doParseLittleBang
+%name doParseTinyBang
 %tokentype { L.Token }
 %error { parseError }
 %monad { ParseM } { (>>=) } { return }
@@ -134,7 +134,7 @@ type ParseM a = ErrorT ParseError Identity a
 parseError :: [L.Token] -> ParseM a
 parseError = throwError . ParseError
 
-parseLittleBang :: [L.Token] -> Either ParseError A.Expr
-parseLittleBang tokens =
-    runIdentity $ runErrorT $ doParseLittleBang tokens
+parseTinyBang :: [L.Token] -> Either ParseError A.Expr
+parseTinyBang tokens =
+    runIdentity $ runErrorT $ doParseTinyBang tokens
 }

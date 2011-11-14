@@ -1,4 +1,4 @@
-module Language.LittleBang.Interpreter.SourceInterpreter
+module Language.TinyBang.Interpreter.SourceInterpreter
 ( evalStringTop
 , EvalStringResult(..)
 , EvalSuccessOrFailure(..)
@@ -7,14 +7,14 @@ module Language.LittleBang.Interpreter.SourceInterpreter
 import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
 
-import Language.LittleBang.Render.Display
-import qualified Language.LittleBang.Ast as A
-import qualified Language.LittleBang.Interpreter.Interpreter as I
-import qualified Language.LittleBang.Syntax.Lexer as L
-import qualified Language.LittleBang.Syntax.Parser as P
-import qualified Language.LittleBang.Types.Closure as C
-import qualified Language.LittleBang.Types.TypeInference as TI
-import qualified Language.LittleBang.Types.Types as T
+import Language.TinyBang.Render.Display
+import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Interpreter.Interpreter as I
+import qualified Language.TinyBang.Syntax.Lexer as L
+import qualified Language.TinyBang.Syntax.Parser as P
+import qualified Language.TinyBang.Types.Closure as C
+import qualified Language.TinyBang.Types.TypeInference as TI
+import qualified Language.TinyBang.Types.Types as T
 
 import Debug.Trace
 
@@ -58,13 +58,13 @@ eAll s = do
 
 eLex :: String -> EvalStringM [L.Token]
 eLex s =
-    case L.lexLittleBang s of
+    case L.lexTinyBang s of
         Left err -> throwError $ FailureWrapper $ LexFailure err
         Right tokens -> return tokens
 
 eParse :: [L.Token] -> EvalStringM A.Expr
 eParse tokens =
-    case P.parseLittleBang tokens of
+    case P.parseTinyBang tokens of
         Left err -> throwError $ FailureWrapper $ ParseFailure err
         Right ast -> return ast
 

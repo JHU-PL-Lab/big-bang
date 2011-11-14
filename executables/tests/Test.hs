@@ -1,19 +1,19 @@
 module Main where
 
-import qualified Language.LittleBang.Render.PrettyPrintTest as TPP
-import Language.LittleBang.Interpreter.SourceInterpreter
+import qualified Language.TinyBang.Render.PrettyPrintTest as TPP
+import Language.TinyBang.Interpreter.SourceInterpreter
 import Test.HUnit
-import Language.LittleBang.Render.Display (display)
-import qualified Language.LittleBang.Syntax.Lexer as L
-import Language.LittleBang.Syntax.Lexer (Token(..))
-import qualified Language.LittleBang.Types.TypeInference as TI
-import qualified Language.LittleBang.Ast as A
-import Language.LittleBang.Types.UtilTypes (labelName, ident, Ident)
-import qualified Language.LittleBang.Types.Types as T
+import Language.TinyBang.Render.Display (display)
+import qualified Language.TinyBang.Syntax.Lexer as L
+import Language.TinyBang.Syntax.Lexer (Token(..))
+import qualified Language.TinyBang.Types.TypeInference as TI
+import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Types.UtilTypes (labelName, ident, Ident)
+import qualified Language.TinyBang.Types.Types as T
 
-type LittleBangCode = String
+type TinyBangCode = String
 
-xEval :: LittleBangCode -> A.Expr -> Test
+xEval :: TinyBangCode -> A.Expr -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -27,7 +27,7 @@ xEval code expectedResult =
         label = show code ++
                 " was expected to produce " ++ display expectedResult
 
-xType :: LittleBangCode -> Test
+xType :: TinyBangCode -> Test
 xType code =
   label ~: TestCase $ case evalStringTop code of
     EvalResult _ _ -> assertSuccess
@@ -40,7 +40,7 @@ xType code =
 assertSuccess :: Assertion
 assertSuccess = return ()
 
-xCont :: LittleBangCode -> Test
+xCont :: TinyBangCode -> Test
 xCont code =
   label ~: case result of
     Contradiction _ _ -> TestCase $ assertSuccess
@@ -52,7 +52,7 @@ xCont code =
                 " was expected to produce a contradiction"
         result = evalStringTop code
 
-xNotC :: LittleBangCode -> Test
+xNotC :: TinyBangCode -> Test
 xNotC code =
   label ~: case result of
     TypecheckFailure _ (TI.NotClosed _) _ -> TestCase $ assertSuccess
@@ -63,14 +63,14 @@ xNotC code =
                 " was expected to produce a contradiction"
         result = evalStringTop code
 
-xLexs :: LittleBangCode -> [Token] -> Test
+xLexs :: TinyBangCode -> [Token] -> Test
 xLexs code expected =
-  label ~: TestCase $ case L.lexLittleBang code of
+  label ~: TestCase $ case L.lexTinyBang code of
     Left err -> assertFailure $ "Lexing failed with: " ++ err
     Right tokens -> assertEqual "" expected tokens
   where label = "Lexing " ++ show code
 
-xPars :: LittleBangCode -> A.Expr -> Test
+xPars :: TinyBangCode -> A.Expr -> Test
 xPars code expected =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -81,7 +81,7 @@ xPars code expected =
   where label = "Parsing " ++ show code
         eq = assertEqual "" expected
 
-fPars :: LittleBangCode -> Test
+fPars :: TinyBangCode -> Test
 fPars code =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -96,9 +96,9 @@ multiAppl :: [A.Expr] -> A.Expr
 multiAppl [] = error "multiAppl used on empty list"
 multiAppl xs = foldl1 A.Appl xs
 
-srcSummate :: LittleBangCode
+srcSummate :: TinyBangCode
 srcSummate = "fun this -> fun x -> case (equal x 0) of { `True z -> 0 ; `False z -> plus x (this (minus x 1))}"
-srcMultiAppl :: [LittleBangCode] -> LittleBangCode
+srcMultiAppl :: [TinyBangCode] -> TinyBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"
 srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
 
@@ -119,7 +119,7 @@ srcGreaterOrLess =
            ++ srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"]
            ++ "}"
 
-srcY  :: LittleBangCode
+srcY  :: TinyBangCode
 srcY  = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
 
 true  :: A.Expr
@@ -567,4 +567,3 @@ tests = TestList $ [TPP.tests] ++
 
 main :: IO Counts
 main = runTestTT tests
-

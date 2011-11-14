@@ -1,15 +1,15 @@
 {-# LANGUAGE TupleSections #-}
-module Language.LittleBang.Types.Closure
+module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
 
-import qualified Language.LittleBang.Types.Types as T
-import Language.LittleBang.Types.Types ( (<:)
+import qualified Language.TinyBang.Types.Types as T
+import Language.TinyBang.Types.Types ( (<:)
                                     , (.:)
                                     , Constraints
                                     , Constraint
                                     )
-import Language.LittleBang.Types.UtilTypes (LabelName)
+import Language.TinyBang.Types.UtilTypes (LabelName)
 
 import Data.Maybe.Utils (justIf)
 import Data.Function.Utils (leastFixedPoint)
@@ -400,6 +400,3 @@ instance (AlphaSubstitutable a) => AlphaSubstitutable [a] where
 
 instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
     substituteAlpha = Set.map . substituteAlpha
-
-
-
