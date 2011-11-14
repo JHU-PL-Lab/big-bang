@@ -89,10 +89,6 @@ Executable test-suite
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
   
-  -- Modules not exported by this package.
-  Other-modules:       Language.LittleBang.Syntax.LexerTest
-                       Language.LittleBang.Syntax.ParserTest
-  
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
 

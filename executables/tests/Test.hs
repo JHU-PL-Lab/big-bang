@@ -1,7 +1,6 @@
 module Main where
 
 import qualified Language.LittleBang.Render.PrettyPrintTest as TPP
-import qualified Language.LittleBang.Types.TypesTest as TT
 import Language.LittleBang.Interpreter.SourceInterpreter
 import Test.HUnit
 import Language.LittleBang.Render.Display (display)
