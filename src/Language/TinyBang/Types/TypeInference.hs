@@ -33,6 +33,7 @@ type NextFreshVar = Integer
 data TypeInferenceError =
     -- |Indicates that an expression contained an unbound variable.
       NotClosed Ident
+      -- TODO: Add NotImplemented
     deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
@@ -140,6 +141,9 @@ inferType expr =
                     (\x -> T.TdcLabel (labelName x) $ T.TdcPrim T.PrimUnit)
                     ["True","False"]
               naryOp expr gamma [e1,e2] (T.TucAlpha alpha) (T.TdcAlpha alpha')
+        -- FIXME: make these definitons do something
+        A.Def _ _ _ -> throwError $ NotClosed (ident "x")
+        A.Assign _ _ _ -> throwError $ NotClosed (ident "x")
     where rprim = return . T.TdcPrim
           ralpha = return . T.TdcAlpha
           tell1 :: T.Constraint -> TIM ()
@@ -173,7 +177,7 @@ extractBranchAssumptionAndChi (A.Branch _ chi _) =
             return (Map.singleton i alpha, T.ChiLabel n alpha)
         A.ChiFun -> return (Map.empty, T.ChiFun)
         A.ChiTop -> return (Map.empty, T.ChiTop)
-        
+
 -- |Inserts the contents of Just into a set (or ignores Nothing).
 maybeInsert :: (Ord a) => Maybe a -> Set a -> Set a
 maybeInsert v set = maybe id Set.insert v $ set
