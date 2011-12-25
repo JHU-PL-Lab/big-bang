@@ -177,6 +177,12 @@ tests = TestList $ [TPP.tests] ++
           A.Def idX four $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
           A.Assign idX four $ A.Onion varX (A.PrimChar 'a')
+-- Test evaluation of definition and assignment
+  , xEval "def x = 4 in x" $
+          four
+  , xNotC "x = 4 in x"
+  , xEval "def x = 3 in x = 4 in x" $
+          four
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $
