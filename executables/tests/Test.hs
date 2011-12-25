@@ -170,13 +170,13 @@ tests = TestList $ [TPP.tests] ++
           A.VPrimInt (-1234567890)
 -- Test parsing of definition and assignment
   , xPars "def x = 4 in x" $
-          A.Def idX four varX
+          A.Def idX (A.exprFromValue four) varX
   , xPars "x = 4 in x" $
-          A.Assign idX four varX
+          A.Assign idX (A.exprFromValue four) varX
   , xPars "def x = 4 in x & 'a'" $
-          A.Def idX four $ A.Onion varX (A.PrimChar 'a')
+          A.Def idX (A.exprFromValue four) $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
-          A.Assign idX four $ A.Onion varX (A.PrimChar 'a')
+          A.Assign idX (A.exprFromValue four) $ A.Onion varX (A.PrimChar 'a')
 -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" $
           four
