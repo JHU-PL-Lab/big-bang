@@ -273,17 +273,17 @@ tests = TestList $ [TPP.tests] ++
   , xNotC "x"
 -- Test evaluation of some recursive arithmetic evaluations
   , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
-          A.PrimInt 15
+          A.VPrimInt 15
   , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-          A.Label (labelName "EqualTo") A.PrimUnit
+          A.VLabel (labelName "EqualTo") A.VPrimUnit
   , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-          A.Label (labelName "LessThan") A.PrimUnit
+          A.VLabel (labelName "LessThan") A.VPrimUnit
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-          A.Label (labelName "GreaterThan") A.PrimUnit
+          A.VLabel (labelName "GreaterThan") A.VPrimUnit
 -- Test parsing of nonterminating function
-  , xPars "(fun x -> x x) (fun x -> x x)"
-          (A.Appl xomega xomega)
+  , xPars "(fun x -> x x) (fun x -> x x)" $
+          A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
   , xType "(fun x -> x x) (fun x -> x x)"
 -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
