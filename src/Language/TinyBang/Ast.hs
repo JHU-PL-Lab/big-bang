@@ -3,6 +3,8 @@ module Language.TinyBang.Ast
 , Chi(..)
 , Branches
 , Branch(..)
+, Value(..)
+, exprFromValue
 ) where
 
 import Language.TinyBang.Render.Display
@@ -28,6 +30,16 @@ data Expr =
     | Equal Expr Expr
     deriving (Eq, Ord, Show)
 
+-- |Data type for representing Big Bang values
+data Value =
+      VLabel LabelName Value
+    | VOnion Value Value
+    | VFunc Ident Expr
+    | VPrimInt Integer
+    | VPrimChar Char
+    | VPrimUnit
+    deriving (Eq, Ord, Show)
+
 -- |Data type describing type patterns for case expressions.
 data Chi =
       ChiPrim (T.PrimitiveType)
@@ -40,6 +52,16 @@ data Chi =
 type Branches = [Branch]
 data Branch = Branch (Maybe Ident) Chi Expr
     deriving (Eq, Ord, Show)
+
+-- |Trivial conversion from values to exprs
+exprFromValue :: Value -> Expr
+exprFromValue v = case v of
+  VLabel l v1  -> Label l $ exprFromValue v1
+  VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
+  VFunc i e    -> Func i e
+  VPrimInt i   -> PrimInt i
+  VPrimChar c  -> PrimChar c
+  VPrimUnit    -> PrimUnit
 
 instance Display Expr where
     makeDoc a = case a of
@@ -65,6 +87,9 @@ instance Display Expr where
         Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
         Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
         Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
+
+instance Display Value where
+  makeDoc = makeDoc . exprFromValue
 
 instance Display Branch where
     makeDoc (Branch mident chi e) =

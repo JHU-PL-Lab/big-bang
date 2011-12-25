@@ -1,4 +1,4 @@
-module Language.TinyBang.Types.Types 
+module Language.TinyBang.Types.Types
 ( AlphaContents(..)
 , AlphaUp(..)
 , Alpha(..)
@@ -165,10 +165,10 @@ instance Eq Constraint where
   -- For Subtype and case constraints, ignore history
   (==) (Subtype a b _) (Subtype c d _) = (a, b) == (c, d)
   (==) (Case a b _   ) (Case c d _   ) = (a, b) == (c, d)
-  
+
   -- For bottom constraints, differentiate by history
   (==) (Bottom a     ) (Bottom b     ) = a == b
-  
+
   -- Constraints are only equal to others with the same constructor
   _ == _ = False
 
@@ -176,10 +176,10 @@ instance Ord Constraint where
   -- For Subtype and case constraints, ignore history
   compare (Subtype a b _) (Subtype c d _) = compare (a, b) (c, d)
   compare (Case a b _   ) (Case c d _   ) = compare (a, b) (c, d)
-  
+
   -- For bottom constraints, differentiate by history
   compare (Bottom a     ) (Bottom b     ) = compare a b
-  
+
   -- Compare constraints with different constructors an arbitrary ordering
   compare (Subtype _ _ _) (Case    _ _ _) = LT
   compare (Case    _ _ _) (Subtype _ _ _) = GT

@@ -18,7 +18,7 @@ import qualified Language.TinyBang.Types.Types as T
 
 import Debug.Trace
 
-data EvalSuccessOrFailure = EvalSuccess A.Expr | EvalFailure I.EvalError
+data EvalSuccessOrFailure = EvalSuccess A.Value | EvalFailure I.EvalError
 
 -- |A result type for evalStringTop
 data EvalStringResult
