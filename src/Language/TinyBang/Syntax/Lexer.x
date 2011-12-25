@@ -41,7 +41,6 @@ tokens :-
     \)                                  { constTok TokCloseParen }
     \-?$digit+                          { strTok $ TokIntegerLiteral . read }
     \' ( \\. | ~\' ) \'                 { strTok $ TokCharLiteral . head . tail }
-    $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
     \{                                  { constTok TokOpenBlock }
     \}                                  { constTok TokCloseBlock }
     \;                                  { constTok TokSeparator }
@@ -50,6 +49,7 @@ tokens :-
 	def									{ constTok TokDef }
 	\=									{ constTok TokEquals }
 	in									{ constTok TokIn }
+    $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
 
 {
 type LexerResult = Either String [Token]
