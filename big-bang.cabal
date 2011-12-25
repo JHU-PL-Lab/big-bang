@@ -90,7 +90,7 @@ Executable test-suite
   Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  Build-tools:         alex, happy >= 1.18.8
+  Build-tools:         alex, happy
 
   -- Enable compiler warnings
   ghc-options:         -Wall
