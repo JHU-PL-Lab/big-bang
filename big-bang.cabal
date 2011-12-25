@@ -37,7 +37,7 @@ Build-type:          Simple
 
 -- Extra files to be distributed with the package, such as examples or
 -- a README.
--- Extra-source-files:  
+-- Extra-source-files:
 
 Stability:           alpha
 
@@ -61,7 +61,7 @@ Library
         Language.TinyBang.Types.TypeInference
         Language.TinyBang.Types.UtilTypes
 
-  Build-depends:       base, array, containers >= 0.4.0.0, mtl, pretty, template-haskell 
+  Build-depends:       base, array, containers >= 0.4.0.0, mtl, pretty, template-haskell
 
   ghc-options:         -Wall
 
@@ -72,7 +72,7 @@ Executable interpreter
 
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers >= 0.4.0.0 , mtl, split, big-bang
-  
+
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
 
@@ -88,10 +88,9 @@ Executable test-suite
 
   -- Packages needed in order to build this package.
   Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
-  
+
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  Build-tools:         alex, happy
+  Build-tools:         alex, happy >= 1.18.8
 
   -- Enable compiler warnings
   ghc-options:         -Wall
-  

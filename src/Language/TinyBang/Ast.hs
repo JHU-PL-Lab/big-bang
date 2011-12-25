@@ -22,6 +22,8 @@ data Expr =
     | PrimChar Char
     | PrimUnit
     | Case Expr Branches
+    | Def Ident Expr Expr
+    | Assign Ident Expr Expr
     -- Below are the AST forms which cannot be represented as text directly
     | Plus Expr Expr
     | Minus Expr Expr

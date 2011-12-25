@@ -55,7 +55,11 @@ import System.IO
         ';'             { L.TokSeparator }
         '_'             { L.TokUnder }
         ':'             { L.TokColon }
+        def             { L.TokDef }
+        '='             { L.TokEquals }
+        in              { L.TokIn }
 
+%left       in
 %right      '->'
 %right      '&'
 
@@ -65,6 +69,10 @@ Exp     :   '\\' ident '->' Exp
                                     { A.Func (ident $2) $4 }
         |   fun ident '->' Exp
                                     { A.Func (ident $2) $4 }
+        |   def ident '=' Exp in Exp
+                                    { A.Def (ident $2) $4 $6 }
+        |   ident '=' Exp in Exp
+                                    { A.Assign (ident $1) $3 $5 }
         |   case Exp of '{' Branches '}'
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
@@ -97,7 +105,7 @@ Branches:   Branch ';' Branches     { $1:$3 }
         |   Branch                  { [$1] }
 
 
-Branch  :   Pattern '->' Exp        
+Branch  :   Pattern '->' Exp
                                     { A.Branch Nothing $1 $3 }
         |   ident ':' Pattern '->' Exp
                                     { A.Branch (Just $ ident $1) $3 $5 }

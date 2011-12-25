@@ -168,6 +168,9 @@ tests = TestList $ [TPP.tests] ++
           A.PrimInt 1234567890
   , xEval "-1234567890" $
           A.PrimInt (-1234567890)
+-- Test parsing of definition and assignment
+  , xPars "def x = 5 in x" A.PrimUnit
+  , xPars "x = 5 in x" A.PrimUnit
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $

@@ -47,6 +47,9 @@ tokens :-
     \;                                  { constTok TokSeparator }
     _                                   { constTok TokUnder }
     :                                   { constTok TokColon }
+	def									{ constTok TokDef }
+	\=									{ constTok TokEquals }
+	in									{ constTok TokIn }
 
 {
 type LexerResult = Either String [Token]
@@ -60,7 +63,7 @@ lexTinyBang s = runAlex s tokenList
                 [] -> return []
                 _ -> sequence [(return tok), tokenList]
         tokenList = liftM concat tokenLists
-            
+
 alexEOF :: Alex [Token]
 alexEOF = return []
 
@@ -91,6 +94,9 @@ data Token =
     | TokCloseBlock
     | TokSeparator
     | TokColon
+	| TokDef
+	| TokEquals
+	| TokIn
     deriving (Eq, Show)
 
 instance Display Token where
@@ -115,5 +121,8 @@ instance Display Token where
         TokCloseBlock -> "close block"
         TokSeparator -> "separator"
         TokColon -> "colon"
+        TokDef -> "def"
+        TokEquals -> "equals"
+        TokIn -> "in"
 }
 
