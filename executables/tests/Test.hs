@@ -13,7 +13,7 @@ import qualified Language.TinyBang.Types.Types as T
 
 type TinyBangCode = String
 
-xEval :: TinyBangCode -> A.Expr -> Test
+xEval :: TinyBangCode -> A.Value -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -122,23 +122,23 @@ srcGreaterOrLess =
 srcY  :: TinyBangCode
 srcY  = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
 
-true  :: A.Expr
-true  = A.Label (labelName "True") A.PrimUnit
+true  :: A.Value
+true  = A.VLabel (labelName "True") A.VPrimUnit
 
-false :: A.Expr
-false = A.Label (labelName "False") A.PrimUnit
+false :: A.Value
+false = A.VLabel (labelName "False") A.VPrimUnit
 
-zero  :: A.Expr
-zero  = A.PrimInt 0
+zero  :: A.Value
+zero  = A.VPrimInt 0
 
-one   :: A.Expr
-one   = A.PrimInt 1
+one   :: A.Value
+one   = A.VPrimInt 1
 
-two   :: A.Expr
-two   = A.PrimInt 2
+two   :: A.Value
+two   = A.VPrimInt 2
 
-four  :: A.Expr
-four  = A.PrimInt 4
+four  :: A.Value
+four  = A.VPrimInt 4
 
 varX :: A.Expr
 varX = A.Var $ idX
@@ -146,11 +146,11 @@ varX = A.Var $ idX
 idX :: Ident
 idX = ident "x"
 
-xIdent :: A.Expr
-xIdent = A.Func idX varX
+xIdent :: A.Value
+xIdent = A.VFunc idX varX
 
-xomega :: A.Expr
-xomega = A.Func idX (A.Appl varX varX)
+xomega :: A.Value
+xomega = A.VFunc idX (A.Appl varX varX)
 
 tests = TestList $ [TPP.tests] ++
 -- Test proper handling of an arbitrary positive and negative integer literal
@@ -165,9 +165,9 @@ tests = TestList $ [TPP.tests] ++
   , xType "1234567890"
   , xType "-1234567890"
   , xEval "1234567890" $
-          A.PrimInt 1234567890
+          A.VPrimInt 1234567890
   , xEval "-1234567890" $
-          A.PrimInt (-1234567890)
+          A.VPrimInt (-1234567890)
 -- Test parsing of definition and assignment
   , xPars "def x = 4 in x" $
           A.Def idX four varX
@@ -186,46 +186,46 @@ tests = TestList $ [TPP.tests] ++
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $
-          A.PrimChar 'a'
+          A.VPrimChar 'a'
   , xEval "'A'" $
-          A.PrimChar 'A'
+          A.VPrimChar 'A'
   , xEval "'z'" $
-          A.PrimChar 'z'
+          A.VPrimChar 'z'
   , xEval "'Z'" $
-          A.PrimChar 'Z'
+          A.VPrimChar 'Z'
 -- Test proper handling of arbitrary Unicode characters
   , xEval "'∀'" $
-          A.PrimChar '∀'
+          A.VPrimChar '∀'
   , xEval "'∃'" $
-          A.PrimChar '∃'
+          A.VPrimChar '∃'
   , xEval "'λ'" $
-          A.PrimChar 'λ'
+          A.VPrimChar 'λ'
   , xEval "'◈'" $
-          A.PrimChar '◈'
+          A.VPrimChar '◈'
   , xEval "'☺'" $
-          A.PrimChar '☺'
+          A.VPrimChar '☺'
   , xEval "'⤳'" $
-          A.PrimChar '⤳'
+          A.VPrimChar '⤳'
   , xEval "'☃'" $
-          A.PrimChar '☃'
+          A.VPrimChar '☃'
 -- Test proper handling of whitespace characters
   , xEval "' '" $
-          A.PrimChar ' '
+          A.VPrimChar ' '
   , xEval "'\t'" $
-          A.PrimChar '\t'
+          A.VPrimChar '\t'
 -- Test parse, typechecking, and evaluation of some simple values
   , xPars "()"
           A.PrimUnit
-  , xPars "`True ()"
-          true
-  , xPars "`False ()"
-          false
-  , xPars "(\\x -> x)"
-          xIdent
+  , xPars "`True ()" $
+          A.exprFromValue true
+  , xPars "`False ()" $
+          A.exprFromValue false
+  , xPars "(\\x -> x)" $
+          A.exprFromValue xIdent
   , xType "`A ()"
   , xType "()"
   , xEval "()"
-          A.PrimUnit
+          A.VPrimUnit
   , xEval "`True ()"
           true
   , xEval "`False ()"
@@ -234,7 +234,7 @@ tests = TestList $ [TPP.tests] ++
           xIdent
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "plus 2 2" $
-          multiAppl [(A.Var (ident "plus")), two, two]
+          multiAppl $ (A.Var (ident "plus")):(map A.exprFromValue [two, two])
   , xType "plus 1 2"
   , xType "minus 1 2"
   , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
@@ -266,7 +266,7 @@ tests = TestList $ [TPP.tests] ++
           four
 -- Test parse, typecheck, and evaluation of some higher order applications
   , xPars "(fun x -> x)\n(fun x -> x)" $
-          A.Appl xIdent xIdent
+          A.Appl (A.exprFromValue xIdent) (A.exprFromValue xIdent)
   , xEval "(fun x -> x)\n(fun x -> x)"
           xIdent
   , xType "(fun x -> x)"
@@ -288,17 +288,17 @@ tests = TestList $ [TPP.tests] ++
   , xNotC "x"
 -- Test evaluation of some recursive arithmetic evaluations
   , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
-          A.PrimInt 15
+          A.VPrimInt 15
   , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-          A.Label (labelName "EqualTo") A.PrimUnit
+          A.VLabel (labelName "EqualTo") A.VPrimUnit
   , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-          A.Label (labelName "LessThan") A.PrimUnit
+          A.VLabel (labelName "LessThan") A.VPrimUnit
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-          A.Label (labelName "GreaterThan") A.PrimUnit
+          A.VLabel (labelName "GreaterThan") A.VPrimUnit
 -- Test parsing of nonterminating function
-  , xPars "(fun x -> x x) (fun x -> x x)"
-          (A.Appl xomega xomega)
+  , xPars "(fun x -> x x) (fun x -> x x)" $
+          A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
   , xType "(fun x -> x x) (fun x -> x x)"
 -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
@@ -350,7 +350,7 @@ tests = TestList $ [TPP.tests] ++
 -- Test case projection
   -- Test that onion projection projects an onion if possible
   , xEval "case `A 5 & `A \'a\' of {`A x -> x}"
-          (A.Onion (A.PrimInt 5) (A.PrimChar 'a'))
+          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
   , xEval "case 'a' of {char -> 0}"
           zero
   , xEval "case 1234567890 of {int -> 0}"
@@ -372,7 +372,7 @@ tests = TestList $ [TPP.tests] ++
   , xType "case `A 5 of { `A x -> x }"
 -- Test that implicit porjection from onions works
   , xEval "plus (1 & 'a') ('a' & 1 & ())"
-          (A.PrimInt 2)
+          two
   , xEval "(1 & (fun x -> x)) 1"
           one
 -- Test that application requires that the first argument be a function
@@ -568,7 +568,8 @@ tests = TestList $ [TPP.tests] ++
             [ A.Branch Nothing (A.ChiPrim T.PrimInt) $ A.PrimInt 5
             , A.Branch Nothing (A.ChiPrim T.PrimChar) $ A.PrimChar 'a'
             , A.Branch Nothing (A.ChiPrim T.PrimUnit) A.PrimUnit
-            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) false
+            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) $
+                               A.exprFromValue false
             , A.Branch Nothing A.ChiFun $ A.Func (ident "x") varX
             ]
 -- Test some simple parse failures
