@@ -169,8 +169,14 @@ tests = TestList $ [TPP.tests] ++
   , xEval "-1234567890" $
           A.PrimInt (-1234567890)
 -- Test parsing of definition and assignment
-  , xPars "def x = 5 in x" A.PrimUnit
-  , xPars "x = 5 in x" A.PrimUnit
+  , xPars "def x = 4 in x" $
+          A.Def idX four varX
+  , xPars "x = 4 in x" $
+          A.Assign idX four varX
+  , xPars "def x = 4 in x & 'a'" $
+          A.Def idX four $ A.Onion varX (A.PrimChar 'a')
+  , xPars "x = 4 in x & 'a'" $
+          A.Assign idX four $ A.Onion varX (A.PrimChar 'a')
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $
