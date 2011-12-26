@@ -125,8 +125,14 @@ srcY  = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body 
 true  :: A.Value
 true  = A.VLabel (labelName "True") A.VPrimUnit
 
+etrue :: A.Expr
+etrue = A.exprFromValue true
+
 false :: A.Value
 false = A.VLabel (labelName "False") A.VPrimUnit
+
+efalse :: A.Expr
+efalse = A.exprFromValue false
 
 zero  :: A.Value
 zero  = A.VPrimInt 0
@@ -137,8 +143,14 @@ one   = A.VPrimInt 1
 two   :: A.Value
 two   = A.VPrimInt 2
 
+etwo :: A.Expr
+etwo = A.exprFromValue two
+
 four  :: A.Value
 four  = A.VPrimInt 4
+
+efour :: A.Expr
+efour = A.exprFromValue four
 
 varX :: A.Expr
 varX = A.Var $ idX
@@ -148,6 +160,9 @@ idX = ident "x"
 
 xIdent :: A.Value
 xIdent = A.VFunc idX varX
+
+exIdent :: A.Expr
+exIdent = A.exprFromValue xIdent
 
 xomega :: A.Value
 xomega = A.VFunc idX (A.Appl varX varX)
@@ -170,13 +185,15 @@ tests = TestList $ [TPP.tests] ++
           A.VPrimInt (-1234567890)
 -- Test parsing of definition and assignment
   , xPars "def x = 4 in x" $
-          A.Def idX (A.exprFromValue four) varX
+          A.Def idX efour varX
   , xPars "x = 4 in x" $
-          A.Assign idX (A.exprFromValue four) varX
+          A.Assign idX efour varX
   , xPars "def x = 4 in x & 'a'" $
-          A.Def idX (A.exprFromValue four) $ A.Onion varX (A.PrimChar 'a')
+          A.Def idX efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
-          A.Assign idX (A.exprFromValue four) $ A.Onion varX (A.PrimChar 'a')
+          A.Assign idX efour $ A.Onion varX (A.PrimChar 'a')
+  , xPars "def x = 3 in x = 4 in x" $
+          A.Def idX (A.PrimInt 3) $ A.Assign idX efour varX
 -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" $
           four
@@ -217,11 +234,11 @@ tests = TestList $ [TPP.tests] ++
   , xPars "()"
           A.PrimUnit
   , xPars "`True ()" $
-          A.exprFromValue true
+          etrue
   , xPars "`False ()" $
-          A.exprFromValue false
+          efalse
   , xPars "(\\x -> x)" $
-          A.exprFromValue xIdent
+          exIdent
   , xType "`A ()"
   , xType "()"
   , xEval "()"
@@ -234,7 +251,7 @@ tests = TestList $ [TPP.tests] ++
           xIdent
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "plus 2 2" $
-          multiAppl $ (A.Var (ident "plus")):(map A.exprFromValue [two, two])
+          multiAppl $ [A.Var (ident "plus"), etwo, etwo]
   , xType "plus 1 2"
   , xType "minus 1 2"
   , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
@@ -266,7 +283,7 @@ tests = TestList $ [TPP.tests] ++
           four
 -- Test parse, typecheck, and evaluation of some higher order applications
   , xPars "(fun x -> x)\n(fun x -> x)" $
-          A.Appl (A.exprFromValue xIdent) (A.exprFromValue xIdent)
+          A.Appl exIdent exIdent
   , xEval "(fun x -> x)\n(fun x -> x)"
           xIdent
   , xType "(fun x -> x)"
@@ -301,8 +318,8 @@ tests = TestList $ [TPP.tests] ++
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
   , xType "(fun x -> x x) (fun x -> x x)"
 -- Test typechecking of some pathological functions
-  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
-  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
+--  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
+--  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
 --  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
 --  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
 --  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
@@ -568,8 +585,7 @@ tests = TestList $ [TPP.tests] ++
             [ A.Branch Nothing (A.ChiPrim T.PrimInt) $ A.PrimInt 5
             , A.Branch Nothing (A.ChiPrim T.PrimChar) $ A.PrimChar 'a'
             , A.Branch Nothing (A.ChiPrim T.PrimUnit) A.PrimUnit
-            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) $
-                               A.exprFromValue false
+            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) efalse
             , A.Branch Nothing A.ChiFun $ A.Func (ident "x") varX
             ]
 -- Test some simple parse failures
