@@ -89,6 +89,8 @@ instance Display Expr where
         Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
         Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
         Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
+        Def i v e -> sep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+        Assign i v e -> sep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
 
 instance Display Value where
   makeDoc = makeDoc . exprFromValue
