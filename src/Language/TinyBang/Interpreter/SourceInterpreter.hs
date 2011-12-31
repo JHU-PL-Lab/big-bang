@@ -6,6 +6,7 @@ module Language.TinyBang.Interpreter.SourceInterpreter
 
 import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
+import Data.IntMap (IntMap)
 
 import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Ast as A
@@ -18,7 +19,7 @@ import qualified Language.TinyBang.Types.Types as T
 
 import Debug.Trace
 
-data EvalSuccessOrFailure = EvalSuccess A.Value | EvalFailure I.EvalError
+data EvalSuccessOrFailure = EvalSuccess (A.Value, IntMap A.Value) | EvalFailure I.EvalError
 
 -- |A result type for evalStringTop
 data EvalStringResult

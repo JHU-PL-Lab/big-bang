@@ -11,10 +11,16 @@ module Language.TinyBang.Interpreter.Interpreter
 , applyBuiltins
 ) where
 
-import Control.Monad.Error (Error, strMsg, throwError)
+import Control.Monad.Error (Error, ErrorT, strMsg, throwError)
+import Control.Monad.State (State, StateT, runStateT, get, put, gets, modify)
+import Control.Arrow (second)
 import Data.Maybe (catMaybes, maybeToList)
 import Data.Function (on)
-import Data.List(sortBy, groupBy, intersectBy)
+import Data.List(sortBy, groupBy)-- intersectBy (redundant but used)
+import qualified Data.IntMap as IntMap
+import Data.IntMap (IntMap, (!))
+import Data.Maybe (listToMaybe)
+import Data.Maybe.Utils (justIf)
 
 import Language.TinyBang.Ast
   ( Branch(..)
@@ -23,6 +29,7 @@ import Language.TinyBang.Ast
   , Expr(..)
   , Value(..)
   , exprFromValue
+  , Assignable(..)
   )
 import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
@@ -62,8 +69,23 @@ instance Display EvalError where
             text "cannot be matched by branches" $$
             (nest 4 $ makeDoc brs)
 
-type EvalM = Either EvalError Value
+-- I'm not sure if this or the other order of the monad transformers is
+-- preferable to the alternative. TODO: figure it out.
+type EvalM a = StateT Map (Either EvalError) a
 type CoerceTo a = Value -> Maybe a
+type Cell = Int
+type NextCell = Int
+type Map = (NextCell, IntMap Value)
+
+newCell :: Value -> EvalM Cell
+newCell v = do
+  (i, m) <- get
+  put (i + 1, IntMap.insert i v m)
+  return i
+
+readCell i = gets snd >>= return . (! i)
+
+writeCell i v = modify (second $ IntMap.adjust (const v) i)
 
 ------------------------------------------------------------------------------
 -- *Evaluation Functions
@@ -74,9 +96,9 @@ type CoerceTo a = Value -> Maybe a
 -- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
-evalTop :: Expr -> EvalM
-evalTop e = do
-    eval $ applyBuiltins e
+evalTop :: Expr -> Either EvalError (Value, IntMap Value)
+evalTop e =
+    fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
 -- |Wraps an expression in a context where builtin names are bound
 applyBuiltins :: Expr -> Expr
@@ -101,13 +123,14 @@ applyBuiltins e =
 
 
 -- |Evaluates a Big Bang expression.
-eval :: Expr -> EvalM
+eval :: Expr -> EvalM Value
 
 eval (Var i) = throwError $ NotClosed i
 
 eval (Label n e) = do
     e' <- eval e
-    return $ VLabel n e'
+    c <- newCell e'
+    return $ VLabel n c
 
 eval (Onion e1 e2) = do
     e1' <- eval e1
@@ -146,8 +169,8 @@ eval (Case e branches) = do
              case (chi, mval) of
                  -- We don't care about the matching the names because it was
                  -- ensured to be correct earlier.
-                 (ChiLabel _ i, Just (VLabel _ lblVal)) ->
-                   fmap (subst (exprFromValue lblVal) i) boundExpr
+                 (ChiLabel _ i, Just (VLabel _ cell)) ->
+                   fmap (subst (ExprCell cell) i) boundExpr
                  _ -> boundExpr
           coerce chi =
              case chi of
@@ -168,28 +191,29 @@ eval (Equal e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
     case (e1', e2') of
-        (VPrimInt _, VPrimInt _) -> req e1' e2'
-        (VPrimChar _, VPrimChar _) -> req e1' e2'
-        ((VFunc _ _), (VFunc _ _)) -> req e1' e2'
+        (VPrimInt _, VPrimInt _) -> eq e1' e2'
+        (VPrimChar _, VPrimChar _) -> eq e1' e2'
+        ((VFunc _ _), (VFunc _ _)) -> eq e1' e2'
         (VLabel name1 expr1, VLabel name2 expr2) -> if name1 == name2
-                                                     then req expr1 expr2
+                                                     then eq expr1 expr2
                                                      else throwError $ DynamicTypeError "incorrect type in expression"
-        (VPrimUnit, VPrimUnit) -> return true
+        (VPrimUnit, VPrimUnit) -> true
 -- FIXME: Some things that should be type errors evaluate to false.
-        (o1@(VOnion _ _), o2@(VOnion _ _)) -> oreq o1 o2
-        (o1@(VOnion _ _), _) -> ovreq o1 e2'
-        (_, o2@(VOnion _ _)) -> ovreq o2 e1'
+        (o1@(VOnion _ _), o2@(VOnion _ _)) -> oeq o1 o2
+        (o1@(VOnion _ _), _) -> oveq o1 e2'
+        (_, o2@(VOnion _ _)) -> oveq o2 e1'
         _ -> throwError $ DynamicTypeError "incorrect type in expression"
-  where true  = VLabel (labelName "True" ) VPrimUnit
-        false = VLabel (labelName "False") VPrimUnit
+  where true  = VLabel (labelName "True" ) `fmap` newCell VPrimUnit
+        false = VLabel (labelName "False") `fmap` newCell VPrimUnit
         eq a b = if a == b then true else false
-        req a b = return $ eq a b
-        oreq a b = return $ if onionEq a b
-                               then true
-                               else false
-        ovreq o v = return $ if onionValueEq o v
-                                then true
-                                else false
+        oeq a b = if onionEq a b
+                     then true
+                     else false
+        oveq o v = if onionValueEq o v
+                      then true
+                      else false
+
+eval (ExprCell c) = readCell c
 
 -- |Flattens onions to a list whose elements are guaranteed not to
 --  be onions themselves and which appear in the same order as they
@@ -274,7 +298,7 @@ evalBinop :: Expr              -- ^The first argument to the binary operator.
           -> Expr              -- ^The second argument to the binary operator.
           -> CoerceTo a        -- ^A coercion function for correct arg type
           -> (a -> a -> Value) -- ^A function to evaluate coerced arguments
-          -> EvalM             -- ^The results of evaluation
+          -> EvalM Value       -- ^The results of evaluation
 evalBinop e1 e2 c f = do
     e1' <- eval e1
     e2' <- eval e2
@@ -340,18 +364,13 @@ coerceToUnit e =
 -- routine will recurse through onions looking for a labeled value.
 coerceToLabel :: LabelName -> CoerceTo Value
 coerceToLabel name e =
-  if null coercedList
-     then Nothing
-     else Just coercedOnion
+    onionCoerce
   where
-      simpleLabelCoerce lbl@(VLabel name' _) = if name == name'
-                                                  then Just lbl
-                                                  else Nothing
-      simpleLabelCoerce _ = Nothing
+      labelMatch (VLabel name' _) = name == name'
+      labelMatch _ = False
+      simpleLabelCoerce lbl = lbl `justIf` (labelMatch lbl)
+      onionCoerce = listToMaybe $ reverse $ filter labelMatch coercedList
       coercedList = catMaybes $ map simpleLabelCoerce $ flattenOnion e
-      coercedOnion = VLabel name $ foldr1 VOnion $ map unLabel coercedList
-      unLabel (VLabel _ e') = e'
-      unLabel _ = error "Found non-label in list of labels"
 
 -- |Used to obtain a function from an expression.  If necessary, this routine
 --  will recurse through onions looking for a function.

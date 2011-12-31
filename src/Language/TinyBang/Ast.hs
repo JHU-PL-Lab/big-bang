@@ -5,12 +5,12 @@ module Language.TinyBang.Ast
 , Branch(..)
 , Value(..)
 , exprFromValue
+, Assignable(..)
 ) where
 
 import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
-
 -------------------------------------------------------------------------------
 
 -- |Data type for representing Big Bang ASTs.
@@ -25,22 +25,26 @@ data Expr =
     | PrimUnit
     | Case Expr Branches
     | Def Ident Expr Expr
-    | Assign Ident Expr Expr
+    | Assign Assignable Expr Expr
     -- Below are the AST forms which cannot be represented as text directly
     | Plus Expr Expr
     | Minus Expr Expr
     | Equal Expr Expr
+    | ExprCell Int
     deriving (Eq, Ord, Show)
 
 -- |Data type for representing Big Bang values
 data Value =
-      VLabel LabelName Value
+      VLabel LabelName Int
     | VOnion Value Value
     | VFunc Ident Expr
     | VPrimInt Integer
     | VPrimChar Char
     | VPrimUnit
     deriving (Eq, Ord, Show)
+
+data Assignable = ACell Int | AIdent Ident
+  deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
 data Chi =
@@ -58,7 +62,7 @@ data Branch = Branch (Maybe Ident) Chi Expr
 -- |Trivial conversion from values to exprs
 exprFromValue :: Value -> Expr
 exprFromValue v = case v of
-  VLabel l v1  -> Label l $ exprFromValue v1
+  VLabel l c   -> Label l $ ExprCell c
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
   VFunc i e    -> Func i e
   VPrimInt i   -> PrimInt i
@@ -105,3 +109,7 @@ instance Display Branch where
             ChiFun -> text "fun"
             ChiTop -> text "_"
         ) <+> text "->" <+> makeDoc e
+
+instance Display Assignable where
+  makeDoc (AIdent i) = makeDoc i
+  makeDoc (ACell c) = int c

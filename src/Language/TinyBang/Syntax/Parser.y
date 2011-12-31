@@ -72,7 +72,7 @@ Exp     :   '\\' ident '->' Exp
         |   def ident '=' Exp in Exp
                                     { A.Def (ident $2) $4 $6 }
         |   ident '=' Exp in Exp
-                                    { A.Assign (ident $1) $3 $5 }
+                                    { A.Assign (A.AIdent $ ident $1) $3 $5 }
         |   case Exp of '{' Branches '}'
                                     { A.Case $2 $5 }
         |   Exp '&' Exp

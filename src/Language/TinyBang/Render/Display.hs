@@ -21,6 +21,8 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Data.Set as Set
 import Data.Set (Set)
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Language.Haskell.TH
 import Text.PrettyPrint
 
@@ -51,7 +53,7 @@ makeDocForDocList
 
 makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
 makeCommaSeparatedDocForList lst =
-    makeDocForList catByComma ", " lst 
+    makeDocForList catByComma ", " lst
 
 catByComma :: String -> [Doc] -> Doc
 catByComma x = if elem ',' x then vcat else hcat
@@ -65,6 +67,12 @@ class Display a where
     displayList = render . makeListDoc
     makeListDoc = brackets . makeCommaSeparatedDocForList
 
+displayMap :: (Display k, Display v) =>
+              (a -> [(k, v)]) -> a -> Doc
+displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
+             . toList
+  where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
+
 instance Display Char where
     makeDoc = char
     makeListDoc = doubleQuotes . text
@@ -76,9 +84,9 @@ instance (Display a) => Display (Set a) where
     makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
 
 instance (Display k, Display v) => Display (Map k v) where
-    makeDoc = braces . (makeDocForListBy mappingToDoc catByComma ", ")
-                     . Map.toList
-      where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
+    makeDoc = displayMap Map.toList
+instance (Display v) => Display (IntMap v) where
+    makeDoc = displayMap IntMap.toList
 
 $(
     let typeNames = ["Int","Integer","Float","Double"]
