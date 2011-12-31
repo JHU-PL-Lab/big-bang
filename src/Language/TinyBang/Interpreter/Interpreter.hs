@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TupleSections #-}
 
 {- |A module defining a Big Bang interpreter.
 -}
@@ -13,10 +14,10 @@ module Language.TinyBang.Interpreter.Interpreter
 
 import Control.Monad.Error (Error, ErrorT, strMsg, throwError)
 import Control.Monad.State (State, StateT, runStateT, get, put, gets, modify)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Data.Maybe (catMaybes, maybeToList)
 import Data.Function (on)
-import Data.List(sortBy, groupBy)-- intersectBy (redundant but used)
+import Data.List(foldl1', sort, sortBy, groupBy)-- intersectBy (redundant but used)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
 import Data.Maybe (listToMaybe)
@@ -76,6 +77,7 @@ type CoerceTo a = Value -> Maybe a
 type Cell = Int
 type NextCell = Int
 type Map = (NextCell, IntMap Value)
+type Result = (Value, IntMap Value)
 
 newCell :: Value -> EvalM Cell
 newCell v = do
@@ -96,7 +98,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
-evalTop :: Expr -> Either EvalError (Value, IntMap Value)
+evalTop :: Expr -> Either EvalError Result
 evalTop e =
     fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
@@ -119,7 +121,7 @@ applyBuiltins e =
         wrappedBuiltins :: [Expr -> Expr]
         wrappedBuiltins = map (\(x,y) z -> Appl (Func (ident x) z) y) builtins
         wrapper :: Expr -> Expr
-        wrapper = foldl1 (.) wrappedBuiltins
+        wrapper = foldl1' (.) wrappedBuiltins
 
 
 -- |Evaluates a Big Bang expression.
@@ -232,6 +234,13 @@ flattenOnion e =
 canonicalizeList :: [Value] -> [Value]
 canonicalizeList xs = map last ys
   where ys = groupBy ((==) `on` intFromType) $ sortBy (compare `on` intFromType) xs
+
+-- |Transforms an onion into canonical form.  Canonical form requires
+--  that there be no duplicate labels, that the onion be left leaning,
+--  and that the onion entries be sorted in accordance with the ordering
+--  defined over Values
+canonicalizeOnion :: Value -> Value
+canonicalizeOnion = foldl1' VOnion . sort . canonicalizeList . flattenOnion
 
 --TODO: come up with a more robust solution; perhaps a newtype?
 -- |Convert type constructor to integer.
@@ -441,3 +450,36 @@ subst v x (Minus e1 e2) =
 
 subst v x (Equal e1 e2) =
     Equal (subst v x e1) (subst v x e2)
+
+-- |This function takes a value-mapping pair and returns a new one in
+--  canonical form.  Canonical form requires that there be no repeated
+--  labels, no unreachable cells, and that the cells' names are
+--  determined by position in the value.
+canonicalize :: Result -> Result
+canonicalize (v, imap) = canonicalize' (v', imap)
+  where v' = case v of
+               VOnion _ _ -> canonicalizeOnion v
+               _ -> v
+
+-- |Helper function for 'canonicalize', which assumes that its input has
+--  been deduped if it's an onion.
+canonicalize' :: Result -> Result
+canonicalize' (v, imap) =
+  case v of
+    VLabel _ cell -> (v, IntMap.singleton 0 (imap ! cell))
+    VOnion v1 v2 ->
+      let (c1, m1) = canonicalize' (v1, imap)
+          (c2, m2) = canonicalize' (v2, imap)
+      in (VOnion c1 c2,) $
+         case (IntMap.null m1, IntMap.null m2) of
+           (True , True ) -> IntMap.empty
+           (False, True ) -> m1
+           (True , False) -> m2
+           (False, False) -> IntMap.fromList $
+             -- Ensure that keys don't collide by adding an offset equal
+             -- to the size of the first list to each key
+             m1list ++ (map (first (+ len)) m2list)
+             where m1list = IntMap.toList m1
+                   m2list = IntMap.toList m2
+                   len = length m1list
+    _ -> (v, IntMap.empty)
