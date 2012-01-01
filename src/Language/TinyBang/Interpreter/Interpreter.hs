@@ -500,20 +500,25 @@ canonicalize (v, imap) = canonicalize' (v', imap)
 canonicalize' :: Result -> Result
 canonicalize' (v, imap) =
   case v of
-    VLabel _ cell -> (v, IntMap.singleton 0 (imap ! cell))
+    VLabel lbl cell -> (VLabel lbl 0, IntMap.singleton 0 (imap ! cell))
     VOnion v1 v2 ->
       let (c1, m1) = canonicalize' (v1, imap)
           (c2, m2) = canonicalize' (v2, imap)
-      in (VOnion c1 c2,) $
-         case (IntMap.null m1, IntMap.null m2) of
-           (True , True ) -> IntMap.empty
-           (False, True ) -> m1
-           (True , False) -> m2
-           (False, False) -> IntMap.fromList $
+          o = VOnion c1 c2
+          m1list = IntMap.toList m1
+          m2list = IntMap.toList m2
+          len = length m1list
+      in case (IntMap.null m1, IntMap.null m2) of
+           (True , True ) -> (o, IntMap.empty)
+           (False, True ) -> (o, m1)
+           (True , False) -> (o, m2)
+           (False, False) ->
              -- Ensure that keys don't collide by adding an offset equal
              -- to the size of the first list to each key
-             m1list ++ (map (first (+ len)) m2list)
-             where m1list = IntMap.toList m1
-                   m2list = IntMap.toList m2
-                   len = length m1list
+             (VOnion c1 $ incCells len c2, IntMap.fromList $
+                m1list ++ (map (first (+ len)) m2list))
     _ -> (v, IntMap.empty)
+  where incCells i v' = case v' of
+            VLabel lbl c -> VLabel lbl $ c + i
+            VOnion e1 e2 -> VOnion (incCells i e1) (incCells i e2)
+            _ -> v
