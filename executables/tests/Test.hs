@@ -3,21 +3,28 @@ module Main where
 import qualified Language.TinyBang.Render.PrettyPrintTest as TPP
 import Language.TinyBang.Interpreter.SourceInterpreter
 import Test.HUnit
-import Language.TinyBang.Render.Display (display)
+import Language.TinyBang.Render.Display (display, Display)
 import qualified Language.TinyBang.Syntax.Lexer as L
 import Language.TinyBang.Syntax.Lexer (Token(..))
 import qualified Language.TinyBang.Types.TypeInference as TI
 import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Ast (vmPair, Evaluated)
 import Language.TinyBang.Types.UtilTypes (labelName, ident, Ident)
 import qualified Language.TinyBang.Types.Types as T
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 
 type TinyBangCode = String
+type Result = (A.Value, IntMap A.Value)
 
-xEval :: TinyBangCode -> A.Value -> Test
+xEval :: (Display v, Evaluated v) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
-                           EvalSuccess result -> assertEqual "" expectedResult result
+                           EvalSuccess result ->
+                             assertEqual ""
+                                         (vmPair expectedResult)
+                                         (vmPair result)
                            EvalFailure err -> assertFailure $
                                                 "EvalFailure: " ++ display err
     _ -> assertFailure $
@@ -122,14 +129,14 @@ srcGreaterOrLess =
 srcY  :: TinyBangCode
 srcY  = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
 
-true  :: A.Value
-true  = A.VLabel (labelName "True") A.VPrimUnit
+true  :: Result
+true  = (A.VLabel (labelName "True") 0, IntMap.singleton 0 A.VPrimUnit)
 
 etrue :: A.Expr
 etrue = A.exprFromValue true
 
-false :: A.Value
-false = A.VLabel (labelName "False") A.VPrimUnit
+false :: Result
+false = (A.VLabel (labelName "False") 0, IntMap.singleton 0 A.VPrimUnit)
 
 efalse :: A.Expr
 efalse = A.exprFromValue false
@@ -167,6 +174,12 @@ exIdent = A.exprFromValue xIdent
 xomega :: A.Value
 xomega = A.VFunc idX (A.Appl varX varX)
 
+lblEq, lblLt, lblGt :: Result
+lblEq = (A.VLabel (labelName "EqualTo") 0, IntMap.singleton 0 A.VPrimUnit)
+lblLt = (A.VLabel (labelName "LessThan") 0, IntMap.singleton 0 A.VPrimUnit)
+lblGt = (A.VLabel (labelName "GreaterThan") 0, IntMap.singleton 0 A.VPrimUnit)
+
+
 tests = TestList $ [TPP.tests] ++
 -- Test proper handling of an arbitrary positive and negative integer literal
   [ xLexs "1234567890"
@@ -187,13 +200,13 @@ tests = TestList $ [TPP.tests] ++
   , xPars "def x = 4 in x" $
           A.Def idX efour varX
   , xPars "x = 4 in x" $
-          A.Assign idX efour varX
+          A.Assign (A.AIdent idX) efour varX
   , xPars "def x = 4 in x & 'a'" $
           A.Def idX efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
-          A.Assign idX efour $ A.Onion varX (A.PrimChar 'a')
+          A.Assign (A.AIdent idX) efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "def x = 3 in x = 4 in x" $
-          A.Def idX (A.PrimInt 3) $ A.Assign idX efour varX
+          A.Def idX (A.PrimInt 3) $ A.Assign (A.AIdent idX) efour varX
 -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" $
           four
@@ -308,11 +321,11 @@ tests = TestList $ [TPP.tests] ++
           A.VPrimInt 15
   , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-          A.VLabel (labelName "EqualTo") A.VPrimUnit
+          lblEq
   , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-          A.VLabel (labelName "LessThan") A.VPrimUnit
+          lblLt
   , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-          A.VLabel (labelName "GreaterThan") A.VPrimUnit
+          lblGt
 -- Test parsing of nonterminating function
   , xPars "(fun x -> x x) (fun x -> x x)" $
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)

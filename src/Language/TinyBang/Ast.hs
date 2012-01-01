@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances#-}
 module Language.TinyBang.Ast
 ( Expr(..)
 , Chi(..)
@@ -6,11 +7,14 @@ module Language.TinyBang.Ast
 , Value(..)
 , exprFromValue
 , Assignable(..)
+, Evaluated(..)
 ) where
 
 import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 -------------------------------------------------------------------------------
 
 -- |Data type for representing Big Bang ASTs.
@@ -60,8 +64,8 @@ data Branch = Branch (Maybe Ident) Chi Expr
     deriving (Eq, Ord, Show)
 
 -- |Trivial conversion from values to exprs
-exprFromValue :: Value -> Expr
-exprFromValue v = case v of
+exprFromValue :: (Evaluated v) => v -> Expr
+exprFromValue v = case value v of
   VLabel l c   -> Label l $ ExprCell c
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
   VFunc i e    -> Func i e
@@ -113,3 +117,19 @@ instance Display Branch where
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
   makeDoc (ACell c) = int c
+
+class Evaluated a where
+  value :: a -> Value
+  value v = fst $ vmPair v
+  mapping :: a -> IntMap Value
+  mapping v = snd $ vmPair v
+
+  vmPair :: a -> (Value, IntMap Value)
+  vmPair v = (value v, mapping v)
+
+instance Evaluated (Value, IntMap Value) where
+  vmPair = id
+
+instance Evaluated Value where
+  value = id
+  mapping = const IntMap.empty
