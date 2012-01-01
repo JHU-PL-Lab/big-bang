@@ -100,7 +100,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 --  expressions.
 evalTop :: Expr -> Either EvalError Result
 evalTop e =
-    fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
+    fmap (canonicalize . second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
 -- |Wraps an expression in a context where builtin names are bound
 applyBuiltins :: Expr -> Expr
