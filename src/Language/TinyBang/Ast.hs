@@ -99,6 +99,7 @@ instance Display Expr where
         Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
         Def i v e -> sep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
         Assign i v e -> sep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+        ExprCell c -> text "Cell #" <> int c
 
 instance Display Value where
   makeDoc = makeDoc . exprFromValue

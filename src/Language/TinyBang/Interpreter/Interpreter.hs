@@ -12,8 +12,8 @@ module Language.TinyBang.Interpreter.Interpreter
 , applyBuiltins
 ) where
 
-import Control.Monad.Error (Error, ErrorT, strMsg, throwError)
-import Control.Monad.State (State, StateT, runStateT, get, put, gets, modify)
+import Control.Monad.Error (Error, strMsg, throwError)
+import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
 import Control.Arrow (first, second)
 import Data.Maybe (catMaybes, maybeToList)
 import Data.Function (on)
@@ -29,7 +29,6 @@ import Language.TinyBang.Ast
   , Chi(..)
   , Expr(..)
   , Value(..)
-  , exprFromValue
   , Assignable(..)
   )
 import Language.TinyBang.Render.Display
@@ -85,8 +84,10 @@ newCell v = do
   put (i + 1, IntMap.insert i v m)
   return i
 
+readCell :: Cell -> EvalM Value
 readCell i = gets snd >>= return . (! i)
 
+writeCell :: Cell -> Value -> EvalM ()
 writeCell i v = modify (second $ IntMap.adjust (const v) i)
 
 ------------------------------------------------------------------------------
@@ -144,9 +145,10 @@ eval (Func i e) = return $ VFunc i e
 eval (Appl e1 e2) = do
     e1' <- eval e1
     e2' <- eval e2
+    cell <- newCell e2'
     let e1'' = coerceToFunction e1'
     case e1'' of
-        Just (VFunc i body) -> eval $ subst (exprFromValue e2') i body
+        Just (VFunc i body) -> eval $ subst cell i body
         _ -> throwError $ ApplNotFunction e1' e2'
 
 eval (PrimInt i) = return $ VPrimInt i
@@ -160,19 +162,21 @@ eval (Case e branches) = do
     let answers = catMaybes $ map (evalBranch e') branches
     case answers of
         [] -> throwError $ UnmatchedCase e' branches
-        answer:_ -> eval answer
+        answer:_ -> eval =<< answer
     where evalBranch e' (Branch mbinder chi branchExpr) =
              let mval = coerce chi e'
                  boundExpr = do
                    val <- mval
-                   return $ maybe id (\binder -> subst (exprFromValue val) binder) mbinder $
-                         branchExpr
+                   return $ do
+                     cell <- newCell val
+                     return $ maybe id (\binder -> subst cell binder) mbinder $
+                       branchExpr
              in
              case (chi, mval) of
                  -- We don't care about the matching the names because it was
                  -- ensured to be correct earlier.
                  (ChiLabel _ i, Just (VLabel _ cell)) ->
-                   fmap (subst (ExprCell cell) i) boundExpr
+                   (fmap . fmap) (subst cell i) boundExpr
                  _ -> boundExpr
           coerce chi =
              case chi of
@@ -217,6 +221,19 @@ eval (Equal e1 e2) = do
 
 eval (ExprCell c) = readCell c
 
+eval (Def i e1 e2) = do
+  e1' <- eval e1
+  cell <- newCell e1'
+  eval $ subst cell i e2
+
+eval (Assign a e1 e2) =
+  case a of
+    AIdent i -> throwError $ NotClosed i
+    ACell c -> do
+      e1' <- eval e1
+      writeCell c e1'
+      eval e2
+
 -- |Flattens onions to a list whose elements are guaranteed not to
 --  be onions themselves and which appear in the same order as they
 --  did in the original onion
@@ -254,12 +271,15 @@ intFromType v =
     VPrimChar _   -> 5
     VPrimUnit     -> 6
 
+onionEq :: Value -> Value -> Bool
 onionEq o1 o2 = c o1 == c o2
   where c = canonicalizeList . flattenOnion
 
+onionValueEq :: Value -> Value -> Bool
 onionValueEq o v = c o == [v]
   where c = canonicalizeList . flattenOnion
 
+{-
 {-# DEPRECATED recurseOnion, removeType, firstOfType, equalOnion "These functions are outdated" #-}
 recurseOnion :: Expr -> [Expr]
 recurseOnion (Onion e1 e2) = recurseOnion e1 ++ recurseOnion e2
@@ -301,6 +321,7 @@ equalOnion (x:xs) ys = let ys' = removeType x ys
                        in case v of
                          Nothing -> False
                          Just y -> ((x == y) && equalOnion xs' ys')
+-}
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr              -- ^The first argument to the binary operator.
@@ -396,15 +417,15 @@ coerceToFunction e =
 --
 -- Defining functions related to variable substitution.
 
--- |Substitutes with a given subexpression all references to a specified
+-- |Substitutes with a given cell all references to a specified
 --  variable in the provided expression.
-subst :: Expr    -- ^ The subexpression
+subst :: Cell    -- ^ The cell
       -> Ident   -- ^ The identifier to replace
       -> Expr    -- ^ The expression in which to do the replacement
       -> Expr    -- ^ The resulting expression
 
 subst v x e@(Var i)
-    | i == x      = v
+    | i == x      = ExprCell v
     | otherwise   = e
 
 subst v x (Label name expr) =
@@ -450,6 +471,19 @@ subst v x (Minus e1 e2) =
 
 subst v x (Equal e1 e2) =
     Equal (subst v x e1) (subst v x e2)
+
+subst v x (Def i e1 e2)
+    | i == x    = Def i (subst v x e1) e2
+    | otherwise = Def i (subst v x e1) (subst v x e2)
+
+subst v x (Assign c@(ACell _) e1 e2) =
+  Assign c (subst v x e1) (subst v x e2)
+
+subst v x (Assign ai@(AIdent i) e1 e2)
+    | i == x    = Assign (ACell v) (subst v x e1) e2
+    | otherwise = Assign ai (subst v x e1) (subst v x e2)
+
+subst _ _ e@(ExprCell _) = e
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated
