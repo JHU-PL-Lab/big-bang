@@ -261,15 +261,15 @@ canonicalizeOnion = foldl1' VOnion . sort . canonicalizeList . flattenOnion
 
 --TODO: come up with a more robust solution; perhaps a newtype?
 -- |Convert type constructor to integer.
-intFromType :: Value -> Int
+intFromType :: Value -> (Int, LabelName)
 intFromType v =
   case v of
-    VLabel    _ _ -> 1
-    VOnion    _ _ -> 2
-    VFunc     _ _ -> 3
-    VPrimInt  _   -> 4
-    VPrimChar _   -> 5
-    VPrimUnit     -> 6
+    VLabel  lbl _ -> (1, lbl)
+    VOnion    _ _ -> (2, labelName "")
+    VFunc     _ _ -> (3, labelName "")
+    VPrimInt  _   -> (4, labelName "")
+    VPrimChar _   -> (5, labelName "")
+    VPrimUnit     -> (6, labelName "")
 
 onionEq :: Value -> Value -> Bool
 onionEq o1 o2 = c o1 == c o2

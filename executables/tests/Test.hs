@@ -262,6 +262,10 @@ tests = TestList $ [TPP.tests] ++
           false
   , xEval "(\\x -> x)"
           xIdent
+-- Test evaluation of some onions
+  , xEval "`A 1 & `B 1" $
+          ( VOnion (VLabel (labelName "A") 0) (VLabel (labelName "B") 1)
+          , IntMap.fromList $ zip [0, 1] $ map VPrimInt $ repeat 1)
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "plus 2 2" $
           multiAppl $ [A.Var (ident "plus"), etwo, etwo]
@@ -378,9 +382,12 @@ tests = TestList $ [TPP.tests] ++
   , xEval "equal (1 & 2) (2 & 1)"
           false
 -- Test case projection
-  -- Test that onion projection projects an onion if possible
-  , xEval "case `A 5 & `A \'a\' of {`A x -> x}"
-          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
+  , xEval "case `A 5 & `A \'a\' of {`A x -> x}" $
+-- This is no longer true
+--          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
+          A.VPrimChar 'a'
+  , xEval "case `A \'a\' & `A 5 of {`A x -> x}" $
+          A.VPrimInt 5
   , xEval "case 'a' of {char -> 0}"
           zero
   , xEval "case 1234567890 of {int -> 0}"
