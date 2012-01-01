@@ -133,13 +133,13 @@ true  :: Result
 true  = (A.VLabel (labelName "True") 0, IntMap.singleton 0 A.VPrimUnit)
 
 etrue :: A.Expr
-etrue = A.exprFromValue true
+etrue = A.Label (labelName "True") A.PrimUnit
 
 false :: Result
 false = (A.VLabel (labelName "False") 0, IntMap.singleton 0 A.VPrimUnit)
 
 efalse :: A.Expr
-efalse = A.exprFromValue false
+efalse = A.Label (labelName "False") A.PrimUnit
 
 zero  :: A.Value
 zero  = A.VPrimInt 0
