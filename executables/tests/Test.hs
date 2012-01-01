@@ -264,8 +264,8 @@ tests = TestList $ [TPP.tests] ++
           xIdent
 -- Test evaluation of some onions
   , xEval "`A 1 & `B 1" $
-          ( VOnion (VLabel (labelName "A") 0) (VLabel (labelName "B") 1)
-          , IntMap.fromList $ zip [0, 1] $ map VPrimInt $ repeat 1)
+          ( A.VOnion (A.VLabel (labelName "A") 0) (A.VLabel (labelName "B") 1)
+          , IntMap.fromList $ zip [0, 1] $ map A.VPrimInt $ repeat 1)
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "plus 2 2" $
           multiAppl $ [A.Var (ident "plus"), etwo, etwo]
