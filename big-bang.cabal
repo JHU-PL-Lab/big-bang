@@ -90,7 +90,9 @@ Executable test-suite
   Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  Build-tools:         alex, happy
+  -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
+  --       EOF to return an "internal happy error", but 1.18.6 works otherwise
+  Build-tools:         alex, happy >= 1.18.6
 
   -- Enable compiler warnings
   ghc-options:         -Wall
