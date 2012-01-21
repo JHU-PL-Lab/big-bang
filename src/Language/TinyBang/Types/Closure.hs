@@ -3,11 +3,20 @@ module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
 
-import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.Types ( (<:)
                                      , (.:)
                                      , Constraints
-                                     , Constraint
+                                     , Constraint(..)
+                                     , TauDown(..)
+                                     , TauUp(..)
+                                     , TauChi(..)
+                                     , ConstraintHistory
+                                     , Alpha(..)
+                                     , CallSite(..)
+                                     , CallSites(..)
+                                     , callSites
+                                     , PolyFuncData(..)
+                                     , Guard(..)
                                      )
 import Language.TinyBang.Types.UtilTypes (LabelName)
 
@@ -32,35 +41,35 @@ import Control.Arrow (second)
 --  otherwise, Nothing is returned.  This function is equivalent to the
 --  _ <:: _ ~ _ relation in the documentation.
 immediatelyCompatible :: Constraints
-                      -> T.TauDown
-                      -> T.TauChi
-                      -> Set T.TauDown
+                      -> TauDown
+                      -> TauChi
+                      -> Set TauDown
 immediatelyCompatible constraints tau chi =
 -- TODO: make this return Maybe
     case (tau,chi) of
-        (_,T.ChiAny) -> Set.singleton tau
-        (T.TdPrim p, T.ChiPrim p') -> tau `singIf` (p == p')
-        (T.TdLabel n t, T.ChiLabel n' a) -> tau `singIf` (n == n')
-        (T.TdOnion t1 t2, _) ->
+        (_,ChiAny) -> Set.singleton tau
+        (TdPrim p, ChiPrim p') -> tau `singIf` (p == p')
+        (TdLabel n t, ChiLabel n' a) -> tau `singIf` (n == n')
+        (TdOnion t1 t2, _) ->
             let mc1 = immediatelyCompatible constraints t1 chi in
             let mc2 = immediatelyCompatible constraints t2 chi in
             if Set.null mc2 then mc1 else mc2
-        (T.TdFunc _, T.ChiFun) -> Set.singleton tau
-        (T.TdAlpha a, _) -> Set.empty
+        (TdFunc _, ChiFun) -> Set.singleton tau
+        (TdAlpha a, _) -> Set.empty
 -- TODO: Deal with lops
 
 -- |A function modeling TLabelBind.  This function creates an appropriate set
 --  of constraints to add when a given case branch is taken.  Its primary
 --  purpose is to bind a label variable (such as `A x) to the contents of the
 --  input.
-tCaseBind :: T.ConstraintHistory
-          -> T.TauDown
-          -> T.TauChi
+tCaseBind :: ConstraintHistory
+          -> TauDown
+          -> TauChi
           -> Constraints
 tCaseBind history tau chi =
     case (tau,chi) of
-        (T.TdLabel n tau', T.ChiLabel n' a) ->
-            (tau' <: T.TuAlpha a .: history)
+        (TdLabel n tau', ChiLabel n' a) ->
+            (tau' <: TuAlpha a .: history)
                 `singIf` (n == n')
         _ -> Set.empty
 
@@ -112,11 +121,11 @@ findPolyFuncs = Map.unionsWith mappend . map fn . Set.toList
 --               Map.singleton (a,b) $ Set.singleton (d, c)
 --             _ -> Map.empty
 
-findCases :: Constraints -> Map T.Alpha (Set ([T.Guard], Constraint))
+findCases :: Constraints -> Map Alpha (Set ([Guard], Constraint))
 findCases = Map.unionsWith mappend . map fn . Set.toList
   where fn c =
           case c of
-            T.Case a gs _ -> Map.singleton a $ Set.singleton (gs, c)
+            Case a gs _ -> Map.singleton a $ Set.singleton (gs, c)
             _ -> Map.empty
 
 -- |This function transforms a specified alpha into a call site list.  The
@@ -125,27 +134,27 @@ findCases = Map.unionsWith mappend . map fn . Set.toList
 --  variable with the exponent expression '1^('2^'3).  The resulting call site
 --  list is suitable for use in type variable substitution for polymorphic
 --  functions.
-makeCallSites :: T.Alpha -> T.CallSites
-makeCallSites alpha@(T.Alpha alphaId siteList) =
-    T.callSites $
+makeCallSites :: Alpha -> CallSites
+makeCallSites alpha@(Alpha alphaId siteList) =
+    callSites $
     case rest of
       [] -> -- In this case, this call site is new to the list
-        (T.CallSite $ Set.singleton alphaEntry) : map T.CallSite siteList'
+        (CallSite $ Set.singleton alphaEntry) : map CallSite siteList'
       (_,cyc):tl -> -- In this case, we found a cycle
-        (T.CallSite cyc):(map (T.CallSite . fst) tl)
-    where unCallSite (T.CallSite a) = a
-          siteList' = map unCallSite $ T.unCallSites siteList
-          alphaEntry = T.Alpha alphaId $ T.callSites []
+        (CallSite cyc):(map (CallSite . fst) tl)
+    where unCallSite (CallSite a) = a
+          siteList' = map unCallSite $ unCallSites siteList
+          alphaEntry = Alpha alphaId $ callSites []
           -- A list of pairs, the snd of which is the union of all the fsts so
           -- far.
-          totals :: [(Set T.Alpha, Set T.Alpha)]
+          totals :: [(Set Alpha, Set Alpha)]
           totals = zip siteList' $ tail $ scanl Set.union Set.empty siteList'
           rest = dropWhile (not . Set.member alphaEntry . snd) totals
 
 -- |A function which performs substitution on a set of constraints.  All
 --  variables in the alpha set are replaced with corresponding versions that
 --  have the specified alpha in their call sites list.
-substituteVars :: Constraints -> Set T.Alpha -> T.Alpha -> Constraints
+substituteVars :: Constraints -> Set Alpha -> Alpha -> Constraints
 substituteVars constraints forallVars replAlpha =
   runReader
     (substituteAlpha constraints)
@@ -177,7 +186,7 @@ closeAll c = Set.unions $ map ($ c)
 calculateClosure :: Constraints -> Constraints
 calculateClosure c = leastFixedPoint closeAll c
 
-type AlphaSubstitutionEnv = (T.Alpha, Set T.Alpha)
+type AlphaSubstitutionEnv = (Alpha, Set Alpha)
 
 -- |A typeclass for entities which can substitute their type variables.
 class AlphaSubstitutable a where
@@ -185,8 +194,8 @@ class AlphaSubstitutable a where
   --  The set in the reader environment contains alphas to ignore.
   substituteAlpha :: a -> Reader AlphaSubstitutionEnv a
 
-instance AlphaSubstitutable T.Alpha where
-  substituteAlpha alpha@(T.Alpha alphaId callSites) = do
+instance AlphaSubstitutable Alpha where
+  substituteAlpha alpha@(Alpha alphaId callSites) = do
     (newAlpha, forallVars) <- ask
     let newCallSites = makeCallSites newAlpha
     if not $ Set.member alpha forallVars
@@ -197,33 +206,33 @@ instance AlphaSubstitutable T.Alpha where
       -- inference rules themselves (which have no notion of call
       -- sites) and the type replacement function (which does not
       -- replace forall-ed elements within a forall constraint).
-      else assert ((length . T.unCallSites) callSites == 0) $
-         return $ T.Alpha alphaId newCallSites
+      else assert ((length . unCallSites) callSites == 0) $
+         return $ Alpha alphaId newCallSites
 
-instance AlphaSubstitutable T.TauUp where
+instance AlphaSubstitutable TauUp where
   substituteAlpha tau =
     case tau of
-      T.TuFunc ai ao ->
-        T.TuFunc
+      TuFunc ai ao ->
+        TuFunc
           <$> substituteAlpha ai
           <*> substituteAlpha ao
-      T.TuAlpha a -> T.TuAlpha <$> substituteAlpha a
+      TuAlpha a -> TuAlpha <$> substituteAlpha a
 
-instance AlphaSubstitutable T.TauDown where
+instance AlphaSubstitutable TauDown where
   substituteAlpha tau =
     case tau of
-      T.TdPrim p -> return $ T.TdPrim p
-      T.TdLabel n t -> T.TdLabel n <$> substituteAlpha t
-      T.TdOnion t1 t2 ->
-        T.TdOnion
+      TdPrim p -> return $ TdPrim p
+      TdLabel n t -> TdLabel n <$> substituteAlpha t
+      TdOnion t1 t2 ->
+        TdOnion
           <$> substituteAlpha t1
           <*> substituteAlpha t2
-      T.TdFunc pfd -> T.TdFunc <$> substituteAlpha pfd
-      T.TdAlpha a -> T.TdAlpha <$> substituteAlpha a
+      TdFunc pfd -> TdFunc <$> substituteAlpha pfd
+      TdAlpha a -> TdAlpha <$> substituteAlpha a
 
-instance AlphaSubstitutable T.PolyFuncData where
-  substituteAlpha (T.PolyFuncData alphas alphaIn alphaOut constraints) =
-      T.PolyFuncData alphas
+instance AlphaSubstitutable PolyFuncData where
+  substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
+      PolyFuncData alphas
         <$> substituteAlpha' alphaIn
         <*> substituteAlpha' alphaOut
         <*> substituteAlpha' constraints
@@ -233,32 +242,32 @@ instance AlphaSubstitutable T.PolyFuncData where
             substituteAlpha' =
               local (second $ flip Set.difference alphas) . substituteAlpha
 
-instance AlphaSubstitutable T.Constraint where
+instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
-      T.Subtype td tu hist ->
-        T.Subtype
+      Subtype td tu hist ->
+        Subtype
           <$> substituteAlpha td
           <*> substituteAlpha tu
           <*> return hist
-      T.Case a guards hist ->
-        T.Case
+      Case a guards hist ->
+        Case
           <$> substituteAlpha a
           <*> mapM substituteAlpha guards
           <*> return hist
-      T.Bottom hist -> return $ T.Bottom hist
+      Bottom hist -> return $ Bottom hist
 
-instance AlphaSubstitutable T.Guard where
-  substituteAlpha (T.Guard tauChi constraints) =
-      T.Guard
+instance AlphaSubstitutable Guard where
+  substituteAlpha (Guard tauChi constraints) =
+      Guard
         <$> substituteAlpha tauChi
         <*> substituteAlpha constraints
 
-instance AlphaSubstitutable T.TauChi where
+instance AlphaSubstitutable TauChi where
   substituteAlpha c = case c of
-      T.ChiPrim p -> return $ T.ChiPrim p
-      T.ChiLabel n a -> T.ChiLabel n <$> substituteAlpha a
-      T.ChiFun -> return T.ChiFun
-      T.ChiAny -> return T.ChiAny
+      ChiPrim p -> return $ ChiPrim p
+      ChiLabel n a -> ChiLabel n <$> substituteAlpha a
+      ChiFun -> return ChiFun
+      ChiAny -> return ChiAny
 
 instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
   substituteAlpha = fmap Set.fromList . mapM substituteAlpha . Set.toList
