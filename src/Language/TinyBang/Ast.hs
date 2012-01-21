@@ -4,12 +4,22 @@ module Language.TinyBang.Ast
 , Branches
 , Branch(..)
 , Value(..)
+-- Re-exported for convenience
+, LazyOperator(..)
+, EagerOperator(..)
 , exprFromValue
 ) where
 
 import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
-import Language.TinyBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
+import Language.TinyBang.Types.UtilTypes
+  ( LabelName
+  , Ident
+  , unIdent
+  , unLabelName
+  , LazyOperator(..)
+  , EagerOperator(..)
+  )
 
 -------------------------------------------------------------------------------
 
@@ -24,10 +34,8 @@ data Expr =
     | PrimChar Char
     | PrimUnit
     | Case Expr Branches
-    -- Below are the AST forms which cannot be represented as text directly
-    | Plus Expr Expr
-    | Minus Expr Expr
-    | Equal Expr Expr
+    | LazyOp Expr LazyOperator Expr
+    | EagerOp Expr EagerOperator Expr
     deriving (Eq, Ord, Show)
 
 -- |Data type for representing Big Bang values
@@ -45,7 +53,7 @@ data Chi =
       ChiPrim (T.PrimitiveType)
     | ChiLabel LabelName Ident
     | ChiFun
-    | ChiTop
+    | ChiAny
     deriving (Eq, Ord, Show)
 
 -- |Alias for case branches
@@ -77,6 +85,8 @@ instance Display Expr where
         Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
                 (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
                 $+$ text "}"
+        LazyOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+        EagerOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
         {-
            TODO: deal with the fact that the following isn't actually code
            options include:
@@ -84,9 +94,6 @@ instance Display Expr where
                * namespacing trick (e.g., Plus translates to
                    "Language.TinyBang.Builtins.([+]) e1 e2"
         -}
-        Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
-        Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
-        Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
 
 instance Display Value where
   makeDoc = makeDoc . exprFromValue
@@ -99,5 +106,5 @@ instance Display Branch where
             ChiLabel n i ->
                 char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
             ChiFun -> text "fun"
-            ChiTop -> text "_"
+            ChiAny -> text "_"
         ) <+> text "->" <+> makeDoc e

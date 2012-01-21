@@ -8,6 +8,8 @@ module Language.TinyBang.Types.UtilTypes
 , Ident
 , ident
 , unIdent
+, LazyOperator(..)
+, EagerOperator(..)
 ) where
 
 import Language.TinyBang.Render.Display
@@ -31,3 +33,29 @@ instance Display LabelName where
 
 instance Display Ident where
     makeDoc = text . unIdent
+
+-- |Data type used to represent lazy operations
+data LazyOperator
+  = Plus
+  | Minus
+  deriving (Eq, Ord, Show)
+
+-- |Data type used to represent eager operations
+data EagerOperator
+  = Equal
+  | LessEqual
+  | GreaterEqual
+  deriving (Eq, Ord, Show)
+
+instance Display LazyOperator where
+  makeDoc o = brackets . text $
+    case o of
+      Plus -> "+"
+      Minus -> "-"
+
+instance Display EagerOperator where
+  makeDoc o = brackets $ text $
+    case o of
+      Equal -> "="
+      LessEqual -> "<="
+      GreaterEqual -> ">="

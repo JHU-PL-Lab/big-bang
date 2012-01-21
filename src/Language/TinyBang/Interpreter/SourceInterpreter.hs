@@ -68,7 +68,7 @@ eParse tokens =
         Left err -> throwError $ FailureWrapper $ ParseFailure err
         Right ast -> return ast
 
-eTypeInfer :: A.Expr -> EvalStringM (T.TauDownClosed, T.Constraints)
+eTypeInfer :: A.Expr -> EvalStringM (T.TauDown, T.Constraints)
 eTypeInfer e =
     let (res,cs) = TI.inferTypeTop e in
     case res of

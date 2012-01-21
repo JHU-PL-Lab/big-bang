@@ -22,6 +22,8 @@ import Language.TinyBang.Ast
   , Chi(..)
   , Expr(..)
   , Value(..)
+  , LazyOperator(..)
+  , EagerOperator(..)
   , exprFromValue
   )
 import Language.TinyBang.Render.Display
@@ -80,24 +82,24 @@ evalTop e = do
 
 -- |Wraps an expression in a context where builtin names are bound
 applyBuiltins :: Expr -> Expr
-applyBuiltins e =
-  wrapper e
-  where ix = ident "x"
-        iy = ident "y"
-        vx = Var ix
-        vy = Var iy
-        builtins = [
-              ("plus", Func ix $ Func iy $ Plus vx vy)
-            , ("minus", Func ix $ Func iy $ Minus vx vy)
-            , ("equal", Func ix $ Func iy $ Equal vx vy)
-            ]
-        -- Takes the builtins as defined above and returns a list of functions
-        -- which use let encoding to bind the name as given above to the
-        -- definition as given above.
-        wrappedBuiltins :: [Expr -> Expr]
-        wrappedBuiltins = map (\(x,y) z -> Appl (Func (ident x) z) y) builtins
-        wrapper :: Expr -> Expr
-        wrapper = foldl1 (.) wrappedBuiltins
+applyBuiltins e = e
+  -- wrapper e
+  -- where ix = ident "x"
+  --       iy = ident "y"
+  --       vx = Var ix
+  --       vy = Var iy
+  --       builtins = [
+  --             ("plus", Func ix $ Func iy $ Plus vx vy)
+  --           , ("minus", Func ix $ Func iy $ Minus vx vy)
+  --           , ("equal", Func ix $ Func iy $ Equal vx vy)
+  --           ]
+  --       -- Takes the builtins as defined above and returns a list of functions
+  --       -- which use let encoding to bind the name as given above to the
+  --       -- definition as given above.
+  --       wrappedBuiltins :: [Expr -> Expr]
+  --       wrappedBuiltins = map (\(x,y) z -> Appl (Func (ident x) z) y) builtins
+  --       wrapper :: Expr -> Expr
+  --       wrapper = foldl1 (.) wrappedBuiltins
 
 
 -- |Evaluates a Big Bang expression.
@@ -156,40 +158,42 @@ eval (Case e branches) = do
                  ChiPrim T.PrimUnit -> coerceToUnit
                  ChiLabel name _ -> coerceToLabel name
                  ChiFun -> coerceToFunction
-                 ChiTop -> Just
+                 ChiAny -> Just
 
-eval (Plus e1 e2) =
-    evalBinop e1 e2 tryExtractInteger $ \x y -> VPrimInt $ x + y
+eval (LazyOp e1 op e2) =
+    evalBinop e1 e2 tryExtractInteger $
+      case op of
+        Plus  -> \x y -> VPrimInt $ x + y
+        Minus -> \x y -> VPrimInt $ x - y
 
-eval (Minus e1 e2) =
-    evalBinop e1 e2 tryExtractInteger $ \x y -> VPrimInt $ x - y
+eval (EagerOp e1 op e2) = error "Eager operations are not implemented yet"
 
-eval (Equal e1 e2) = do
-    e1' <- eval e1
-    e2' <- eval e2
-    case (e1', e2') of
-        (VPrimInt _, VPrimInt _) -> req e1' e2'
-        (VPrimChar _, VPrimChar _) -> req e1' e2'
-        ((VFunc _ _), (VFunc _ _)) -> req e1' e2'
-        (VLabel name1 expr1, VLabel name2 expr2) -> if name1 == name2
-                                                     then req expr1 expr2
-                                                     else throwError $ DynamicTypeError "incorrect type in expression"
-        (VPrimUnit, VPrimUnit) -> return true
--- FIXME: Some things that should be type errors evaluate to false.
-        (o1@(VOnion _ _), o2@(VOnion _ _)) -> oreq o1 o2
-        (o1@(VOnion _ _), _) -> ovreq o1 e2'
-        (_, o2@(VOnion _ _)) -> ovreq o2 e1'
-        _ -> throwError $ DynamicTypeError "incorrect type in expression"
-  where true  = VLabel (labelName "True" ) VPrimUnit
-        false = VLabel (labelName "False") VPrimUnit
-        eq a b = if a == b then true else false
-        req a b = return $ eq a b
-        oreq a b = return $ if onionEq a b
-                               then true
-                               else false
-        ovreq o v = return $ if onionValueEq o v
-                                then true
-                                else false
+-- eval (Equal e1 e2) = do
+--     e1' <- eval e1
+--     e2' <- eval e2
+--     case (e1', e2') of
+--         (VPrimInt _, VPrimInt _) -> req e1' e2'
+--         (VPrimChar _, VPrimChar _) -> req e1' e2'
+--         ((VFunc _ _), (VFunc _ _)) -> req e1' e2'
+--         (VLabel name1 expr1, VLabel name2 expr2) -> if name1 == name2
+--                                                      then req expr1 expr2
+--                                                      else throwError $ DynamicTypeError "incorrect type in expression"
+--         (VPrimUnit, VPrimUnit) -> return true
+-- -- FIXME: Some things that should be type errors evaluate to false.
+--         (o1@(VOnion _ _), o2@(VOnion _ _)) -> oreq o1 o2
+--         (o1@(VOnion _ _), _) -> ovreq o1 e2'
+--         (_, o2@(VOnion _ _)) -> ovreq o2 e1'
+--         _ -> throwError $ DynamicTypeError "incorrect type in expression"
+--   where true  = VLabel (labelName "True" ) VPrimUnit
+--         false = VLabel (labelName "False") VPrimUnit
+--         eq a b = if a == b then true else false
+--         req a b = return $ eq a b
+--         oreq a b = return $ if onionEq a b
+--                                then true
+--                                else false
+--         ovreq o v = return $ if onionValueEq o v
+--                                 then true
+--                                 else false
 
 -- |Flattens onions to a list whose elements are guaranteed not to
 --  be onions themselves and which appear in the same order as they
@@ -408,17 +412,14 @@ subst v x (Case expr branches) =
                         ChiPrim _ -> []
                         ChiLabel _ i -> [i]
                         ChiFun -> []
-                        ChiTop -> []
+                        ChiAny -> []
             in
             if elem x boundIdents
                 then branch
                 else Branch mident chi $ subst v x branchExpr
 
-subst v x (Plus e1 e2) =
-    Plus (subst v x e1) (subst v x e2)
+subst v x (LazyOp e1 op e2) =
+    LazyOp (subst v x e1) op (subst v x e2)
 
-subst v x (Minus e1 e2) =
-    Minus (subst v x e1) (subst v x e2)
-
-subst v x (Equal e1 e2) =
-    Equal (subst v x e1) (subst v x e2)
+subst v x (EagerOp e1 op e2) =
+    EagerOp (subst v x e1) op (subst v x e2)

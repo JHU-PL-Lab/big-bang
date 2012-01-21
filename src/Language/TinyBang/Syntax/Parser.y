@@ -97,7 +97,7 @@ Branches:   Branch ';' Branches     { $1:$3 }
         |   Branch                  { [$1] }
 
 
-Branch  :   Pattern '->' Exp        
+Branch  :   Pattern '->' Exp
                                     { A.Branch Nothing $1 $3 }
         |   ident ':' Pattern '->' Exp
                                     { A.Branch (Just $ ident $1) $3 $5 }
@@ -106,7 +106,7 @@ Branch  :   Pattern '->' Exp
 Pattern :   PrimitiveType           { A.ChiPrim $1 }
         |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
         |   fun                     { A.ChiFun }
-        |   '_'                     { A.ChiTop }
+        |   '_'                     { A.ChiAny }
 
 
 PrimitiveType
