@@ -27,13 +27,15 @@ import Data.Set.Utils (singIf)
 import Control.Exception (assert)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (catMaybes, fromJust, mapMaybe, listToMaybe)
+import Data.Maybe (catMaybes, fromJust, mapMaybe, listToMaybe, isJust)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Monoid (mappend)
 import Control.Monad.Reader (runReader, ask, local, Reader)
+import Control.Monad.Writer
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second)
+import Control.Arrow (first, second, (***), (&&&))
+import Data.Either (partitionEithers)
 
 -- |A function modeling immediate compatibility.  This function takes a type and
 --  a guard in a match case.  If the input type is compatible with the guard,
@@ -73,14 +75,67 @@ tCaseBind history tau chi =
                 `singIf` (n == n')
         _ -> Set.empty
 
-findAlphaOnRight :: Constraints
-                 -> Map T.Alpha (Set (T.TauDown, Constraint))
-findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
-  where fn c =
+getLowerBound :: Constraint -> Maybe TauDown
+getLowerBound c =
+  case c of
+    Subtype td _ _ -> Just td
+    _ -> Nothing
+
+getUpperBound :: Constraint -> Maybe TauUp
+getUpperBound c =
+  case c of
+    Subtype _ tu _ -> Just tu
+    _ -> Nothing
+
+getHistory :: Constraint -> ConstraintHistory
+getHistory c =
+  case c of
+    Subtype _ _ h -> h
+    Case _ _ h -> h
+    Bottom h -> h
+
+filterByUpperBound :: Constraints -> TauUp -> Constraints
+filterByUpperBound cs t = Set.filter f cs
+  where f c = Just t == getUpperBound c
+
+filterByLowerBound :: Constraints -> TauDown -> Constraints
+filterByLowerBound cs t = Set.filter f cs
+  where f c = Just t == getLowerBound c
+
+--getByUpperBound :: Constraints -> T.TauUp -> Set (T.TauDown, T.ConstraintHistory)
+--getByUpperBound cs t = Set.fromAscList $ mapMaybe
+
+findConcreteLowerBounds :: Constraints -> TauUp -> Set TauDown
+findConcreteLowerBounds cs t = execWriter $ loop [t]
+  where toEither c =
           case c of
-            T.Subtype a (T.TuAlpha b) _ ->
-              Map.singleton b $ Set.singleton (a, c)
-            _ -> Map.empty
+            TdAlpha a -> Left a
+            _ -> Right c
+        -- This is elegant, but is it too clever by half?
+        -- As it stands, it can be optimized by removing used constraints
+        step :: TauUp -> Writer (Set TauDown) [TauUp]
+        step
+          = uncurry (flip (>>))
+          . (return . map TuAlpha *** tell . Set.fromAscList)
+          . partitionEithers
+          . map toEither
+          . mapMaybe getLowerBound
+          . Set.toAscList
+          . filterByUpperBound cs
+        loop :: [TauUp] -> Writer (Set TauDown) ()
+        loop xs = do
+          when (not $ null xs) $
+            concat <$> mapM step (nub' xs) >>= loop
+        nub' = Set.toList . Set.fromList
+
+-- findAlphaOnRight :: Constraints
+--                  -> Map T.Alpha (Set (T.TauDown, Constraint))
+-- findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
+--   where fn c =
+--           case c of
+--             T.Subtype a (T.TuAlpha b) _ ->
+--               Map.singleton b $ Set.singleton (a, c)
+--             _ -> Map.empty
 
 -- findAlphaOnLeft :: Constraints
 --                 -> Map T.Alpha (Set (T.TauUpClosed, Constraint))
@@ -102,14 +157,14 @@ findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
 --               Map.singleton a $ Set.singleton (lbl, b, c)
 --             _ -> Map.empty
 
-findPolyFuncs :: Constraints
-              -> Map T.Alpha (Set (T.Alpha, T.PolyFuncData, Constraint))
-findPolyFuncs = Map.unionsWith mappend . map fn . Set.toList
-  where fn c =
-          case c of
-            T.Subtype (T.TdFunc pfd) (T.TuFunc ai ao) _ ->
-                Map.singleton ai $ Set.singleton (ao, pfd, c)
-            _ -> Map.empty
+-- findPolyFuncs :: Constraints
+--               -> Map T.Alpha (Set (T.Alpha, T.PolyFuncData, Constraint))
+-- findPolyFuncs = Map.unionsWith mappend . map fn . Set.toList
+--   where fn c =
+--           case c of
+--             T.Subtype (T.TdFunc pfd) (T.TuFunc ai ao) _ ->
+--                 Map.singleton ai $ Set.singleton (ao, pfd, c)
+--             _ -> Map.empty
 
 -- findAlphaAmpPairs :: Constraints
 --                   -> Map (T.Alpha, T.Alpha) (Set ( T.TauUp
