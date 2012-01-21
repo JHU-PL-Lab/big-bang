@@ -8,7 +8,7 @@ import Language.TinyBang.Types.UtilTypes
 import Language.TinyBang.Render.Display
 
 tests :: Test
-tests = TestList [printPrimCases, printFuncTests, printOnionTests, printOpsTests]
+tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTests-}]
 
 -- Test cases that ensure that primitive literals are printed correctly
 printPrimCases :: Test
@@ -23,7 +23,7 @@ testPrintPositiveInt = TestCase $ assertEqual
 testPrintNegativeInt :: Test
 testPrintNegativeInt = TestCase $ assertEqual
   "Test if input -1234567890 is printed correctly"
-  "-1234567890" 
+  "-1234567890"
   (display (PrimInt (-1234567890)))
 
 testPrintChar :: Test
@@ -99,7 +99,7 @@ testPrintFunction3 = TestCase $ assertEqual
 
 -- Test cases that check pretty printing of onions
 printOnionTests :: Test
-printOnionTests = TestList [testPrintOnion, testPrintTernaryOnion] 
+printOnionTests = TestList [testPrintOnion, testPrintTernaryOnion]
 
 testPrintOnion :: Test
 testPrintOnion = TestCase $ assertEqual
@@ -115,23 +115,23 @@ testPrintTernaryOnion = TestCase $ assertEqual
 
 
 -- Test cases that check pretty printing of basic builtin operators
-printOpsTests :: Test
-printOpsTests = TestList [testPrintPlus, testPrintMinus, testPrintEqual]
+-- printOpsTests :: Test
+-- printOpsTests = TestList [testPrintPlus, testPrintMinus, testPrintEqual]
 
-testPrintPlus :: Test
-testPrintPlus = TestCase $ assertEqual
-  "Test that primitive add prints correctly"
-  "1 [+] 1"
-  (display (Plus (PrimInt 1) (PrimInt 1)))
+-- testPrintPlus :: Test
+-- testPrintPlus = TestCase $ assertEqual
+--   "Test that primitive add prints correctly"
+--   "1 [+] 1"
+--   (display (Plus (PrimInt 1) (PrimInt 1)))
 
-testPrintMinus :: Test
-testPrintMinus = TestCase $ assertEqual
-  "Test that primitive subtract prints correctly"
-  "1 [-] 1"
-  (display (Minus (PrimInt 1) (PrimInt 1)))
+-- testPrintMinus :: Test
+-- testPrintMinus = TestCase $ assertEqual
+--   "Test that primitive subtract prints correctly"
+--   "1 [-] 1"
+--   (display (Minus (PrimInt 1) (PrimInt 1)))
 
-testPrintEqual :: Test
-testPrintEqual = TestCase $ assertEqual
-  "Test that primitive equals prints correctly"
-  "1 [=] 1"
-  (display (Equal (PrimInt 1) (PrimInt 1)))
+-- testPrintEqual :: Test
+-- testPrintEqual = TestCase $ assertEqual
+--   "Test that primitive equals prints correctly"
+--   "1 [=] 1"
+--   (display (Equal (PrimInt 1) (PrimInt 1)))
