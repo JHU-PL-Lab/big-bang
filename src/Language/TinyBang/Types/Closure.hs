@@ -32,7 +32,8 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Monoid (mappend)
 import Control.Monad.Reader (runReader, ask, local, Reader)
-import Control.Monad.Writer
+import Control.Monad.Writer (tell, Writer, execWriter)
+import Control.Monad (when)
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first, second, (***), (&&&))
 import Data.Either (partitionEithers)
@@ -127,6 +128,22 @@ findConcreteLowerBounds cs t = execWriter $ loop [t]
           when (not $ null xs) $
             concat <$> mapM step (nub' xs) >>= loop
         nub' = Set.toList . Set.fromList
+
+concretizeType :: Constraints -> TauDown -> Set TauDown
+concretizeType cs t =
+  case t of
+    TdOnion t1 t2 -> Set.fromList
+      [TdOnion a b | a <- Set.toList $ f t1
+                   , b <- Set.toList $ f t2]
+    TdAlpha a -> Set.unions $ map f $ lowerBounds a
+    _ -> Set.singleton t
+  where f = concretizeType cs
+        lowerBounds :: Alpha -> [TauDown]
+        lowerBounds alpha
+          = mapMaybe getLowerBound
+          $ Set.toList
+          $ filterByUpperBound cs
+          $ TuAlpha alpha
 
 -- findAlphaOnRight :: Constraints
 --                  -> Map T.Alpha (Set (T.TauDown, Constraint))
