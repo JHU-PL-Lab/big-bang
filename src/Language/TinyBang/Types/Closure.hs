@@ -38,33 +38,41 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first, second, (***), (&&&))
 import Data.Either (partitionEithers)
 
+data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
+
 -- |A function modeling immediate compatibility.  This function takes a type and
 --  a guard in a match case.  If the input type is compatible with the guard,
---  this function returns the type as which the original type is compatible;
---  otherwise, Nothing is returned.  This function is equivalent to the
---  _ <:: _ ~ _ relation in the documentation.
-immediatelyCompatible :: Constraints
-                      -> TauDown
-                      -> TauChi
-                      -> Set TauDown
-immediatelyCompatible constraints tau chi =
--- TODO: make this return Maybe
-    case (tau,chi) of
-        (_,ChiAny) -> Set.singleton tau
-        (TdPrim p, ChiPrim p') -> tau `singIf` (p == p')
-        (TdLabel n t, ChiLabel n' a) -> tau `singIf` (n == n')
-        (TdOnion t1 t2, _) ->
-            let mc1 = immediatelyCompatible constraints t1 chi in
-            let mc2 = immediatelyCompatible constraints t2 chi in
-            if Set.null mc2 then mc1 else mc2
-        (TdFunc _, ChiFun) -> Set.singleton tau
-        (TdAlpha a, _) -> Set.empty
--- TODO: Deal with lops
+--  this function returns @CompatibleAs t@, where t is the type as which the
+--  original type is compatible; otherwise, @NotCompatible@ is
+--  returned. MaybeCompatible is returned if the result is not yet determinable,
+--  as in the case of lazy operations not yet being closed over.  This function
+--  is equivalent to the _ <:: _ ~ _ relation in the documentation.
 
--- |A function modeling TLabelBind.  This function creates an appropriate set
---  of constraints to add when a given case branch is taken.  Its primary
---  purpose is to bind a label variable (such as `A x) to the contents of the
---  input.
+-- Note that lazy ops match against ChiAny; TODO: is this desired behavior?
+immediatelyCompatible :: TauDown
+                      -> TauChi
+                      -> Compatibility
+immediatelyCompatible tau chi =
+  case (tau,chi) of
+    (_,ChiAny) -> CompatibleAs tau
+    (TdPrim p, ChiPrim p') | p == p' -> CompatibleAs tau
+    (TdLabel n t, ChiLabel n' a) | n == n' -> CompatibleAs tau
+    (TdOnion t1 t2, _) ->
+      case (immediatelyCompatible t1 chi, immediatelyCompatible t2 chi) of
+        (_, MaybeCompatible) -> MaybeCompatible
+        (c, NotCompatible) -> c
+        -- If we reach this case, we must have found compatibility in the second
+        -- onion.
+        (_, c) -> c
+    (TdFunc _, ChiFun) -> CompatibleAs tau
+    (TdLazyOp _ _ _, _) -> MaybeCompatible
+    -- The line below is not strictly necessary, but included for clarity.
+    (TdAlpha a, _) -> NotCompatible
+    _ -> NotCompatible
+
+-- |A function modeling TLabelBind.  This function creates an appropriate set of
+--  constraints to add when a given case branch is taken.  Its primary purpose
+--  is to bind a label variable (such as `A x) to the contents of the input.
 tCaseBind :: ConstraintHistory
           -> TauDown
           -> TauChi
