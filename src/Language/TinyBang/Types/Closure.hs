@@ -72,7 +72,7 @@ immediatelyCompatible tau chi =
     (TdAlpha a, _) -> NotCompatible
     _ -> NotCompatible
 
--- |A function modeling TLabelBind.  This function creates an appropriate set of
+-- |A function modeling TCaseBind.  This function creates an appropriate set of
 --  constraints to add when a given case branch is taken.  Its primary purpose
 --  is to bind a label variable (such as `A x) to the contents of the input.
 tCaseBind :: ConstraintHistory
