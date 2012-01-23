@@ -10,13 +10,14 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , TauDown(..)
                                      , TauUp(..)
                                      , TauChi(..)
-                                     , ConstraintHistory
+                                     , ConstraintHistory(..)
                                      , Alpha(..)
                                      , CallSite(..)
                                      , CallSites(..)
                                      , callSites
                                      , PolyFuncData(..)
                                      , Guard(..)
+                                     , PrimitiveType(..)
                                      )
 import Language.TinyBang.Types.UtilTypes (LabelName)
 
@@ -30,15 +31,16 @@ import qualified Data.Set as Set
 import Data.Maybe (catMaybes, fromJust, mapMaybe, listToMaybe, isJust)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Monoid (mappend)
-import Control.Monad.Reader (runReader, ask, local, Reader)
-import Control.Monad.Writer (tell, Writer, execWriter)
-import Control.Monad (when)
-import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (first, second, (***), (&&&))
-import Data.Either (partitionEithers)
+import Data.Monoid (mappend, mempty)
+import Control.Monad.Reader (runReader, ask, local, reader, Reader, MonadReader)
+import Control.Monad.Writer (tell, WriterT, execWriterT)
+import Control.Monad (guard, join, mzero)
+import Control.Applicative ((<$>), (<*>), pure)
+import Control.Arrow (second)
 
 type CReader = Reader Constraints
+
+--type CWriter out ret = Writer (Set out) ret
 
 data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
 
@@ -239,13 +241,82 @@ substituteVars constraints forallVars replAlpha =
     (replAlpha, forallVars)
 
 closeCases :: Constraints -> Constraints
-closeCases cs = error "Not implemented"
+closeCases cs = Set.unions $ do
+  -- Using the list monad
+  -- failure to match similar to "continue" statment
+  Case alpha guards hist <- Set.toList cs
+  tau <- f $ TdAlpha alpha
+  -- Handle contradictions elsewhere, both to improve readability and to be more
+  -- like the document.
+  Just ret <- return $ join $ listToMaybe $ do
+    Guard tauChi cs' <- guards
+    case immediatelyCompatible tau tauChi of
+      NotCompatible -> return $ Nothing
+      MaybeCompatible -> mzero
+      CompatibleAs tau' ->
+        return $ Just $ Set.union cs' $ tCaseBind undefined tau' tauChi
+  return ret
+  where f t = Set.toList $ runReader (concretizeType t) cs
+
+findCaseContradictions :: Constraints -> Constraints
+findCaseContradictions cs = Set.fromList $ do
+  c@(Case alpha guards hist) <- Set.toList cs
+  tau <- f $ TdAlpha alpha
+  isCont <- return $ null $ do
+    Guard tauChi cs' <- guards
+    case immediatelyCompatible tau tauChi of
+      NotCompatible -> mzero
+      MaybeCompatible -> return ()
+      CompatibleAs tau' -> return ()
+  guard isCont
+  return $ Bottom $ ContradictionCase undefined c
+  where f t = Set.toList $ runReader (concretizeType t) cs
 
 closeApplications :: Constraints -> Constraints
-closeApplications cs = error "Not implemented"
+closeApplications cs = Set.unions $ do
+  Subtype t1 (TuFunc ai' ao') hist <- Set.toList cs
+  TdFunc (PolyFuncData foralls ai ao cs') <- f t1
+  t2 <- f $ TdAlpha ai'
+  let cs' = Set.union cs $
+              Set.fromList [ t2 <: TuAlpha ai .: undefined
+                           , TdAlpha ao <: TuAlpha ao' .: undefined]
+  return $ substituteVars cs' foralls ai'
+  where f t = Set.toList $ runReader (concretizeType t) cs
+
+findNonFunctionApplications :: Constraints -> Constraints
+findNonFunctionApplications cs = Set.fromList $ do
+  c@(Subtype t (TuFunc ai' ao') hist) <- Set.toList cs
+  tau <- f t
+  case tau of
+    TdFunc (PolyFuncData foralls ai ao cs') -> mzero
+    _ -> return $ Bottom undefined
+  where f t = Set.toList $ runReader (concretizeType t) cs
 
 closeLops :: Constraints -> Constraints
-closeLops cs = error "Not yet implemented"
+closeLops cs = Set.fromList $ do
+  Subtype (TdLazyOp t1 op t2) tu hist <- Set.toList cs
+  -- Horribly inefficient
+  -- TODO: trivial optimization if necessary
+  c1 <- f t1
+  c2 <- f t2
+  case (c1, c2) of
+    (TdPrim PrimInt, TdPrim PrimInt) ->
+      -- TODO: fix use of undefined to stand in for ConstraintHistory below.
+      return $ TdPrim PrimInt <: tu .: undefined
+    _ -> mzero
+  where f t = Set.toList $ runReader (concretizeType t) cs
+
+findLopContradictions :: Constraints -> Constraints
+findLopContradictions cs = Set.fromList $ do
+  Subtype (TdLazyOp t1 op t2) tu hist <- Set.toList cs
+  -- Not quite like the document.
+  -- FIXME: when we have lops that aren't int -> -- int -> int, this needs to be
+  -- changed.
+  tau <- f t1 ++ f t2
+  case tau of
+    TdPrim PrimInt -> mzero
+    _ -> return $ Bottom undefined
+  where f t = Set.toList $ runReader (concretizeType t) cs
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
