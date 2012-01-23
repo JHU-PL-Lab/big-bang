@@ -38,6 +38,8 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first, second, (***), (&&&))
 import Data.Either (partitionEithers)
 
+type CReader = Reader Constraints
+
 data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
 
 -- |A function modeling immediate compatibility.  This function takes a type and
@@ -114,44 +116,40 @@ filterByLowerBound cs t = Set.filter f cs
 --getByUpperBound :: Constraints -> T.TauUp -> Set (T.TauDown, T.ConstraintHistory)
 --getByUpperBound cs t = Set.fromAscList $ mapMaybe
 
-findConcreteLowerBounds :: Constraints -> TauUp -> Set TauDown
-findConcreteLowerBounds cs t = execWriter $ loop [t]
-  where toEither c =
-          case c of
-            TdAlpha a -> Left a
-            _ -> Right c
-        -- This is elegant, but is it too clever by half?
-        -- As it stands, it can be optimized by removing used constraints
-        step :: TauUp -> Writer (Set TauDown) [TauUp]
-        step
-          = uncurry (flip (>>))
-          . (return . map TuAlpha *** tell . Set.fromAscList)
-          . partitionEithers
-          . map toEither
-          . mapMaybe getLowerBound
-          . Set.toAscList
-          . filterByUpperBound cs
-        loop :: [TauUp] -> Writer (Set TauDown) ()
-        loop xs = do
-          when (not $ null xs) $
-            concat <$> mapM step (nub' xs) >>= loop
-        nub' = Set.toList . Set.fromList
+--TODO: Consider adding chains to history and handling them here
 
-concretizeType :: Constraints -> TauDown -> Set TauDown
-concretizeType cs t =
+findConcreteLowerBounds :: TauUp -> CReader (Set TauDown)
+findConcreteLowerBounds t = execWriterT $ do
+  ilbs <- immediateLowerBounds t
+  mapM_ accumulateLBs ilbs
+  where -- The folowing type signature is morally but not technically correct
+--      immediateLowerBounds :: TauUp -> CReader [TauDown]
+        immediateLowerBounds tu =
+          mapMaybe getLowerBound . Set.toList <$> mFilter tu
+        accumulateLBs :: TauDown -> WriterT (Set TauDown) CReader ()
+        accumulateLBs td =
+          case td of
+            TdAlpha a -> do
+              ilbs <- immediateLowerBounds $ TuAlpha a
+              mapM_ accumulateLBs ilbs
+            _ -> tell $ Set.singleton td
+        mFilter x = filterByUpperBound <$> ask <*> pure x
+
+concretizeType :: TauDown -> CReader (Set TauDown)
+concretizeType t =
   case t of
-    TdOnion t1 t2 -> Set.fromList
-      [TdOnion a b | a <- Set.toList $ f t1
-                   , b <- Set.toList $ f t2]
-    TdAlpha a -> Set.unions $ map f $ lowerBounds a
-    _ -> Set.singleton t
-  where f = concretizeType cs
-        lowerBounds :: Alpha -> [TauDown]
-        lowerBounds alpha
-          = mapMaybe getLowerBound
-          $ Set.toList
-          $ filterByUpperBound cs
-          $ TuAlpha alpha
+    TdOnion t1 t2 -> do
+      c1 <- concretizeType t1
+      c2 <- concretizeType t2
+      return $ Set.map (uncurry TdOnion) $ crossProduct c1 c2
+    TdAlpha a -> Set.unions <$> (mapM concretizeType =<< lowerBounds a)
+    _ -> return $ Set.singleton t
+    where crossProduct xs ys = Set.fromList
+            [(x,y) | x <- Set.toList xs, y <- Set.toList ys]
+          lowerBounds :: Alpha -> CReader [TauDown]
+          lowerBounds alpha =
+            mapMaybe getLowerBound . Set.toList <$>
+            reader (`filterByUpperBound` TuAlpha alpha)
 
 -- findAlphaOnRight :: Constraints
 --                  -> Map T.Alpha (Set (T.TauDown, Constraint))
@@ -309,6 +307,8 @@ instance AlphaSubstitutable TauDown where
           <*> substituteAlpha t2
       TdFunc pfd -> TdFunc <$> substituteAlpha pfd
       TdAlpha a -> TdAlpha <$> substituteAlpha a
+      TdLazyOp t1 op t2 ->
+        TdLazyOp <$> substituteAlpha t1 <*> pure op <*> substituteAlpha t2
 
 instance AlphaSubstitutable PolyFuncData where
   substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
