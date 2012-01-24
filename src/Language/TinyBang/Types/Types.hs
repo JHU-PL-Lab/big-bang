@@ -72,6 +72,8 @@ data TauDown
   | TdOnion Alpha Alpha
   | TdLazyOp Alpha LazyOperator Alpha
   | TdFunc PolyFuncData
+  | TdOnionSub Alpha Sigma
+  | TdEmptyOnion
   deriving (Eq, Ord, Show)
 
 
@@ -259,10 +261,12 @@ instance Display TauDown where
   makeDoc tau =
     case tau of
       TdPrim p -> makeDoc p
-      TdLabel n t -> char '`' <> makeDoc n <+> makeDoc t
-      TdOnion t1 t2 -> makeDoc t1 <+> char '&' <+> makeDoc t2
+      TdLabel n a -> char '`' <> makeDoc n <+> makeDoc a
+      TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
       TdFunc polyFuncData -> makeDoc polyFuncData
-      TdLazyOp t1 op t2 -> makeDoc t1 <+> makeDoc op <+> makeDoc t2
+      TdLazyOp a1 op a2 -> makeDoc a1 <+> makeDoc op <+> makeDoc a2
+      TdEmptyOnion -> text "(&)"
+      TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
 
 instance Display PolyFuncData where
   makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
