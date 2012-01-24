@@ -114,7 +114,7 @@ Branch  :   Pattern '->' Exp
 Pattern :   PrimitiveType           { A.ChiPrim $1 }
         |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
         |   fun                     { A.ChiFun }
-        |   '_'                     { A.ChiTop }
+        |   '_'                     { A.ChiAny }
 
 
 PrimitiveType

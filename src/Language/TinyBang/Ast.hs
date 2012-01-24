@@ -5,63 +5,81 @@ module Language.TinyBang.Ast
 , Branches
 , Branch(..)
 , Value(..)
+-- Re-exported for convenience
+, LazyOperator(..)
+, EagerOperator(..)
+, Sigma(..)
 , exprFromValue
 , Assignable(..)
 , Evaluated(..)
 ) where
 
-import Language.TinyBang.Render.Display
-import qualified Language.TinyBang.Types.Types as T
-import Language.TinyBang.Types.UtilTypes (LabelName, Ident, unIdent, unLabelName)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+
+import Language.TinyBang.Render.Display
+import Language.TinyBang.Types.UtilTypes
+  ( LabelName
+  , Ident
+  , unIdent
+  , unLabelName
+  , LazyOperator(..)
+  , EagerOperator(..)
+  , Sigma(..)
+  )
+import qualified Language.TinyBang.Types.UtilTypes as T
+  ( PrimitiveType(..) )
+
 -------------------------------------------------------------------------------
 
+type CellId = Int
+
 -- |Data type for representing Big Bang ASTs.
-data Expr =
-      Var Ident
-    | Label LabelName Expr
-    | Onion Expr Expr
-    | Func Ident Expr
-    | Appl Expr Expr
-    | PrimInt Integer
-    | PrimChar Char
-    | PrimUnit
-    | Case Expr Branches
-    | Def Ident Expr Expr
-    | Assign Assignable Expr Expr
-    -- Below are the AST forms which cannot be represented as text directly
-    | Plus Expr Expr
-    | Minus Expr Expr
-    | Equal Expr Expr
-    | ExprCell Int
-    deriving (Eq, Ord, Show)
+data Expr
+  = Var Ident
+  | Label LabelName Expr
+  | Onion Expr Expr
+  | OnionSub Expr Sigma
+  | Func Ident Expr
+  | Appl Expr Expr
+  | PrimInt Integer
+  | PrimChar Char
+  | PrimUnit
+  | Case Expr Branches
+  | Def Ident Expr Expr
+  | Assign Assignable Expr Expr
+  | LazyOp Expr LazyOperator Expr
+  | EagerOp Expr EagerOperator Expr
+  | ExprCell CellId
+  deriving (Eq, Ord, Show)
 
 -- |Data type for representing Big Bang values
-data Value =
-      VLabel LabelName Int
-    | VOnion Value Value
-    | VFunc Ident Expr
-    | VPrimInt Integer
-    | VPrimChar Char
-    | VPrimUnit
-    deriving (Eq, Ord, Show)
+data Value
+  = VLabel LabelName CellId
+  | VOnion Value Value
+  | VFunc Ident Expr
+  | VPrimInt Integer
+  | VPrimChar Char
+  | VPrimUnit
+  | VEmptyOnion
+  | VCell CellId
+  deriving (Eq, Ord, Show)
 
-data Assignable = ACell Int | AIdent Ident
+data Assignable = AValue Value | AIdent Ident
   deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
-data Chi =
-      ChiPrim (T.PrimitiveType)
-    | ChiLabel LabelName Ident
-    | ChiFun
-    | ChiTop
-    deriving (Eq, Ord, Show)
+data Chi
+  = ChiPrim T.PrimitiveType
+  | ChiLabel LabelName Ident
+  | ChiFun
+  | ChiAny
+  deriving (Eq, Ord, Show)
 
 -- |Alias for case branches
 type Branches = [Branch]
 data Branch = Branch (Maybe Ident) Chi Expr
-    deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show)
 
 -- |Trivial conversion from values to exprs
 exprFromValue :: (Evaluated v) => v -> Expr
@@ -72,52 +90,57 @@ exprFromValue v = case value v of
   VPrimInt i   -> PrimInt i
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
+  VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit
+  VCell c      -> ExprCell c
 
 instance Display Expr where
-    makeDoc a = case a of
-        Var i -> text $ unIdent i
-        Label n e -> char '`' <> (text $ unLabelName n) <+> makeDoc e
-        Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
-        Func i e -> parens $
-                text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
-        Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
-        PrimInt i -> integer i
-        PrimChar c -> quotes $ char c
-        PrimUnit -> parens empty
-        Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
-                (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
-                $+$ text "}"
-        {-
-           TODO: deal with the fact that the following isn't actually code
-           options include:
-               * errors on ASTs containing builtin nodes
-               * namespacing trick (e.g., Plus translates to
-                   "Language.TinyBang.Builtins.([+]) e1 e2"
-        -}
-        Plus e1 e2 -> makeDoc e1 <+> text "[+]" <+> makeDoc e2
-        Minus e1 e2 -> makeDoc e1 <+> text "[-]" <+> makeDoc e2
-        Equal e1 e2 -> makeDoc e1 <+> text "[=]" <+> makeDoc e2
-        Def i v e -> sep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-        Assign i v e -> sep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-        ExprCell c -> text "Cell #" <> int c
+  makeDoc a = case a of
+    Var i -> text $ unIdent i
+    Label n e -> char '`' <> (text $ unLabelName n) <+> makeDoc e
+    Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
+    Func i e -> parens $
+            text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
+    Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
+    PrimInt i -> integer i
+    PrimChar c -> quotes $ char c
+    PrimUnit -> parens empty
+    Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
+            (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
+            $+$ text "}"
+    OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
+    LazyOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    EagerOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    {-
+       TODO: deal with the fact that the following isn't actually code
+       options include:
+           * errors on ASTs containing builtin nodes
+           * namespacing trick (e.g., Plus translates to
+               "Language.TinyBang.Builtins.([+]) e1 e2"
+    -}
+    Def i v e -> sep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Assign i v e -> sep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    ExprCell c -> text "Cell #" <> int c
 
 instance Display Value where
-  makeDoc = makeDoc . exprFromValue
+  makeDoc x =
+    case x of
+      VEmptyOnion -> text "(&)"
+      _ -> makeDoc $ exprFromValue x
 
 instance Display Branch where
-    makeDoc (Branch mident chi e) =
-        maybe empty ((<> colon) . text . unIdent) mident <+>
-        (case chi of
-            ChiPrim p -> makeDoc p
-            ChiLabel n i ->
-                char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
-            ChiFun -> text "fun"
-            ChiTop -> text "_"
-        ) <+> text "->" <+> makeDoc e
+  makeDoc (Branch mident chi e) =
+    maybe empty ((<> colon) . text . unIdent) mident <+>
+    (case chi of
+      ChiPrim p -> makeDoc p
+      ChiLabel n i ->
+        char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
+      ChiFun -> text "fun"
+      ChiAny -> text "_"
+    ) <+> text "->" <+> makeDoc e
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
-  makeDoc (ACell c) = int c
+  makeDoc (AValue v) = makeDoc v
 
 class Evaluated a where
   value :: a -> Value

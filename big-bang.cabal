@@ -50,10 +50,11 @@ Library
   Exposed-Modules:
         Data.Function.Utils
         Data.Maybe.Utils
+        Data.Set.Utils
         Language.TinyBang.Ast
         Language.TinyBang.Interpreter.Interpreter
-        Language.TinyBang.Render.Display
         Language.TinyBang.Interpreter.SourceInterpreter
+        Language.TinyBang.Render.Display
         Language.TinyBang.Syntax.Parser
         Language.TinyBang.Syntax.Lexer
         Language.TinyBang.Types.Closure

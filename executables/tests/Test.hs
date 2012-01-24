@@ -335,12 +335,12 @@ tests = TestList $ [TPP.tests] ++
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
   , xType "(fun x -> x x) (fun x -> x x)"
 -- Test typechecking of some pathological functions
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
--- Test sinple equalities
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
+-- Test simple equalities
   , xType "equal 1 1"
   , xEval "equal 1 1"
           true
