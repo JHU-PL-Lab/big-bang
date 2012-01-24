@@ -130,6 +130,11 @@ inferType expr =
             (zipWith3 (buildGuard expr gamma a1) tauChis constraints alphas)
             $ T.Inferred expr gamma
       return a1
+    A.OnionSub e s -> do
+      a1 <- freshVar
+      a2 <- inferType e
+      tell1 $ T.TdOnionSub a2 s <: a1 .: histFIXME
+      return a1
     A.LazyOp e1 op e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
