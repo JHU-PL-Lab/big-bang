@@ -95,37 +95,8 @@ tCaseBind history tau chi =
                 `singIf` (n == n')
         _ -> Set.empty
 
--- getLowerBound :: Constraint -> Maybe TauDown
--- getLowerBound c =
---   case c of
---     Subtype td _ _ -> Just td
---     _ -> Nothing
-
--- getUpperBound :: Constraint -> Maybe TauUp
--- getUpperBound c =
---   case c of
---     Subtype _ tu _ -> Just tu
---     _ -> Nothing
-
--- getHistory :: Constraint -> ConstraintHistory
--- getHistory c =
---   case c of
---     Subtype _ _ h -> h
---     Case _ _ h -> h
---     Bottom h -> h
-
--- filterByUpperBound :: Constraints -> TauUp -> Constraints
--- filterByUpperBound cs t = Set.filter f cs
---   where f c = Just t == getUpperBound c
-
--- filterByLowerBound :: Constraints -> TauDown -> Constraints
--- filterByLowerBound cs t = Set.filter f cs
---   where f c = Just t == getLowerBound c
-
---getByUpperBound :: Constraints -> T.TauUp -> Set (T.TauDown, T.ConstraintHistory)
---getByUpperBound cs t = Set.fromAscList $ mapMaybe
-
 --TODO: Consider adding chains to history and handling them here
+--TODO: Docstring this function
 
 concretizeType :: Alpha -> CReader (Set TauDown)
 concretizeType a = do
@@ -147,55 +118,6 @@ concretizeType a = do
             AlphaSubtype ret a' _ <- Set.toAscList constraints
             guard $ a == a'
             return ret
-
--- findAlphaOnRight :: Constraints
---                  -> Map T.Alpha (Set (T.TauDown, Constraint))
--- findAlphaOnRight = Map.unionsWith mappend . map fn . Set.toList
---   where fn c =
---           case c of
---             T.Subtype a (T.TuAlpha b) _ ->
---               Map.singleton b $ Set.singleton (a, c)
---             _ -> Map.empty
-
--- findAlphaOnLeft :: Constraints
---                 -> Map T.Alpha (Set (T.TauUpClosed, Constraint))
--- findAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
---   where fn c =
---           case c of
---             T.Subtype (T.TdAlpha a) b _ -> Map.singleton a $
---                                               Set.singleton (b, c)
---             _                            -> Map.empty
-
--- findLblAlphaOnLeft :: Constraints
---                    -> Map T.Alpha (Set ( LabelName
---                                        , T.TauUpClosed
---                                        , Constraint))
--- findLblAlphaOnLeft = Map.unionsWith mappend . map fn . Set.toList
---   where fn c =
---           case c of
---             T.Subtype (T.TdLabel lbl (T.TdAlpha a)) b _ ->
---               Map.singleton a $ Set.singleton (lbl, b, c)
---             _ -> Map.empty
-
--- findPolyFuncs :: Constraints
---               -> Map T.Alpha (Set (T.Alpha, T.PolyFuncData, Constraint))
--- findPolyFuncs = Map.unionsWith mappend . map fn . Set.toList
---   where fn c =
---           case c of
---             T.Subtype (T.TdFunc pfd) (T.TuFunc ai ao) _ ->
---                 Map.singleton ai $ Set.singleton (ao, pfd, c)
---             _ -> Map.empty
-
--- findAlphaAmpPairs :: Constraints
---                   -> Map (T.Alpha, T.Alpha) (Set ( T.TauUp
---                                                  , Constraint))
--- findAlphaAmpPairs = Map.unionsWith mappend . map fn . Set.toList
---   where fn c =
---           case c of
---             T.Subtype (T.TdOnion (T.TdAlpha a) (T.TdAlpha b)) d _ ->
---               Map.singleton (a,b) $ Set.singleton (d, c)
---             _ -> Map.empty
-
 
 -- |This function transforms a specified alpha into a call site list.  The
 --  resulting call site list is in the reverse order form dictated by the
