@@ -10,6 +10,8 @@ module Language.TinyBang.Types.UtilTypes
 , unIdent
 , LazyOperator(..)
 , EagerOperator(..)
+, Sigma(..)
+, PrimitiveType(..)
 ) where
 
 import Language.TinyBang.Render.Display
@@ -59,3 +61,30 @@ instance Display EagerOperator where
       Equal -> "="
       LessEqual -> "<="
       GreaterEqual -> ">="
+
+-- |The datatype enumerating the primitives in the Little Bang type system.
+data PrimitiveType
+  = PrimInt
+  | PrimChar
+  | PrimUnit
+  deriving (Eq, Ord, Show)
+
+instance Display PrimitiveType where
+  makeDoc p =
+    case p of
+      PrimInt -> text "int"
+      PrimChar -> text "char"
+      PrimUnit -> text "unit"
+
+-- |Data type describing type patterns for removing values from onions.
+data Sigma
+  = SubPrim PrimitiveType
+  | SubLabel LabelName
+  | SubFunc
+  deriving (Eq, Ord, Show)
+
+instance Display Sigma where
+  makeDoc a = text "-" <> case a of
+    SubPrim p -> makeDoc p
+    SubLabel n -> makeDoc n
+    SubFunc -> text "fun"

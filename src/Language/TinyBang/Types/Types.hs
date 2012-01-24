@@ -24,7 +24,7 @@ import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Function (on)
 
-import Language.TinyBang.Types.UtilTypes (LabelName, Ident, LazyOperator)
+import Language.TinyBang.Types.UtilTypes (LabelName, Ident, LazyOperator, Sigma(..), PrimitiveType(..))
 import Language.TinyBang.Render.Display
 import {-# SOURCE #-} qualified Language.TinyBang.Ast as A
 
@@ -79,14 +79,6 @@ data TauDown
 data PolyFuncData =
   PolyFuncData (Set Alpha) Alpha Alpha Constraints -- TODO: alias Set AnyAlpha?
   deriving (Eq, Ord, Show)
-
--- |The datatype enumerating the primitives in the Little Bang type system.
-data PrimitiveType
-  = PrimInt
-  | PrimChar
-  | PrimUnit
-  deriving (Eq, Ord, Show)
-
 
 -------------------------------------------------------------------------------
 -- *Type Pattern Types
@@ -279,13 +271,6 @@ instance Display PolyFuncData where
       else empty) <+>
     makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
     char '\\' <+> (parens $ makeDoc constraints)
-
-instance Display PrimitiveType where
-  makeDoc p =
-    case p of
-      PrimInt -> text "int"
-      PrimChar -> text "char"
-      PrimUnit -> text "unit"
 
 instance Display TauChi where
   makeDoc tauChi =

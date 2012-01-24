@@ -20,6 +20,7 @@ import Language.TinyBang.Types.UtilTypes
   , unLabelName
   , LazyOperator(..)
   , EagerOperator(..)
+  , Sigma(..)
   )
 
 -------------------------------------------------------------------------------
@@ -59,13 +60,6 @@ data Chi
   | ChiAny
   deriving (Eq, Ord, Show)
 
--- |Data type describing type patterns for removing values from onions.
-data Sigma
-  = SubPrim T.PrimitiveType
-  | SubLabel LabelName
-  | SubFunc
-  deriving (Eq, Ord, Show)
-
 -- |Alias for case branches
 type Branches = [Branch]
 data Branch = Branch (Maybe Ident) Chi Expr
@@ -81,12 +75,6 @@ exprFromValue v = case v of
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
   VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit
-
-instance Display Sigma where
-  makeDoc a = text "-" <> case a of
-    SubPrim p -> makeDoc p
-    SubLabel n -> makeDoc n
-    SubFunc -> text "fun"
 
 instance Display Expr where
   makeDoc a = case a of
