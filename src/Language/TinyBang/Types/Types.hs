@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Language.TinyBang.Types.Types
 ( Alpha(..)
 , CallSite(..)
@@ -21,6 +22,7 @@ module Language.TinyBang.Types.Types
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
+import Data.Function (on)
 
 import Language.TinyBang.Types.UtilTypes (LabelName, Ident, LazyOperator)
 import Language.TinyBang.Render.Display
@@ -61,17 +63,15 @@ callSites lst = CallSites lst
 -- |The datatype used to represent upper bound types.
 data TauUp
   = TuFunc Alpha Alpha
-  | TuAlpha Alpha
   deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent lower bound types.
 data TauDown
   = TdPrim PrimitiveType
-  | TdLabel LabelName TauDown
-  | TdOnion TauDown TauDown
-  | TdLazyOp TauDown LazyOperator TauDown
+  | TdLabel LabelName Alpha
+  | TdOnion Alpha Alpha
+  | TdLazyOp Alpha LazyOperator Alpha
   | TdFunc PolyFuncData
-  | TdAlpha Alpha
   deriving (Eq, Ord, Show)
 
 
@@ -112,39 +112,37 @@ data TauChi
 type Constraints = Set Constraint
 -- |A type describing constraints in Little Bang.
 data Constraint
-  = Subtype TauDown TauUp ConstraintHistory
+  = LowerSubtype TauDown Alpha ConstraintHistory
+  | UpperSubtype Alpha TauUp ConstraintHistory
+  | AlphaSubtype Alpha Alpha ConstraintHistory
   | Case Alpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
 
+-- |A datatype used to simplify writing Ord and Eq instances for Constraint.
+data ConstraintOrdinal
+  = OrdLS TauDown Alpha
+  | OrdUS Alpha TauUp
+  | OrdAS Alpha Alpha
+  | OrdCase Alpha [Guard]
+  | OrdBottom ConstraintHistory
+  deriving (Eq, Ord)
+
+-- |Extracts information relevant for sorting
+constraintOrdinal :: Constraint -> ConstraintOrdinal
+constraintOrdinal c =
+  case c of
+    LowerSubtype td a  _ -> OrdLS     td a
+    UpperSubtype a  tu _ -> OrdUS     a  tu
+    AlphaSubtype a1 a2 _ -> OrdAS     a1 a2
+    Case         a  gs _ -> OrdCase   a gs
+    Bottom             h -> OrdBottom h
+
 instance Eq Constraint where
-  -- For Subtype and case constraints, ignore history
-  (==) (Subtype a b _) (Subtype c d _) = (a, b) == (c, d)
-  (==) (Case a b _   ) (Case c d _   ) = (a, b) == (c, d)
-
-  -- For bottom constraints, differentiate by history
-  (==) (Bottom a     ) (Bottom b     ) = a == b
-
-  -- Constraints are only equal to others with the same constructor
-  _ == _ = False
+  (==) = (==) `on` constraintOrdinal
 
 instance Ord Constraint where
-  -- For Subtype and case constraints, ignore history
-  compare (Subtype a b _) (Subtype c d _) = compare (a, b) (c, d)
-  compare (Case a b _   ) (Case c d _   ) = compare (a, b) (c, d)
-
-  -- For bottom constraints, differentiate by history
-  compare (Bottom a     ) (Bottom b     ) = compare a b
-
-  -- Compare constraints with different constructors an arbitrary ordering
-  compare (Subtype _ _ _) (Case    _ _ _) = LT
-  compare (Case    _ _ _) (Subtype _ _ _) = GT
-
-  compare (Subtype _ _ _) (Bottom  _    ) = LT
-  compare (Bottom  _    ) (Subtype _ _ _) = GT
-
-  compare (Case    _ _ _) (Bottom  _    ) = LT
-  compare (Bottom  _    ) (Case    _ _ _) = GT
+  compare = compare `on` constraintOrdinal
 
 -- |A type describing the which rule generated a constraint and why.
 data ConstraintHistory
@@ -205,10 +203,25 @@ data ConstraintHistory
 data Guard = Guard TauChi Constraints
     deriving (Eq, Ord, Show)
 
--- |An infix function for creating subtype contraints (for convenience).
---  meant to be used in conjunction with '(.:)'
-(<:) :: TauDown -> TauUp -> ConstraintHistory -> Constraint
-(<:) = Subtype
+class MkConstraint a b where
+  (<:) :: a -> b -> ConstraintHistory -> Constraint
+
+instance MkConstraint TauDown Alpha where
+  (<:) = LowerSubtype
+
+instance MkConstraint Alpha TauUp where
+  (<:) = UpperSubtype
+
+instance MkConstraint Alpha Alpha where
+  (<:) = AlphaSubtype
+
+instance MkConstraint PrimitiveType Alpha where
+  p <: a = TdPrim p <: a
+
+-- -- |An infix function for creating subtype contraints (for convenience).
+-- --  meant to be used in conjunction with '(.:)'
+-- (<:) :: TauDown -> TauUp -> ConstraintHistory -> Constraint
+-- (<:) = Subtype
 
 -- |An alias for application with precedence set so that @a <: b .: c@ creates
 --  a subtype constraint with history @c@
@@ -249,7 +262,6 @@ instance Display TauUp where
   makeDoc tau =
     case tau of
       TuFunc au a -> makeDoc au <+> text "->" <+> makeDoc a
-      TuAlpha a -> makeDoc a
 
 instance Display TauDown where
   makeDoc tau =
@@ -259,7 +271,6 @@ instance Display TauDown where
       TdOnion t1 t2 -> makeDoc t1 <+> char '&' <+> makeDoc t2
       TdFunc polyFuncData -> makeDoc polyFuncData
       TdLazyOp t1 op t2 -> makeDoc t1 <+> makeDoc op <+> makeDoc t2
-      TdAlpha a -> makeDoc a
 
 instance Display PolyFuncData where
   makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
@@ -288,7 +299,9 @@ instance Display Constraint where
   makeDoc c =
     --TODO: FIXME display history or remove this comment
     case c of
-      Subtype a b _ -> makeDoc a <+> text "<:" <+> makeDoc b
+      LowerSubtype a b _ -> subtype a b
+      UpperSubtype a b _ -> subtype a b
+      AlphaSubtype a b _ -> subtype a b
       Case alpha guards _ ->
         text "case" <+> makeDoc alpha <+> text "of" <+> lbrace $+$
         (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
@@ -296,3 +309,4 @@ instance Display Constraint where
       Bottom ch -> text "_|_" $$ (text . show) ch
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
+          subtype a b = makeDoc a <+> text "<:" <+> makeDoc b

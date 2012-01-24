@@ -44,6 +44,9 @@ type CReader = Reader Constraints
 
 data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
 
+histFIXME :: ConstraintHistory
+histFIXME = undefined
+
 -- |A function modeling immediate compatibility.  This function takes a type and
 --  a guard in a match case.  If the input type is compatible with the guard,
 --  this function returns @CompatibleAs t@, where t is the type as which the
@@ -55,24 +58,28 @@ data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
 -- Note that lazy ops match against ChiAny; TODO: is this desired behavior?
 immediatelyCompatible :: TauDown
                       -> TauChi
-                      -> Compatibility
+                      -> CReader Compatibility
 immediatelyCompatible tau chi =
   case (tau,chi) of
-    (_,ChiAny) -> CompatibleAs tau
-    (TdPrim p, ChiPrim p') | p == p' -> CompatibleAs tau
-    (TdLabel n t, ChiLabel n' a) | n == n' -> CompatibleAs tau
-    (TdOnion t1 t2, _) ->
-      case (immediatelyCompatible t1 chi, immediatelyCompatible t2 chi) of
-        (_, MaybeCompatible) -> MaybeCompatible
-        (c, NotCompatible) -> c
-        -- If we reach this case, we must have found compatibility in the second
-        -- onion.
-        (_, c) -> c
-    (TdFunc _, ChiFun) -> CompatibleAs tau
-    (TdLazyOp _ _ _, _) -> MaybeCompatible
-    -- The line below is not strictly necessary, but included for clarity.
-    (TdAlpha a, _) -> NotCompatible
-    _ -> NotCompatible
+    (_,ChiAny) -> return $ CompatibleAs tau
+    (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
+    (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
+    (TdOnion a1 a2, _) -> do
+      t1s <- concretizeType a1
+      t2s <- concretizeType a2
+      compatibilities <-
+        sequence [ immediatelyCompatible t chi |
+                   t <- Set.toList t2s ++ Set.toList t1s]
+      -- If the list is all NotCompatible, it's not compatible; otherwise,
+      -- whatever was at the first other answer goes.
+      return $ maybe NotCompatible id $ listToMaybe $ dropWhile notCompatible compatibilities
+    (TdFunc _, ChiFun) -> return $ CompatibleAs tau
+    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
+    _ -> return $ NotCompatible
+    where notCompatible x =
+            case x of
+              NotCompatible -> True
+              _ -> False
 
 -- |A function modeling TCaseBind.  This function creates an appropriate set of
 --  constraints to add when a given case branch is taken.  Its primary purpose
@@ -84,74 +91,62 @@ tCaseBind :: ConstraintHistory
 tCaseBind history tau chi =
     case (tau,chi) of
         (TdLabel n tau', ChiLabel n' a) ->
-            (tau' <: TuAlpha a .: history)
+            (tau' <: a .: history)
                 `singIf` (n == n')
         _ -> Set.empty
 
-getLowerBound :: Constraint -> Maybe TauDown
-getLowerBound c =
-  case c of
-    Subtype td _ _ -> Just td
-    _ -> Nothing
+-- getLowerBound :: Constraint -> Maybe TauDown
+-- getLowerBound c =
+--   case c of
+--     Subtype td _ _ -> Just td
+--     _ -> Nothing
 
-getUpperBound :: Constraint -> Maybe TauUp
-getUpperBound c =
-  case c of
-    Subtype _ tu _ -> Just tu
-    _ -> Nothing
+-- getUpperBound :: Constraint -> Maybe TauUp
+-- getUpperBound c =
+--   case c of
+--     Subtype _ tu _ -> Just tu
+--     _ -> Nothing
 
-getHistory :: Constraint -> ConstraintHistory
-getHistory c =
-  case c of
-    Subtype _ _ h -> h
-    Case _ _ h -> h
-    Bottom h -> h
+-- getHistory :: Constraint -> ConstraintHistory
+-- getHistory c =
+--   case c of
+--     Subtype _ _ h -> h
+--     Case _ _ h -> h
+--     Bottom h -> h
 
-filterByUpperBound :: Constraints -> TauUp -> Constraints
-filterByUpperBound cs t = Set.filter f cs
-  where f c = Just t == getUpperBound c
+-- filterByUpperBound :: Constraints -> TauUp -> Constraints
+-- filterByUpperBound cs t = Set.filter f cs
+--   where f c = Just t == getUpperBound c
 
-filterByLowerBound :: Constraints -> TauDown -> Constraints
-filterByLowerBound cs t = Set.filter f cs
-  where f c = Just t == getLowerBound c
+-- filterByLowerBound :: Constraints -> TauDown -> Constraints
+-- filterByLowerBound cs t = Set.filter f cs
+--   where f c = Just t == getLowerBound c
 
 --getByUpperBound :: Constraints -> T.TauUp -> Set (T.TauDown, T.ConstraintHistory)
 --getByUpperBound cs t = Set.fromAscList $ mapMaybe
 
 --TODO: Consider adding chains to history and handling them here
 
-findConcreteLowerBounds :: TauUp -> CReader (Set TauDown)
-findConcreteLowerBounds t = execWriterT $ do
-  ilbs <- immediateLowerBounds t
-  mapM_ accumulateLBs ilbs
-  where -- The folowing type signature is morally but not technically correct
---      immediateLowerBounds :: TauUp -> CReader [TauDown]
-        immediateLowerBounds tu =
-          mapMaybe getLowerBound . Set.toList <$> mFilter tu
-        accumulateLBs :: TauDown -> WriterT (Set TauDown) CReader ()
-        accumulateLBs td =
-          case td of
-            TdAlpha a -> do
-              ilbs <- immediateLowerBounds $ TuAlpha a
-              mapM_ accumulateLBs ilbs
-            _ -> tell $ Set.singleton td
-        mFilter x = filterByUpperBound <$> ask <*> pure x
-
-concretizeType :: TauDown -> CReader (Set TauDown)
-concretizeType t =
-  case t of
-    TdOnion t1 t2 -> do
-      c1 <- concretizeType t1
-      c2 <- concretizeType t2
-      return $ Set.map (uncurry TdOnion) $ crossProduct c1 c2
-    TdAlpha a -> Set.unions <$> (mapM concretizeType =<< lowerBounds a)
-    _ -> return $ Set.singleton t
-    where crossProduct xs ys = Set.fromList
-            [(x,y) | x <- Set.toList xs, y <- Set.toList ys]
-          lowerBounds :: Alpha -> CReader [TauDown]
-          lowerBounds alpha =
-            mapMaybe getLowerBound . Set.toList <$>
-            reader (`filterByUpperBound` TuAlpha alpha)
+concretizeType :: Alpha -> CReader (Set TauDown)
+concretizeType a = do
+  clbs <- concreteLowerBounds
+  ilbs <- intermediateLowerBounds
+  rec <- Set.unions <$> mapM concretizeType ilbs
+  return $ Set.union (Set.fromList clbs) rec
+  where concreteLowerBounds :: CReader [TauDown]
+        concreteLowerBounds = do
+          constraints <- ask
+          return $ do
+            LowerSubtype td a' _ <- Set.toAscList constraints
+            guard $ a == a'
+            return td
+        intermediateLowerBounds :: CReader [Alpha]
+        intermediateLowerBounds = do
+          constraints <- ask
+          return $ do
+            AlphaSubtype ret a' _ <- Set.toAscList constraints
+            guard $ a == a'
+            return ret
 
 -- findAlphaOnRight :: Constraints
 --                  -> Map T.Alpha (Set (T.TauDown, Constraint))
@@ -201,12 +196,6 @@ concretizeType t =
 --               Map.singleton (a,b) $ Set.singleton (d, c)
 --             _ -> Map.empty
 
-findCases :: Constraints -> Map Alpha (Set ([Guard], Constraint))
-findCases = Map.unionsWith mappend . map fn . Set.toList
-  where fn c =
-          case c of
-            Case a gs _ -> Map.singleton a $ Set.singleton (gs, c)
-            _ -> Map.empty
 
 -- |This function transforms a specified alpha into a call site list.  The
 --  resulting call site list is in the reverse order form dictated by the
@@ -245,78 +234,72 @@ closeCases cs = Set.unions $ do
   -- Using the list monad
   -- failure to match similar to "continue" statment
   Case alpha guards hist <- Set.toList cs
-  tau <- f $ TdAlpha alpha
+  tau <- f alpha
   -- Handle contradictions elsewhere, both to improve readability and to be more
   -- like the document.
   Just ret <- return $ join $ listToMaybe $ do
     Guard tauChi cs' <- guards
-    case immediatelyCompatible tau tauChi of
+    case runReader (immediatelyCompatible tau tauChi) cs of
       NotCompatible -> return $ Nothing
       MaybeCompatible -> mzero
       CompatibleAs tau' ->
-        return $ Just $ Set.union cs' $ tCaseBind undefined tau' tauChi
+        return $ Just $ Set.union cs' $ tCaseBind histFIXME tau' tauChi
   return ret
-  where f t = Set.toList $ runReader (concretizeType t) cs
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findCaseContradictions :: Constraints -> Constraints
 findCaseContradictions cs = Set.fromList $ do
-  c@(Case alpha guards hist) <- Set.toList cs
-  tau <- f $ TdAlpha alpha
+  Case alpha guards _ <- Set.toList cs
+  tau <- f alpha
   isCont <- return $ null $ do
     Guard tauChi cs' <- guards
-    case immediatelyCompatible tau tauChi of
+    case runReader (immediatelyCompatible tau tauChi) cs of
       NotCompatible -> mzero
       MaybeCompatible -> return ()
       CompatibleAs tau' -> return ()
   guard isCont
-  return $ Bottom $ ContradictionCase undefined c
-  where f t = Set.toList $ runReader (concretizeType t) cs
+  return $ Bottom histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do
-  Subtype t1 (TuFunc ai' ao') hist <- Set.toList cs
-  TdFunc (PolyFuncData foralls ai ao cs') <- f t1
-  t2 <- f $ TdAlpha ai'
-  let cs' = Set.union cs $
-              Set.fromList [ t2 <: TuAlpha ai .: undefined
-                           , TdAlpha ao <: TuAlpha ao' .: undefined]
-  return $ substituteVars cs' foralls ai'
-  where f t = Set.toList $ runReader (concretizeType t) cs
+  UpperSubtype a (TuFunc ai' ao') _ <- Set.toList cs
+  TdFunc (PolyFuncData foralls ai ao cs') <- f a
+  t2 <- f ai'
+  let cs'' = Set.union cs' $
+               Set.fromList [ t2 <: ai .: histFIXME
+                            , ao <: ao' .: histFIXME]
+  return $ substituteVars cs'' foralls ai'
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do
-  c@(Subtype t (TuFunc ai' ao') hist) <- Set.toList cs
-  tau <- f t
+  UpperSubtype a (TuFunc ai' ao') _ <- Set.toList cs
+  tau <- f a
   case tau of
     TdFunc (PolyFuncData foralls ai ao cs') -> mzero
-    _ -> return $ Bottom undefined
-  where f t = Set.toList $ runReader (concretizeType t) cs
+    _ -> return $ Bottom histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
-  Subtype (TdLazyOp t1 op t2) tu hist <- Set.toList cs
-  -- Horribly inefficient
-  -- TODO: trivial optimization if necessary
-  c1 <- f t1
-  c2 <- f t2
-  case (c1, c2) of
-    (TdPrim PrimInt, TdPrim PrimInt) ->
-      -- TODO: fix use of undefined to stand in for ConstraintHistory below.
-      return $ TdPrim PrimInt <: tu .: undefined
-    _ -> mzero
-  where f t = Set.toList $ runReader (concretizeType t) cs
+  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
+  TdPrim PrimInt <- f a1
+  TdPrim PrimInt <- f a2
+  return $ TdPrim PrimInt <: a .: histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  Subtype (TdLazyOp t1 op t2) tu hist <- Set.toList cs
+  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
   -- Not quite like the document.
-  -- FIXME: when we have lops that aren't int -> -- int -> int, this needs to be
+  -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
-  tau <- f t1 ++ f t2
+  tau <- f a1 ++ f a2
   case tau of
     TdPrim PrimInt -> mzero
-    _ -> return $ Bottom undefined
-  where f t = Set.toList $ runReader (concretizeType t) cs
+    _ -> return $ Bottom histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
@@ -358,29 +341,6 @@ instance AlphaSubstitutable Alpha where
       else assert ((length . unCallSites) callSites == 0) $
          return $ Alpha alphaId newCallSites
 
-instance AlphaSubstitutable TauUp where
-  substituteAlpha tau =
-    case tau of
-      TuFunc ai ao ->
-        TuFunc
-          <$> substituteAlpha ai
-          <*> substituteAlpha ao
-      TuAlpha a -> TuAlpha <$> substituteAlpha a
-
-instance AlphaSubstitutable TauDown where
-  substituteAlpha tau =
-    case tau of
-      TdPrim p -> return $ TdPrim p
-      TdLabel n t -> TdLabel n <$> substituteAlpha t
-      TdOnion t1 t2 ->
-        TdOnion
-          <$> substituteAlpha t1
-          <*> substituteAlpha t2
-      TdFunc pfd -> TdFunc <$> substituteAlpha pfd
-      TdAlpha a -> TdAlpha <$> substituteAlpha a
-      TdLazyOp t1 op t2 ->
-        TdLazyOp <$> substituteAlpha t1 <*> pure op <*> substituteAlpha t2
-
 instance AlphaSubstitutable PolyFuncData where
   substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
       PolyFuncData alphas
@@ -395,11 +355,17 @@ instance AlphaSubstitutable PolyFuncData where
 
 instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
-      Subtype td tu hist ->
-        Subtype
-          <$> substituteAlpha td
-          <*> substituteAlpha tu
-          <*> return hist
+      LowerSubtype td a hist -> do
+        a' <- substituteAlpha a
+        return $ LowerSubtype td a' hist
+      UpperSubtype a tu hist -> do
+        a' <- substituteAlpha a
+        return $ UpperSubtype a' tu hist
+      AlphaSubtype a1 a2 hist ->
+        AlphaSubtype
+          <$> substituteAlpha a1
+          <*> substituteAlpha a2
+          <*> pure hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a
