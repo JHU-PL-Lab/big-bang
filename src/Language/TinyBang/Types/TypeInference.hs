@@ -178,7 +178,7 @@ inferType expr =
 
 -- |Accepts a branch and the case expression type and produces an appropriate
 --  assumption for typechecking the corresponding branch expression. This
---  corresponds to the kappa function in the document.
+--  corresponds to the TDigestBranch function in the document.
 extractBranchAssumptionAndChi
     :: A.Branch
     -> TIM (Gamma, T.TauChi)
