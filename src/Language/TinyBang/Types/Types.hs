@@ -17,6 +17,7 @@ module Language.TinyBang.Types.Types
 , Guard(..)
 , (<:)
 , (.:)
+, Sigma(..)
 ) where
 
 import Data.Set (Set)
