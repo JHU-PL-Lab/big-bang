@@ -226,19 +226,26 @@ findLopContradictions cs = Set.fromList $ do
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
 closeSingleContradictions :: Constraints -> Constraints
-closeSingleContradictions cs = error "Not yet implemented"
+closeSingleContradictions cs =
+  Set.unions $ map ($ cs)
+    [ id
+    , findCaseContradictions
+    , findNonFunctionApplications
+    , findLopContradictions
+    ]
 
 closeAll :: Constraints -> Constraints
-closeAll c = Set.unions $ map ($ c)
-        [ id
-        , closeCases
-        , closeApplications
-        , closeLops
-        ]
+closeAll cs =
+  Set.unions $ map ($ cs)
+    [ id
+    , closeCases
+    , closeApplications
+    , closeLops
+    ]
 
 -- |Calculates the transitive closure of a set of type constraints.
 calculateClosure :: Constraints -> Constraints
-calculateClosure c = leastFixedPoint closeAll c
+calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
 
 type AlphaSubstitutionEnv = (Alpha, Set Alpha)
 

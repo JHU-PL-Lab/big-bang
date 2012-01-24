@@ -306,7 +306,7 @@ instance Display Constraint where
         text "case" <+> makeDoc alpha <+> text "of" <+> lbrace $+$
         (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
         $+$ rbrace
-      Bottom ch -> text "_|_" $$ (text . show) ch
+      Bottom ch -> text "_|_" -- $$ (text . show) ch
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
