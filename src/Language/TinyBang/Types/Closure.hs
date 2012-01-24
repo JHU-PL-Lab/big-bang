@@ -18,6 +18,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , PolyFuncData(..)
                                      , Guard(..)
                                      , PrimitiveType(..)
+                                     , Sigma(..)
                                      )
 import Language.TinyBang.Types.UtilTypes (LabelName)
 
@@ -64,15 +65,13 @@ immediatelyCompatible tau chi =
     (_,ChiAny) -> return $ CompatibleAs tau
     (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
     (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
+    (TdOnionSub a s, chi) | not $ tSubMatch s chi -> do
+      ts <- concretizeType a
+      firstCompatibilityInList $ Set.toList ts
     (TdOnion a1 a2, _) -> do
       t1s <- concretizeType a1
       t2s <- concretizeType a2
-      compatibilities <-
-        sequence [ immediatelyCompatible t chi |
-                   t <- Set.toList t2s ++ Set.toList t1s]
-      -- If the list is all NotCompatible, it's not compatible; otherwise,
-      -- whatever was at the first other answer goes.
-      return $ maybe NotCompatible id $ listToMaybe $ dropWhile notCompatible compatibilities
+      firstCompatibilityInList $ Set.toList t1s ++ Set.toList t2s
     (TdFunc _, ChiFun) -> return $ CompatibleAs tau
     (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     _ -> return $ NotCompatible
@@ -80,6 +79,21 @@ immediatelyCompatible tau chi =
             case x of
               NotCompatible -> True
               _ -> False
+          firstCompatibilityInList xs = do
+            compatibilities <- sequence [immediatelyCompatible x chi | x <- xs]
+            -- If the list is all NotCompatible, it's not compatible; otherwise,
+            -- whatever was at the first other answer goes.
+            return $
+              maybe NotCompatible id $
+              listToMaybe $ dropWhile notCompatible compatibilities
+
+
+tSubMatch sigma chi =
+  case (chi, sigma) of
+    (ChiPrim p, SubPrim p') -> p == p'
+    (ChiLabel n _, SubLabel n') -> n == n'
+    (ChiFun, SubFunc) -> True
+    (ChiAny, _) -> False
 
 -- |A function modeling TCaseBind.  This function creates an appropriate set of
 --  constraints to add when a given case branch is taken.  Its primary purpose
