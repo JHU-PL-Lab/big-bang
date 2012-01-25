@@ -23,6 +23,7 @@ import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
 import Data.Maybe (listToMaybe)
 import Data.Maybe.Utils (justIf)
+import Control.Monad.Writer (tell, listen, execWriter, Writer)
 
 import Language.TinyBang.Ast
   ( Branch(..)
@@ -34,6 +35,7 @@ import Language.TinyBang.Ast
   , LazyOperator(..)
   , EagerOperator(..)
   , Sigma(..)
+  , CellId
   , exprFromValue
   )
 import Language.TinyBang.Render.Display
@@ -111,7 +113,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 --  expressions.
 evalTop :: Expr -> Either EvalError Result
 evalTop e =
-    fmap ( {-canonicalize . -} second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
+    fmap ( canonicalize . second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
 -- |Wraps an expression in a context where builtin names are bound
 applyBuiltins :: Expr -> Expr
@@ -511,26 +513,29 @@ canonicalize (v, imap) = canonicalize' (v', imap)
 --  been deduped if it's an onion.
 canonicalize' :: Result -> Result
 canonicalize' (v, imap) =
-  case v of
-    VLabel lbl cell -> (VLabel lbl 0, IntMap.singleton 0 (imap ! cell))
-    VOnion v1 v2 ->
-      let (c1, m1) = canonicalize' (v1, imap)
-          (c2, m2) = canonicalize' (v2, imap)
-          o = VOnion c1 c2
-          m1list = IntMap.toList m1
-          m2list = IntMap.toList m2
-          len = length m1list
-      in case (IntMap.null m1, IntMap.null m2) of
-           (True , True ) -> (o, IntMap.empty)
-           (False, True ) -> (o, m1)
-           (True , False) -> (o, m2)
-           (False, False) ->
-             -- Ensure that keys don't collide by adding an offset equal
-             -- to the size of the first list to each key
-             (VOnion c1 $ incCells len c2, IntMap.fromList $
-                m1list ++ (map (first (+ len)) m2list))
-    _ -> (v, IntMap.empty)
-  where incCells i v' = case v' of
-            VLabel lbl c -> VLabel lbl $ c + i
-            VOnion e1 e2 -> VOnion (incCells i e1) (incCells i e2)
-            _ -> v
+  (valueRemap v, imapRemap imap)
+  where -- FIXME: Make more efficient later if neccessary
+        gatherCells :: Value -> Writer [CellId] ()
+        gatherCells v' = do
+          case v' of
+            VLabel _ c -> tell [c]
+            VOnion v1 v2 -> gatherCells v1 >> gatherCells v2
+            _ -> return ()
+        followCellRefs :: Value -> Writer [CellId] ()
+        followCellRefs v' = do
+          cs <- snd <$> listen (gatherCells v')
+          mapM_ followCellRefs $ map (imap !) cs
+        remap :: IntMap CellId
+        remap = IntMap.fromList $ (\x -> zip (map fst x) [0 :: Int ..]) $
+                  IntMap.toList $ IntMap.fromListWith (flip const) $
+                  zip (execWriter $ followCellRefs v) [0 :: Int ..]
+        valueRemap v' =
+          case v' of
+            VLabel n c -> VLabel n $ remap ! c
+            VOnion v1 v2 -> VOnion (valueRemap v1) (valueRemap v2)
+            _ -> v'
+        imapRemap imap' =
+          IntMap.fromList $ map pairRemap $
+            filter ((`IntMap.member` remap) . fst) $ IntMap.assocs imap'
+        pairRemap (cell, contents) =
+          (remap ! cell, valueRemap contents)

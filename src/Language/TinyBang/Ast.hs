@@ -12,6 +12,7 @@ module Language.TinyBang.Ast
 , exprFromValue
 , Assignable(..)
 , Evaluated(..)
+, CellId
 ) where
 
 import Data.IntMap (IntMap)

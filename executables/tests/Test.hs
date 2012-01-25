@@ -211,8 +211,12 @@ tests = TestList $ [TPP.tests] ++
   , xEval "def x = 4 in x" $
           four
   , xNotC "x = 4 in x"
-  , xEval "def x = 3 in x = 4 in x" $
-          four
+  , xEval "def x = 3 in x = 4 in x" four
+  , xEval "def x = () in x = 4 in x" four
+  , xEval "def x = () in case x of { unit -> 4 }" four
+  , xCont "def x = () in x = 2 in case x of { unit -> 4 }"
+  , xCont "def x = () in x = 2 in case x of { int -> 4 }"
+  , xEval "def x = () in x = 2 in case x of { unit -> 2 ; int -> 4 }" four
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $
