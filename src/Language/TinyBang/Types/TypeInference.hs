@@ -74,7 +74,7 @@ inferType expr =
       a2 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- freshVar
       tell1 $ a2 <: TuCellGet a1 .: histFIXME
-      return a2
+      return a1
     A.Label n e -> do
       a1 <- freshVar
       a2 <- inferType e
