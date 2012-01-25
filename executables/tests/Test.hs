@@ -3,21 +3,28 @@ module Main where
 import qualified Language.TinyBang.Render.PrettyPrintTest as TPP
 import Language.TinyBang.Interpreter.SourceInterpreter
 import Test.HUnit
-import Language.TinyBang.Render.Display (display)
+import Language.TinyBang.Render.Display (display, Display)
 import qualified Language.TinyBang.Syntax.Lexer as L
 import Language.TinyBang.Syntax.Lexer (Token(..))
 import qualified Language.TinyBang.Types.TypeInference as TI
 import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Ast (vmPair, Evaluated)
 import Language.TinyBang.Types.UtilTypes (labelName, ident, Ident)
 import qualified Language.TinyBang.Types.Types as T
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 
 type TinyBangCode = String
+type Result = (A.Value, IntMap A.Value)
 
-xEval :: TinyBangCode -> A.Value -> Test
+xEval :: (Display v, Evaluated v) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
-                           EvalSuccess result -> assertEqual "" expectedResult result
+                           EvalSuccess result ->
+                             assertEqual ""
+                                         (vmPair expectedResult)
+                                         (vmPair result)
                            EvalFailure err -> assertFailure $
                                                 "EvalFailure: " ++ display err
     _ -> assertFailure $
@@ -122,11 +129,17 @@ srcGreaterOrLess =
 srcY  :: TinyBangCode
 srcY  = "fun body -> (fun f -> fun arg -> f f arg) (fun this -> fun arg -> body (this this) arg)"
 
-true  :: A.Value
-true  = A.VLabel (labelName "True") A.VPrimUnit
+true  :: Result
+true  = (A.VLabel (labelName "True") 0, IntMap.singleton 0 A.VPrimUnit)
 
-false :: A.Value
-false = A.VLabel (labelName "False") A.VPrimUnit
+etrue :: A.Expr
+etrue = A.Label (labelName "True") A.PrimUnit
+
+false :: Result
+false = (A.VLabel (labelName "False") 0, IntMap.singleton 0 A.VPrimUnit)
+
+efalse :: A.Expr
+efalse = A.Label (labelName "False") A.PrimUnit
 
 zero  :: A.Value
 zero  = A.VPrimInt 0
@@ -137,8 +150,14 @@ one   = A.VPrimInt 1
 two   :: A.Value
 two   = A.VPrimInt 2
 
+etwo :: A.Expr
+etwo = A.exprFromValue two
+
 four  :: A.Value
 four  = A.VPrimInt 4
+
+efour :: A.Expr
+efour = A.exprFromValue four
 
 varX :: A.Expr
 varX = A.Var $ idX
@@ -149,8 +168,17 @@ idX = ident "x"
 xIdent :: A.Value
 xIdent = A.VFunc idX varX
 
+exIdent :: A.Expr
+exIdent = A.exprFromValue xIdent
+
 xomega :: A.Value
 xomega = A.VFunc idX (A.Appl varX varX)
+
+lblEq, lblLt, lblGt :: Result
+lblEq = (A.VLabel (labelName "EqualTo") 0, IntMap.singleton 0 A.VPrimUnit)
+lblLt = (A.VLabel (labelName "LessThan") 0, IntMap.singleton 0 A.VPrimUnit)
+lblGt = (A.VLabel (labelName "GreaterThan") 0, IntMap.singleton 0 A.VPrimUnit)
+
 
 tests = TestList $ [TPP.tests] ++
 -- Test proper handling of an arbitrary positive and negative integer literal
@@ -168,6 +196,27 @@ tests = TestList $ [TPP.tests] ++
           A.VPrimInt 1234567890
   , xEval "-1234567890" $
           A.VPrimInt (-1234567890)
+-- Test parsing of definition and assignment
+  , xPars "def x = 4 in x" $
+          A.Def idX efour varX
+  , xPars "x = 4 in x" $
+          A.Assign (A.AIdent idX) efour varX
+  , xPars "def x = 4 in x & 'a'" $
+          A.Def idX efour $ A.Onion varX (A.PrimChar 'a')
+  , xPars "x = 4 in x & 'a'" $
+          A.Assign (A.AIdent idX) efour $ A.Onion varX (A.PrimChar 'a')
+  , xPars "def x = 3 in x = 4 in x" $
+          A.Def idX (A.PrimInt 3) $ A.Assign (A.AIdent idX) efour varX
+-- Test evaluation of definition and assignment
+  , xEval "def x = 4 in x" $
+          four
+  , xNotC "x = 4 in x"
+  , xEval "def x = 3 in x = 4 in x" four
+  , xEval "def x = () in x = 4 in x" four
+  , xEval "def x = () in case x of { unit -> 4 }" four
+  , xCont "def x = () in x = 2 in case x of { unit -> 4 }"
+  , xCont "def x = () in x = 2 in case x of { int -> 4 }"
+  , xEval "def x = () in x = 2 in case x of { unit -> 2 ; int -> 4 }" four
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $
@@ -202,11 +251,11 @@ tests = TestList $ [TPP.tests] ++
   , xPars "()"
           A.PrimUnit
   , xPars "`True ()" $
-          A.exprFromValue true
+          etrue
   , xPars "`False ()" $
-          A.exprFromValue false
+          efalse
   , xPars "(\\x -> x)" $
-          A.exprFromValue xIdent
+          exIdent
   , xType "`A ()"
   , xType "()"
   , xEval "()"
@@ -217,70 +266,75 @@ tests = TestList $ [TPP.tests] ++
           false
   , xEval "(\\x -> x)"
           xIdent
+-- Test evaluation of some onions
+  , xEval "`A 1 & `B 1" $
+          ( A.VOnion (A.VLabel (labelName "A") 0) (A.VLabel (labelName "B") 1)
+          , IntMap.fromList $ zip [0, 1] $ map A.VPrimInt $ repeat 1)
 -- Test parse and evaluation of some simple arithmetic applications
-  , xPars "plus 2 2" $
-          multiAppl $ (A.Var (ident "plus")):(map A.exprFromValue [two, two])
-  , xType "plus 1 2"
-  , xType "minus 1 2"
-  , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
-  , xEval "(fun x -> plus x x) 2"
-          four
-  , xEval "(\\x -> plus x x) 2"
-          four
-  , xEval "plus 2 2"
-          four
-  , xEval "minus 2 2"
-          zero
-  , xEval "minus 2 -2"
-          four
-  , xType "(fun x -> plus x 1) 1"
--- Test that arithmetic expressions on non-numeric literals fail to typecheck
-  , xCont "plus 1 'a'"
-  , xCont "plus 1 ()"
-  , xCont "plus 'a' 'a'"
-  , xCont "plus () ()"
-  , xCont "plus 2 'x'"
-  , xCont "plus 1 (fun x -> x)"
-  , xCont "minus 1 'a'"
-  , xCont "minus 1 ()"
-  , xCont "minus 'a' 'a'"
-  , xCont "minus () ()"
-  , xCont "(fun x -> plus x 1) 'a'"
--- Test evaluation of compound arithmetic application
-  , xEval "plus (minus 1 -1) (minus 1 -1)"
-          four
--- Test parse, typecheck, and evaluation of some higher order applications
-  , xPars "(fun x -> x)\n(fun x -> x)" $
-          A.Appl (A.exprFromValue xIdent) (A.exprFromValue xIdent)
-  , xEval "(fun x -> x)\n(fun x -> x)"
-          xIdent
-  , xType "(fun x -> x)"
-  , xType "(fun x -> x) (fun x -> x)"
-  , xType srcY
-  , xType (srcMultiAppl [srcY, srcSummate, "5"])
-  , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
-  , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
-  , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
-  , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
-  , xType "plus (2 & 'b') 2"
-  , xCont "plus (`True () & 'z') 2"
-  , xType "plus (2 & 'x') ('y' & 2)"
-  , xType "plus (2 & ('a' & ())) ((2 & 'b') & ())"
-  , xType "plus (1 & ('a' & ())) ('a' & (1 & ()))"
-  , xType "(1 & (fun x -> x)) 1"
-  , xNotC "(fun x -> plus n 2)"
+-- TODO: uncomment when updated to include plus, etc.
+--   , xPars "plus 2 2" $
+--           multiAppl $ [A.Var (ident "plus"), etwo, etwo]
+--   , xType "plus 1 2"
+--   , xType "minus 1 2"
+--   , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
+--   , xEval "(fun x -> plus x x) 2"
+--           four
+--   , xEval "(\\x -> plus x x) 2"
+--           four
+--   , xEval "plus 2 2"
+--           four
+--   , xEval "minus 2 2"
+--           zero
+--   , xEval "minus 2 -2"
+--           four
+--   , xType "(fun x -> plus x 1) 1"
+-- -- Test that arithmetic expressions on non-numeric literals fail to typecheck
+--   , xCont "plus 1 'a'"
+--   , xCont "plus 1 ()"
+--   , xCont "plus 'a' 'a'"
+--   , xCont "plus () ()"
+--   , xCont "plus 2 'x'"
+--   , xCont "plus 1 (fun x -> x)"
+--   , xCont "minus 1 'a'"
+--   , xCont "minus 1 ()"
+--   , xCont "minus 'a' 'a'"
+--   , xCont "minus () ()"
+--   , xCont "(fun x -> plus x 1) 'a'"
+-- -- Test evaluation of compound arithmetic application
+--   , xEval "plus (minus 1 -1) (minus 1 -1)"
+--           four
+-- -- Test parse, typecheck, and evaluation of some higher order applications
+--   , xPars "(fun x -> x)\n(fun x -> x)" $
+--           A.Appl exIdent exIdent
+--   , xEval "(fun x -> x)\n(fun x -> x)"
+--           xIdent
+--   , xType "(fun x -> x)"
+--   , xType "(fun x -> x) (fun x -> x)"
+--   , xType srcY
+--   , xType (srcMultiAppl [srcY, srcSummate, "5"])
+--   , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
+--   , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
+--   , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
+--   , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
+--   , xType "plus (2 & 'b') 2"
+--   , xCont "plus (`True () & 'z') 2"
+--   , xType "plus (2 & 'x') ('y' & 2)"
+--   , xType "plus (2 & ('a' & ())) ((2 & 'b') & ())"
+--   , xType "plus (1 & ('a' & ())) ('a' & (1 & ()))"
+--   , xNotC "(fun x -> plus n 2)"
   , xNotC "case x of {int -> 0; char -> 'a'}"
   , xNotC "x"
 -- Test evaluation of some recursive arithmetic evaluations
-  , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
-          A.VPrimInt 15
-  , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
-  , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-          A.VLabel (labelName "EqualTo") A.VPrimUnit
-  , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-          A.VLabel (labelName "LessThan") A.VPrimUnit
-  , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-          A.VLabel (labelName "GreaterThan") A.VPrimUnit
+-- TODO: uncomment when we define equal
+--  , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+--          A.VPrimInt 15
+-- , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
+--         lblEq
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
+--         lblLt
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
+--         lblGt
 -- Test parsing of nonterminating function
   , xPars "(fun x -> x x) (fun x -> x x)" $
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
@@ -288,54 +342,58 @@ tests = TestList $ [TPP.tests] ++
 -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
---  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
--- Test sinple equalities
-  , xType "equal 1 1"
-  , xEval "equal 1 1"
-          true
-  , xEval "equal 0 1"
-          false
-  , xEval "equal 0 (minus (minus (plus 1 1) 1) 1)"
-          true
-  , xType "equal 'a' 'a'"
-  , xEval "equal 'a' 'a'"
-          true
-  , xEval "equal 'a' 'A'"
-          false
-  , xEval "equal `True () `True ()"
-          true
-  , xEval "equal `A 1 `A 1"
-          true
-  , xType "equal () ()"
-  , xEval "equal () ()"
-          true
--- TODO: make these tests pass by implementing the equality constraint
-  , xCont "equal `A 1 `B 1"
-  , xCont "equal `True () `False ()"
-  , xCont "equal 1 'a'"
-  , xCont "equal 1 ()"
-  , xCont "equal (fun x -> x) (fun y -> y)"
-  , xType "(fun f -> equal f f) (fun x -> x)"
-  , xEval "(fun f -> equal f f) (fun x -> x)" $
-          true
--- Test equality evaluations on onions
--- TODO: Make all of these pass
-  , xEval "equal (1 & 'a') ('a' & 1)"
-          true
-  , xEval "equal ('a' & 1) (1 & 'a')"
-          true
-  , xEval "equal (1 & 'a') (1 & 'z')"
-          false
-  , xEval "equal (1 & 'a') (0 & 'a')"
-          false
-  , xEval "equal (1 & 2) (2 & 1)"
-          false
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
+  , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
+-- -- Test simple equalities
+-- TODO: uncomment when we have equal
+--   , xType "equal 1 1"
+--   , xEval "equal 1 1"
+--           true
+--   , xEval "equal 0 1"
+--           false
+--   , xEval "equal 0 (minus (minus (plus 1 1) 1) 1)"
+--           true
+--   , xType "equal 'a' 'a'"
+--   , xEval "equal 'a' 'a'"
+--           true
+--   , xEval "equal 'a' 'A'"
+--           false
+--   , xEval "equal `True () `True ()"
+--           true
+--   , xEval "equal `A 1 `A 1"
+--           true
+--   , xType "equal () ()"
+--   , xEval "equal () ()"
+--           true
+-- -- TODO: make these tests pass by implementing the equality constraint
+--   , xCont "equal `A 1 `B 1"
+--   , xCont "equal `True () `False ()"
+--   , xCont "equal 1 'a'"
+--   , xCont "equal 1 ()"
+--   , xCont "equal (fun x -> x) (fun y -> y)"
+--   , xType "(fun f -> equal f f) (fun x -> x)"
+--   , xEval "(fun f -> equal f f) (fun x -> x)" $
+--           true
+-- -- Test equality evaluations on onions
+-- -- TODO: Make all of these pass
+--   , xEval "equal (1 & 'a') ('a' & 1)"
+--           true
+--   , xEval "equal ('a' & 1) (1 & 'a')"
+--           true
+--   , xEval "equal (1 & 'a') (1 & 'z')"
+--           false
+--   , xEval "equal (1 & 'a') (0 & 'a')"
+--           false
+--   , xEval "equal (1 & 2) (2 & 1)"
+--           false
 -- Test case projection
-  -- Test that onion projection projects an onion if possible
-  , xEval "case `A 5 & `A \'a\' of {`A x -> x}"
-          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
+  , xEval "case `A 5 & `A \'a\' of {`A x -> x}" $
+-- This is no longer true
+--          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
+          A.VPrimChar 'a'
+  , xEval "case `A \'a\' & `A 5 of {`A x -> x}" $
+          A.VPrimInt 5
   , xEval "case 'a' of {char -> 0}"
           zero
   , xEval "case 1234567890 of {int -> 0}"
@@ -355,11 +413,11 @@ tests = TestList $ [TPP.tests] ++
   , xEval "case `A 1 of {`A a -> 1; `A n -> 0}"
           one
   , xType "case `A 5 of { `A x -> x }"
--- Test that implicit porjection from onions works
-  , xEval "plus (1 & 'a') ('a' & 1 & ())"
-          two
-  , xEval "(1 & (fun x -> x)) 1"
-          one
+-- Test that implicit projection from onions fails
+-- TODO: uncomment when we have plus
+--  , xEval "plus (1 & 'a') ('a' & 1 & ())"
+--          two
+  , xCont "(1 & (fun x -> x)) 1"
 -- Test that application requires that the first argument be a function
   , xCont "1 'x'"
 -- Test that incomplete case statements result in contradiction
@@ -553,8 +611,7 @@ tests = TestList $ [TPP.tests] ++
             [ A.Branch Nothing (A.ChiPrim T.PrimInt) $ A.PrimInt 5
             , A.Branch Nothing (A.ChiPrim T.PrimChar) $ A.PrimChar 'a'
             , A.Branch Nothing (A.ChiPrim T.PrimUnit) A.PrimUnit
-            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) $
-                               A.exprFromValue false
+            , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) efalse
             , A.Branch Nothing A.ChiFun $ A.Func (ident "x") varX
             ]
 -- Test some simple parse failures

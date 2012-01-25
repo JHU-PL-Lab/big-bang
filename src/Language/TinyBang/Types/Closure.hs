@@ -56,12 +56,13 @@ histFIXME = undefined
 --  as in the case of lazy operations not yet being closed over.  This function
 --  is equivalent to the _ <:: _ ~ _ relation in the documentation.
 
--- Note that lazy ops match against ChiAny; TODO: is this desired behavior?
 immediatelyCompatible :: TauDown
                       -> TauChi
                       -> CReader Compatibility
 immediatelyCompatible tau chi =
   case (tau,chi) of
+    (TdCell _, _) -> return $ MaybeCompatible
+    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     (_,ChiAny) -> return $ CompatibleAs tau
     (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
     (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
@@ -73,7 +74,6 @@ immediatelyCompatible tau chi =
       t2s <- concretizeType a2
       firstCompatibilityInList $ Set.toList t1s ++ Set.toList t2s
     (TdFunc _, ChiFun) -> return $ CompatibleAs tau
-    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     _ -> return $ NotCompatible
     where notCompatible x =
             case x of
@@ -93,7 +93,7 @@ tSubMatch sigma chi =
     (ChiPrim p, SubPrim p') -> p == p'
     (ChiLabel n _, SubLabel n') -> n == n'
     (ChiFun, SubFunc) -> True
-    (ChiAny, _) -> False
+    _ -> False
 
 -- |A function modeling TCaseBind.  This function creates an appropriate set of
 --  constraints to add when a given case branch is taken.  Its primary purpose
@@ -219,7 +219,7 @@ findNonFunctionApplications cs = Set.fromList $ do
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
+  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
   TdPrim PrimInt <- f a1
   TdPrim PrimInt <- f a2
   return $ TdPrim PrimInt <: a .: histFIXME
@@ -227,7 +227,7 @@ closeLops cs = Set.fromList $ do
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
+  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
   -- Not quite like the document.
   -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
@@ -235,6 +235,22 @@ findLopContradictions cs = Set.fromList $ do
   case tau of
     TdPrim PrimInt -> mzero
     _ -> return $ Bottom histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
+
+propogateCellsForward :: Constraints -> Constraints
+propogateCellsForward cs = Set.fromList $ do
+  UpperSubtype a (TuCellGet a1) _ <- Set.toList cs
+  TdCell a2 <- f a
+  t2 <- f a2
+  return $ t2 <: a1 .: histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
+
+propogateCellsBackward :: Constraints -> Constraints
+propogateCellsBackward cs = Set.fromList $ do
+  UpperSubtype a (TuCellSet a1) _ <- Set.toList cs
+  TdCell a2 <- f a
+  t2 <- f a1
+  return $ t2 <: a2 .: histFIXME
   where f a = Set.toList $ runReader (concretizeType a) cs
 
 -- |This closure calculation function produces appropriate bottom values for
@@ -255,6 +271,8 @@ closeAll cs =
     , closeCases
     , closeApplications
     , closeLops
+    , propogateCellsForward
+    , propogateCellsBackward
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.
@@ -262,6 +280,9 @@ calculateClosure :: Constraints -> Constraints
 calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
 
 type AlphaSubstitutionEnv = (Alpha, Set Alpha)
+
+saHelper constr a = constr <$> substituteAlpha a
+saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
 
 -- |A typeclass for entities which can substitute their type variables.
 class AlphaSubstitutable a where
@@ -283,6 +304,22 @@ instance AlphaSubstitutable Alpha where
       -- replace forall-ed elements within a forall constraint).
       else assert ((length . unCallSites) callSites == 0) $
          return $ Alpha alphaId newCallSites
+
+instance AlphaSubstitutable TauUp where
+  substituteAlpha tu = case tu of
+    TuFunc a1 a2 -> saHelper2 TuFunc a1 a2
+    TuCellGet a -> saHelper TuCellGet a
+    TuCellSet a -> saHelper TuCellSet a
+
+instance AlphaSubstitutable TauDown where
+  substituteAlpha td = case td of
+    TdLabel n a -> saHelper (TdLabel n) a
+    TdOnion a1 a2 -> saHelper2 TdOnion a1 a2
+    TdLazyOp op a1 a2 -> saHelper2 (TdLazyOp op) a1 a2
+    TdFunc pfd -> saHelper TdFunc pfd
+    TdOnionSub a s -> saHelper (`TdOnionSub` s) a
+    TdCell a -> saHelper TdCell a
+    _ -> return td
 
 instance AlphaSubstitutable PolyFuncData where
   substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =

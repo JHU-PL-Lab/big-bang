@@ -26,6 +26,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , (.:)
                                      , Constraint(..)
                                      , TauDown(..)
+                                     , TauUp(..)
                                      , Alpha(..)
                                      , Constraints
                                      )
@@ -42,6 +43,7 @@ histFIXME = undefined
 data TypeInferenceError =
     -- |Indicates that an expression contained an unbound variable.
       NotClosed Ident
+      -- TODO: Add NotImplemented
     deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
@@ -68,12 +70,17 @@ inferTypeTop expr = runTIM (inferType $ applyBuiltins expr) Map.empty 0
 inferType :: A.Expr -> TIM Alpha
 inferType expr =
   case expr of
-    A.Var x ->
-      maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
+    A.Var x -> do
+      a2 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
+      a1 <- freshVar
+      tell1 $ a2 <: TuCellGet a1 .: histFIXME
+      return a1
     A.Label n e -> do
       a1 <- freshVar
       a2 <- inferType e
-      tell1 $ TdLabel n a2 <: a1 .: histFIXME
+      a3 <- freshVar
+      tell1 $ TdCell a2 <: a3 .: histFIXME
+      tell1 $ TdLabel n a3 <: a1 .: histFIXME
       return a1
     A.Onion e1 e2 -> do
       a0 <- freshVar
@@ -96,14 +103,14 @@ inferType expr =
       tell1 $ funcType <: a1 .: T.Inferred expr gamma
       return a1
     A.Appl e1 e2 -> do
-      ai <- freshVar
-      ao <- freshVar
+      a1' <- freshVar
+      a2' <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
       gamma <- ask
-      tell1 $ a1 <: T.TuFunc ai ao .: T.Inferred expr gamma
-      tell1 $ a2 <: ai .: T.Inferred expr gamma
-      return ao
+      tell1 $ a1 <: T.TuFunc a1' a2' .: T.Inferred expr gamma
+      tell1 $ TdCell a2 <: a1' .: T.Inferred expr gamma
+      return a2'
     A.PrimInt _ -> do
       a <- freshVar
       tell1 $ T.PrimInt <: a .: histFIXME
@@ -135,13 +142,13 @@ inferType expr =
       a2 <- inferType e
       tell1 $ T.TdOnionSub a2 s <: a1 .: histFIXME
       return a1
-    A.LazyOp e1 op e2 -> do
+    A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ T.TdLazyOp a1 op a2 <: a0 .: histFIXME
+      tell1 $ T.TdLazyOp op a1 a2 <: a0 .: histFIXME
       return a0
-    A.EagerOp e1 op e2 -> error "Eager operations are not implemented yet"
+    A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet"
         -- do
         --   t1 <- inferType e1
         --   t2 <- inferType e2
@@ -155,6 +162,23 @@ inferType expr =
           --       (\x -> T.TdcLabel (labelName x) $ T.TdcPrim T.PrimUnit)
           --       ["True","False"]
           -- naryOp expr gamma [e1,e2] (T.TucAlpha alpha) (T.TdcAlpha alpha')
+      -- TODO: Make these definitions do something
+    A.Def x e1 e2 -> do
+      --TODO: Something about shadowing
+      a1 <- inferType e1
+      a3 <- freshVar
+      a2 <- local (Map.insert x a3) $ inferType e2
+      tell1 $ TdCell a1 <: a3 .: histFIXME
+      return a2
+    A.Assign a e1 e2 -> do -- throwError $ NotClosed (ident "x")
+      x <- return $! case a of
+        A.AIdent x -> x
+        A.AValue _ -> error "Internal Error; Assignment expression contains value"
+      a3 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
+      a1 <- inferType e1
+      a2 <- inferType e2
+      tell1 $ a3 <: TuCellSet a1 .: histFIXME
+      return a2
     where tell1 :: T.Constraint -> TIM ()
           tell1 = tell . Set.singleton
           -- |Infers the type of the subexpression in an environment modified by

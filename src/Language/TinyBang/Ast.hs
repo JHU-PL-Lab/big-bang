@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances#-}
 module Language.TinyBang.Ast
 ( Expr(..)
 , Chi(..)
@@ -9,10 +10,15 @@ module Language.TinyBang.Ast
 , EagerOperator(..)
 , Sigma(..)
 , exprFromValue
+, Assignable(..)
+, Evaluated(..)
+, CellId
 ) where
 
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+
 import Language.TinyBang.Render.Display
-import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
   ( LabelName
   , Ident
@@ -22,8 +28,12 @@ import Language.TinyBang.Types.UtilTypes
   , EagerOperator(..)
   , Sigma(..)
   )
+import qualified Language.TinyBang.Types.UtilTypes as T
+  ( PrimitiveType(..) )
 
 -------------------------------------------------------------------------------
+
+type CellId = Int
 
 -- |Data type for representing Big Bang ASTs.
 data Expr
@@ -37,19 +47,26 @@ data Expr
   | PrimChar Char
   | PrimUnit
   | Case Expr Branches
-  | LazyOp Expr LazyOperator Expr
-  | EagerOp Expr EagerOperator Expr
+  | Def Ident Expr Expr
+  | Assign Assignable Expr Expr
+  | LazyOp LazyOperator Expr Expr
+  | EagerOp EagerOperator Expr Expr
+  | ExprCell CellId
   deriving (Eq, Ord, Show)
 
 -- |Data type for representing Big Bang values
 data Value
-  = VLabel LabelName Value
+  = VLabel LabelName CellId
   | VOnion Value Value
   | VFunc Ident Expr
   | VPrimInt Integer
   | VPrimChar Char
   | VPrimUnit
   | VEmptyOnion
+  | VCell CellId
+  deriving (Eq, Ord, Show)
+
+data Assignable = AValue Value | AIdent Ident
   deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
@@ -66,15 +83,16 @@ data Branch = Branch (Maybe Ident) Chi Expr
   deriving (Eq, Ord, Show)
 
 -- |Trivial conversion from values to exprs
-exprFromValue :: Value -> Expr
-exprFromValue v = case v of
-  VLabel l v1  -> Label l $ exprFromValue v1
+exprFromValue :: (Evaluated v) => v -> Expr
+exprFromValue v = case value v of
+  VLabel l c   -> Label l $ ExprCell c
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
   VFunc i e    -> Func i e
   VPrimInt i   -> PrimInt i
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
   VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit
+  VCell c      -> ExprCell c
 
 instance Display Expr where
   makeDoc a = case a of
@@ -91,8 +109,8 @@ instance Display Expr where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
-    LazyOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    EagerOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    LazyOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    EagerOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
     {-
        TODO: deal with the fact that the following isn't actually code
        options include:
@@ -100,6 +118,9 @@ instance Display Expr where
            * namespacing trick (e.g., Plus translates to
                "Language.TinyBang.Builtins.([+]) e1 e2"
     -}
+    Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    ExprCell c -> text "Cell #" <> int c
 
 instance Display Value where
   makeDoc x =
@@ -108,12 +129,32 @@ instance Display Value where
       _ -> makeDoc $ exprFromValue x
 
 instance Display Branch where
-    makeDoc (Branch mident chi e) =
-        maybe empty ((<> colon) . text . unIdent) mident <+>
-        (case chi of
-            ChiPrim p -> makeDoc p
-            ChiLabel n i ->
-                char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
-            ChiFun -> text "fun"
-            ChiAny -> text "_"
-        ) <+> text "->" <+> makeDoc e
+  makeDoc (Branch mident chi e) =
+    maybe empty ((<> colon) . text . unIdent) mident <+>
+    (case chi of
+      ChiPrim p -> makeDoc p
+      ChiLabel n i ->
+        char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
+      ChiFun -> text "fun"
+      ChiAny -> text "_"
+    ) <+> text "->" <+> makeDoc e
+
+instance Display Assignable where
+  makeDoc (AIdent i) = makeDoc i
+  makeDoc (AValue v) = makeDoc v
+
+class Evaluated a where
+  value :: a -> Value
+  value v = fst $ vmPair v
+  mapping :: a -> IntMap Value
+  mapping v = snd $ vmPair v
+
+  vmPair :: a -> (Value, IntMap Value)
+  vmPair v = (value v, mapping v)
+
+instance Evaluated (Value, IntMap Value) where
+  vmPair = id
+
+instance Evaluated Value where
+  value = id
+  mapping = const IntMap.empty

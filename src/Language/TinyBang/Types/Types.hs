@@ -27,7 +27,7 @@ import Data.Function (on)
 
 import Language.TinyBang.Types.UtilTypes (LabelName, Ident, LazyOperator, Sigma(..), PrimitiveType(..))
 import Language.TinyBang.Render.Display
-import {-# SOURCE #-} qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Ast as A
 
 -------------------------------------------------------------------------------
 -- *Little Bang Types
@@ -64,6 +64,8 @@ callSites lst = CallSites lst
 -- |The datatype used to represent upper bound types.
 data TauUp
   = TuFunc Alpha Alpha
+  | TuCellGet Alpha
+  | TuCellSet Alpha
   deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent lower bound types.
@@ -71,10 +73,11 @@ data TauDown
   = TdPrim PrimitiveType
   | TdLabel LabelName Alpha
   | TdOnion Alpha Alpha
-  | TdLazyOp Alpha LazyOperator Alpha
+  | TdLazyOp LazyOperator Alpha Alpha
   | TdFunc PolyFuncData
   | TdOnionSub Alpha Sigma
   | TdEmptyOnion
+  | TdCell Alpha
   deriving (Eq, Ord, Show)
 
 
@@ -257,6 +260,8 @@ instance Display TauUp where
   makeDoc tau =
     case tau of
       TuFunc au a -> makeDoc au <+> text "->" <+> makeDoc a
+      TuCellGet a -> text "CellG" <> parens (makeDoc a)
+      TuCellSet a -> text "CellS" <> parens (makeDoc a)
 
 instance Display TauDown where
   makeDoc tau =
@@ -265,9 +270,10 @@ instance Display TauDown where
       TdLabel n a -> char '`' <> makeDoc n <+> makeDoc a
       TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
       TdFunc polyFuncData -> makeDoc polyFuncData
-      TdLazyOp a1 op a2 -> makeDoc a1 <+> makeDoc op <+> makeDoc a2
+      TdLazyOp op a1 a2 -> makeDoc a1 <+> makeDoc op <+> makeDoc a2
       TdEmptyOnion -> text "(&)"
       TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
+      TdCell a -> text "Cell" <> parens (makeDoc a)
 
 instance Display PolyFuncData where
   makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
