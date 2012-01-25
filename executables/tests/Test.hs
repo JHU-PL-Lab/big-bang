@@ -267,69 +267,70 @@ tests = TestList $ [TPP.tests] ++
           ( A.VOnion (A.VLabel (labelName "A") 0) (A.VLabel (labelName "B") 1)
           , IntMap.fromList $ zip [0, 1] $ map A.VPrimInt $ repeat 1)
 -- Test parse and evaluation of some simple arithmetic applications
-  , xPars "plus 2 2" $
-          multiAppl $ [A.Var (ident "plus"), etwo, etwo]
-  , xType "plus 1 2"
-  , xType "minus 1 2"
-  , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
-  , xEval "(fun x -> plus x x) 2"
-          four
-  , xEval "(\\x -> plus x x) 2"
-          four
-  , xEval "plus 2 2"
-          four
-  , xEval "minus 2 2"
-          zero
-  , xEval "minus 2 -2"
-          four
-  , xType "(fun x -> plus x 1) 1"
--- Test that arithmetic expressions on non-numeric literals fail to typecheck
-  , xCont "plus 1 'a'"
-  , xCont "plus 1 ()"
-  , xCont "plus 'a' 'a'"
-  , xCont "plus () ()"
-  , xCont "plus 2 'x'"
-  , xCont "plus 1 (fun x -> x)"
-  , xCont "minus 1 'a'"
-  , xCont "minus 1 ()"
-  , xCont "minus 'a' 'a'"
-  , xCont "minus () ()"
-  , xCont "(fun x -> plus x 1) 'a'"
--- Test evaluation of compound arithmetic application
-  , xEval "plus (minus 1 -1) (minus 1 -1)"
-          four
--- Test parse, typecheck, and evaluation of some higher order applications
-  , xPars "(fun x -> x)\n(fun x -> x)" $
-          A.Appl exIdent exIdent
-  , xEval "(fun x -> x)\n(fun x -> x)"
-          xIdent
-  , xType "(fun x -> x)"
-  , xType "(fun x -> x) (fun x -> x)"
-  , xType srcY
-  , xType (srcMultiAppl [srcY, srcSummate, "5"])
-  , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
-  , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
-  , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
-  , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
-  , xType "plus (2 & 'b') 2"
-  , xCont "plus (`True () & 'z') 2"
-  , xType "plus (2 & 'x') ('y' & 2)"
-  , xType "plus (2 & ('a' & ())) ((2 & 'b') & ())"
-  , xType "plus (1 & ('a' & ())) ('a' & (1 & ()))"
-  , xType "(1 & (fun x -> x)) 1"
-  , xNotC "(fun x -> plus n 2)"
+-- TODO: uncomment when updated to include plus, etc.
+--   , xPars "plus 2 2" $
+--           multiAppl $ [A.Var (ident "plus"), etwo, etwo]
+--   , xType "plus 1 2"
+--   , xType "minus 1 2"
+--   , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
+--   , xEval "(fun x -> plus x x) 2"
+--           four
+--   , xEval "(\\x -> plus x x) 2"
+--           four
+--   , xEval "plus 2 2"
+--           four
+--   , xEval "minus 2 2"
+--           zero
+--   , xEval "minus 2 -2"
+--           four
+--   , xType "(fun x -> plus x 1) 1"
+-- -- Test that arithmetic expressions on non-numeric literals fail to typecheck
+--   , xCont "plus 1 'a'"
+--   , xCont "plus 1 ()"
+--   , xCont "plus 'a' 'a'"
+--   , xCont "plus () ()"
+--   , xCont "plus 2 'x'"
+--   , xCont "plus 1 (fun x -> x)"
+--   , xCont "minus 1 'a'"
+--   , xCont "minus 1 ()"
+--   , xCont "minus 'a' 'a'"
+--   , xCont "minus () ()"
+--   , xCont "(fun x -> plus x 1) 'a'"
+-- -- Test evaluation of compound arithmetic application
+--   , xEval "plus (minus 1 -1) (minus 1 -1)"
+--           four
+-- -- Test parse, typecheck, and evaluation of some higher order applications
+--   , xPars "(fun x -> x)\n(fun x -> x)" $
+--           A.Appl exIdent exIdent
+--   , xEval "(fun x -> x)\n(fun x -> x)"
+--           xIdent
+--   , xType "(fun x -> x)"
+--   , xType "(fun x -> x) (fun x -> x)"
+--   , xType srcY
+--   , xType (srcMultiAppl [srcY, srcSummate, "5"])
+--   , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
+--   , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
+--   , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
+--   , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
+--   , xType "plus (2 & 'b') 2"
+--   , xCont "plus (`True () & 'z') 2"
+--   , xType "plus (2 & 'x') ('y' & 2)"
+--   , xType "plus (2 & ('a' & ())) ((2 & 'b') & ())"
+--   , xType "plus (1 & ('a' & ())) ('a' & (1 & ()))"
+--   , xNotC "(fun x -> plus n 2)"
   , xNotC "case x of {int -> 0; char -> 'a'}"
   , xNotC "x"
 -- Test evaluation of some recursive arithmetic evaluations
-  , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
-          A.VPrimInt 15
-  , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
-  , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-          lblEq
-  , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-          lblLt
-  , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-          lblGt
+-- TODO: uncomment when we define equal
+--  , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+--          A.VPrimInt 15
+-- , xCont (srcMultiAppl [srcY, srcGreaterOrLess, "4", "4"])
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
+--         lblEq
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
+--         lblLt
+-- , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
+--         lblGt
 -- Test parsing of nonterminating function
   , xPars "(fun x -> x x) (fun x -> x x)" $
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
@@ -340,47 +341,48 @@ tests = TestList $ [TPP.tests] ++
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
--- Test simple equalities
-  , xType "equal 1 1"
-  , xEval "equal 1 1"
-          true
-  , xEval "equal 0 1"
-          false
-  , xEval "equal 0 (minus (minus (plus 1 1) 1) 1)"
-          true
-  , xType "equal 'a' 'a'"
-  , xEval "equal 'a' 'a'"
-          true
-  , xEval "equal 'a' 'A'"
-          false
-  , xEval "equal `True () `True ()"
-          true
-  , xEval "equal `A 1 `A 1"
-          true
-  , xType "equal () ()"
-  , xEval "equal () ()"
-          true
--- TODO: make these tests pass by implementing the equality constraint
-  , xCont "equal `A 1 `B 1"
-  , xCont "equal `True () `False ()"
-  , xCont "equal 1 'a'"
-  , xCont "equal 1 ()"
-  , xCont "equal (fun x -> x) (fun y -> y)"
-  , xType "(fun f -> equal f f) (fun x -> x)"
-  , xEval "(fun f -> equal f f) (fun x -> x)" $
-          true
--- Test equality evaluations on onions
--- TODO: Make all of these pass
-  , xEval "equal (1 & 'a') ('a' & 1)"
-          true
-  , xEval "equal ('a' & 1) (1 & 'a')"
-          true
-  , xEval "equal (1 & 'a') (1 & 'z')"
-          false
-  , xEval "equal (1 & 'a') (0 & 'a')"
-          false
-  , xEval "equal (1 & 2) (2 & 1)"
-          false
+-- -- Test simple equalities
+-- TODO: uncomment when we have equal
+--   , xType "equal 1 1"
+--   , xEval "equal 1 1"
+--           true
+--   , xEval "equal 0 1"
+--           false
+--   , xEval "equal 0 (minus (minus (plus 1 1) 1) 1)"
+--           true
+--   , xType "equal 'a' 'a'"
+--   , xEval "equal 'a' 'a'"
+--           true
+--   , xEval "equal 'a' 'A'"
+--           false
+--   , xEval "equal `True () `True ()"
+--           true
+--   , xEval "equal `A 1 `A 1"
+--           true
+--   , xType "equal () ()"
+--   , xEval "equal () ()"
+--           true
+-- -- TODO: make these tests pass by implementing the equality constraint
+--   , xCont "equal `A 1 `B 1"
+--   , xCont "equal `True () `False ()"
+--   , xCont "equal 1 'a'"
+--   , xCont "equal 1 ()"
+--   , xCont "equal (fun x -> x) (fun y -> y)"
+--   , xType "(fun f -> equal f f) (fun x -> x)"
+--   , xEval "(fun f -> equal f f) (fun x -> x)" $
+--           true
+-- -- Test equality evaluations on onions
+-- -- TODO: Make all of these pass
+--   , xEval "equal (1 & 'a') ('a' & 1)"
+--           true
+--   , xEval "equal ('a' & 1) (1 & 'a')"
+--           true
+--   , xEval "equal (1 & 'a') (1 & 'z')"
+--           false
+--   , xEval "equal (1 & 'a') (0 & 'a')"
+--           false
+--   , xEval "equal (1 & 2) (2 & 1)"
+--           false
 -- Test case projection
   , xEval "case `A 5 & `A \'a\' of {`A x -> x}" $
 -- This is no longer true
@@ -407,11 +409,11 @@ tests = TestList $ [TPP.tests] ++
   , xEval "case `A 1 of {`A a -> 1; `A n -> 0}"
           one
   , xType "case `A 5 of { `A x -> x }"
--- Test that implicit porjection from onions works
-  , xEval "plus (1 & 'a') ('a' & 1 & ())"
-          two
-  , xEval "(1 & (fun x -> x)) 1"
-          one
+-- Test that implicit projection from onions fails
+-- TODO: uncomment when we have plus
+--  , xEval "plus (1 & 'a') ('a' & 1 & ())"
+--          two
+  , xCont "(1 & (fun x -> x)) 1"
 -- Test that application requires that the first argument be a function
   , xCont "1 'x'"
 -- Test that incomplete case statements result in contradiction

@@ -14,7 +14,7 @@ module Language.TinyBang.Interpreter.Interpreter
 
 import Control.Monad.Error (Error, strMsg, throwError)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
-import Control.Arrow (first, second)
+import Control.Arrow (second)
 import Control.Applicative ((<$>))
 import Data.Maybe (catMaybes, maybeToList)
 import Data.Function (on)
@@ -40,11 +40,8 @@ import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( Ident
-    , ident
     , unIdent
     , LabelName
-    , labelName
---    , unLabelName
     )
 
 -- TODO: remove
@@ -235,8 +232,8 @@ eval (LazyOp op e1 e2) =
 
 eval (EagerOp op e1 e2) = error "Eager operations are not implemented yet" $
   case op of
-    Equal -> undefined
-    LessEqual -> undefined
+    Equal -> undefined e1
+    LessEqual -> undefined e2
     GreaterEqual -> undefined
 
 -- eval (Equal e1 e2) = do
@@ -292,13 +289,14 @@ canonicalizeList xs = map last ys
 canonicalizeOnion :: Value -> Value
 canonicalizeOnion = foldl1' VOnion . sort . canonicalizeList . flattenOnion
 
-onionListLessEq _ [] _  = Just True
-onionListLessEq _ _  [] = Nothing
-onionListLessEq cmp (x:xs) (y:ys) =
-  case compareValues x y of
-    LT -> onionListLessEq cmp xs (y:ys)
-    EQ -> (&& cmp x y) <$> onionListLessEq cmp xs ys
-    GT -> onionListLessEq cmp (x:xs) ys
+-- Still useful: commented out to silence "Defined but not used" warnings.
+-- onionListLessEq _ [] _  = Just True
+-- onionListLessEq _ _  [] = Nothing
+-- onionListLessEq cmp (x:xs) (y:ys) =
+--   case compareValues x y of
+--     LT -> onionListLessEq cmp xs (y:ys)
+--     EQ -> (&& cmp x y) <$> onionListLessEq cmp xs ys
+--     GT -> onionListLessEq cmp (x:xs) ys
 
 data ValueOrdinal
   = OrdLabel LabelName
@@ -308,10 +306,15 @@ data ValueOrdinal
   | OrdPrimUnit
   deriving (Eq, Ord)
 
-leqValues = (<=) `on` valueToOrd
+-- Still useful: commented out to silence "Defined but not used" warnings.
+-- leqValues = (<=) `on` valueToOrd
+compareValues :: Value -> Value -> Ordering
 compareValues = compare `on` valueToOrd
+
+eqValues :: Value -> Value -> Bool
 eqValues = (==) `on` valueToOrd
 
+valueToOrd :: Value -> ValueOrdinal
 valueToOrd v =
   case v of
     VLabel n _ -> OrdLabel n
@@ -321,13 +324,14 @@ valueToOrd v =
     VPrimUnit -> OrdPrimUnit
     _ -> error "This value should not be inside an onion"
 
-onionEq :: Value -> Value -> Bool
-onionEq o1 o2 = c o1 == c o2
-  where c = canonicalizeList . flattenOnion
+-- Still useful: commented out to silence "Defined but not used" warnings.
+-- onionEq :: Value -> Value -> Bool
+-- onionEq o1 o2 = c o1 == c o2
+--   where c = canonicalizeList . flattenOnion
 
-onionValueEq :: Value -> Value -> Bool
-onionValueEq o v = c o == [v]
-  where c = canonicalizeList . flattenOnion
+-- onionValueEq :: Value -> Value -> Bool
+-- onionValueEq o v = c o == [v]
+--   where c = canonicalizeList . flattenOnion
 
 -- |Evaluates a binary expression.
 evalBinop :: Expr              -- ^The first argument to the binary operator.
