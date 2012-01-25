@@ -56,12 +56,13 @@ histFIXME = undefined
 --  as in the case of lazy operations not yet being closed over.  This function
 --  is equivalent to the _ <:: _ ~ _ relation in the documentation.
 
--- Note that lazy ops match against ChiAny; TODO: is this desired behavior?
 immediatelyCompatible :: TauDown
                       -> TauChi
                       -> CReader Compatibility
 immediatelyCompatible tau chi =
   case (tau,chi) of
+    (TdCell _, _) -> return $ MaybeCompatible
+    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     (_,ChiAny) -> return $ CompatibleAs tau
     (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
     (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
@@ -73,7 +74,6 @@ immediatelyCompatible tau chi =
       t2s <- concretizeType a2
       firstCompatibilityInList $ Set.toList t1s ++ Set.toList t2s
     (TdFunc _, ChiFun) -> return $ CompatibleAs tau
-    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     _ -> return $ NotCompatible
     where notCompatible x =
             case x of
@@ -237,7 +237,6 @@ findLopContradictions cs = Set.fromList $ do
     _ -> return $ Bottom histFIXME
   where f a = Set.toList $ runReader (concretizeType a) cs
 
--- The notation ▽τ ▹: △τ is used as a shorthand for ▽τ 􏳒: α ∧ α <: △τ.
 propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
   UpperSubtype a (TuCellGet a1) _ <- Set.toList cs
@@ -263,8 +262,6 @@ closeSingleContradictions cs =
     , findCaseContradictions
     , findNonFunctionApplications
     , findLopContradictions
-    , propogateCellsForward
-    , propogateCellsBackward
     ]
 
 closeAll :: Constraints -> Constraints
@@ -274,6 +271,8 @@ closeAll cs =
     , closeCases
     , closeApplications
     , closeLops
+    , propogateCellsForward
+    , propogateCellsBackward
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.
