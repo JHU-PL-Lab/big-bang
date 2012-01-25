@@ -114,7 +114,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 --  expressions.
 evalTop :: Expr -> Either EvalError Result
 evalTop e =
-    fmap (canonicalize . second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
+    fmap ( {-canonicalize . -} second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
 -- |Wraps an expression in a context where builtin names are bound
 applyBuiltins :: Expr -> Expr
@@ -212,7 +212,6 @@ eval (Case e branches) = do
             ChiLabel name _ -> coerceToLabel name
             ChiFun -> coerceToFunction
             ChiAny -> Just
-
 
 eval (Def i e1 e2) = do
   e1' <- eval e1
