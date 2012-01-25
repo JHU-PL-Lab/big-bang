@@ -117,8 +117,8 @@ instance Display Expr where
            * namespacing trick (e.g., Plus translates to
                "Language.TinyBang.Builtins.([+]) e1 e2"
     -}
-    Def i v e -> sep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-    Assign i v e -> sep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     ExprCell c -> text "Cell #" <> int c
 
 instance Display Value where
