@@ -21,8 +21,6 @@ import Data.Function (on)
 import Data.List(foldl1', sort, sortBy, groupBy)-- intersectBy (redundant but used)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
-import Data.Maybe (listToMaybe)
-import Data.Maybe.Utils (justIf)
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 
 import Language.TinyBang.Ast
@@ -184,33 +182,36 @@ eval (Appl e1 e2) = do
     VFunc i body -> eval $ subst e2' i body
     _ -> throwError $ ApplNotFunction e1' e2'
 
---TODO: define an duse eMatch
+--TODO: define and use eMatch
 eval (Case e branches) = do
-  e' <- eval e
-  let answers = catMaybes $ map (evalBranch e') branches
+  v <- eval e
+  let answers = catMaybes $ map (eMatch v) branches
   case answers of
-    [] -> throwError $ UnmatchedCase e' branches
+    [] -> throwError $ UnmatchedCase v branches
     answer:_ -> eval answer
-  where evalBranch e' (Branch mbinder chi branchExpr) =
-          let mval = coerce chi e'
-              boundExpr = do
-                val <- mval
-                return $ maybe id (\b -> subst val b) mbinder $ branchExpr
-          in
-          case (chi, mval) of
-            -- We don't care about the matching the names because it was
-            -- ensured to be correct earlier.
-            (ChiLabel _ i, Just (VLabel _ lblVal)) ->
-              subst (VCell lblVal) i <$> boundExpr
-            _ -> boundExpr
-        coerce chi =
-          case chi of
-            ChiPrim T.PrimInt -> coerceToInteger
-            ChiPrim T.PrimChar -> coerceToCharacter
-            ChiPrim T.PrimUnit -> coerceToUnit
-            ChiLabel name _ -> coerceToLabel name
-            ChiFun -> coerceToFunction
-            ChiAny -> Just
+  where eMatch v (Branch b chi expr) =
+          case (chi, v') of
+            (ChiLabel _ x, Just (VLabel _ c)) -> subst (VCell c) x <$> expr'
+            _ -> expr'
+          where v' = eSearch v chi
+                expr' =  do
+                  mv <- v'
+                  return $ case b of
+                    Just x -> subst mv x expr
+                    Nothing -> expr
+        eSearch v chi =
+          case (chi, v) of
+            (ChiAny, _) -> Just v
+            (ChiPrim T.PrimInt, VPrimInt _) -> Just v
+            (ChiPrim T.PrimChar, VPrimChar _) -> Just v
+            (ChiPrim T.PrimUnit, VPrimUnit) -> Just v
+            (ChiLabel n _, VLabel n' _) | n == n' -> Just v
+            (ChiFun, VFunc _ _) -> Just v
+            (_, VOnion v1 v2) ->
+              case eSearch v2 chi of
+                Nothing -> eSearch v1 chi
+                ret -> ret
+            _ -> Nothing
 
 eval (Def i e1 e2) = do
   e1' <- eval e1
@@ -226,11 +227,13 @@ eval (Assign a e1 e2) =
       eval e2
     _ -> throwError $ IllegalAssignment a
 
-eval (LazyOp op e1 e2) =
-  evalBinop e1 e2 tryExtractInteger $
-    case op of
-      Plus  -> \x y -> VPrimInt $ x + y
-      Minus -> \x y -> VPrimInt $ x - y
+eval (LazyOp op e1 e2) = do
+  v1 <- eval e1
+  v2 <- eval e2
+  case (op, v1, v2) of
+    (Plus,  VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x + y
+    (Minus, VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x - y
+    _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
 
 eval (EagerOp op e1 e2) = error "Eager operations are not implemented yet" $
   case op of
@@ -334,94 +337,6 @@ valueToOrd v =
 -- onionValueEq :: Value -> Value -> Bool
 -- onionValueEq o v = c o == [v]
 --   where c = canonicalizeList . flattenOnion
-
--- |Evaluates a binary expression.
-evalBinop :: Expr              -- ^The first argument to the binary operator.
-          -> Expr              -- ^The second argument to the binary operator.
-          -> CoerceTo a        -- ^A coercion function for correct arg type
-          -> (a -> a -> Value) -- ^A function to evaluate coerced arguments
-          -> EvalM Value       -- ^The results of evaluation
-evalBinop e1 e2 c f = do
-    e1' <- eval e1
-    e2' <- eval e2
-    case (c e1', c e2') of
-        (Just i1, Just i2) -> return $ f i1 i2
-        _ -> throwError $ DynamicTypeError "incorrect type in expression"
-
--- |Used to perform general coercion of values.  This function takes a direct
---  coercion function (which should be relatively trivial) and applies it
---  appropriately across onions and other such values.
-coerceToType :: CoerceTo a -- ^The trivial coercion function.
-             -> Value      -- ^The value to coerce.
-             -> Maybe a    -- ^Just the result or Nothing on failure
-coerceToType f e =
-    case f e of
-        Just a -> Just a
-        Nothing ->
-            case e of
-                VOnion a b ->
-                    case (coerceToType f a, coerceToType f b) of
-                        (Just i, _) -> Just i
-                        (Nothing, Just j) -> Just j
-                        (Nothing, Nothing) -> Nothing
-                _ -> Nothing
-
--- |Used to obtain an integer from an value.  If necessary, this routine
---  will recurse through onions looking for an integer.
-coerceToInteger :: CoerceTo Value
-coerceToInteger e =
-    coerceToType simpleIntCoerce e
-    where
-        simpleIntCoerce (VPrimInt i) = Just $ VPrimInt i
-        simpleIntCoerce _ = Nothing
-
--- |Used to obtain a Haskell integer from a value.  Otherwise like
---  coerceToInteger.
-tryExtractInteger :: CoerceTo Integer
-tryExtractInteger e =
-    fmap unPrimInt $ coerceToInteger e
-  where unPrimInt e' = case e' of
-            VPrimInt i -> i
-            _ -> error "coerceToInteger returned Just non-integer"
-
--- |Used to obtain a character from a value.  If necessary, this routine
---  will recurse through onions looking for a character.
-coerceToCharacter :: CoerceTo Value
-coerceToCharacter e =
-    coerceToType simpleCharCoerce e
-    where
-        simpleCharCoerce (VPrimChar i) = Just $ VPrimChar i
-        simpleCharCoerce _ = Nothing
-
--- |Used to obtain a unit from a value.  If necessary, this routine
---  will recurse through onions looking for a unit.
-coerceToUnit :: CoerceTo Value
-coerceToUnit e =
-    coerceToType simpleUnitCoerce e
-    where
-        simpleUnitCoerce VPrimUnit = Just VPrimUnit
-        simpleUnitCoerce _ = Nothing
-
--- |Used to obtain a labeled value from an expression.  If necessary, this
--- routine will recurse through onions looking for a labeled value.
-coerceToLabel :: LabelName -> CoerceTo Value
-coerceToLabel name e =
-    onionCoerce
-  where
-      labelMatch (VLabel name' _) = name == name'
-      labelMatch _ = False
-      simpleLabelCoerce lbl = lbl `justIf` (labelMatch lbl)
-      onionCoerce = listToMaybe $ reverse $ filter labelMatch coercedList
-      coercedList = catMaybes $ map simpleLabelCoerce $ flattenOnion e
-
--- |Used to obtain a function from an expression.  If necessary, this routine
---  will recurse through onions looking for a function.
-coerceToFunction :: CoerceTo Value
-coerceToFunction e =
-    coerceToType simpleFuncCoerce e
-    where
-        simpleFuncCoerce a@(VFunc _ _) = Just a
-        simpleFuncCoerce _ = Nothing
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
