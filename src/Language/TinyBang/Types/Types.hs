@@ -71,7 +71,7 @@ data TauDown
   = TdPrim PrimitiveType
   | TdLabel LabelName Alpha
   | TdOnion Alpha Alpha
-  | TdLazyOp Alpha LazyOperator Alpha
+  | TdLazyOp LazyOperator Alpha Alpha
   | TdFunc PolyFuncData
   | TdOnionSub Alpha Sigma
   | TdEmptyOnion
