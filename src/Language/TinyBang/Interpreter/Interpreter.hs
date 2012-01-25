@@ -488,7 +488,7 @@ subst v x (Assign c@(AValue _) e1 e2) =
   Assign c (subst v x e1) (subst v x e2)
 
 subst v x (Assign ai@(AIdent i) e1 e2)
-  | i == x    = Assign (AValue v) (subst v x e1) e2
+  | i == x    = Assign (AValue v) (subst v x e1) (subst v x e2)
   | otherwise = Assign ai (subst v x e1) (subst v x e2)
 
 subst _ _ e@(ExprCell _) = e
