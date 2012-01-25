@@ -142,13 +142,13 @@ inferType expr =
       a2 <- inferType e
       tell1 $ T.TdOnionSub a2 s <: a1 .: histFIXME
       return a1
-    A.LazyOp e1 op e2 -> do
+    A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
       tell1 $ T.TdLazyOp op a1 a2 <: a0 .: histFIXME
       return a0
-    A.EagerOp e1 op e2 -> error "Eager operations are not implemented yet"
+    A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet"
         -- do
         --   t1 <- inferType e1
         --   t2 <- inferType e2

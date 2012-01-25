@@ -228,13 +228,13 @@ eval (Assign a e1 e2) =
       eval e2
     _ -> throwError $ IllegalAssignment a
 
-eval (LazyOp e1 op e2) =
+eval (LazyOp op e1 e2) =
   evalBinop e1 e2 tryExtractInteger $
     case op of
       Plus  -> \x y -> VPrimInt $ x + y
       Minus -> \x y -> VPrimInt $ x - y
 
-eval (EagerOp e1 op e2) = error "Eager operations are not implemented yet" $
+eval (EagerOp op e1 e2) = error "Eager operations are not implemented yet" $
   case op of
     Equal -> undefined
     LessEqual -> undefined
@@ -475,11 +475,11 @@ subst v x (Case expr branches) =
 subst v x (OnionSub e s) =
   OnionSub (subst v x e) s
 
-subst v x (LazyOp e1 op e2) =
-  LazyOp (subst v x e1) op (subst v x e2)
+subst v x (LazyOp op e1 e2) =
+  LazyOp op (subst v x e1) (subst v x e2)
 
-subst v x (EagerOp e1 op e2) =
-  EagerOp (subst v x e1) op (subst v x e2)
+subst v x (EagerOp op e1 e2) =
+  EagerOp op (subst v x e1) (subst v x e2)
 
 subst v x (Def i e1 e2)
   | i == x    = Def i (subst v x e1) e2

@@ -48,8 +48,8 @@ data Expr
   | Case Expr Branches
   | Def Ident Expr Expr
   | Assign Assignable Expr Expr
-  | LazyOp Expr LazyOperator Expr
-  | EagerOp Expr EagerOperator Expr
+  | LazyOp LazyOperator Expr Expr
+  | EagerOp EagerOperator Expr Expr
   | ExprCell CellId
   deriving (Eq, Ord, Show)
 
@@ -108,8 +108,8 @@ instance Display Expr where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
-    LazyOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    EagerOp e1 op e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    LazyOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    EagerOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
     {-
        TODO: deal with the fact that the following isn't actually code
        options include:
