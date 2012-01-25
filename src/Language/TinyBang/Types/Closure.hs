@@ -93,7 +93,7 @@ tSubMatch sigma chi =
     (ChiPrim p, SubPrim p') -> p == p'
     (ChiLabel n _, SubLabel n') -> n == n'
     (ChiFun, SubFunc) -> True
-    (ChiAny, _) -> False
+    _ -> False
 
 -- |A function modeling TCaseBind.  This function creates an appropriate set of
 --  constraints to add when a given case branch is taken.  Its primary purpose
@@ -237,6 +237,23 @@ findLopContradictions cs = Set.fromList $ do
     _ -> return $ Bottom histFIXME
   where f a = Set.toList $ runReader (concretizeType a) cs
 
+-- The notation ▽τ ▹: △τ is used as a shorthand for ▽τ 􏳒: α ∧ α <: △τ.
+propogateCellsForward :: Constraints -> Constraints
+propogateCellsForward cs = Set.fromList $ do
+  UpperSubtype a (TuCellGet a1) _ <- Set.toList cs
+  TdCell a2 <- f a
+  t2 <- f a2
+  return $ t2 <: a1 .: histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
+
+propogateCellsBackward :: Constraints -> Constraints
+propogateCellsBackward cs = Set.fromList $ do
+  UpperSubtype a (TuCellSet a1) _ <- Set.toList cs
+  TdCell a2 <- f a
+  t2 <- f a1
+  return $ t2 <: a2 .: histFIXME
+  where f a = Set.toList $ runReader (concretizeType a) cs
+
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
 closeSingleContradictions :: Constraints -> Constraints
@@ -246,6 +263,8 @@ closeSingleContradictions cs =
     , findCaseContradictions
     , findNonFunctionApplications
     , findLopContradictions
+    , propogateCellsForward
+    , propogateCellsBackward
     ]
 
 closeAll :: Constraints -> Constraints
@@ -262,6 +281,9 @@ calculateClosure :: Constraints -> Constraints
 calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
 
 type AlphaSubstitutionEnv = (Alpha, Set Alpha)
+
+saHelper constr a = constr <$> substituteAlpha a
+saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
 
 -- |A typeclass for entities which can substitute their type variables.
 class AlphaSubstitutable a where
@@ -283,6 +305,22 @@ instance AlphaSubstitutable Alpha where
       -- replace forall-ed elements within a forall constraint).
       else assert ((length . unCallSites) callSites == 0) $
          return $ Alpha alphaId newCallSites
+
+instance AlphaSubstitutable TauUp where
+  substituteAlpha tu = case tu of
+    TuFunc a1 a2 -> saHelper2 TuFunc a1 a2
+    TuCellGet a -> saHelper TuCellGet a
+    TuCellSet a -> saHelper TuCellSet a
+
+instance AlphaSubstitutable TauDown where
+  substituteAlpha td = case td of
+    TdLabel n a -> saHelper (TdLabel n) a
+    TdOnion a1 a2 -> saHelper2 TdOnion a1 a2
+    TdLazyOp op a1 a2 -> saHelper2 (TdLazyOp op) a1 a2
+    TdFunc pfd -> saHelper TdFunc pfd
+    TdOnionSub a s -> saHelper (`TdOnionSub` s) a
+    TdCell a -> saHelper TdCell a
+    _ -> return td
 
 instance AlphaSubstitutable PolyFuncData where
   substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
