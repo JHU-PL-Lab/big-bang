@@ -219,7 +219,7 @@ findNonFunctionApplications cs = Set.fromList $ do
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
+  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
   TdPrim PrimInt <- f a1
   TdPrim PrimInt <- f a2
   return $ TdPrim PrimInt <: a .: histFIXME
@@ -227,7 +227,7 @@ closeLops cs = Set.fromList $ do
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp a1 op a2) a _ <- Set.toList cs
+  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
   -- Not quite like the document.
   -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
