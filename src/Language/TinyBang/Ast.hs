@@ -109,8 +109,8 @@ instance Display Expr where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
-    LazyOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    EagerOp op e1 e2 -> makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    LazyOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
+    EagerOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
     {-
        TODO: deal with the fact that the following isn't actually code
        options include:
