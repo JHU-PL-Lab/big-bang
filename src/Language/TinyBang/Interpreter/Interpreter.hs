@@ -77,7 +77,7 @@ instance Display EvalError where
         text "The comparison" <+> makeDoc op <+> makeDoc v1 <+> makeDoc v2 <+>
         text "cannot be is not well typed."
       IllegalAssignment a ->
-        makeDoc a <+> text "Can't be assigned to."
+        text "The value" <+> makeDoc a <+> text "can't be assigned to."
 
 -- I'm not sure if this or the other order of the monad transformers is
 -- preferable to the alternative. TODO: figure it out.
@@ -182,7 +182,6 @@ eval (Appl e1 e2) = do
     VFunc i body -> eval $ subst e2' i body
     _ -> throwError $ ApplNotFunction e1' e2'
 
---TODO: define and use eMatch
 eval (Case e branches) = do
   v <- eval e
   let answers = catMaybes $ map (eMatch v) branches

@@ -215,6 +215,9 @@ tests = TestList $ [TPP.tests] ++
   , xEval "def x = 3 in x = 4 in x" four
   , xEval "def x = () in x = 4 in x" four
   , xEval "def x = () in case x of { unit -> 4 }" four
+-- Test that def can be encoded with case.
+  , xEval "case `Ref 4 of {`Ref x -> x = 2 in x}" two
+-- The next two tests are contradictions due to flow insensitivity.
   , xCont "def x = () in x = 2 in case x of { unit -> 4 }"
   , xCont "def x = () in x = 2 in case x of { int -> 4 }"
   , xEval "def x = () in x = 2 in case x of { unit -> 2 ; int -> 4 }" four
@@ -223,6 +226,8 @@ tests = TestList $ [TPP.tests] ++
   , xEval "case () & 0 of {x:unit -> x}" A.VPrimUnit
   , xEval "case () & 0 of {x:_ -> x}" $
           A.VOnion (A.VPrimInt 0) A.VPrimUnit
+-- The next test is a contradiction due to binder immutability.
+  , xCont "case 4 of {x:_ -> x = 0 in x}"
 -- Test proper handling of arbitrary ASCII characters
   , xType "'x'"
   , xEval "'a'" $

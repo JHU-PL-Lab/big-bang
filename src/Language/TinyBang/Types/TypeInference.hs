@@ -71,7 +71,8 @@ inferTypeTop :: A.Expr
              -> ( Either TypeInferenceError Alpha
                 , Constraints
                 )
-inferTypeTop expr = runTIM (inferType $ applyBuiltins expr) Map.empty 0
+inferTypeTop expr =
+  runTIM (inferType $ applyBuiltins expr) Map.empty 0
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM Alpha
