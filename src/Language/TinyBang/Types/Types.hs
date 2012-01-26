@@ -271,7 +271,7 @@ instance Display TauDown where
       TdLabel n a -> char '`' <> makeDoc n <+> makeDoc a
       TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
       TdFunc polyFuncData -> makeDoc polyFuncData
-      TdLazyOp op a1 a2 -> makeDoc a1 <+> makeDoc op <+> makeDoc a2
+      TdLazyOp op a1 a2 -> makeDoc op <+> makeDoc a1 <+> makeDoc a2
       TdEmptyOnion -> text "(&)"
       TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
       TdCell a -> text "Cell" <> parens (makeDoc a)
