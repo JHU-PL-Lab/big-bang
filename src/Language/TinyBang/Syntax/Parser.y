@@ -58,6 +58,11 @@ import System.IO
         def             { L.TokDef }
         '='             { L.TokEquals }
         in              { L.TokIn }
+        '[+]'           { L.TokOpPlus }
+        '[-]'           { L.TokOpMinus }
+        '[=]'           { L.TokOpEquals }
+        '[<=]'          { L.TokOpLessEquals }
+        '[>=]'          { L.TokOpGreaterEquals }
 
 %left       in
 %right      '->'
@@ -77,6 +82,8 @@ Exp     :   '\\' ident '->' Exp
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
                                     { A.Onion $1 $3 }
+        |   OpExp
+                                    { $1 }
         |   ApplExp
                                     { $1 }
 
@@ -116,12 +123,18 @@ Pattern :   PrimitiveType           { A.ChiPrim $1 }
         |   fun                     { A.ChiFun }
         |   '_'                     { A.ChiAny }
 
-
 PrimitiveType
         :   int                     { T.PrimInt }
         |   char                    { T.PrimChar }
         |   unit                    { T.PrimUnit }
 
+Op      :   '[+]'                   { \x y -> A.LazyOp A.Plus x y }
+        |   '[-]'                   { \x y -> A.LazyOp A.Minus x y }
+        |   '[=]'                   { \x y -> A.EagerOp A.Equal x y }
+        |   '[<=]'                  { \x y -> A.EagerOp A.LessEqual x y }
+        |   '[>=]'                  { \x y -> A.EagerOp A.GreaterEqual x y }
+
+OpExp   :   Op Primary Primary      { $1 $2 $3 }
 
 {
 data ParseError

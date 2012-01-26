@@ -46,9 +46,14 @@ tokens :-
     \;                                  { constTok TokSeparator }
     _                                   { constTok TokUnder }
     :                                   { constTok TokColon }
-	def									{ constTok TokDef }
-	\=									{ constTok TokEquals }
-	in									{ constTok TokIn }
+    def                                 { constTok TokDef }
+    \[\+\]                              { constTok TokOpPlus }
+    \[\-\]                              { constTok TokOpMinus }
+    \[\=\]                              { constTok TokOpEquals }
+    \[\<\=\]                            { constTok TokOpLessEquals }
+    \[\>\=\]                            { constTok TokOpGreaterEquals }
+    \=                                  { constTok TokEquals }
+    in                                  { constTok TokIn }
     $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
 
 {
@@ -94,9 +99,14 @@ data Token =
     | TokCloseBlock
     | TokSeparator
     | TokColon
-	| TokDef
-	| TokEquals
-	| TokIn
+    | TokDef
+    | TokEquals
+    | TokIn
+    | TokOpPlus
+    | TokOpMinus
+    | TokOpEquals
+    | TokOpLessEquals
+    | TokOpGreaterEquals
     deriving (Eq, Show)
 
 instance Display Token where
@@ -124,5 +134,10 @@ instance Display Token where
         TokDef -> "def"
         TokEquals -> "equals"
         TokIn -> "in"
+        TokOpPlus -> "op plus"
+        TokOpMinus -> "op minus"
+        TokOpEquals -> "op equals"
+        TokOpLessEquals -> "op less than or equal"
+        TokOpGreaterEquals -> "op greater than or equal"
 }
 
