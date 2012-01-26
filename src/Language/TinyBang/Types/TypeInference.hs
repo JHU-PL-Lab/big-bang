@@ -6,7 +6,6 @@ module Language.TinyBang.Types.TypeInference
 , TypeInferenceError (..)
 ) where
 
-import Control.Monad (liftM, mapAndUnzipM, zipWithM)
 import Control.Monad.Reader (ask, asks, local)
 import Control.Monad.Writer (censor, listen, tell)
 import Control.Monad.State (get, put)
@@ -18,6 +17,7 @@ import Data.Map (Map)
 import Data.Monoid (Monoid, mempty)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Control.Applicative ((<$>))
 
 import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.Render.Display
@@ -40,16 +40,23 @@ histFIXME :: T.ConstraintHistory
 histFIXME = undefined
 
 -- |An error type for the type inference routine.
-data TypeInferenceError =
-    -- |Indicates that an expression contained an unbound variable.
-      NotClosed Ident
+data TypeInferenceError
+      -- |Indicates that an expression contained an unbound variable.
+      = NotClosed Ident
+      -- |Indicates that the binder and label use the same variable.
+      | DoubleBound Ident
       -- TODO: Add NotImplemented
     deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
 instance Display TypeInferenceError where
     makeDoc err = case err of
-        NotClosed i -> text "not closed:" <+> (text $ unIdent i)
+        NotClosed i ->
+          text "TypeInference: not closed:" <+>
+          (text $ unIdent i)
+        DoubleBound i ->
+          text "TypeInference: bound both in the binder and in the label:" <+>
+          (text $ unIdent i)
 
 -- |A type alias for the type information monad.
 type TIM a = ErrorT TypeInferenceError
@@ -123,20 +130,44 @@ inferType expr =
       a <- freshVar
       tell1 $ T.PrimUnit <: a .: histFIXME
       return a
-    A.Case e brs -> do
-      a1 <- freshVar
-      a2 <- freshVar
+    A.Case e branches -> do
+      a1' <- freshVar
       a2' <- inferType e
       gamma <- ask
-      (brAssump, tauChis) <-
-            mapAndUnzipM extractBranchAssumptionAndChi brs
-      let fs = map Map.union brAssump
-      (alphas, constraints) <- liftM unzip $ zipWithM capture fs $
-                                 map (\(A.Branch _ _ x) -> x) brs
-      tell1 $ T.Case a2'
-            (zipWith3 (buildGuard expr gamma a1) tauChis constraints alphas)
-            $ T.Inferred expr gamma
-      return a1
+
+      bundle <- sequence $ do
+        A.Branch binder chi branchExpr <- branches
+        return $ (\(x,y) -> (x,y,branchExpr)) <$> tDigestBranch a2' binder chi
+
+      guards <- sequence $ do
+        (branchGamma, tauChi, branchExpr) <- bundle
+        let mAlphaConstraints = inferForBranch branchGamma branchExpr
+            buildGuard (alpha, constraints) =
+              T.Guard tauChi $
+                Set.insert (alpha <: a1' .: histFIXME) constraints
+        return $ buildGuard <$> mAlphaConstraints
+
+      tell1 $ (\bs -> T.Case a2' bs $ T.Inferred e gamma) guards
+      return a1'
+      where tDigestBranch a1 binder chi = do
+              a2 <- freshVar
+              case chi of
+                A.ChiAny ->
+                  return (g', T.ChiAny)
+                A.ChiPrim p ->
+                  return (g', T.ChiPrim p)
+                A.ChiLabel n x | Just x /= binder ->
+                  return (Map.insert x a2 g' , T.ChiLabel n a2)
+                A.ChiLabel _ x ->
+                  throwError $ DoubleBound x
+                A.ChiFun ->
+                  return (g', T.ChiFun)
+              where g' =
+                      case binder of
+                        Just x -> Map.singleton x a1
+                        Nothing -> Map.empty
+            inferForBranch branchGamma branchExpr =
+              capture (Map.union branchGamma) branchExpr
     A.OnionSub e s -> do
       a1 <- freshVar
       a2 <- inferType e
@@ -148,7 +179,7 @@ inferType expr =
       a2 <- inferType e2
       tell1 $ T.TdLazyOp op a1 a2 <: a0 .: histFIXME
       return a0
-    A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet"
+    A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet" op e1 e2
         -- do
         --   t1 <- inferType e1
         --   t2 <- inferType e2
@@ -170,7 +201,7 @@ inferType expr =
       a2 <- local (Map.insert x a3) $ inferType e2
       tell1 $ TdCell a1 <: a3 .: histFIXME
       return a2
-    A.Assign a e1 e2 -> do -- throwError $ NotClosed (ident "x")
+    A.Assign a e1 e2 -> do
       x <- return $! case a of
         A.AIdent x -> x
         A.AValue _ -> error "Internal Error; Assignment expression contains value"
@@ -179,6 +210,7 @@ inferType expr =
       a2 <- inferType e2
       tell1 $ a3 <: TuCellSet a1 .: histFIXME
       return a2
+    A.ExprCell _ -> error "Implementation error; infer called on ExprCell"
     where tell1 :: T.Constraint -> TIM ()
           tell1 = tell . Set.singleton
           -- |Infers the type of the subexpression in an environment modified by
@@ -186,11 +218,6 @@ inferType expr =
           --  up.
           capture :: (Gamma -> Gamma) -> A.Expr -> TIM (Alpha, Constraints)
           capture f e = censor (const mempty) $ listen $ local f $ inferType e
-          buildGuard expr' gamma supAlpha tauChi constraints subAlpha =
-            T.Guard tauChi $
-              Set.insert
-                (subAlpha <: supAlpha .: T.Inferred expr' gamma)
-                constraints
           -- naryOp expr' gamma es tIn tOut = do
           --   ts <- mapM inferType es
           --   tell $ Set.fromList $
@@ -199,21 +226,6 @@ inferType expr =
           --   alpha <- freshVar
           --   tell1 $ tOut <: T.TuAlpha alpha .: T.Inferred expr' gamma
           --   return alpha
-
--- |Accepts a branch and the case expression type and produces an appropriate
---  assumption for typechecking the corresponding branch expression. This
---  corresponds to the TDigestBranch function in the document.
-extractBranchAssumptionAndChi
-    :: A.Branch
-    -> TIM (Gamma, T.TauChi)
-extractBranchAssumptionAndChi (A.Branch _ chi _) =
-  case chi of
-    A.ChiPrim p -> return (Map.empty, T.ChiPrim p)
-    A.ChiLabel n i -> do
-      alpha <- freshVar
-      return (Map.singleton i alpha, T.ChiLabel n alpha)
-    A.ChiFun -> return (Map.empty, T.ChiFun)
-    A.ChiAny -> return (Map.empty, T.ChiAny)
 
 -- |Extracts all type variables from the provided constraints.
 extractConstraintTypeVars :: T.Constraints -> Set T.Alpha
