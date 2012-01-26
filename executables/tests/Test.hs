@@ -580,6 +580,23 @@ tests = TestList $ [TPP.tests] ++
 -- Test that negative zero lexs to zero
   , xLexs "-0"
           [TokIntegerLiteral 0]
+-- Test that cases with binders and assignment lex correctly
+  , xLexs "case 4 of {x:_ -> x = 2 in x}"
+          [ TokCase
+          , TokIntegerLiteral 4
+          , TokOf
+          , TokOpenBlock
+          , TokIdentifier "x"
+          , TokColon
+          , TokUnder
+          , TokArrow
+          , TokIdentifier "x"
+          , TokEquals
+          , TokIntegerLiteral 2
+          , TokIn
+          , TokIdentifier "x"
+          , TokCloseBlock
+          ]
 -- Test that a few expressions functions parse correctly
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
           (A.Func idX
@@ -618,6 +635,10 @@ tests = TestList $ [TPP.tests] ++
             , A.Branch Nothing (A.ChiLabel (labelName "True") (ident "a")) efalse
             , A.Branch Nothing A.ChiFun $ A.Func (ident "x") varX
             ]
+-- Test that cases with binders and assignment parse correctly
+  , xPars "case 4 of {x:_ -> x = 2 in x}" $
+          A.Case efour
+           [ A.Branch (Just idX) A.ChiAny $ A.Assign (A.AIdent idX) etwo varX ]
 -- Test some simple parse failures
   , fPars ""
   , fPars "(expr"
