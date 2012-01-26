@@ -46,7 +46,7 @@ type CReader = Reader Constraints
 data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
 
 histFIXME :: ConstraintHistory
-histFIXME = undefined
+histFIXME = IDontCare
 
 -- |A function modeling immediate compatibility.  This function takes a type and
 --  a guard in a match case.  If the input type is compatible with the guard,

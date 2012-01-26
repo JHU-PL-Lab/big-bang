@@ -37,7 +37,7 @@ type Gamma = Map Ident Alpha
 type NextFreshVar = T.AlphaId
 
 histFIXME :: T.ConstraintHistory
-histFIXME = undefined
+histFIXME = T.IDontCare
 
 -- |An error type for the type inference routine.
 data TypeInferenceError

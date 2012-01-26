@@ -148,6 +148,7 @@ data ConstraintHistory
   = Inferred
       A.Expr
       (Map Ident Alpha)
+  | IDontCare
   -- | The first argument is a td <: alpha.
   --   The second argument is an alpha <: tu.
   | ClosureTransitivity
