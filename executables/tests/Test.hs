@@ -104,20 +104,22 @@ multiAppl [] = error "multiAppl used on empty list"
 multiAppl xs = foldl1 A.Appl xs
 
 srcSummate :: TinyBangCode
-srcSummate = "fun this -> fun x -> case (equal x 0) of { `True z -> 0 ; `False z -> plus x (this (minus x 1))}"
+srcSummate = "fun this -> fun x -> case ([=] x 0) of { `True z -> 0 ; `False z -> [+] x (this ([-] x 1))}"
 srcMultiAppl :: [TinyBangCode] -> TinyBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"
 srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
 
+srcGreaterOrLessUtil :: TinyBangCode
 srcGreaterOrLessUtil =
  "fun this -> fun x -> fun y -> fun z ->"++
-     "case equal (minus x y) z of {"++
+     "case equal ([-] x y) z of {"++
           "`True junk -> `GreaterThan () ;"++
           "`False junk ->"++
-                 "case equal (minus y x) z of {"++
+                 "case [=] (minus y x) z of {"++
                       "`True junk -> `LessThan () ;"++
-                      "`False junk -> this x y (plus z 1) }}"
+                      "`False junk -> this x y ([+] z 1) }}"
 
+srcGreaterOrLess :: TinyBangCode
 srcGreaterOrLess =
  "fun x -> fun y ->"++
      "case equal x y of {"++
@@ -275,57 +277,57 @@ tests = TestList $ [TPP.tests] ++
           ( A.VOnion (A.VLabel (labelName "A") 0) (A.VLabel (labelName "B") 1)
           , IntMap.fromList $ zip [0, 1] $ map A.VPrimInt $ repeat 1)
 -- Test parse and evaluation of some simple arithmetic applications
--- TODO: uncomment when updated to include plus, etc.
---   , xPars "plus 2 2" $
---           multiAppl $ [A.Var (ident "plus"), etwo, etwo]
---   , xType "plus 1 2"
---   , xType "minus 1 2"
---   , xType "plus (minus (plus 1 2) 3) (plus (-2) (minus 4 0))"
---   , xEval "(fun x -> plus x x) 2"
---           four
---   , xEval "(\\x -> plus x x) 2"
---           four
---   , xEval "plus 2 2"
---           four
---   , xEval "minus 2 2"
---           zero
---   , xEval "minus 2 -2"
---           four
---   , xType "(fun x -> plus x 1) 1"
--- -- Test that arithmetic expressions on non-numeric literals fail to typecheck
---   , xCont "plus 1 'a'"
---   , xCont "plus 1 ()"
---   , xCont "plus 'a' 'a'"
---   , xCont "plus () ()"
---   , xCont "plus 2 'x'"
---   , xCont "plus 1 (fun x -> x)"
---   , xCont "minus 1 'a'"
---   , xCont "minus 1 ()"
---   , xCont "minus 'a' 'a'"
---   , xCont "minus () ()"
---   , xCont "(fun x -> plus x 1) 'a'"
--- -- Test evaluation of compound arithmetic application
---   , xEval "plus (minus 1 -1) (minus 1 -1)"
---           four
--- -- Test parse, typecheck, and evaluation of some higher order applications
---   , xPars "(fun x -> x)\n(fun x -> x)" $
---           A.Appl exIdent exIdent
---   , xEval "(fun x -> x)\n(fun x -> x)"
---           xIdent
---   , xType "(fun x -> x)"
---   , xType "(fun x -> x) (fun x -> x)"
---   , xType srcY
---   , xType (srcMultiAppl [srcY, srcSummate, "5"])
---   , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
---   , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
---   , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
---   , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
---   , xType "plus (2 & 'b') 2"
---   , xCont "plus (`True () & 'z') 2"
---   , xType "plus (2 & 'x') ('y' & 2)"
---   , xType "plus (2 & ('a' & ())) ((2 & 'b') & ())"
---   , xType "plus (1 & ('a' & ())) ('a' & (1 & ()))"
---   , xNotC "(fun x -> plus n 2)"
+  , xPars "[+] 2 2" $
+          A.LazyOp A.Plus etwo etwo
+  , xType "[+] 1 2"
+  , xType "[-] 1 2"
+  , xType "[+] ([-] ([+] 1 2) 3) ([+] (-2) ([-] 4 0))"
+  , xEval "(fun x -> [+] x x) 2"
+          four
+  , xEval "(\\x -> [+] x x) 2"
+          four
+  , xEval "[+] 2 2"
+          four
+  , xEval "[-] 2 2"
+          zero
+  , xEval "[-] 2 -2"
+          four
+  , xType "(fun x -> [+] x 1) 1"
+-- Test that arithmetic expressions on non-numeric literals fail to typecheck
+  , xCont "[+] 1 'a'"
+  , xCont "[+] 1 ()"
+  , xCont "[+] 'a' 'a'"
+  , xCont "[+] () ()"
+  , xCont "[+] 2 'x'"
+  , xCont "[+] 1 (fun x -> x)"
+  , xCont "[-] 1 'a'"
+  , xCont "[-] 1 ()"
+  , xCont "[-] 'a' 'a'"
+  , xCont "[-] () ()"
+  , xCont "(fun x -> [+] x 1) 'a'"
+-- Test evaluation of compound arithmetic application
+  , xEval "[+] ([-] 1 -1) ([-] 1 -1)"
+          four
+-- Test parse, typecheck, and evaluation of some higher order applications
+  , xPars "(fun x -> x)\n(fun x -> x)" $
+          A.Appl exIdent exIdent
+  , xEval "(fun x -> x)\n(fun x -> x)"
+          xIdent
+  , xType "(fun x -> x)"
+  , xType "(fun x -> x) (fun x -> x)"
+  , xType srcY
+-- TODO: uncomment when eager ops work
+  -- , xType (srcMultiAppl [srcY, srcSummate, "5"])
+  -- , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
+  -- , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
+  -- , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
+  -- , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
+  , xCont "[+] (2 & 'b') 2"
+  , xCont "[+] (`True () & 'z') 2"
+  , xCont "[+] (2 & 'x') ('y' & 2)"
+  , xCont "[+] (2 & ('a' & ())) ((2 & 'b') & ())"
+  , xCont "[+] (1 & ('a' & ())) ('a' & (1 & ()))"
+  , xNotC "(fun x -> [+] n 2)"
   , xNotC "case x of {int -> 0; char -> 'a'}"
   , xNotC "x"
 -- Test evaluation of some recursive arithmetic evaluations
@@ -418,9 +420,7 @@ tests = TestList $ [TPP.tests] ++
           one
   , xType "case `A 5 of { `A x -> x }"
 -- Test that implicit projection from onions fails
--- TODO: uncomment when we have plus
---  , xEval "plus (1 & 'a') ('a' & 1 & ())"
---          two
+  , xCont "[+] (1 & 'a') ('a' & 1 & ())"
   , xCont "(1 & (fun x -> x)) 1"
 -- Test that application requires that the first argument be a function
   , xCont "1 'x'"
