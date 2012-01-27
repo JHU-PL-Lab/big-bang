@@ -2,6 +2,7 @@ module Language.TinyBang.Interpreter.SourceInterpreter
 ( evalStringTop
 , EvalStringResult(..)
 , EvalSuccessOrFailure(..)
+, I.canonicalize
 ) where
 
 import Control.Monad.Error (Error, strMsg, throwError)

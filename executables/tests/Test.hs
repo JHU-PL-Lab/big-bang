@@ -23,8 +23,8 @@ xEval code expectedResult =
     EvalResult _ sOrF -> case sOrF of
                            EvalSuccess result ->
                              assertEqual ""
-                                         (vmPair expectedResult)
-                                         (vmPair result)
+                                         (canonicalize $ vmPair expectedResult)
+                                         (canonicalize $ vmPair result)
                            EvalFailure err -> assertFailure $
                                                 "EvalFailure: " ++ display err
     _ -> assertFailure $
