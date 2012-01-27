@@ -182,7 +182,53 @@ lblLt = (A.VLabel (labelName "LessThan") 0, IntMap.singleton 0 A.VPrimUnit)
 lblGt = (A.VLabel (labelName "GreaterThan") 0, IntMap.singleton 0 A.VPrimUnit)
 
 
-tests = TestList $ [TPP.tests] ++
+-- TODO: Modularize the test cases a lot more than this.
+-- For the moment, this "module" will just sit here.
+peanoSrcZero =
+  "def zero = `Z () in                                                              "
+peanoSrcTwo =
+  "def two = `S `S `Z () in                                                         "
+peanoSrcSucc =
+  "def succ = fun x -> `S x in                                                      "
+peanoSrcY =
+  "def Y = " ++ srcY ++ " in                                                        "
+peanoSrcPlus =
+  "def plus = Y (fun this -> fun x -> fun y ->                                      \
+  \                case x of {                                                      \
+  \                    `Z x' -> y ;                                                 \
+  \                    `S x' -> this x' (succ y) }) in                              "
+peanoSrcMult =
+  "def multHelper = Y (fun this -> fun accum -> fun x -> fun y ->                   \
+  \                        case x of {                                              \
+  \                            `Z x' -> accum ;                                     \
+  \                            `S x' -> this (plus accum y) x' y }) in              \
+  \def mult = multHelper zero in                                                    "
+peanoVal x = case x of
+  0 -> (A.VLabel (labelName "Z") 0, IntMap.fromList [(0,A.VPrimUnit)])
+  1 -> (A.VLabel (labelName "S") 0, IntMap.fromList [(0,A.VLabel (labelName "Z") 1),
+                                                     (1,A.VPrimUnit)])
+  _ | x >= 0 ->
+       (A.VLabel (labelName "S") x,
+        IntMap.fromList $ [ (0,A.VPrimUnit)
+                          , (1,A.VLabel (labelName "Z") 0) ] ++
+                          map (\x -> (x,A.VLabel (labelName "S") (x-1))) [2..x])
+  _ -> error $ "Peano value requested for negative value: " ++ show x
+peanoTests =
+  [ xEval (peanoSrcZero ++ peanoSrcTwo ++ peanoSrcSucc ++ peanoSrcY ++ peanoSrcPlus ++
+           "plus two two")
+      $ peanoVal 4
+  , xEval (peanoSrcZero ++ peanoSrcTwo ++ peanoSrcSucc ++ peanoSrcY ++ peanoSrcPlus ++
+           peanoSrcMult ++
+           "mult two two")
+      $ peanoVal 4
+  , xEval (peanoSrcZero ++ peanoSrcTwo ++ peanoSrcSucc ++ peanoSrcY ++ peanoSrcPlus ++
+           peanoSrcMult ++
+           "def four = plus two two in mult four two")
+      $ peanoVal 8
+  ]
+-- TODO: end quasi-Peano module
+
+tests = TestList $ [TPP.tests] ++ peanoTests ++
 -- Test proper handling of an arbitrary positive and negative integer literal
   [ xLexs "1234567890"
           [TokIntegerLiteral 1234567890]
