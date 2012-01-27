@@ -251,12 +251,12 @@ extractConstraintTypeVars c =
             case el of
                 LowerSubtype _ a _ -> insertWeak set a
                 UpperSubtype a _ _ -> insertWeak set a
-                AlphaSubtype a1 a2 _ -> insertManyWeak set [a1, a2]
-                CellSubtype _ a _ -> insertWeak set a
-                CellGetSubtype a _ _ -> insertWeak set a
-                CellSetSubtype a _ _ -> insertWeak set a
-                CellAlphaSubtype a1 a2 _ -> insertManyWeak set [a1, a2]
-                LazyOpSubtype _ a1 a2 a3 _ -> insertManyWeak set [a1, a2, a3]
+                AlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
+                CellSubtype a1 a2 _ -> insert2Weak set a1 a2
+                CellGetSubtype a1 a2 _ -> insert2Weak set a1 a2
+                CellSetSubtype a1 a2 _ -> insert2Weak set a1 a2
+                CellAlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
+                LazyOpSubtype _ a1 a2 a3 _ -> insert3Weak set a1 a2 a3
                 T.Case a gs _ ->
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs
@@ -271,8 +271,10 @@ extractConstraintTypeVars c =
                 T.ChiFun -> set
                 T.ChiAny -> set
           insertWeak set a = Set.insert (alphaWeaken a) set
-          insertManyWeak set as =
-            Set.union set $ Set.fromList $ map alphaWeaken as
+          insert2Weak set a1 a2 =
+            insertWeak (insertWeak set a1) a2
+          insert3Weak set a1 a2 a3 =
+            insertWeak (insert2Weak set a1 a2) a3
 
 -- |Creates a fresh type variable for the type inference engine.
 freshVar :: (AlphaType a) => TIM (SomeAlpha a)
