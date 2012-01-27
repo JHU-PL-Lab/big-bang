@@ -45,8 +45,6 @@ type CReader = Reader Constraints
 
 --type CWriter out ret = Writer (Set out) ret
 
-data Compatibility = NotCompatible | MaybeCompatible | CompatibleAs TauDown
-
 histFIXME :: ConstraintHistory
 histFIXME = IDontCare
 
