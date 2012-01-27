@@ -82,7 +82,6 @@ instance Display EvalError where
 -- I'm not sure if this or the other order of the monad transformers is
 -- preferable to the alternative. TODO: figure it out.
 type EvalM a = StateT Map (Either EvalError) a
-type CoerceTo a = Value -> Maybe a
 type Cell = Int
 type NextCell = Int
 type Map = (NextCell, IntMap Value)
