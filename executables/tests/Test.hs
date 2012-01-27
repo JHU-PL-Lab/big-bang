@@ -362,6 +362,10 @@ tests = TestList $ [TPP.tests] ++
   , xPars "(fun x -> x x) (fun x -> x x)" $
           A.Appl (A.exprFromValue xomega) (A.exprFromValue xomega)
   , xType "(fun x -> x x) (fun x -> x x)"
+-- Ensure that functions are correctly polymorphic when stored in cells
+  , xType "def f = (fun x -> x) in (f 1) & (f ())"
+-- Ensure that constraints from functions propagate correctly from cells
+  , xCont "def f = (fun x -> case x of { int -> x }) in (f 1) & (f ())"
 -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)"]
   , xType $ srcMultiAppl [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
@@ -412,8 +416,6 @@ tests = TestList $ [TPP.tests] ++
 --           false
 -- Test case projection
   , xEval "case `A 5 & `A \'a\' of {`A x -> x}" $
--- This is no longer true
---          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
           A.VPrimChar 'a'
   , xEval "case `A \'a\' & `A 5 of {`A x -> x}" $
           A.VPrimInt 5
