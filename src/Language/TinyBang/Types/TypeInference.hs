@@ -193,7 +193,7 @@ inferType expr =
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ TdLazyOp op a1 a2 <: a0 .: histFIXME
+      tell1 $ T.LazyOp op a1 a2 <: a0 .: histFIXME
       return a0
     A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet" op e1 e2
         -- do
@@ -256,6 +256,7 @@ extractConstraintTypeVars c =
                 CellGetSubtype a _ _ -> insertWeak set a
                 CellSetSubtype a _ _ -> insertWeak set a
                 CellAlphaSubtype a1 a2 _ -> insertManyWeak set [a1, a2]
+                LazyOpSubtype _ a1 a2 a3 _ -> insertManyWeak set [a1, a2, a3]
                 T.Case a gs _ ->
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs

@@ -16,6 +16,7 @@ module Language.TinyBang.Types.Types
 , CellSet(..)
 , Cell(..)
 , ForallVars
+, LazyOp(..)
 , module Language.TinyBang.Types.Alphas
 ) where
 
@@ -39,6 +40,7 @@ import qualified Language.TinyBang.Ast as A
 newtype CellGet = CellGet InterAlpha
 newtype CellSet = CellSet InterAlpha
 newtype Cell    = Cell    InterAlpha
+data    LazyOp  = LazyOp  LazyOperator InterAlpha InterAlpha
 
 -- |The datatype used to represent upper bound types.
 data TauUp = TuFunc CellAlpha InterAlpha
@@ -49,13 +51,10 @@ data TauDown
   = TdPrim PrimitiveType
   | TdLabel LabelName CellAlpha
   | TdOnion InterAlpha InterAlpha
-  -- TODO: remove lops
-  | TdLazyOp LazyOperator InterAlpha InterAlpha
   | TdFunc PolyFuncData
   | TdOnionSub InterAlpha Sigma
   | TdEmptyOnion
   deriving (Eq, Ord, Show)
-
 
 type ForallVars = Set AnyAlpha
 -- |A wrapper type containing the polymorphic function type information.
@@ -94,6 +93,8 @@ data Constraint
   | CellGetSubtype CellAlpha InterAlpha ConstraintHistory
   | CellSetSubtype CellAlpha InterAlpha ConstraintHistory
   | CellAlphaSubtype CellAlpha CellAlpha ConstraintHistory
+  | LazyOpSubtype
+      LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
   | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
@@ -107,6 +108,7 @@ data ConstraintOrdinal
   | OrdCGS CellAlpha InterAlpha
   | OrdCSS CellAlpha InterAlpha
   | OrdCAS CellAlpha CellAlpha
+  | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
   | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
@@ -115,15 +117,16 @@ data ConstraintOrdinal
 constraintOrdinal :: Constraint -> ConstraintOrdinal
 constraintOrdinal c =
   case c of
-    LowerSubtype     td a  _ -> OrdLS     td a
-    UpperSubtype     a  tu _ -> OrdUS     a  tu
-    AlphaSubtype     a1 a2 _ -> OrdAS     a1 a2
-    CellSubtype      td a  _ -> OrdCLS    td a
-    CellGetSubtype   a  tu _ -> OrdCGS    a  tu
-    CellSetSubtype   a  tu _ -> OrdCSS    a  tu
-    CellAlphaSubtype a1 a2 _ -> OrdCAS    a1 a2
-    Case             a  gs _ -> OrdCase   a gs
-    Bottom                 h -> OrdBottom h
+    LowerSubtype     td a     _ -> OrdLS     td a
+    UpperSubtype     a  tu    _ -> OrdUS     a  tu
+    AlphaSubtype     a1 a2    _ -> OrdAS     a1 a2
+    CellSubtype      td a     _ -> OrdCLS    td a
+    CellGetSubtype   a  tu    _ -> OrdCGS    a  tu
+    CellSetSubtype   a  tu    _ -> OrdCSS    a  tu
+    CellAlphaSubtype a1 a2    _ -> OrdCAS    a1 a2
+    LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
+    Case             a  gs    _ -> OrdCase   a gs
+    Bottom                    h -> OrdBottom h
 
 instance Eq Constraint where
   (==) = (==) `on` constraintOrdinal
@@ -216,6 +219,9 @@ instance MkConstraint (SomeAlpha CellType) CellSet where
 instance MkConstraint (SomeAlpha CellType) (SomeAlpha CellType) where
   (<:) = CellAlphaSubtype
 
+instance MkConstraint LazyOp (SomeAlpha InterType) where
+  (LazyOp op a1 a2) <: a3 = LazyOpSubtype op a1 a2 a3
+
 instance MkConstraint PrimitiveType (SomeAlpha InterType) where
   p <: a = TdPrim p <: a
 
@@ -249,7 +255,6 @@ instance Display TauDown where
       TdLabel n a -> char '`' <> makeDoc n <+> makeDoc a
       TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
       TdFunc polyFuncData -> makeDoc polyFuncData
-      TdLazyOp op a1 a2 -> makeDoc op <+> makeDoc a1 <+> makeDoc a2
       TdEmptyOnion -> text "(&)"
       TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
 
@@ -284,6 +289,8 @@ instance Display Constraint where
         subtype ca $ text "CellS" <> parens (makeDoc ia)
       CellAlphaSubtype a1 a2 _ ->
         subtype a1 a2
+      LazyOpSubtype op a1 a2 a3 _ ->
+        subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3
       Case a gs _ ->
         text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
         (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)

@@ -63,7 +63,6 @@ immediatelyCompatible :: TauDown
                       -> CReader Compatibility
 immediatelyCompatible tau chi =
   case (tau,chi) of
-    (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     (_,ChiAny) -> return $ CompatibleAs tau
     (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
     (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
@@ -246,14 +245,14 @@ findNonFunctionApplications cs = Set.fromList $ do
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
 -- TODO: assumes all lops are int -> int -> int
-  LowerSubtype (TdLazyOp _ a1 a2) a _ <- Set.toList cs
+  LazyOpSubtype _ a1 a2 a _ <- Set.toList cs
   TdPrim PrimInt <- ct cs a1
   TdPrim PrimInt <- ct cs a2
   return $ TdPrim PrimInt <: a .: histFIXME
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp _ a1 a2) _ _ <- Set.toList cs
+  LazyOpSubtype _ a1 a2 _ _ <- Set.toList cs
   -- Not quite like the document.
   -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
@@ -313,7 +312,6 @@ instance AlphaSubstitutable TauDown where
   substituteAlpha td = case td of
     TdLabel n a -> saHelper (TdLabel n) a
     TdOnion a1 a2 -> saHelper2 TdOnion a1 a2
-    TdLazyOp op a1 a2 -> saHelper2 (TdLazyOp op) a1 a2
     TdFunc pfd -> saHelper TdFunc pfd
     TdOnionSub a s -> saHelper (`TdOnionSub` s) a
     _ -> return td
@@ -332,6 +330,13 @@ instance AlphaSubstitutable PolyFuncData where
 
 csaHelper constr a1 a2 hist =
   constr <$> substituteAlpha a1 <*> substituteAlpha a2 <*> pure hist
+
+csaHelper3 constr a1 a2 a3 hist =
+  constr
+    <$> substituteAlpha a1
+    <*> substituteAlpha a2
+    <*> substituteAlpha a3
+    <*> pure hist
 
 -- |A typeclass for entities which can substitute their type variables.
 class AlphaSubstitutable a where
@@ -363,6 +368,8 @@ instance AlphaSubstitutable Constraint where
         csaHelper CellSetSubtype ca ia hist
       CellAlphaSubtype a1 a2 hist ->
         csaHelper CellAlphaSubtype a1 a2 hist
+      LazyOpSubtype op a1 a2 a3 hist ->
+        csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a
