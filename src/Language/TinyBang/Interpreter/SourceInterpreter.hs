@@ -17,8 +17,6 @@ import qualified Language.TinyBang.Types.Closure as C
 import qualified Language.TinyBang.Types.TypeInference as TI
 import qualified Language.TinyBang.Types.Types as T
 
-import Debug.Trace
-
 data EvalSuccessOrFailure = EvalSuccess (A.Value, IntMap A.Value) | EvalFailure I.EvalError
 
 -- |A result type for evalStringTop
