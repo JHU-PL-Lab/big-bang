@@ -43,7 +43,7 @@ makeDocForListBy :: (a -> Doc)
                  -> Doc
 makeDocForListBy toDoc f s lst = makeDocForDocList f s $ map toDoc lst
 
-makeDocForDocList :: (String -> [Doc] -> Doc) -> String -> [Doc] -> Doc 
+makeDocForDocList :: (String -> [Doc] -> Doc) -> String -> [Doc] -> Doc
 makeDocForDocList
         catF -- ^The function producing the document concatenator
         punc -- ^The punctuation to place between each document
@@ -72,6 +72,9 @@ displayMap :: (Display k, Display v) =>
 displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
              . toList
   where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
+
+instance Display Doc where
+    makeDoc = id
 
 instance Display Char where
     makeDoc = char
