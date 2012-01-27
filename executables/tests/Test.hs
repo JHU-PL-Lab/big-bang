@@ -416,8 +416,6 @@ tests = TestList $ [TPP.tests] ++
 --           false
 -- Test case projection
   , xEval "case `A 5 & `A \'a\' of {`A x -> x}" $
--- This is no longer true
---          (A.VOnion (A.VPrimInt 5) (A.VPrimChar 'a'))
           A.VPrimChar 'a'
   , xEval "case `A \'a\' & `A 5 of {`A x -> x}" $
           A.VPrimInt 5
