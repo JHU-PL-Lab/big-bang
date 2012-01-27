@@ -107,6 +107,11 @@ data Token =
     | TokOpEquals
     | TokOpLessEquals
     | TokOpGreaterEquals
+    | TokSubInteger
+    | TokSubChar
+    | TokSubUnit
+    | TokSubLabelPrefix
+    | TokSubFun
     deriving (Eq, Show)
 
 instance Display Token where
@@ -139,5 +144,10 @@ instance Display Token where
         TokOpEquals -> "op equals"
         TokOpLessEquals -> "op less than or equal"
         TokOpGreaterEquals -> "op greater than or equal"
+        TokSubInteger -> "-int"
+        TokSubChar -> "-char"
+        TokSubUnit -> "-unit"
+        TokSubLabelPrefix -> "-`"
+        TokSubFun -> "-fun"
 }
 
