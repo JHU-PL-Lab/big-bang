@@ -186,6 +186,7 @@ substituteVars constraints forallVars replAlpha =
 
 ct cs a = Set.toList $ runReader (concretizeType a) cs
 
+--TODO: case rules use explicit case on Maybe; possibly clean up.
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ do
   Case a guards _ <- Set.toList cs
