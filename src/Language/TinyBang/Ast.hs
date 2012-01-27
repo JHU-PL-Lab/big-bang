@@ -101,7 +101,7 @@ instance Display Expr where
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Func i e -> parens $
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
-    Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
+    Appl e1 e2 -> parens $ makeDoc e1 <+> makeDoc e2
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty

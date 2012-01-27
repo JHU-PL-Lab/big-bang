@@ -74,26 +74,26 @@ testPrintFunction2 = TestCase $ assertEqual
 testPrintFuncAppl1 :: Test
 testPrintFuncAppl1 = TestCase $ assertEqual
   "Test if function application is printed correctly"
-  "plus 2 2"
+  "((plus 2) 2)"
   (display (Appl (Appl (Var (ident "plus")) (PrimInt 2)) (PrimInt 2)))
 
 testPrintFuncAppl2 :: Test
 testPrintFuncAppl2 = TestCase $ assertEqual
   "Test if printing function with variables and characters displays correctly"
-  "plus x \'x\'"
+  "((plus x) \'x\')"
   (display (Appl (Appl (Var (ident "plus")) (Var (ident "x"))) (PrimChar 'x')))
 
 
 testPrintPerverse :: Test
 testPrintPerverse = TestCase $ assertEqual
-  "Test if perverse function aprettylication is printed correctly"
-  "(fun x -> x x) (fun x -> x x)"
+  "Test if perverse function application is printed correctly"
+  "((fun x -> (x x)) (fun x -> (x x)))"
   (display (Appl (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x")))) (Func (ident "x") (Appl (Var (ident "x")) (Var (ident "x"))))))
 
 testPrintFunction3 :: Test
 testPrintFunction3 = TestCase $ assertEqual
   "Test if S combinator is pretty printed correctly"
-  "(fun x -> (fun y -> (fun z -> x z y z)))"
+  "(fun x -> (fun y -> (fun z -> ((x z) (y z)))))"
   (display (Func (ident "x") (Func (ident "y") (Func (ident "z") (Appl (Appl (Var (ident "x")) (Var (ident "z"))) (Appl (Var (ident "y")) (Var (ident "z"))))))))
 
 
