@@ -35,7 +35,7 @@ import Data.Set.Utils (singIf)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, catMaybes)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad (guard, join, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
@@ -60,32 +60,24 @@ histFIXME = IDontCare
 
 immediatelyCompatible :: TauDown
                       -> TauChi
-                      -> CReader Compatibility
+                      -> CReader (Maybe TauDown)
 immediatelyCompatible tau chi =
   case (tau,chi) of
-    (_,ChiAny) -> return $ CompatibleAs tau
-    (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
-    (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
+    (_,ChiAny) -> rJust tau
+    (TdPrim p, ChiPrim p') | p == p' -> rJust tau
+    (TdLabel n _, ChiLabel n' _) | n == n' -> rJust tau
     (TdOnionSub a s, _) | not $ tSubMatch s chi -> do
       ts <- concretizeType a
-      firstCompatibilityInList $ Set.toList ts
+      rFilter $ Set.toList ts
     (TdOnion a1 a2, _) -> do
       t1s <- concretizeType a1
       t2s <- concretizeType a2
-      firstCompatibilityInList $ Set.toList t1s ++ Set.toList t2s
-    (TdFunc _, ChiFun) -> return $ CompatibleAs tau
-    _ -> return $ NotCompatible
-    where notCompatible x =
-            case x of
-              NotCompatible -> True
-              _ -> False
-          firstCompatibilityInList xs = do
-            compatibilities <- sequence [immediatelyCompatible x chi | x <- xs]
-            -- If the list is all NotCompatible, it's not compatible; otherwise,
-            -- whatever was at the first other answer goes.
-            return $
-              maybe NotCompatible id $
-              listToMaybe $ dropWhile notCompatible compatibilities
+      rFilter $ Set.toList t2s ++ Set.toList t1s
+    (TdFunc _, ChiFun) -> rJust tau
+    _ -> return $ Nothing
+    where rJust = return . Just
+          rFilter xs =
+            listToMaybe . catMaybes <$> mapM (`immediatelyCompatible` chi) xs
 
 tSubMatch :: Sigma -> TauChi -> Bool
 tSubMatch sigma chi =
@@ -205,9 +197,8 @@ closeCases cs = Set.unions $ do
   Just ret <- return $ join $ listToMaybe $ do
     Guard tauChi cs' <- guards
     case runReader (immediatelyCompatible tau tauChi) cs of
-      NotCompatible -> return $ Nothing
-      MaybeCompatible -> mzero
-      CompatibleAs tau' ->
+      Nothing -> return $ Nothing
+      Just tau' ->
         return $ Just $ Set.union cs' $ tCaseBind histFIXME tau' tauChi
   return ret
 
@@ -218,9 +209,8 @@ findCaseContradictions cs = Set.fromList $ do
   isCont <- return $ null $ do
     Guard tauChi _ <- guards
     case runReader (immediatelyCompatible tau tauChi) cs of
-      NotCompatible -> mzero
-      MaybeCompatible -> return ()
-      CompatibleAs _ -> return ()
+      Nothing -> mzero
+      Just _ -> return ()
   guard isCont
   return $ Bottom histFIXME
 
