@@ -54,6 +54,11 @@ tokens :-
     \[\>\=\]                            { constTok TokOpGreaterEquals }
     \=                                  { constTok TokEquals }
     in                                  { constTok TokIn }
+    \-int                               { constTok TokSubInteger }
+    \-char                              { constTok TokSubChar }
+    \-unit                              { constTok TokSubUnit }
+    \-`                                 { constTok TokSubLabelPrefix }
+    \-fun                               { constTok TokSubFun }
     $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
 
 {

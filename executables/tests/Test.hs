@@ -281,6 +281,18 @@ tests = TestList $ [TPP.tests] ++
   , xEval "`A 1 & `B 1" $
           ( A.VOnion (A.VLabel (labelName "A") 0) (A.VLabel (labelName "B") 1)
           , IntMap.fromList $ zip [0, 1] $ map A.VPrimInt $ repeat 1)
+  , xEval "`A 0 & -`A" $ A.VEmptyOnion
+  , xEval "(`A 0 & -`A) & `A 0" $
+          ( A.VLabel (labelName "A") $ 0
+          , IntMap.fromList $ [(0,A.VPrimInt 0)] )
+  , xEval "0 & -int" $ A.VEmptyOnion
+  , xEval "0 & -char" $ zero
+  , xEval "(() & `A 0 & `A ()) & -`A" $ A.VPrimUnit
+  , xEval "`A 0 & `A () & `A `B () & -`A & 0" $ zero
+  , xEval "(((`A 0 & `A ()) & `A `B ()) & -`A) & 0" $ zero
+  , xEval "`A 0 & `A 0" $
+          ( A.VLabel (labelName "A") $ 0
+          , IntMap.fromList $ [(0,A.VPrimInt 0)] )
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "[+] 2 2" $
           A.LazyOp A.Plus etwo etwo
@@ -541,6 +553,12 @@ tests = TestList $ [TPP.tests] ++
           , TokIdentifier "c"
           , TokCloseParen
           ]
+  , xLexs "a&-`b"
+          [ TokIdentifier "a"
+          , TokOnionCons
+          , TokSubLabelPrefix
+          , TokIdentifier "b"
+          ]
   , xLexs "`True()"
           [ TokLabelPrefix
           , TokIdentifier "True"
@@ -602,6 +620,27 @@ tests = TestList $ [TPP.tests] ++
           , TokIdentifier "x"
           , TokCloseBlock
           ]
+-- Test that onion expressions parse correctly
+  , xPars "`A 0 & `A () & `A `B () & -`A & 0"
+          (A.Onion (
+            (A.OnionSub (
+              (A.Onion (
+                (A.Onion (
+                  A.Label (labelName "A") $ A.PrimInt 0
+                ) (A.Label (labelName "A") A.PrimUnit))
+              ) (A.Label (labelName "A") (A.Label (labelName "B") A.PrimUnit)))
+            ) (A.SubLabel $ labelName "A"))
+          ) (A.PrimInt 0))
+  , xPars "(((`A 0 & `A ()) & `A `B ()) & -`A) & 0"
+          (A.Onion (
+            (A.OnionSub (
+              (A.Onion (
+                (A.Onion (
+                  A.Label (labelName "A") $ A.PrimInt 0
+                ) (A.Label (labelName "A") A.PrimUnit))
+              ) (A.Label (labelName "A") (A.Label (labelName "B") A.PrimUnit)))
+            ) (A.SubLabel $ labelName "A"))
+          ) (A.PrimInt 0))
 -- Test that a few expressions functions parse correctly
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
           (A.Func idX

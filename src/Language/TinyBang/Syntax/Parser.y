@@ -23,7 +23,7 @@ import Language.TinyBang.Types.UtilTypes
     , labelName
     , unLabelName
     , PrimitiveType(..)
-    , Sigma(..)
+    , SubTerm(..)
     )
 
 -- For debugging purposes only
@@ -73,7 +73,7 @@ import System.IO
 
 %left       in
 %right      '->'
-%right      '&'
+%left       '&'
 
 %%
 
