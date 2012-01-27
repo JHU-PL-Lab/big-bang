@@ -22,6 +22,8 @@ import Language.TinyBang.Types.UtilTypes
     , LabelName
     , labelName
     , unLabelName
+    , PrimitiveType(..)
+    , SubTerm(..)
     )
 
 -- For debugging purposes only
@@ -63,10 +65,15 @@ import System.IO
         '[=]'           { L.TokOpEquals }
         '[<=]'          { L.TokOpLessEquals }
         '[>=]'          { L.TokOpGreaterEquals }
+        '-int'          { L.TokSubInteger }
+        '-char'         { L.TokSubChar }
+        '-unit'         { L.TokSubUnit }
+        '-`'            { L.TokSubLabelPrefix }
+        '-fun'          { L.TokSubFun }
 
 %left       in
 %right      '->'
-%right      '&'
+%left       '&'
 
 %%
 
@@ -82,6 +89,8 @@ Exp     :   '\\' ident '->' Exp
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
                                     { A.Onion $1 $3 }
+        |   Exp '&' SubTerm
+                                    { A.OnionSub $1 $3 }
         |   OpExp
                                     { $1 }
         |   ApplExp
@@ -128,13 +137,19 @@ PrimitiveType
         |   char                    { T.PrimChar }
         |   unit                    { T.PrimUnit }
 
+SubTerm :   '-int'                  { SubPrim PrimInt }
+        |   '-char'                 { SubPrim PrimChar }
+        |   '-unit'                 { SubPrim PrimUnit }
+        |   '-`' ident              { SubLabel (labelName $2) }
+        |   '-fun'                  { SubFunc }
+
+OpExp   :   Op Primary Primary      { $1 $2 $3 }
+
 Op      :   '[+]'                   { \x y -> A.LazyOp A.Plus x y }
         |   '[-]'                   { \x y -> A.LazyOp A.Minus x y }
         |   '[=]'                   { \x y -> A.EagerOp A.Equal x y }
         |   '[<=]'                  { \x y -> A.EagerOp A.LessEqual x y }
         |   '[>=]'                  { \x y -> A.EagerOp A.GreaterEqual x y }
-
-OpExp   :   Op Primary Primary      { $1 $2 $3 }
 
 {
 data ParseError
