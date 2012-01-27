@@ -11,7 +11,7 @@ module Language.TinyBang.Types.Types
 , Guard(..)
 , (<:)
 , (.:)
-, Sigma(..)
+, SubTerm(..)
 , CellGet(..)
 , CellSet(..)
 , Cell(..)
@@ -26,7 +26,7 @@ import Data.Map (Map)
 import Data.Function (on)
 
 import Language.TinyBang.Types.UtilTypes
-  (LabelName, Ident, LazyOperator, Sigma(..), PrimitiveType(..))
+  (LabelName, Ident, LazyOperator, SubTerm(..), PrimitiveType(..))
 import Language.TinyBang.Render.Display
 import Language.TinyBang.Types.Alphas
 import qualified Language.TinyBang.Ast as A
@@ -52,7 +52,7 @@ data TauDown
   | TdLabel LabelName CellAlpha
   | TdOnion InterAlpha InterAlpha
   | TdFunc PolyFuncData
-  | TdOnionSub InterAlpha Sigma
+  | TdOnionSub InterAlpha SubTerm
   | TdEmptyOnion
   deriving (Eq, Ord, Show)
 

@@ -8,7 +8,7 @@ module Language.TinyBang.Ast
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
-, Sigma(..)
+, SubTerm(..)
 , exprFromValue
 , Assignable(..)
 , Evaluated(..)
@@ -26,7 +26,7 @@ import Language.TinyBang.Types.UtilTypes
   , unLabelName
   , LazyOperator(..)
   , EagerOperator(..)
-  , Sigma(..)
+  , SubTerm(..)
   )
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
@@ -40,7 +40,7 @@ data Expr
   = Var Ident
   | Label LabelName Expr
   | Onion Expr Expr
-  | OnionSub Expr Sigma
+  | OnionSub Expr SubTerm
   | Func Ident Expr
   | Appl Expr Expr
   | PrimInt Integer

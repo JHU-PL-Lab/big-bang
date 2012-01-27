@@ -10,7 +10,7 @@ module Language.TinyBang.Types.UtilTypes
 , unIdent
 , LazyOperator(..)
 , EagerOperator(..)
-, Sigma(..)
+, SubTerm(..)
 , PrimitiveType(..)
 ) where
 
@@ -77,13 +77,13 @@ instance Display PrimitiveType where
       PrimUnit -> text "unit"
 
 -- |Data type describing type patterns for removing values from onions.
-data Sigma
+data SubTerm
   = SubPrim PrimitiveType
   | SubLabel LabelName
   | SubFunc
   deriving (Eq, Ord, Show)
 
-instance Display Sigma where
+instance Display SubTerm where
   makeDoc a = text "-" <> case a of
     SubPrim p -> makeDoc p
     SubLabel n -> makeDoc n

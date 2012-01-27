@@ -32,7 +32,7 @@ import Language.TinyBang.Ast
   , Assignable(..)
   , LazyOperator(..)
   , EagerOperator(..)
-  , Sigma(..)
+  , SubTerm(..)
   , CellId
   , exprFromValue
   )

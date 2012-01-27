@@ -14,7 +14,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , PolyFuncData(..)
                                      , Guard(..)
                                      , PrimitiveType(..)
-                                     , Sigma(..)
+                                     , SubTerm(..)
                                      , ForallVars
                                      , Cell(..)
                                      )
@@ -77,9 +77,9 @@ immediatelyCompatible tau chi =
           rFilter xs =
             listToMaybe . catMaybes <$> mapM (`immediatelyCompatible` chi) xs
 
-tSubMatch :: Sigma -> TauChi -> Bool
-tSubMatch sigma chi =
-  case (chi, sigma) of
+tSubMatch :: SubTerm -> TauChi -> Bool
+tSubMatch subTerm chi =
+  case (chi, subTerm) of
     (ChiPrim p, SubPrim p') -> p == p'
     (ChiLabel n _, SubLabel n') -> n == n'
     (ChiFun, SubFunc) -> True
