@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
@@ -11,30 +11,32 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , TauUp(..)
                                      , TauChi(..)
                                      , ConstraintHistory(..)
-                                     , Alpha(..)
-                                     , CallSite(..)
-                                     , CallSites(..)
-                                     , callSites
                                      , PolyFuncData(..)
                                      , Guard(..)
                                      , PrimitiveType(..)
                                      , Sigma(..)
+                                     , ForallVars
+                                     , Cell(..)
                                      )
-import Language.TinyBang.Types.UtilTypes (LabelName)
+
+import Language.TinyBang.Types.Alphas ( InterAlpha
+                                      , CellAlpha
+                                      , SomeAlpha
+                                      , InterType
+                                      , CellType
+                                      , AlphaType
+                                      , AnyAlpha
+                                      , AlphaSubstitutionEnv
+                                      , substituteAlphaHelper
+                                      )
 
 import Data.Function.Utils (leastFixedPoint)
-import Data.Maybe.Utils (justIf)
 import Data.Set.Utils (singIf)
 
-import Control.Exception (assert)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (catMaybes, fromJust, mapMaybe, listToMaybe, isJust)
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Monoid (mappend, mempty)
-import Control.Monad.Reader (runReader, ask, local, reader, Reader, MonadReader)
-import Control.Monad.Writer (tell, WriterT, execWriterT)
+import Data.Maybe (listToMaybe)
+import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad (guard, join, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
@@ -61,12 +63,11 @@ immediatelyCompatible :: TauDown
                       -> CReader Compatibility
 immediatelyCompatible tau chi =
   case (tau,chi) of
-    (TdCell _, _) -> return $ MaybeCompatible
     (TdLazyOp _ _ _, _) -> return $ MaybeCompatible
     (_,ChiAny) -> return $ CompatibleAs tau
     (TdPrim p, ChiPrim p') | p == p' -> return $ CompatibleAs tau
     (TdLabel n _, ChiLabel n' _) | n == n' -> return $ CompatibleAs tau
-    (TdOnionSub a s, chi) | not $ tSubMatch s chi -> do
+    (TdOnionSub a s, _) | not $ tSubMatch s chi -> do
       ts <- concretizeType a
       firstCompatibilityInList $ Set.toList ts
     (TdOnion a1 a2, _) -> do
@@ -87,7 +88,7 @@ immediatelyCompatible tau chi =
               maybe NotCompatible id $
               listToMaybe $ dropWhile notCompatible compatibilities
 
-
+tSubMatch :: Sigma -> TauChi -> Bool
 tSubMatch sigma chi =
   case (chi, sigma) of
     (ChiPrim p, SubPrim p') -> p == p'
@@ -112,65 +113,94 @@ tCaseBind history tau chi =
 --TODO: Consider adding chains to history and handling them here
 --TODO: Docstring this function
 
-concretizeType :: Alpha -> CReader (Set TauDown)
-concretizeType a = do
-  clbs <- concreteLowerBounds
-  ilbs <- intermediateLowerBounds
-  rec <- Set.unions <$> mapM concretizeType ilbs
-  return $ Set.union (Set.fromList clbs) rec
-  where concreteLowerBounds :: CReader [TauDown]
-        concreteLowerBounds = do
-          constraints <- ask
-          return $ do
-            LowerSubtype td a' _ <- Set.toAscList constraints
-            guard $ a == a'
-            return td
-        intermediateLowerBounds :: CReader [Alpha]
-        intermediateLowerBounds = do
-          constraints <- ask
-          return $ do
-            AlphaSubtype ret a' _ <- Set.toAscList constraints
-            guard $ a == a'
-            return ret
+-- This is particularly similar to an abstract class in the java sense
+class (Eq a, Ord (LowerBound a)) => LowerBounded a where
+  type LowerBound a
 
--- |This function transforms a specified alpha into a call site list.  The
---  resulting call site list is in the reverse order form dictated by the
---  CallSites structure; that is, the list [{'3},{'2},{'1}] represents the type
---  variable with the exponent expression '1^('2^'3).  The resulting call site
---  list is suitable for use in type variable substitution for polymorphic
---  functions.
-makeCallSites :: Alpha -> CallSites
-makeCallSites alpha@(Alpha alphaId siteList) =
-    callSites $
-    case rest of
-      [] -> -- In this case, this call site is new to the list
-        (CallSite $ Set.singleton alphaEntry) : map CallSite siteList'
-      (_,cyc):tl -> -- In this case, we found a cycle
-        (CallSite cyc):(map (CallSite . fst) tl)
-    where unCallSite (CallSite a) = a
-          siteList' = map unCallSite $ unCallSites siteList
-          alphaEntry = Alpha alphaId $ callSites []
-          -- A list of pairs, the snd of which is the union of all the fsts so
-          -- far.
-          totals :: [(Set Alpha, Set Alpha)]
-          totals = zip siteList' $ tail $ scanl Set.union Set.empty siteList'
-          rest = dropWhile (not . Set.member alphaEntry . snd) totals
+  concretizeType :: a -> CReader (Set (LowerBound a))
+  concretizeType a = do
+    clbs <- concreteLowerBounds a
+    ilbs <- intermediateLowerBounds a
+    rec <- Set.unions <$> mapM concretizeType ilbs
+    return $ Set.union (Set.fromList clbs) rec
+
+  concreteLowerBounds :: a -> CReader [LowerBound a]
+  concreteLowerBounds a = do
+    cs <- ask
+    return $ do
+      (lb, a') <- findCLowerBounds cs
+      guard $ a == a'
+      return lb
+
+  intermediateLowerBounds :: a -> CReader [a]
+  intermediateLowerBounds a = do
+    cs <- ask
+    return $ do
+      (ret, a') <- findILowerBounds cs
+      guard $ a == a'
+      return ret
+
+  findCLowerBounds :: Constraints -> [(LowerBound a, a)]
+  findILowerBounds :: Constraints -> [(a, a)]
+
+instance LowerBounded (SomeAlpha InterType) where
+  type LowerBound (SomeAlpha InterType)= TauDown
+
+  findCLowerBounds cs = do
+    LowerSubtype td a' _ <- Set.toAscList cs
+    return (td, a')
+
+  findILowerBounds cs = do
+    AlphaSubtype ret a' _ <- Set.toAscList cs
+    return (ret, a')
+
+instance LowerBounded (SomeAlpha CellType) where
+  type LowerBound (SomeAlpha CellType) = InterAlpha
+
+  findCLowerBounds cs = do
+    CellSubtype td a' _ <- Set.toAscList cs
+    return (td, a')
+
+  findILowerBounds cs = do
+    CellAlphaSubtype ret a' _ <- Set.toAscList cs
+    return (ret, a')
+
+-- concretizeInterAlpha :: InterAlpha -> CReader (Set TauDown)
+-- concretizeInterAlpha a = do
+--   clbs <- concreteLowerBounds
+--   ilbs <- intermediateLowerBounds
+--   rec <- Set.unions <$> mapM concretizeInterAlpha ilbs
+--   return $ Set.union (Set.fromList clbs) rec
+--   where concreteLowerBounds :: CReader [TauDown]
+--         concreteLowerBounds = do
+--           constraints <- ask
+--           return $ do
+--             LowerSubtype td a' _ <- Set.toAscList constraints
+--             guard $ a == a'
+--             return td
+--         intermediateLowerBounds :: CReader [InterAlpha]
+--         intermediateLowerBounds = do
+--           constraints <- ask
+--           return $ do
+--             AlphaSubtype ret a' _ <- Set.toAscList constraints
+--             guard $ a == a'
+--             return ret
 
 -- |A function which performs substitution on a set of constraints.  All
 --  variables in the alpha set are replaced with corresponding versions that
 --  have the specified alpha in their call sites list.
-substituteVars :: Constraints -> Set Alpha -> Alpha -> Constraints
+substituteVars :: Constraints -> ForallVars -> CellAlpha -> Constraints
 substituteVars constraints forallVars replAlpha =
   runReader
     (substituteAlpha constraints)
     (replAlpha, forallVars)
 
+ct cs a = Set.toList $ runReader (concretizeType a) cs
+
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ do
-  -- Using the list monad
-  -- failure to match similar to "continue" statment
-  Case alpha guards hist <- Set.toList cs
-  tau <- f alpha
+  Case a guards _ <- Set.toList cs
+  tau <- ct cs a
   -- Handle contradictions elsewhere, both to improve readability and to be more
   -- like the document.
   Just ret <- return $ join $ listToMaybe $ do
@@ -181,77 +211,70 @@ closeCases cs = Set.unions $ do
       CompatibleAs tau' ->
         return $ Just $ Set.union cs' $ tCaseBind histFIXME tau' tauChi
   return ret
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findCaseContradictions :: Constraints -> Constraints
 findCaseContradictions cs = Set.fromList $ do
-  Case alpha guards _ <- Set.toList cs
-  tau <- f alpha
+  Case a guards _ <- Set.toList cs
+  tau <- ct cs a
   isCont <- return $ null $ do
-    Guard tauChi cs' <- guards
+    Guard tauChi _ <- guards
     case runReader (immediatelyCompatible tau tauChi) cs of
       NotCompatible -> mzero
       MaybeCompatible -> return ()
-      CompatibleAs tau' -> return ()
+      CompatibleAs _ -> return ()
   guard isCont
   return $ Bottom histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do
   UpperSubtype a (TuFunc ai' ao') _ <- Set.toList cs
-  TdFunc (PolyFuncData foralls ai ao cs') <- f a
-  t2 <- f ai'
+  TdFunc (PolyFuncData foralls ai ao cs') <- ct cs a
+  ca3 <- ct cs ai'
   let cs'' = Set.union cs' $
-               Set.fromList [ t2 <: ai .: histFIXME
+               Set.fromList [ Cell ca3 <: ai .: histFIXME
                             , ao <: ao' .: histFIXME]
   return $ substituteVars cs'' foralls ai'
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do
-  UpperSubtype a (TuFunc ai' ao') _ <- Set.toList cs
-  tau <- f a
+  UpperSubtype a (TuFunc {}) _ <- Set.toList cs
+  tau <- ct cs a
   case tau of
-    TdFunc (PolyFuncData foralls ai ao cs') -> mzero
+    TdFunc (PolyFuncData {}) -> mzero
     _ -> return $ Bottom histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
-  TdPrim PrimInt <- f a1
-  TdPrim PrimInt <- f a2
+-- TODO: assumes all lops are int -> int -> int
+  LowerSubtype (TdLazyOp _ a1 a2) a _ <- Set.toList cs
+  TdPrim PrimInt <- ct cs a1
+  TdPrim PrimInt <- ct cs a2
   return $ TdPrim PrimInt <: a .: histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  LowerSubtype (TdLazyOp op a1 a2) a _ <- Set.toList cs
+  LowerSubtype (TdLazyOp _ a1 a2) _ _ <- Set.toList cs
   -- Not quite like the document.
   -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
-  tau <- f a1 ++ f a2
+  tau <- ct cs a1 ++ ct cs a2
   case tau of
     TdPrim PrimInt -> mzero
     _ -> return $ Bottom histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
-  UpperSubtype a (TuCellGet a1) _ <- Set.toList cs
-  TdCell a2 <- f a
-  t2 <- f a2
+  CellGetSubtype a a1 _ <- Set.toList cs
+  a2 <- ct cs a
+  t2 <- ct cs a2
   return $ t2 <: a1 .: histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 propogateCellsBackward :: Constraints -> Constraints
 propogateCellsBackward cs = Set.fromList $ do
-  UpperSubtype a (TuCellSet a1) _ <- Set.toList cs
-  TdCell a2 <- f a
-  t2 <- f a1
+  CellSetSubtype a a1 _ <- Set.toList cs
+  a2 <- ct cs a
+  t2 <- ct cs a1
   return $ t2 <: a2 .: histFIXME
-  where f a = Set.toList $ runReader (concretizeType a) cs
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
@@ -279,37 +302,12 @@ closeAll cs =
 calculateClosure :: Constraints -> Constraints
 calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
 
-type AlphaSubstitutionEnv = (Alpha, Set Alpha)
-
 saHelper constr a = constr <$> substituteAlpha a
 saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
-
--- |A typeclass for entities which can substitute their type variables.
-class AlphaSubstitutable a where
-  -- |The alpha in the reader environment is added to superscripts.
-  --  The set in the reader environment contains alphas to ignore.
-  substituteAlpha :: a -> Reader AlphaSubstitutionEnv a
-
-instance AlphaSubstitutable Alpha where
-  substituteAlpha alpha@(Alpha alphaId callSites) = do
-    (newAlpha, forallVars) <- ask
-    let newCallSites = makeCallSites newAlpha
-    if not $ Set.member alpha forallVars
-      then return alpha
-      -- The variable we are substituting should never have marked
-      -- call sites.  The only places where polymorphic function
-      -- constraints (forall constraints) are built are by the
-      -- inference rules themselves (which have no notion of call
-      -- sites) and the type replacement function (which does not
-      -- replace forall-ed elements within a forall constraint).
-      else assert ((length . unCallSites) callSites == 0) $
-         return $ Alpha alphaId newCallSites
 
 instance AlphaSubstitutable TauUp where
   substituteAlpha tu = case tu of
     TuFunc a1 a2 -> saHelper2 TuFunc a1 a2
-    TuCellGet a -> saHelper TuCellGet a
-    TuCellSet a -> saHelper TuCellSet a
 
 instance AlphaSubstitutable TauDown where
   substituteAlpha td = case td of
@@ -318,7 +316,6 @@ instance AlphaSubstitutable TauDown where
     TdLazyOp op a1 a2 -> saHelper2 (TdLazyOp op) a1 a2
     TdFunc pfd -> saHelper TdFunc pfd
     TdOnionSub a s -> saHelper (`TdOnionSub` s) a
-    TdCell a -> saHelper TdCell a
     _ -> return td
 
 instance AlphaSubstitutable PolyFuncData where
@@ -333,6 +330,21 @@ instance AlphaSubstitutable PolyFuncData where
             substituteAlpha' =
               local (second $ flip Set.difference alphas) . substituteAlpha
 
+csaHelper constr a1 a2 hist =
+  constr <$> substituteAlpha a1 <*> substituteAlpha a2 <*> pure hist
+
+-- |A typeclass for entities which can substitute their type variables.
+class AlphaSubstitutable a where
+  -- |The alpha in the reader environment is added to superscripts.
+  --  The set in the reader environment contains alphas to ignore.
+  substituteAlpha :: a -> Reader AlphaSubstitutionEnv a
+
+instance (AlphaType a) => AlphaSubstitutable (SomeAlpha a) where
+  substituteAlpha = substituteAlphaHelper
+
+instance AlphaSubstitutable AnyAlpha where
+  substituteAlpha = substituteAlphaHelper
+
 instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
       LowerSubtype td a hist -> do
@@ -342,10 +354,15 @@ instance AlphaSubstitutable Constraint where
         a' <- substituteAlpha a
         return $ UpperSubtype a' tu hist
       AlphaSubtype a1 a2 hist ->
-        AlphaSubtype
-          <$> substituteAlpha a1
-          <*> substituteAlpha a2
-          <*> pure hist
+        csaHelper AlphaSubtype a1 a2 hist
+      CellSubtype ia ca hist ->
+        csaHelper CellSubtype ia ca hist
+      CellGetSubtype ca ia hist ->
+        csaHelper CellGetSubtype ca ia hist
+      CellSetSubtype ca ia hist ->
+        csaHelper CellSetSubtype ca ia hist
+      CellAlphaSubtype a1 a2 hist ->
+        csaHelper CellAlphaSubtype a1 a2 hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a

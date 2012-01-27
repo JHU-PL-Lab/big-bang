@@ -25,15 +25,22 @@ import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.Types ( (<:)
                                      , (.:)
                                      , Constraint(..)
-                                     , TauDown(..)
-                                     , TauUp(..)
-                                     , Alpha(..)
                                      , Constraints
+                                     , TauDown(..)
+                                     , CellAlpha
+                                     , InterAlpha
+                                     , AnyAlpha
+                                     , SomeAlpha
+                                     , AlphaType
+                                     , Alpha(..)
+                                     , CellGet(..)
+                                     , CellSet(..)
+                                     , Cell(..)
                                      )
 import Language.TinyBang.Types.UtilTypes
 import Language.TinyBang.Interpreter.Interpreter (applyBuiltins)
 
-type Gamma = Map Ident Alpha
+type Gamma = Map Ident CellAlpha
 type NextFreshVar = T.AlphaId
 
 histFIXME :: T.ConstraintHistory
@@ -68,33 +75,33 @@ runTIM :: TIM a -> Gamma -> NextFreshVar
 runTIM t r s = evalRWS (runErrorT t) r s
 
 inferTypeTop :: A.Expr
-             -> ( Either TypeInferenceError Alpha
+             -> ( Either TypeInferenceError InterAlpha
                 , Constraints
                 )
 inferTypeTop expr =
   runTIM (inferType $ applyBuiltins expr) Map.empty 0
 
 -- |Performs type inference for a given Big Bang expression.
-inferType :: A.Expr -> TIM Alpha
+inferType :: A.Expr -> TIM InterAlpha
 inferType expr =
   case expr of
     A.Var x -> do
       a2 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- freshVar
-      tell1 $ a2 <: TuCellGet a1 .: histFIXME
+      tell1 $ a2 <: CellGet a1 .: histFIXME
       return a1
     A.Label n e -> do
       a1 <- freshVar
       a2 <- inferType e
       a3 <- freshVar
-      tell1 $ TdCell a2 <: a3 .: histFIXME
+      tell1 $ Cell a2 <: a3 .: histFIXME
       tell1 $ TdLabel n a3 <: a1 .: histFIXME
       return a1
     A.Onion e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ T.TdOnion a1 a2 <: a0 .: histFIXME
+      tell1 $ TdOnion a1 a2 <: a0 .: histFIXME
       return a0
     A.Func i e -> do
       a1 <- freshVar
@@ -104,8 +111,8 @@ inferType expr =
       vars <-
         return $ Set.difference
           ( Set.union (extractConstraintTypeVars constraints)
-          $ Set.fromList [a2, a3])
-          ( Set.fromList $ Map.elems gamma)
+          $ Set.fromList [alphaWeaken a2, alphaWeaken a3])
+          ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
       let funcType = T.TdFunc
             (T.PolyFuncData vars a2 a3 constraints)
       tell1 $ funcType <: a1 .: T.Inferred expr gamma
@@ -117,7 +124,7 @@ inferType expr =
       a2 <- inferType e2
       gamma <- ask
       tell1 $ a1 <: T.TuFunc a1' a2' .: T.Inferred expr gamma
-      tell1 $ TdCell a2 <: a1' .: T.Inferred expr gamma
+      tell1 $ Cell a2 <: a1' .: T.Inferred expr gamma
       return a2'
     A.PrimInt _ -> do
       a <- freshVar
@@ -138,21 +145,24 @@ inferType expr =
 
       bundle <- sequence $ do
         A.Branch binder chi branchExpr <- branches
-        return $ (\(x,y) -> (x,y,branchExpr)) <$> tDigestBranch a2' binder chi
+        return $
+          (\(x,y,z) -> (x,y,z,branchExpr)) <$> tDigestBranch a2' binder chi
 
       guards <- sequence $ do
-        (branchGamma, tauChi, branchExpr) <- bundle
+        (branchGamma, newConstraints, tauChi, branchExpr) <- bundle
         let mAlphaConstraints = inferForBranch branchGamma branchExpr
-            buildGuard (alpha, constraints) =
+            buildGuard (an, constraints) =
               T.Guard tauChi $
-                Set.insert (alpha <: a1' .: histFIXME) constraints
+                Set.insert (an <: a1' .: histFIXME) $
+                Set.union constraints newConstraints
         return $ buildGuard <$> mAlphaConstraints
 
-      tell1 $ (\bs -> T.Case a2' bs $ T.Inferred e gamma) guards
+      tell1 $ (\bs -> Case a2' bs $ T.Inferred e gamma) guards
       return a1'
       where tDigestBranch a1 binder chi = do
               a2 <- freshVar
-              case chi of
+              (g', c) <- newGammaAndConstraints
+              (\(x, y) -> (x, c, y)) <$> case chi of
                 A.ChiAny ->
                   return (g', T.ChiAny)
                 A.ChiPrim p ->
@@ -163,22 +173,27 @@ inferType expr =
                   throwError $ DoubleBound x
                 A.ChiFun ->
                   return (g', T.ChiFun)
-              where g' =
+              where newGammaAndConstraints =
                       case binder of
-                        Just x -> Map.singleton x a1
-                        Nothing -> Map.empty
+                        Just x -> do
+                          a3 <- freshVar
+                          return
+                            ( Map.singleton x a3
+                            , Set.singleton $ Cell a1 <: a3 .: histFIXME
+                            )
+                        Nothing -> return mempty
             inferForBranch branchGamma branchExpr =
               capture (Map.union branchGamma) branchExpr
     A.OnionSub e s -> do
       a1 <- freshVar
       a2 <- inferType e
-      tell1 $ T.TdOnionSub a2 s <: a1 .: histFIXME
+      tell1 $ TdOnionSub a2 s <: a1 .: histFIXME
       return a1
     A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ T.TdLazyOp op a1 a2 <: a0 .: histFIXME
+      tell1 $ TdLazyOp op a1 a2 <: a0 .: histFIXME
       return a0
     A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet" op e1 e2
         -- do
@@ -200,7 +215,7 @@ inferType expr =
       a1 <- inferType e1
       a3 <- freshVar
       a2 <- local (Map.insert x a3) $ inferType e2
-      tell1 $ TdCell a1 <: a3 .: histFIXME
+      tell1 $ Cell a1 <: a3 .: histFIXME
       return a2
     A.Assign a e1 e2 -> do
       x <- return $! case a of
@@ -209,7 +224,7 @@ inferType expr =
       a3 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ a3 <: TuCellSet a1 .: histFIXME
+      tell1 $ a3 <: CellSet a1 .: histFIXME
       return a2
     A.ExprCell _ -> error "Implementation error; infer called on ExprCell"
     where tell1 :: T.Constraint -> TIM ()
@@ -217,7 +232,7 @@ inferType expr =
           -- |Infers the type of the subexpression in an environment modified by
           --  @f@, and prevents constraints from that inference from bubbling
           --  up.
-          capture :: (Gamma -> Gamma) -> A.Expr -> TIM (Alpha, Constraints)
+          capture :: (Gamma -> Gamma) -> A.Expr -> TIM (InterAlpha, Constraints)
           capture f e = censor (const mempty) $ listen $ local f $ inferType e
           -- naryOp expr' gamma es tIn tOut = do
           --   ts <- mapM inferType es
@@ -229,20 +244,21 @@ inferType expr =
           --   return alpha
 
 -- |Extracts all type variables from the provided constraints.
-extractConstraintTypeVars :: T.Constraints -> Set T.Alpha
+extractConstraintTypeVars :: T.Constraints -> Set AnyAlpha
 extractConstraintTypeVars c =
     Foldable.foldl foldConstraints Set.empty c
     where foldConstraints set el =
             case el of
-                LowerSubtype _ a _ ->
-                  Set.insert a set
-                UpperSubtype a _ _ ->
-                  Set.insert a set
-                AlphaSubtype a1 a2 _ ->
-                  Set.union set $ Set.fromList [a1, a2]
-                T.Case alpha guards _ ->
-                    let set' = Set.insert alpha set in
-                    foldl foldGuards set' guards
+                LowerSubtype _ a _ -> insertWeak set a
+                UpperSubtype a _ _ -> insertWeak set a
+                AlphaSubtype a1 a2 _ -> insertManyWeak set [a1, a2]
+                CellSubtype _ a _ -> insertWeak set a
+                CellGetSubtype a _ _ -> insertWeak set a
+                CellSetSubtype a _ _ -> insertWeak set a
+                CellAlphaSubtype a1 a2 _ -> insertManyWeak set [a1, a2]
+                T.Case a gs _ ->
+                    let set' = insertWeak set a in
+                    foldl foldGuards set' gs
                 T.Bottom _ -> set
           foldGuards set (T.Guard tauChi constraints) =
             Set.union set $ addChiAlpha tauChi $
@@ -250,13 +266,16 @@ extractConstraintTypeVars c =
           addChiAlpha tauChi set =
             case tauChi of
                 T.ChiPrim _ -> set
-                T.ChiLabel _ a -> Set.insert a set
+                T.ChiLabel _ a -> insertWeak set a
                 T.ChiFun -> set
                 T.ChiAny -> set
+          insertWeak set a = Set.insert (alphaWeaken a) set
+          insertManyWeak set as =
+            Set.union set $ Set.fromList $ map alphaWeaken as
 
 -- |Creates a fresh type variable for the type inference engine.
-freshVar :: TIM T.Alpha
+freshVar :: (AlphaType a) => TIM (SomeAlpha a)
 freshVar = do
     idx <- get
     put $ idx + 1
-    return $ T.Alpha idx $ T.callSites []
+    return $ T.makeNewAlpha idx

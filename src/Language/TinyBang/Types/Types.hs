@@ -1,12 +1,6 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module Language.TinyBang.Types.Types
-( Alpha(..)
-, CallSite(..)
-, CallSites
-, AlphaId
-, callSites
-, unCallSites
-, TauUp(..)
+( TauUp(..)
 , TauDown(..)
 , PolyFuncData(..)
 , PrimitiveType(..)
@@ -18,6 +12,11 @@ module Language.TinyBang.Types.Types
 , (<:)
 , (.:)
 , Sigma(..)
+, CellGet(..)
+, CellSet(..)
+, Cell(..)
+, ForallVars
+, module Language.TinyBang.Types.Alphas
 ) where
 
 import Data.Set (Set)
@@ -25,8 +24,10 @@ import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Function (on)
 
-import Language.TinyBang.Types.UtilTypes (LabelName, Ident, LazyOperator, Sigma(..), PrimitiveType(..))
+import Language.TinyBang.Types.UtilTypes
+  (LabelName, Ident, LazyOperator, Sigma(..), PrimitiveType(..))
 import Language.TinyBang.Render.Display
+import Language.TinyBang.Types.Alphas
 import qualified Language.TinyBang.Ast as A
 
 -------------------------------------------------------------------------------
@@ -35,55 +36,31 @@ import qualified Language.TinyBang.Ast as A
 --
 -- These data types are used to represent Little Bang's type grammar.
 
--- |The thing we use to identify and distinguish alphas
-type AlphaId = Integer
-
--- |The datatype used to represent type variables.
-data Alpha = Alpha AlphaId CallSites
-  deriving (Eq, Ord, Show)
-  -- TODO: include data representing debugging hints etc. and rewrite Eq & Ord
-
--- |A data structure representing a single call site.
-newtype CallSite = CallSite (Set Alpha)
-  deriving (Eq, Ord, Show)
-
--- |A data structure representing function call sites.  The call site of a
---  function application is defined by the type parameter used as the domain
---  of the function type upper bounding the function in that application.  The
---  list of call sites is stored in reverse order; that is, the variable
---  '1^['2,'3] represents a1^{a3^{a2}}.  In the event of recursion, a set of
---  multiple call sites is grouped together.  For instance, the variable
---  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
---  that, in this case, the use of single variables in the call site list is a
---  notational sugar for singleton sets.
-newtype CallSites = CallSites { unCallSites :: [CallSite] }
-  deriving (Eq, Ord, Show)
-callSites :: [CallSite] -> CallSites
-callSites lst = CallSites lst
+newtype CellGet = CellGet InterAlpha
+newtype CellSet = CellSet InterAlpha
+newtype Cell    = Cell    InterAlpha
 
 -- |The datatype used to represent upper bound types.
-data TauUp
-  = TuFunc Alpha Alpha
-  | TuCellGet Alpha
-  | TuCellSet Alpha
+data TauUp = TuFunc CellAlpha InterAlpha
   deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent lower bound types.
 data TauDown
   = TdPrim PrimitiveType
-  | TdLabel LabelName Alpha
-  | TdOnion Alpha Alpha
-  | TdLazyOp LazyOperator Alpha Alpha
+  | TdLabel LabelName CellAlpha
+  | TdOnion InterAlpha InterAlpha
+  -- TODO: remove lops
+  | TdLazyOp LazyOperator InterAlpha InterAlpha
   | TdFunc PolyFuncData
-  | TdOnionSub Alpha Sigma
+  | TdOnionSub InterAlpha Sigma
   | TdEmptyOnion
-  | TdCell Alpha
   deriving (Eq, Ord, Show)
 
 
+type ForallVars = Set AnyAlpha
 -- |A wrapper type containing the polymorphic function type information.
 data PolyFuncData =
-  PolyFuncData (Set Alpha) Alpha Alpha Constraints -- TODO: alias Set AnyAlpha?
+  PolyFuncData ForallVars CellAlpha InterAlpha Constraints
   deriving (Eq, Ord, Show)
 
 -------------------------------------------------------------------------------
@@ -95,7 +72,7 @@ data PolyFuncData =
 -- |A type representing the patterns produced by guards.
 data TauChi
   = ChiPrim PrimitiveType
-  | ChiLabel LabelName Alpha
+  | ChiLabel LabelName CellAlpha
   | ChiFun
   | ChiAny
   deriving (Eq, Ord, Show)
@@ -110,19 +87,27 @@ data TauChi
 type Constraints = Set Constraint
 -- |A type describing constraints in Little Bang.
 data Constraint
-  = LowerSubtype TauDown Alpha ConstraintHistory
-  | UpperSubtype Alpha TauUp ConstraintHistory
-  | AlphaSubtype Alpha Alpha ConstraintHistory
-  | Case Alpha [Guard] ConstraintHistory
+  = LowerSubtype TauDown InterAlpha ConstraintHistory
+  | UpperSubtype InterAlpha TauUp ConstraintHistory
+  | AlphaSubtype InterAlpha InterAlpha ConstraintHistory
+  | CellSubtype InterAlpha CellAlpha ConstraintHistory
+  | CellGetSubtype CellAlpha InterAlpha ConstraintHistory
+  | CellSetSubtype CellAlpha InterAlpha ConstraintHistory
+  | CellAlphaSubtype CellAlpha CellAlpha ConstraintHistory
+  | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
 
 -- |A datatype used to simplify writing Ord and Eq instances for Constraint.
 data ConstraintOrdinal
-  = OrdLS TauDown Alpha
-  | OrdUS Alpha TauUp
-  | OrdAS Alpha Alpha
-  | OrdCase Alpha [Guard]
+  = OrdLS TauDown InterAlpha
+  | OrdUS InterAlpha TauUp
+  | OrdAS InterAlpha InterAlpha
+  | OrdCLS InterAlpha CellAlpha
+  | OrdCGS CellAlpha InterAlpha
+  | OrdCSS CellAlpha InterAlpha
+  | OrdCAS CellAlpha CellAlpha
+  | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
 
@@ -130,11 +115,15 @@ data ConstraintOrdinal
 constraintOrdinal :: Constraint -> ConstraintOrdinal
 constraintOrdinal c =
   case c of
-    LowerSubtype td a  _ -> OrdLS     td a
-    UpperSubtype a  tu _ -> OrdUS     a  tu
-    AlphaSubtype a1 a2 _ -> OrdAS     a1 a2
-    Case         a  gs _ -> OrdCase   a gs
-    Bottom             h -> OrdBottom h
+    LowerSubtype     td a  _ -> OrdLS     td a
+    UpperSubtype     a  tu _ -> OrdUS     a  tu
+    AlphaSubtype     a1 a2 _ -> OrdAS     a1 a2
+    CellSubtype      td a  _ -> OrdCLS    td a
+    CellGetSubtype   a  tu _ -> OrdCGS    a  tu
+    CellSetSubtype   a  tu _ -> OrdCSS    a  tu
+    CellAlphaSubtype a1 a2 _ -> OrdCAS    a1 a2
+    Case             a  gs _ -> OrdCase   a gs
+    Bottom                 h -> OrdBottom h
 
 instance Eq Constraint where
   (==) = (==) `on` constraintOrdinal
@@ -147,7 +136,7 @@ data ConstraintHistory
   -- | Takes an AST nod and the environment local to that node
   = Inferred
       A.Expr
-      (Map Ident Alpha)
+      (Map Ident CellAlpha)
   | IDontCare
   -- | The first argument is a td <: alpha.
   --   The second argument is an alpha <: tu.
@@ -205,16 +194,29 @@ data Guard = Guard TauChi Constraints
 class MkConstraint a b where
   (<:) :: a -> b -> ConstraintHistory -> Constraint
 
-instance MkConstraint TauDown Alpha where
+-- Not using the type synonyms to avoid weirdness with FlexibleInstances.
+instance MkConstraint TauDown (SomeAlpha InterType) where
   (<:) = LowerSubtype
 
-instance MkConstraint Alpha TauUp where
+instance MkConstraint (SomeAlpha InterType) TauUp where
   (<:) = UpperSubtype
 
-instance MkConstraint Alpha Alpha where
+instance MkConstraint (SomeAlpha InterType) (SomeAlpha InterType) where
   (<:) = AlphaSubtype
 
-instance MkConstraint PrimitiveType Alpha where
+instance MkConstraint Cell (SomeAlpha CellType) where
+  (Cell ia) <: ca = CellSubtype ia ca
+
+instance MkConstraint (SomeAlpha CellType) CellGet where
+  ca <: (CellGet ia) = CellGetSubtype ca ia
+
+instance MkConstraint (SomeAlpha CellType) CellSet where
+  ca <: (CellSet ia) = CellSetSubtype ca ia
+
+instance MkConstraint (SomeAlpha CellType) (SomeAlpha CellType) where
+  (<:) = CellAlphaSubtype
+
+instance MkConstraint PrimitiveType (SomeAlpha InterType) where
   p <: a = TdPrim p <: a
 
 -- -- |An infix function for creating subtype contraints (for convenience).
@@ -235,34 +237,10 @@ infix 1 .:
 --
 -- Implementations of display routines for type structures.
 
-instance Display Alpha where
-  makeDoc (Alpha i cSites) =
-      char '\'' <> makeDoc i <> (
-          let doc = makeDoc cSites in
-          if not $ isEmpty doc
-              then char '^' <> doc
-              else empty)
-
-instance Display CallSites where
-  makeDoc sites =
-      let siteList = reverse $ unCallSites sites in
-      if length siteList == 0
-          then empty
-          else brackets $ hcat $ punctuate (text ", ") $ map sDoc siteList
-    where sDoc (CallSite set) =
-              if Set.size set == 1
-                  then makeDoc $ Set.findMin set
-                  else makeDoc set
-
-instance Display CallSite where
-  makeDoc (CallSite set) = makeDoc set
-
 instance Display TauUp where
   makeDoc tau =
     case tau of
       TuFunc au a -> makeDoc au <+> text "->" <+> makeDoc a
-      TuCellGet a -> text "CellG" <> parens (makeDoc a)
-      TuCellSet a -> text "CellS" <> parens (makeDoc a)
 
 instance Display TauDown where
   makeDoc tau =
@@ -274,7 +252,6 @@ instance Display TauDown where
       TdLazyOp op a1 a2 -> makeDoc op <+> makeDoc a1 <+> makeDoc a2
       TdEmptyOnion -> text "(&)"
       TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
-      TdCell a -> text "Cell" <> parens (makeDoc a)
 
 instance Display PolyFuncData where
   makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
@@ -299,11 +276,19 @@ instance Display Constraint where
       LowerSubtype a b _ -> subtype a b
       UpperSubtype a b _ -> subtype a b
       AlphaSubtype a b _ -> subtype a b
-      Case alpha guards _ ->
-        text "case" <+> makeDoc alpha <+> text "of" <+> lbrace $+$
-        (nest indentSize $ vcat $ punctuate semi $ map gDoc guards)
+      CellSubtype ia ca _ ->
+        subtype (text "Cell" <> parens (makeDoc ia)) ca
+      CellGetSubtype ca ia _ ->
+        subtype ca $ text "CellG" <> parens (makeDoc ia)
+      CellSetSubtype ca ia _ ->
+        subtype ca $ text "CellS" <> parens (makeDoc ia)
+      CellAlphaSubtype a1 a2 _ ->
+        subtype a1 a2
+      Case a gs _ ->
+        text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
+        (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
         $+$ rbrace
-      Bottom ch -> text "_|_" -- $$ (text . show) ch
+      Bottom _ -> text "_|_" -- $$ (text . show) ch
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b

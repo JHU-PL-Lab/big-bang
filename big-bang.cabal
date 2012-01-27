@@ -58,6 +58,7 @@ Library
         Language.TinyBang.Syntax.Parser
         Language.TinyBang.Syntax.Lexer
         Language.TinyBang.Types.Closure
+        Language.TinyBang.Types.Alphas
         Language.TinyBang.Types.Types
         Language.TinyBang.Types.TypeInference
         Language.TinyBang.Types.UtilTypes
