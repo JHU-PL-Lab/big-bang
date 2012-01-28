@@ -341,12 +341,10 @@ instance AlphaSubstitutable AnyAlpha where
 
 instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
-      LowerSubtype td a hist -> do
-        a' <- substituteAlpha a
-        return $ LowerSubtype td a' hist
-      UpperSubtype a tu hist -> do
-        a' <- substituteAlpha a
-        return $ UpperSubtype a' tu hist
+      LowerSubtype td a hist ->
+        csaHelper LowerSubtype td a hist
+      UpperSubtype a tu hist ->
+        csaHelper UpperSubtype a tu hist
       AlphaSubtype a1 a2 hist ->
         csaHelper AlphaSubtype a1 a2 hist
       CellSubtype ia ca hist ->
