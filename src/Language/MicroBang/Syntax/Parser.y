@@ -122,8 +122,8 @@ SubTerm :   '-int'                  { T.SubPrim PrimInt }
 
 OpExp   :   Op Primary Primary      { $1 $2 $3 }
 
-Op      :   '[+]'                   { \x y -> A.LazyOp T.Plus x y }
-        |   '[=]'                   { \x y -> A.EagerOp T.Equal x y }
+Op      :   '[+]'                   { \x y -> A.BinOp A.Plus x y }
+        |   '[=]'                   { \x y -> A.BinOp A.Equal x y }
 
 {
 data ParseError

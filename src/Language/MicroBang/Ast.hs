@@ -1,14 +1,13 @@
 {-# LANGUAGE FlexibleInstances#-}
 module Language.MicroBang.Ast
 ( Expr(..)
+, Operator(..)
 , Chi(..)
 , Branches
 , Branch(..)
 , Value(..)
 , exprFromValue
-, Assignable(..)
 , Evaluated(..)
-, CellId
 ) where
 
 import Data.IntMap (IntMap)
@@ -19,9 +18,6 @@ import Utils.Render.Display
   
 -------------------------------------------------------------------------------
 
--- |The type for cell IDs.
-type CellId = Int
-
 -- |Data type for representing Big Bang ASTs.
 data Expr
   = Var T.Ident
@@ -31,29 +27,25 @@ data Expr
   | Func T.Ident Expr
   | Appl Expr Expr
   | PrimInt Integer
-  | PrimChar Char
   | PrimUnit
   | Case Expr Branches
-  | Def T.Ident Expr Expr
-  | Assign Assignable Expr Expr
-  | LazyOp T.LazyOperator Expr Expr
-  | EagerOp T.EagerOperator Expr Expr
-  | ExprCell CellId
+  | BinOp Operator Expr Expr
+  deriving (Eq, Ord, Show)
+
+-- |Data type for representing Big Bang operators.
+data Operator
+  = Equal
+  | Plus
   deriving (Eq, Ord, Show)
 
 -- |Data type for representing Big Bang values
 data Value
-  = VLabel T.LabelName CellId
+  = VLabel T.LabelName Value
   | VOnion Value Value
   | VFunc T.Ident Expr
   | VPrimInt Integer
-  | VPrimChar Char
   | VPrimUnit
   | VEmptyOnion
-  | VCell CellId
-  deriving (Eq, Ord, Show)
-
-data Assignable = AValue Value | AIdent T.Ident
   deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
@@ -72,14 +64,12 @@ data Branch = Branch (Maybe T.Ident) Chi Expr
 -- |Trivial conversion from values to exprs
 exprFromValue :: (Evaluated v) => v -> Expr
 exprFromValue v = case value v of
-  VLabel l c   -> Label l $ ExprCell c
+  VLabel l v   -> Label l $ exprFromValue v
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
   VFunc i e    -> Func i e
   VPrimInt i   -> PrimInt i
-  VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
   VEmptyOnion  -> OnionSub PrimUnit $ T.SubPrim T.PrimUnit
-  VCell c      -> ExprCell c
 
 instance Display Expr where
   makeDoc a = case a of
@@ -90,24 +80,18 @@ instance Display Expr where
             text "fun" <+> (text $ T.unIdent i) <+> text "->" <+> makeDoc e
     Appl e1 e2 -> parens $ makeDoc e1 <+> makeDoc e2
     PrimInt i -> integer i
-    PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
     Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
-    LazyOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
-    EagerOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
-    {-
-       TODO: deal with the fact that the following isn't actually code
-       options include:
-           * errors on ASTs containing builtin nodes
-           * namespacing trick (e.g., Plus translates to
-               "Language.TinyBang.Builtins.([+]) e1 e2"
-    -}
-    Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-    Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-    ExprCell c -> text "Cell #" <> int c
+    BinOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
+
+instance Display Operator where
+  makeDoc x =
+    case x of
+      Equal -> text "[=]"
+      Plus -> text "[+]"
 
 instance Display Value where
   makeDoc x =
@@ -125,10 +109,6 @@ instance Display Branch where
       ChiFun -> text "fun"
       ChiAny -> text "_"
     ) <+> text "->" <+> makeDoc e
-
-instance Display Assignable where
-  makeDoc (AIdent i) = makeDoc i
-  makeDoc (AValue v) = makeDoc v
 
 class Evaluated a where
   value :: a -> Value

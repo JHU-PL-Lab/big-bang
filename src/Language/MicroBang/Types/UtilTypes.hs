@@ -8,8 +8,6 @@ module Language.MicroBang.Types.UtilTypes
 , Ident
 , ident
 , unIdent
-, LazyOperator(..)
-, EagerOperator(..)
 , SubTerm(..)
 , PrimitiveType(..)
 ) where
@@ -49,23 +47,9 @@ data EagerOperator
   | GreaterEqual
   deriving (Eq, Ord, Show)
 
-instance Display LazyOperator where
-  makeDoc o = brackets . text $
-    case o of
-      Plus -> "+"
-      Minus -> "-"
-
-instance Display EagerOperator where
-  makeDoc o = brackets $ text $
-    case o of
-      Equal -> "="
-      LessEqual -> "<="
-      GreaterEqual -> ">="
-
 -- |The datatype enumerating the primitives in the Little Bang type system.
 data PrimitiveType
   = PrimInt
-  | PrimChar
   | PrimUnit
   deriving (Eq, Ord, Show)
 
@@ -73,7 +57,6 @@ instance Display PrimitiveType where
   makeDoc p =
     case p of
       PrimInt -> text "int"
-      PrimChar -> text "char"
       PrimUnit -> text "unit"
 
 -- |Data type describing type patterns for removing values from onions.
