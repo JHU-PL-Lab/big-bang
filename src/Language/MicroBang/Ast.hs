@@ -64,7 +64,7 @@ data Branch = Branch (Maybe T.Ident) Chi Expr
 -- |Trivial conversion from values to exprs
 exprFromValue :: (Evaluated v) => v -> Expr
 exprFromValue v = case value v of
-  VLabel l v   -> Label l $ exprFromValue v
+  VLabel l v1  -> Label l $ exprFromValue v1
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
   VFunc i e    -> Func i e
   VPrimInt i   -> PrimInt i

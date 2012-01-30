@@ -34,19 +34,6 @@ instance Display LabelName where
 instance Display Ident where
     makeDoc = text . unIdent
 
--- |Data type used to represent lazy operations
-data LazyOperator
-  = Plus
-  | Minus
-  deriving (Eq, Ord, Show)
-
--- |Data type used to represent eager operations
-data EagerOperator
-  = Equal
-  | LessEqual
-  | GreaterEqual
-  deriving (Eq, Ord, Show)
-
 -- |The datatype enumerating the primitives in the Little Bang type system.
 data PrimitiveType
   = PrimInt
