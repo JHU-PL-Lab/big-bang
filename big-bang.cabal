@@ -51,11 +51,15 @@ Library
         Data.Function.Utils
         Data.Maybe.Utils
         Data.Set.Utils
+        Language.MicroBang.Ast
+        Language.MicroBang.Syntax.Lexer
+        Language.MicroBang.Syntax.Parser
+        Language.MicroBang.Types.UtilTypes
         Language.TinyBang.Ast
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
-        Language.TinyBang.Syntax.Parser
         Language.TinyBang.Syntax.Lexer
+        Language.TinyBang.Syntax.Parser
         Language.TinyBang.Types.Closure
         Language.TinyBang.Types.Alphas
         Language.TinyBang.Types.Types
