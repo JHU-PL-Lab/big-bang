@@ -14,13 +14,6 @@ import Data.Maybe (listToMaybe)
 import qualified Language.MicroBang.Ast as A
 import qualified Language.MicroBang.Syntax.Lexer as L
 import Language.MicroBang.Types.UtilTypes as T
-import Language.MicroBang.Types.UtilTypes
-    ( Ident
-    , ident
-    , unIdent
-    , labelName
-    , unLabelName
-    )
 import Utils.Render.Display
 
 -- For debugging purposes only
@@ -65,7 +58,7 @@ import System.IO
 %%
 
 Exp     :   fun ident '->' Exp
-                                    { A.Func (ident $2) $4 }
+                                    { A.Func (T.ident $2) $4 }
         |   case Exp of '{' Branches '}'
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
@@ -85,13 +78,13 @@ ApplExp :   ApplExp Primary
 
 
 Primary :   ident
-                                    { A.Var (ident $1) }
+                                    { A.Var (T.ident $1) }
         |   intLit
                                     { A.PrimInt $1 }
         |   '(' ')'
                                     { A.PrimUnit }
         |   '`' ident Primary
-                                    { A.Label (labelName $2) $3 }
+                                    { A.Label (T.labelName $2) $3 }
         |   '(' Exp ')'
                                     { $2 }
 
@@ -103,11 +96,11 @@ Branches:   Branch ';' Branches     { $1:$3 }
 Branch  :   Pattern '->' Exp
                                     { A.Branch Nothing $1 $3 }
         |   ident ':' Pattern '->' Exp
-                                    { A.Branch (Just $ ident $1) $3 $5 }
+                                    { A.Branch (Just $ T.ident $1) $3 $5 }
 
 
 Pattern :   PrimitiveType           { A.ChiPrim $1 }
-        |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
+        |   '`' ident ident         { A.ChiLabel (T.labelName $2) (T.ident $3) }
         |   fun                     { A.ChiFun }
         |   '_'                     { A.ChiAny }
 
@@ -117,7 +110,7 @@ PrimitiveType
 
 SubTerm :   '-int'                  { T.SubPrim PrimInt }
         |   '-unit'                 { T.SubPrim PrimUnit }
-        |   '-`' ident              { T.SubLabel (labelName $2) }
+        |   '-`' ident              { T.SubLabel (T.labelName $2) }
         |   '-fun'                  { T.SubFunc }
 
 OpExp   :   Op Primary Primary      { $1 $2 $3 }
