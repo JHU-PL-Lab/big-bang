@@ -40,6 +40,7 @@ import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad (guard, join, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
+import Utils.Render.Display
 
 type CReader = Reader Constraints
 

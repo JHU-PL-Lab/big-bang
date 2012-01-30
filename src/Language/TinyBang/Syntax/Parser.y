@@ -12,7 +12,6 @@ import Control.Monad.Identity (Identity, runIdentity)
 import Data.Maybe (listToMaybe)
 
 import qualified Language.TinyBang.Ast as A
-import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Syntax.Lexer as L
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
@@ -25,6 +24,7 @@ import Language.TinyBang.Types.UtilTypes
     , PrimitiveType(..)
     , SubTerm(..)
     )
+import Utils.Render.Display
 
 -- For debugging purposes only
 import System.IO.Unsafe

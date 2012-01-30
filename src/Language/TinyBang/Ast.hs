@@ -18,7 +18,6 @@ module Language.TinyBang.Ast
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
-import Language.TinyBang.Render.Display
 import Language.TinyBang.Types.UtilTypes
   ( LabelName
   , Ident
@@ -30,7 +29,8 @@ import Language.TinyBang.Types.UtilTypes
   )
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
-
+import Utils.Render.Display
+  
 -------------------------------------------------------------------------------
 
 type CellId = Int

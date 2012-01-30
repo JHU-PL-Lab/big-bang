@@ -14,7 +14,7 @@ module Language.TinyBang.Types.UtilTypes
 , PrimitiveType(..)
 ) where
 
-import Language.TinyBang.Render.Display
+import Utils.Render.Display
 
 -- |A distinguished type for labels.
 newtype LabelName = LabelName { unLabelName :: String }

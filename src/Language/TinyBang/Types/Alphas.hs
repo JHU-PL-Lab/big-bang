@@ -18,7 +18,7 @@ module Language.TinyBang.Types.Alphas
 , substituteAlphaHelper
 ) where
 
-import Language.TinyBang.Render.Display
+import Utils.Render.Display
 
 import Data.Set (Set)
 import qualified Data.Set as Set

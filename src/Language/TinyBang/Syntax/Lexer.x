@@ -14,7 +14,7 @@ module Language.TinyBang.Syntax.Lexer
 
 import Control.Monad (liftM)
 
-import Language.TinyBang.Render.Display
+import Utils.Render.Display
 }
 
 %wrapper "monad"

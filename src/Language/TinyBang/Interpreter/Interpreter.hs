@@ -37,13 +37,13 @@ import Language.TinyBang.Ast
   , CellId
   , exprFromValue
   )
-import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( Ident
     , unIdent
     , LabelName
     )
+import Utils.Render.Display
 
 -- TODO: remove
 -- import Debug.Trace

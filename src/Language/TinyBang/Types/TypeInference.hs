@@ -20,7 +20,6 @@ import qualified Data.Set as Set
 import Control.Applicative ((<$>))
 
 import qualified Language.TinyBang.Ast as A
-import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.Types ( (<:)
                                      , (.:)
@@ -39,6 +38,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      )
 import Language.TinyBang.Types.UtilTypes
 import Language.TinyBang.Interpreter.Interpreter (applyBuiltins)
+import Utils.Render.Display
 
 type Gamma = Map Ident CellAlpha
 type NextFreshVar = T.AlphaId

@@ -3,7 +3,6 @@ module Main where
 import qualified Language.TinyBang.Render.PrettyPrintTest as TPP
 import Language.TinyBang.Interpreter.SourceInterpreter
 import Test.HUnit
-import Language.TinyBang.Render.Display (display, Display)
 import qualified Language.TinyBang.Syntax.Lexer as L
 import Language.TinyBang.Syntax.Lexer (Token(..))
 import qualified Language.TinyBang.Types.TypeInference as TI
@@ -13,6 +12,7 @@ import Language.TinyBang.Types.UtilTypes (labelName, ident, Ident)
 import qualified Language.TinyBang.Types.Types as T
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+import Utils.Render.Display (display, Display)
 
 type TinyBangCode = String
 type Result = (A.Value, IntMap A.Value)

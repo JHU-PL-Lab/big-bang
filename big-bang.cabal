@@ -54,7 +54,6 @@ Library
         Language.TinyBang.Ast
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
-        Language.TinyBang.Render.Display
         Language.TinyBang.Syntax.Parser
         Language.TinyBang.Syntax.Lexer
         Language.TinyBang.Types.Closure
@@ -62,6 +61,7 @@ Library
         Language.TinyBang.Types.Types
         Language.TinyBang.Types.TypeInference
         Language.TinyBang.Types.UtilTypes
+        Utils.Render.Display
 
   Build-depends:       base, array, containers >= 0.4.0.0, mtl, pretty, template-haskell
 

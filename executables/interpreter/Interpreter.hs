@@ -1,6 +1,6 @@
 module Main where
 
-import Language.TinyBang.Render.Display (display)
+import Utils.Render.Display (display)
 import qualified Language.TinyBang.Interpreter.SourceInterpreter as SI
 
 import Data.List.Split

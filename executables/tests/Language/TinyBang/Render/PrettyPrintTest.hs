@@ -5,7 +5,7 @@ module Language.TinyBang.Render.PrettyPrintTest
 import Test.HUnit hiding (Label)
 import Language.TinyBang.Ast
 import Language.TinyBang.Types.UtilTypes hiding (PrimitiveType(..))
-import Language.TinyBang.Render.Display
+import Utils.Render.Display
 
 tests :: Test
 tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTests-}]
