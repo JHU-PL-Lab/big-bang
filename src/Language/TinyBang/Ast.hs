@@ -63,10 +63,9 @@ data Value
   | VPrimChar Char
   | VPrimUnit
   | VEmptyOnion
-  | VCell CellId
   deriving (Eq, Ord, Show)
 
-data Assignable = AValue Value | AIdent Ident
+data Assignable = ACell CellId | AIdent Ident
   deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
@@ -91,8 +90,7 @@ exprFromValue v = case value v of
   VPrimInt i   -> PrimInt i
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
-  VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit
-  VCell c      -> ExprCell c
+  VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit -- TODO: EEmptyOnion
 
 instance Display Expr where
   makeDoc a = case a of
@@ -141,7 +139,7 @@ instance Display Branch where
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
-  makeDoc (AValue v) = makeDoc v
+  makeDoc (ACell v) = makeDoc v
 
 class Evaluated a where
   value :: a -> Value
