@@ -111,6 +111,8 @@ Primary :   ident
                                     { A.PrimChar $1 }
         |   '(' ')'
                                     { A.PrimUnit }
+        |   '(' '&' ')'
+                                    { A.EmptyOnion }
         |   '`' ident Primary
                                     { A.Label (labelName $2) $3 }
         |   '(' Exp ')'

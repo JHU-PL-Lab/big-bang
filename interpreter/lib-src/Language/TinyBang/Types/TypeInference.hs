@@ -190,6 +190,10 @@ inferType expr =
       a2 <- inferType e
       tell1 $ TdOnionSub a2 s <: a1 .: histFIXME
       return a1
+    A.EmptyOnion -> do
+      a <- freshVar
+      tell1 $ TdEmptyOnion <: a .: histFIXME
+      return a
     A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
@@ -221,7 +225,7 @@ inferType expr =
     A.Assign a e1 e2 -> do
       x <- return $! case a of
         A.AIdent x -> x
-        A.AValue _ -> error "Internal Error; Assignment expression contains value"
+        A.ACell _ -> error "Internal Error; assignment to cell during type derivation!"
       a3 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- inferType e1
       a2 <- inferType e2

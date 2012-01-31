@@ -41,6 +41,7 @@ data Expr
   | Label LabelName Expr
   | Onion Expr Expr
   | OnionSub Expr SubTerm
+  | EmptyOnion
   | Func Ident Expr
   | Appl Expr Expr
   | PrimInt Integer
@@ -63,10 +64,9 @@ data Value
   | VPrimChar Char
   | VPrimUnit
   | VEmptyOnion
-  | VCell CellId
   deriving (Eq, Ord, Show)
 
-data Assignable = AValue Value | AIdent Ident
+data Assignable = ACell CellId | AIdent Ident
   deriving (Eq, Ord, Show)
 
 -- |Data type describing type patterns for case expressions.
@@ -83,6 +83,7 @@ data Branch = Branch (Maybe Ident) Chi Expr
   deriving (Eq, Ord, Show)
 
 -- |Trivial conversion from values to exprs
+-- TODO: deprecate the hell outta this thing
 exprFromValue :: (Evaluated v) => v -> Expr
 exprFromValue v = case value v of
   VLabel l c   -> Label l $ ExprCell c
@@ -91,8 +92,7 @@ exprFromValue v = case value v of
   VPrimInt i   -> PrimInt i
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
-  VEmptyOnion  -> OnionSub PrimUnit $ SubPrim T.PrimUnit
-  VCell c      -> ExprCell c
+  VEmptyOnion  -> EmptyOnion
 
 instance Display Expr where
   makeDoc a = case a of
@@ -109,6 +109,7 @@ instance Display Expr where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
+    EmptyOnion -> text "(&)"
     LazyOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
     EagerOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
     {-
@@ -141,7 +142,7 @@ instance Display Branch where
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
-  makeDoc (AValue v) = makeDoc v
+  makeDoc (ACell v) = makeDoc v
 
 class Evaluated a where
   value :: a -> Value

@@ -83,6 +83,8 @@ Primary :   ident
                                     { A.PrimInt $1 }
         |   '(' ')'
                                     { A.PrimUnit }
+        |   '(' '&' ')'
+                                    { A.EmptyOnion }
         |   '`' ident Primary
                                     { A.Label (T.labelName $2) $3 }
         |   '(' Exp ')'

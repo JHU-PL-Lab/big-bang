@@ -24,6 +24,7 @@ data Expr
   | Label T.LabelName Expr
   | Onion Expr Expr
   | OnionSub Expr T.SubTerm
+  | EmptyOnion
   | Func T.Ident Expr
   | Appl Expr Expr
   | PrimInt Integer
@@ -85,6 +86,7 @@ instance Display Expr where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
+    EmptyOnion -> text "(&)"
     BinOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
 
 instance Display Operator where
