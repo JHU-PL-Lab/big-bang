@@ -29,7 +29,7 @@ Author:              Alex Rozenshteyn
 Maintainer:          big-bang@jhu.edu
 
 -- A copyright notice.
-Copyright:           (c) 2011 Alex Rozenshteyn, Zachary Palmer, Scott Smith
+Copyright:           (c) 2011-2012 Alex Rozenshteyn, Zachary Palmer, Scott Smith
 
 Category:            Language
 
@@ -48,12 +48,15 @@ Library
   hs-source-dirs:      lib-src
 
   Exposed-Modules:
+--        Language.MicroBang.Ast
+--        Language.MicroBang.Syntax.Lexer
+--        Language.MicroBang.Syntax.Parser
+--        Language.MicroBang.Types.UtilTypes
         Language.TinyBang.Ast
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
-        Language.TinyBang.Render.Display
-        Language.TinyBang.Syntax.Parser
         Language.TinyBang.Syntax.Lexer
+        Language.TinyBang.Syntax.Parser
         Language.TinyBang.Types.Closure
         Language.TinyBang.Types.Alphas
         Language.TinyBang.Types.Types
@@ -70,7 +73,7 @@ Executable interpreter
   Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang, big-bang-utils
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy

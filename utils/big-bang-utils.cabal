@@ -51,7 +51,8 @@ Library
         Data.Function.Utils
         Data.Maybe.Utils
         Data.Set.Utils
+        Utils.Render.Display
 
-  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty
+  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell
 
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans

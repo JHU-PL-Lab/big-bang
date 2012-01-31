@@ -10,7 +10,6 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
 import Data.IntMap (IntMap)
 
-import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Interpreter.Interpreter as I
 import qualified Language.TinyBang.Syntax.Lexer as L
@@ -18,6 +17,7 @@ import qualified Language.TinyBang.Syntax.Parser as P
 import qualified Language.TinyBang.Types.Closure as C
 import qualified Language.TinyBang.Types.TypeInference as TI
 import qualified Language.TinyBang.Types.Types as T
+import Utils.Render.Display
 
 data EvalSuccessOrFailure = EvalSuccess (A.Value, IntMap A.Value) | EvalFailure I.EvalError
 

@@ -41,9 +41,6 @@ import Control.Monad (guard, join, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
 
-import Debug.Trace (trace)
-import Language.TinyBang.Render.Display (display)
-
 type CReader = Reader Constraints
 
 --type CWriter out ret = Writer (Set out) ret

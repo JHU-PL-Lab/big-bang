@@ -30,7 +30,7 @@ import qualified Language.TinyBang.Syntax.Lexer as L
   (lexTinyBang)
 import Language.TinyBang.Syntax.Lexer (Token(..))
 import Language.TinyBang.Types.UtilTypes (labelName, ident)
-import Language.TinyBang.Render.Display (display, Display)
+import Utils.Render.Display (display, Display)
 
 type TinyBangCode = String
 type Result = (A.Value, IntMap.IntMap A.Value)

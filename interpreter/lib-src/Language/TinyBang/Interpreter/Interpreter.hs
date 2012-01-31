@@ -40,13 +40,13 @@ import Language.TinyBang.Ast
   , CellId
   , exprFromValue
   )
-import Language.TinyBang.Render.Display
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( Ident
     , unIdent
     , LabelName
     )
+import Utils.Render.Display
 
 -- TODO: remove
 -- import Debug.Trace
@@ -146,103 +146,92 @@ onion v1 v2 = VOnion v1 v2
 eval :: Expr -> EvalM Value
 
 -- The next four cases are covered by the value rule
-eval (Func i e) = return $ VFunc i e
-eval (PrimInt i) = return $ VPrimInt i
-eval (PrimChar c) = return $ VPrimChar c
-eval PrimUnit = return $ VPrimUnit
-
-eval (Var i) = throwError $ NotClosed i
-
-eval (ExprCell c) = readCell c
-
-eval (Label n e) = do
-  e' <- eval e
-  c <- newCell e'
-  return $ VLabel n c
-
-eval (Onion e1 e2) = do
-  e1' <- eval e1
-  e2' <- eval e2
-  return $ onion e1' e2'
-
-eval (OnionSub e s) = do
-  v <- eval e
-  return $ onionSub v
-  where onionSub v =
-          case (v, s) of
-            (VOnion v1 v2, _) -> onion (onionSub v1) (onionSub v2)
-            (VPrimInt _, SubPrim T.PrimInt) -> VEmptyOnion
-            (VPrimChar _, SubPrim T.PrimChar) -> VEmptyOnion
-            (VPrimUnit, SubPrim T.PrimUnit) -> VEmptyOnion
-            (VFunc _ _, SubFunc) -> VEmptyOnion
-            (VLabel n _, SubLabel n') | n == n' -> VEmptyOnion
-            _ -> v
-
-eval (Appl e1 e2) = do
-  e1' <- eval e1
-  e2' <- eval e2
-  case e1' of
-    VFunc i body -> eval $ subst e2' i body
-    _ -> throwError $ ApplNotFunction e1' e2'
-
-eval (Case e branches) = do
-  v <- eval e
-  let answers = catMaybes $ map (eMatch v) branches
-  case answers of
-    [] -> throwError $ UnmatchedCase v branches
-    answer:_ -> eval answer
-  where eMatch v (Branch b chi expr) =
-          case (chi, v') of
-            (ChiLabel _ x, Just (VLabel _ c)) -> subst (VCell c) x <$> expr'
-            _ -> expr'
-          where v' = eSearch v chi
-                expr' =  do
-                  mv <- v'
-                  return $ case b of
-                    Just x -> subst mv x expr
-                    Nothing -> expr
-        eSearch v chi =
-          case (chi, v) of
-            (ChiAny, _) -> Just v
-            (ChiPrim T.PrimInt, VPrimInt _) -> Just v
-            (ChiPrim T.PrimChar, VPrimChar _) -> Just v
-            (ChiPrim T.PrimUnit, VPrimUnit) -> Just v
-            (ChiLabel n _, VLabel n' _) | n == n' -> Just v
-            (ChiFun, VFunc _ _) -> Just v
-            (_, VOnion v1 v2) ->
-              case eSearch v2 chi of
-                Nothing -> eSearch v1 chi
-                ret -> ret
-            _ -> Nothing
-
-eval (Def i e1 e2) = do
-  e1' <- eval e1
-  cellId <- newCell e1'
-  eval $ subst (VCell cellId) i e2
-
-eval (Assign a e1 e2) =
-  case a of
-    AIdent i -> throwError $ NotClosed i
-    AValue (VCell c) -> do
-      e1' <- eval e1
-      writeCell c e1'
-      eval e2
-    _ -> throwError $ IllegalAssignment a
-
-eval (LazyOp op e1 e2) = do
-  v1 <- eval e1
-  v2 <- eval e2
-  case (op, v1, v2) of
-    (Plus,  VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x + y
-    (Minus, VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x - y
-    _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
-
-eval (EagerOp op e1 e2) = error "Eager operations are not implemented yet" $
-  case op of
-    Equal -> undefined e1
-    LessEqual -> undefined e2
-    GreaterEqual -> undefined
-
+eval e =
+  case e of
+    Func i e' -> return $ VFunc i e'
+    PrimInt i -> return $ VPrimInt i
+    PrimChar c -> return $ VPrimChar c
+    PrimUnit -> return $ VPrimUnit
+    Var i -> throwError $ NotClosed i
+    ExprCell c -> readCell c
+    Label n e' -> do
+      v <- eval e'
+      c <- newCell v
+      return $ VLabel n c
+    Onion e1 e2 -> do
+      v1 <- eval e1
+      v2 <- eval e2
+      return $ onion v1 v2
+    OnionSub e' s -> do
+      v <- eval e'
+      return $ onionSub v
+      where onionSub v =
+              case (v, s) of
+                (VOnion v1 v2, _) -> onion (onionSub v1) (onionSub v2)
+                (VPrimInt _, SubPrim T.PrimInt) -> VEmptyOnion
+                (VPrimChar _, SubPrim T.PrimChar) -> VEmptyOnion
+                (VPrimUnit, SubPrim T.PrimUnit) -> VEmptyOnion
+                (VFunc _ _, SubFunc) -> VEmptyOnion
+                (VLabel n _, SubLabel n') | n == n' -> VEmptyOnion
+                _ -> v
+    Appl e1 e2 -> do
+      v1 <- eval e1
+      v2 <- eval e2
+      case v1 of
+        VFunc i body -> eval $ subst v2 i body
+        _ -> throwError $ ApplNotFunction v1 v2
+    Case e' branches -> do
+      v <- eval e'
+      let answers = catMaybes $ map (eMatch v) branches
+      case answers of
+        [] -> throwError $ UnmatchedCase v branches
+        answer:_ -> eval answer
+      where eMatch v (Branch b chi expr) =
+              case (chi, v') of
+                (ChiLabel _ x, Just (VLabel _ c)) -> subst (VCell c) x <$> expr'
+                _ -> expr'
+              where v' = eSearch v chi
+                    expr' =  do
+                      mv <- v'
+                      return $ case b of
+                        Just x -> subst mv x expr
+                        Nothing -> expr
+            eSearch v chi =
+              case (chi, v) of
+                (ChiAny, _) -> Just v
+                (ChiPrim T.PrimInt, VPrimInt _) -> Just v
+                (ChiPrim T.PrimChar, VPrimChar _) -> Just v
+                (ChiPrim T.PrimUnit, VPrimUnit) -> Just v
+                (ChiLabel n _, VLabel n' _) | n == n' -> Just v
+                (ChiFun, VFunc _ _) -> Just v
+                (_, VOnion v1 v2) ->
+                  case eSearch v2 chi of
+                    Nothing -> eSearch v1 chi
+                    ret -> ret
+                _ -> Nothing
+    Def i e1 e2 -> do
+      v1 <- eval e1
+      cellId <- newCell v1
+      eval $ subst (VCell cellId) i e2
+    Assign a e1 e2 -> do
+      case a of
+        AIdent i -> throwError $ NotClosed i
+        AValue (VCell c) -> do
+          v1 <- eval e1
+          writeCell c v1
+          eval e2
+        _ -> throwError $ IllegalAssignment a
+    LazyOp op e1 e2 -> do
+      v1 <- eval e1
+      v2 <- eval e2
+      case (op, v1, v2) of
+        (Plus,  VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x + y
+        (Minus, VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x - y
+        _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
+    EagerOp op e1 e2 -> do
+      v1 <- eval e1
+      v2 <- eval e2
+      error "Eager operations are not yet implemented" -- TODO
 -- eval (Equal e1 e2) = do
 --     e1' <- eval e1
 --     e2' <- eval e2
@@ -356,66 +345,48 @@ subst :: Value   -- ^ The value
       -> Expr    -- ^ The expression in which to do the replacement
       -> Expr    -- ^ The resulting expression
 
-subst v x e@(Var i)
-  | i == x      = exprFromValue v
-  | otherwise   = e
-
-subst v x (Label name expr) =
-  Label name $ subst v x expr
-
-subst v x (Onion e1 e2) =
-  Onion (subst v x e1) (subst v x e2)
-
-subst v x e@(Func i body)
-  | i == x      = e
-  | otherwise   = Func i $ subst v x body
-
-subst v x (Appl e1 e2) =
-  Appl (subst v x e1) (subst v x e2)
-
-subst _ _ e@(PrimInt _) = e
-
-subst _ _ e@(PrimChar _) = e
-
-subst _ _ e@(PrimUnit) = e
-
-subst v x (Case expr branches) =
-  let expr' = subst v x expr in
-  Case expr' $ map substBranch branches
-  where substBranch branch@(Branch mident chi branchExpr) =
-          let boundIdents =
-                maybeToList mident ++
-                case chi of
-                  ChiPrim _ -> []
-                  ChiLabel _ i -> [i]
-                  ChiFun -> []
-                  ChiAny -> []
-          in
-          if elem x boundIdents
-              then branch
-              else Branch mident chi $ subst v x branchExpr
-
-subst v x (OnionSub e s) =
-  OnionSub (subst v x e) s
-
-subst v x (LazyOp op e1 e2) =
-  LazyOp op (subst v x e1) (subst v x e2)
-
-subst v x (EagerOp op e1 e2) =
-  EagerOp op (subst v x e1) (subst v x e2)
-
-subst v x (Def i e1 e2)
-  | i == x    = Def i (subst v x e1) e2
-  | otherwise = Def i (subst v x e1) (subst v x e2)
-
-subst v x (Assign c@(AValue _) e1 e2) =
-  Assign c (subst v x e1) (subst v x e2)
-
-subst v x (Assign ai@(AIdent i) e1 e2)
-  | i == x    = Assign (AValue v) (subst v x e1) (subst v x e2)
-  | otherwise = Assign ai (subst v x e1) (subst v x e2)
-
-subst _ _ e@(ExprCell _) = e
+subst v x e =
+  case e of
+    Var i ->
+      if i == x then exprFromValue v
+                else e
+    Label n e' -> Label n $ subst v x e'
+    Onion e1 e2 -> Onion (subst v x e1) (subst v x e2)
+    Func i e' ->
+      if i == x then e
+                else Func i $ subst v x e'
+    Appl e1 e2 -> Appl (subst v x e1) (subst v x e2)
+    PrimInt _ -> e
+    PrimChar _ -> e
+    PrimUnit -> e
+    Case e' branches ->
+      let e'' = subst v x e' in
+      Case e'' $ map substBranch branches
+      where substBranch branch@(Branch mident chi branchExpr) =
+              let boundIdents =
+                    maybeToList mident ++
+                    case chi of
+                      ChiPrim _ -> []
+                      ChiLabel _ i -> [i]
+                      ChiFun -> []
+                      ChiAny -> []
+              in
+              if elem x boundIdents
+                  then branch
+                  else Branch mident chi $ subst v x branchExpr
+    OnionSub e' s -> OnionSub (subst v x e') s
+    LazyOp op e1 e2 -> LazyOp op (subst v x e1) (subst v x e2)
+    EagerOp op e1 e2 -> EagerOp op (subst v x e1) (subst v x e2)
+    Def i e1 e2 ->
+      if i == x then Def i (subst v x e1) e2
+                else Def i (subst v x e1) (subst v x e2)
+    Assign a e1 e2 ->
+      case a of
+        AValue _ -> Assign a (subst v x e1) (subst v x e2)
+        AIdent i ->
+          let a' = if i == x then (AValue v) else a in
+          Assign a' (subst v x e1) (subst v x e2)
+    ExprCell _ -> e
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated

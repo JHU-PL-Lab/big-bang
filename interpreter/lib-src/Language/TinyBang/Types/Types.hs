@@ -27,9 +27,9 @@ import Data.Function (on)
 
 import Language.TinyBang.Types.UtilTypes
   (LabelName, Ident, LazyOperator, SubTerm(..), PrimitiveType(..))
-import Language.TinyBang.Render.Display
 import Language.TinyBang.Types.Alphas
 import qualified Language.TinyBang.Ast as A
+import Utils.Render.Display
 
 -------------------------------------------------------------------------------
 -- *Little Bang Types

@@ -67,7 +67,7 @@ Library
     Language.TinyBang.Test.UtilFunctions
     Language.TinyBang.Test.ValueUtils
 
-  Build-depends:       base, array, containers == 0.4.0.0, mtl, big-bang, HUnit, pretty
+  Build-depends:       base, array, containers == 0.4.0.0, mtl, big-bang, HUnit, pretty, big-bang-utils
 
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans -fno-warn-missing-signatures
 
@@ -78,7 +78,7 @@ Executable test-suite
   Main-is:             Test.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang, big-bang-tests, HUnit
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang, big-bang-tests, HUnit, big-bang-utils
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
