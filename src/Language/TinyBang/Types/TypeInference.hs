@@ -189,6 +189,10 @@ inferType expr =
       a2 <- inferType e
       tell1 $ TdOnionSub a2 s <: a1 .: histFIXME
       return a1
+    A.EmptyOnion -> do
+      a <- freshVar
+      tell1 $ TdEmptyOnion <: a .: histFIXME
+      return a
     A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1

@@ -170,6 +170,7 @@ eval e = do
                   (VFunc _ _, SubFunc) -> VEmptyOnion
                   (VLabel n _, SubLabel n') | n == n' -> VEmptyOnion
                   _ -> v
+      EmptyOnion -> return $ VEmptyOnion
       Appl e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
@@ -372,6 +373,7 @@ subst c x e =
                   then branch
                   else Branch mident chi $ subst c x branchExpr
     OnionSub e' s -> OnionSub (subst c x e') s
+    EmptyOnion -> EmptyOnion
     LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
     EagerOp op e1 e2 -> EagerOp op (subst c x e1) (subst c x e2)
     Def i e1 e2 ->
