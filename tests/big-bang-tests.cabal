@@ -1,0 +1,89 @@
+    Name:                big-bang-tests
+
+-- The package version. See the Haskell package versioning policy
+-- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
+-- standards guiding when and how versions should be incremented.
+Version:             0.1
+
+-- A short (one-line) description of the package.
+Synopsis:            Tests for Big Bang.
+
+-- A longer description of the package.
+Description:         This package contains tests for Big Bang.
+
+-- The license under which the package is released.
+License:             AllRightsReserved
+
+-- The file containing the license text.
+--License-file:        LICENSE
+
+-- The package author(s).
+Author:              Alex Rozenshteyn
+
+-- An email address to which users can send suggestions, bug reports,
+-- and patches.
+Maintainer:          big-bang@jhu.edu
+
+-- A copyright notice.
+Copyright:           (c) 2011-2012 Alex Rozenshteyn, Zachary Palmer, Scott Smith
+
+Category:            Language
+
+Build-type:          Simple
+
+-- Extra files to be distributed with the package, such as examples or
+-- a README.
+-- Extra-source-files:
+
+Stability:           alpha
+
+-- Constraint on the version of Cabal needed to build this package.
+Cabal-version:       >=1.8
+
+Library
+  hs-source-dirs:      lib-src
+
+  Exposed-Modules:
+    Language.TinyBang.Test.Binders
+    Language.TinyBang.Test.Case
+    Language.TinyBang.Test.EagerOps
+    Language.TinyBang.Test.ExpressionUtils
+    Language.TinyBang.Test.Functions
+    Language.TinyBang.Test.LazyOps
+    Language.TinyBang.Test.Lexer
+    Language.TinyBang.Test.Misc
+    Language.TinyBang.Test.NameUtils
+    Language.TinyBang.Test.OnionSubtraction
+    Language.TinyBang.Test.Onions
+    Language.TinyBang.Test.Parser
+    Language.TinyBang.Test.Peano
+    Language.TinyBang.Test.PrettyPrint
+    Language.TinyBang.Test.Primitive.Char
+    Language.TinyBang.Test.Primitive.Int
+    Language.TinyBang.Test.Primitive.Unit
+    Language.TinyBang.Test.Projection
+    Language.TinyBang.Test.SourceUtils
+    Language.TinyBang.Test.State
+    Language.TinyBang.Test.UtilFunctions
+    Language.TinyBang.Test.ValueUtils
+
+  Build-depends:       base, array, containers >= 0.4.0.0, mtl, big-bang, HUnit, pretty
+
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans -fno-warn-missing-signatures
+
+Executable test-suite
+  hs-source-dirs:      executable-src
+
+  -- Main module
+  Main-is:             Test.hs
+
+  -- Packages needed in order to build this package.
+  Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, big-bang-tests, HUnit
+
+  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
+  -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
+  --       EOF to return an "internal happy error", but 1.18.5 works otherwise
+  Build-tools:         alex, happy >= 1.18.5
+
+  -- Enable compiler warnings
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans

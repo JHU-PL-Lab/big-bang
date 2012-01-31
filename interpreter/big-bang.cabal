@@ -45,7 +45,7 @@ Stability:           alpha
 Cabal-version:       >=1.8
 
 Library
-  hs-source-dirs:      src
+  hs-source-dirs:      lib-src
 
   Exposed-Modules:
         Data.Function.Utils
@@ -68,7 +68,7 @@ Library
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
 
 Executable interpreter
-  hs-source-dirs:      executables/interpreter
+  hs-source-dirs:      executable-src
   -- .hs or .lhs file containing the Main module.
   Main-is:             Interpreter.hs
 
@@ -77,24 +77,6 @@ Executable interpreter
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
-
-  -- Enable compiler warnings
-  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
-
-
-Executable test-suite
-  hs-source-dirs:      executables/tests
-
-  -- Main module
-  Main-is:             Test.hs
-
-  -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers >= 0.4.0.0 , mtl, big-bang, HUnit
-
-  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
-  --       EOF to return an "internal happy error", but 1.18.5 works otherwise
-  Build-tools:         alex, happy >= 1.18.5
 
   -- Enable compiler warnings
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans

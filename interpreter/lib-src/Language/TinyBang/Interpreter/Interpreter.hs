@@ -11,6 +11,7 @@ module Language.TinyBang.Interpreter.Interpreter
 , EvalM
 , applyBuiltins
 , canonicalize
+, onion
 ) where
 
 import Control.Monad.Error (Error, strMsg, throwError)
@@ -23,6 +24,8 @@ import Data.List(foldl1', sort, sortBy, groupBy)-- intersectBy (redundant but us
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
+
+import Debug.Trace
 
 import Language.TinyBang.Ast
   ( Branch(..)
@@ -291,7 +294,7 @@ canonicalizeList xs = map last ys
 --  and that the onion entries be sorted in accordance with the ordering
 --  defined over Values
 canonicalizeOnion :: Value -> Value
-canonicalizeOnion = foldl1' VOnion . sort . canonicalizeList . flattenOnion
+canonicalizeOnion = foldl1' onion . sort . canonicalizeList . flattenOnion
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
 -- onionListLessEq _ [] _  = Just True
@@ -312,6 +315,7 @@ data ValueOrdinal
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
 -- leqValues = (<=) `on` valueToOrd
+
 compareValues :: Value -> Value -> Ordering
 compareValues = compare `on` valueToOrd
 

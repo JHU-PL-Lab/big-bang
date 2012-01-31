@@ -1,4 +1,4 @@
-module Language.TinyBang.Render.PrettyPrintTest
+module Language.TinyBang.Test.PrettyPrint
 ( tests
 ) where
 
@@ -6,6 +6,9 @@ import Test.HUnit hiding (Label)
 import Language.TinyBang.Ast
 import Language.TinyBang.Types.UtilTypes hiding (PrimitiveType(..))
 import Language.TinyBang.Render.Display
+
+-- TODO: Refactor this or eliminate it.
+-- TODO: Use quickcheck to write a test that pretty print + parse is idempotent.
 
 tests :: Test
 tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTests-}]

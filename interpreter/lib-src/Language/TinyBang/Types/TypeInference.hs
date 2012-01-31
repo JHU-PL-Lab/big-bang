@@ -1,3 +1,4 @@
+{-# LANGUAGE Rank2Types #-}
 module Language.TinyBang.Types.TypeInference
 ( inferType
 , runTIM
