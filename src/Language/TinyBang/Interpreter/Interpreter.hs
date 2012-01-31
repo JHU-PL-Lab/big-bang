@@ -341,66 +341,48 @@ subst :: Value   -- ^ The value
       -> Expr    -- ^ The expression in which to do the replacement
       -> Expr    -- ^ The resulting expression
 
-subst v x e@(Var i)
-  | i == x      = exprFromValue v
-  | otherwise   = e
-
-subst v x (Label name expr) =
-  Label name $ subst v x expr
-
-subst v x (Onion e1 e2) =
-  Onion (subst v x e1) (subst v x e2)
-
-subst v x e@(Func i body)
-  | i == x      = e
-  | otherwise   = Func i $ subst v x body
-
-subst v x (Appl e1 e2) =
-  Appl (subst v x e1) (subst v x e2)
-
-subst _ _ e@(PrimInt _) = e
-
-subst _ _ e@(PrimChar _) = e
-
-subst _ _ e@(PrimUnit) = e
-
-subst v x (Case expr branches) =
-  let expr' = subst v x expr in
-  Case expr' $ map substBranch branches
-  where substBranch branch@(Branch mident chi branchExpr) =
-          let boundIdents =
-                maybeToList mident ++
-                case chi of
-                  ChiPrim _ -> []
-                  ChiLabel _ i -> [i]
-                  ChiFun -> []
-                  ChiAny -> []
-          in
-          if elem x boundIdents
-              then branch
-              else Branch mident chi $ subst v x branchExpr
-
-subst v x (OnionSub e s) =
-  OnionSub (subst v x e) s
-
-subst v x (LazyOp op e1 e2) =
-  LazyOp op (subst v x e1) (subst v x e2)
-
-subst v x (EagerOp op e1 e2) =
-  EagerOp op (subst v x e1) (subst v x e2)
-
-subst v x (Def i e1 e2)
-  | i == x    = Def i (subst v x e1) e2
-  | otherwise = Def i (subst v x e1) (subst v x e2)
-
-subst v x (Assign c@(AValue _) e1 e2) =
-  Assign c (subst v x e1) (subst v x e2)
-
-subst v x (Assign ai@(AIdent i) e1 e2)
-  | i == x    = Assign (AValue v) (subst v x e1) (subst v x e2)
-  | otherwise = Assign ai (subst v x e1) (subst v x e2)
-
-subst _ _ e@(ExprCell _) = e
+subst v x e =
+  case e of
+    Var i ->
+      if i == x then exprFromValue v
+                else e
+    Label n e' -> Label n $ subst v x e'
+    Onion e1 e2 -> Onion (subst v x e1) (subst v x e2)
+    Func i e' ->
+      if i == x then e
+                else Func i $ subst v x e'
+    Appl e1 e2 -> Appl (subst v x e1) (subst v x e2)
+    PrimInt _ -> e
+    PrimChar _ -> e
+    PrimUnit -> e
+    Case e' branches ->
+      let e'' = subst v x e' in
+      Case e'' $ map substBranch branches
+      where substBranch branch@(Branch mident chi branchExpr) =
+              let boundIdents =
+                    maybeToList mident ++
+                    case chi of
+                      ChiPrim _ -> []
+                      ChiLabel _ i -> [i]
+                      ChiFun -> []
+                      ChiAny -> []
+              in
+              if elem x boundIdents
+                  then branch
+                  else Branch mident chi $ subst v x branchExpr
+    OnionSub e' s -> OnionSub (subst v x e') s
+    LazyOp op e1 e2 -> LazyOp op (subst v x e1) (subst v x e2)
+    EagerOp op e1 e2 -> EagerOp op (subst v x e1) (subst v x e2)
+    Def i e1 e2 ->
+      if i == x then Def i (subst v x e1) e2
+                else Def i (subst v x e1) (subst v x e2)
+    Assign a e1 e2 ->
+      case a of
+        AValue _ -> Assign a (subst v x e1) (subst v x e2)
+        AIdent i ->
+          let a' = if i == x then (AValue v) else a in
+          Assign a' (subst v x e1) (subst v x e2)
+    ExprCell _ -> e
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated
