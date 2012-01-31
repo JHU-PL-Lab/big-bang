@@ -2,7 +2,7 @@
 -- options, see
 -- http://www.haskell.org/cabal/release/cabal-latest/doc/users-guide/authors.html#pkg-descr.
 -- The name of the package.
-Name:                big-bang
+Name:                big-bang-utils
 
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
@@ -10,7 +10,7 @@ Name:                big-bang
 Version:             0.1
 
 -- A short (one-line) description of the package.
-Synopsis:            Statically duck typed language.
+Synopsis:            Utils package for big-bang and related projects
 
 -- A longer description of the package.
 Description:         Big Bang is a statically typed, constraints based programming language which intends to allow programming in python style in a type-safe fashion.
@@ -29,7 +29,7 @@ Author:              Alex Rozenshteyn
 Maintainer:          big-bang@jhu.edu
 
 -- A copyright notice.
-Copyright:           (c) 2011 Alex Rozenshteyn, Zachary Palmer, Scott Smith
+Copyright:           (c) 2011-2012 Alex Rozenshteyn, Zachary Palmer, Scott Smith
 
 Category:            Language
 
@@ -45,35 +45,13 @@ Stability:           alpha
 Cabal-version:       >=1.8
 
 Library
-  hs-source-dirs:      lib-src
+  hs-source-dirs:      src
 
   Exposed-Modules:
-        Language.TinyBang.Ast
-        Language.TinyBang.Interpreter.Interpreter
-        Language.TinyBang.Interpreter.SourceInterpreter
-        Language.TinyBang.Render.Display
-        Language.TinyBang.Syntax.Parser
-        Language.TinyBang.Syntax.Lexer
-        Language.TinyBang.Types.Closure
-        Language.TinyBang.Types.Alphas
-        Language.TinyBang.Types.Types
-        Language.TinyBang.Types.TypeInference
-        Language.TinyBang.Types.UtilTypes
+        Data.Function.Utils
+        Data.Maybe.Utils
+        Data.Set.Utils
 
-  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell, big-bang-utils
+  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty
 
-  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
-
-Executable interpreter
-  hs-source-dirs:      executable-src
-  -- .hs or .lhs file containing the Main module.
-  Main-is:             Interpreter.hs
-
-  -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang
-
-  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  Build-tools:         alex, happy
-
-  -- Enable compiler warnings
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
