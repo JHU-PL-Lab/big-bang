@@ -6,13 +6,13 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 
-tests = TestLabel "Integer tests" $ TestList
+tests = TestLabel "Tests for unit" $ TestList
   [ lexParseEval "()"
-                 [TokUnit]
+                 [TokOpenParen, TokCloseParen]
                  A.PrimUnit
                  A.VPrimUnit
   , lexParseEval "( )"
-                 [TokUnit]
+                 [TokOpenParen, TokCloseParen]
                  A.PrimUnit
                  A.VPrimUnit
   , xEval "case () of { unit -> () }"

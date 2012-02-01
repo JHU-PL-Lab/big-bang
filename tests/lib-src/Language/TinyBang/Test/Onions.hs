@@ -64,10 +64,25 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                    (A.Onion (A.Label lblB $ E.pi 2) (A.Label lblC $ E.pi 3)))
   -- Test that onions evaluate left to right
   -- Uses state
-  -- FIXME: I think this test is failing for good reason.
+  , xEval " def x = 0 in \
+          \ `A (x = [+] x 1 in x) & `B (x = [+] x 1 in x)"
+          ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
+          , mkState [ (0, V.pi 1)
+                    , (1, V.pi 2)
+                    ]
+          )
   , xEval " def x = `Ref 0 in \
           \ def inc = fun x -> case x of { `Ref y -> y = [+] y 1 in y } in \
           \ `A (inc x) & `B (inc x)"
+          ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
+          , mkState [ (0, V.pi 1)
+                    , (1, V.pi 2)
+                    ]
+          )
+  , xEval " def r = `Ref 0 in \
+          \ def inc = fun x -> case x of { `Ref y -> y = [+] y 1 in y } in \
+          \ `A (case r of { `Ref x -> x = [+] x 1 in x }) & \
+          \ `B (case r of { `Ref x -> x = [+] x 1 in x })"
           ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
           , mkState [ (0, V.pi 1)
                     , (1, V.pi 2)

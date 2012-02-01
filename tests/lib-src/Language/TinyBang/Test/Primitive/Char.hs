@@ -14,7 +14,13 @@ testChar c = lexParseEval ('\'':c:'\'':[])
                           (A.PrimChar c)
                           (A.VPrimChar c)
 
+
 tests = TestLabel "Character tests" $ TestList $
   map testChar
-    ['a', 'A', 'z', 'Z', '∀', '∃', 'λ', '◈', '☺', '⤳', '☃', ' ', '\t', '\n']
-
+    ['a', 'A', 'z', 'Z', '∀', '∃', 'λ', '◈', '☺', '⤳', '☃', ' ', '\t']
+--  TODO: We should do something about handling character escapse or literal newlines.
+--  [ lexParseEval "'\\n'"
+--                 [TokCharLiteral '\n']
+--                 (A.PrimChar '\n')
+--                 (A.VPrimChar '\n')
+--  ]

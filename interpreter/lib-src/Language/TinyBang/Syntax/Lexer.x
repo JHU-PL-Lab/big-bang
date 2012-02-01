@@ -36,6 +36,7 @@ tokens :-
     of                                  { constTok TokOf }
     int                                 { constTok TokInteger }
     char                                { constTok TokChar }
+-- TODO: TokUnit isn't actually used; remove it?
     unit                                { constTok TokUnit }
     \(                                  { constTok TokOpenParen }
     \)                                  { constTok TokCloseParen }
