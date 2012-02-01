@@ -1,35 +1,15 @@
-CONFIGFLAGS=--disable-executable-profiling --disable-library-profiling
-CONFIGURE=cabal configure $(CONFIGFLAGS)
-BUILD=cabal build
-REGISTER=cabal register --inplace
-CLEAN=cabal clean
+PROJECTS=utils interpreter micro-bang tests
 
-.PHONY : all utils interpreter tests
-all : utils interpreter tests micro-bang
+.PHONY : all
+all : $(PROJECTS)
 
-utils :
-	cd $@ && $(CONFIGURE) && $(BUILD) && $(REGISTER)
+.PHONY : clean
+clean : $(foreach proj,$(PROJECTS),clean_$(proj))
 
-interpreter :
-	cd $@ && $(CONFIGURE) && $(BUILD) && $(REGISTER)
+.PHONY : $(PROJECTS)
+$(PROJECTS): %:
+	cd $@ && $(MAKE)
 
-tests :
-	cd $@ && $(CONFIGURE) && $(BUILD)
-
-micro-bang :
-	cd $@ && $(CONFIGURE) && $(BUILD)
-
-.PHONY : clean clean-interpreter clean-tests
-clean : clean-utils clean-interpreter clean-tests clean-micro-bang
-
-clean-utils :
-	cd utils && $(CLEAN)
-
-clean-interpreter :
-	cd interpreter && $(CLEAN)
-
-clean-tests :
-	cd tests && $(CLEAN)
-
-clean-micro-bang :
-	cd micro-bang && $(CLEAN)
+.PHONY : $(foreach proj,$(PROJECTS),clean_$(proj))
+$(foreach proj,$(PROJECTS),clean_$(proj)): clean_%:
+	cd $(patsubst clean_%,%,$@) && $(MAKE) clean
