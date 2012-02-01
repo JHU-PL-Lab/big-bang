@@ -47,6 +47,7 @@ Library
     Language.TinyBang.Test.Binders
     Language.TinyBang.Test.Case
     Language.TinyBang.Test.EagerOps
+    Language.TinyBang.Test.EmptyOnion
     Language.TinyBang.Test.ExpressionUtils
     Language.TinyBang.Test.Functions
     Language.TinyBang.Test.LazyOps

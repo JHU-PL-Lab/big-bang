@@ -7,6 +7,7 @@ import qualified Language.TinyBang.Test.Functions as Functions
 import qualified Language.TinyBang.Test.Binders as Binders
 import qualified Language.TinyBang.Test.Case as Case
 import qualified Language.TinyBang.Test.EagerOps as EagerOps
+import qualified Language.TinyBang.Test.EmptyOnion as EmptyOnion
 import qualified Language.TinyBang.Test.LazyOps as LazyOps
 import qualified Language.TinyBang.Test.Lexer as Lexer
 import qualified Language.TinyBang.Test.Misc as Misc
@@ -25,6 +26,7 @@ tests =
   , Binders.tests
   , Case.tests
   , EagerOps.tests
+  , EmptyOnion.tests
   , LazyOps.tests
   , Lexer.tests
   , Misc.tests
