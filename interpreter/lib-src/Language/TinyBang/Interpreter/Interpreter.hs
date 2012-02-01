@@ -14,13 +14,14 @@ module Language.TinyBang.Interpreter.Interpreter
 , onion
 ) where
 
+import Control.Monad (liftM)
 import Control.Monad.Error (Error, strMsg, throwError)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
 import Control.Arrow (second)
 import Control.Applicative ((<$>))
 import Data.Maybe (mapMaybe, maybeToList)
 import Data.Function (on)
-import Data.List(foldl1', sort, sortBy, groupBy)-- intersectBy (redundant but used)
+import Data.List(foldl1', sort, sortBy, groupBy, nubBy)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
@@ -44,6 +45,7 @@ import Language.TinyBang.Types.UtilTypes
     ( Ident
     , unIdent
     , LabelName
+    , labelName
     )
 import Utils.Render.Display
 
@@ -233,45 +235,66 @@ eval e = do
       EagerOp op e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
-        error "Eager operations are not yet implemented" -- TODO
--- eval (Equal e1 e2) = do
---     e1' <- eval e1
---     e2' <- eval e2
---     case (e1', e2') of
---         (VPrimInt _, VPrimInt _) -> req e1' e2'
---         (VPrimChar _, VPrimChar _) -> req e1' e2'
---         ((VFunc _ _), (VFunc _ _)) -> req e1' e2'
---         (VLabel name1 expr1, VLabel name2 expr2) -> if name1 == name2
---                                                      then req expr1 expr2
---                                                      else throwError $ DynamicTypeError "incorrect type in expression"
---         (VPrimUnit, VPrimUnit) -> return true
--- -- FIXME: Some things that should be type errors evaluate to false.
---         (o1@(VOnion _ _), o2@(VOnion _ _)) -> oreq o1 o2
---         (o1@(VOnion _ _), _) -> ovreq o1 e2'
---         (_, o2@(VOnion _ _)) -> ovreq o2 e1'
---         _ -> throwError $ DynamicTypeError "incorrect type in expression"
---   where true  = VLabel (labelName "True" ) VPrimUnit
---         false = VLabel (labelName "False") VPrimUnit
---         eq a b = if a == b then true else false
---         req a b = return $ eq a b
---         oreq a b = return $ if onionEq a b
---                                then true
---                                else false
---         ovreq o v = return $ if onionValueEq o v
---                                 then true
---                                 else false
+        case op of
+          Equal -> eEqual v1 v2
+          LessEqual -> eLessEq v1 v2
+          GreaterEqual -> eGreaterEq v1 v2
+        where eEqual :: Value -> Value -> EvalM Value
+              eEqual v1 v2 = do
+                c <- newCell VPrimUnit
+                b1 <- eCompare v1 v2
+                b2 <- eCompare v2 v1
+                let n = if b1 && b2 then "True" else "False"
+                return $ VLabel (labelName n) c
+              eLessEq :: Value -> Value -> EvalM Value
+              eLessEq v1 v2 = do
+                c <- newCell VPrimUnit
+                b <- eCompare v1 v2
+                let n = if b then "True" else "False"
+                return $ VLabel (labelName n) c
+              eGreaterEq :: Value -> Value -> EvalM Value
+              eGreaterEq v1 v2 = eLessEq v2 v1
+              eCompare :: Value -> Value -> EvalM Bool
+              eCompare v1 v2 = eSublist (eFilter $ eFlatten v1)
+                                        (eFilter $ eFlatten v2)
+              eFilter :: [Value] -> [Value]
+              eFilter vs = reverse $ nubBy eTestMatch (reverse vs)
+              eTestMatch :: Value -> Value -> Bool
+              eTestMatch v1 v2 =
+                case (v1,v2) of
+                  (VPrimUnit,VPrimUnit) -> True
+                  (VPrimInt _,VPrimInt _) -> True
+                  (VPrimChar _,VPrimChar _) -> True
+                  (VLabel n _, VLabel n' _) -> n == n'
+                  (VFunc _ _, VFunc _ _) -> True
+                  _ -> False
+              eSublist :: [Value] -> [Value] -> EvalM Bool
+              eSublist vs1 vs2 =
+                (liftM and) $ mapM inVs2 vs1 -- is every v1 in vs2?
+                where inVs2 :: Value -> EvalM Bool
+                      inVs2 v1 = -- is v1 in vs2?
+                        (liftM or) $ mapM (eAtomCompare v1) vs2
+              eAtomCompare :: Value -> Value -> EvalM Bool
+              eAtomCompare v1 v2 =
+                case (v1,v2) of
+                  (VPrimUnit,VPrimUnit) -> return True
+                  (VPrimInt p1, VPrimInt p2) -> return $ p1 <= p2
+                  (VPrimChar p1, VPrimChar p2) -> return $ p1 <= p2
+                  (VLabel n1 c1, VLabel n2 c2) | n1 == n2 -> do
+                    v1' <- readCell c1
+                    v2' <- readCell c2
+                    eCompare v1' v2'
+                  (VFunc _ _, VFunc _ _) -> return $ v1 == v2
+                  _ -> return False
 
 -- |Flattens onions to a list whose elements are guaranteed not to
 --  be onions themselves and which appear in the same order as they
 --  did in the original onion
-flattenOnion :: Value -> [Value]
-flattenOnion e =
+eFlatten :: Value -> [Value]
+eFlatten e =
   case e of
     VEmptyOnion -> []
-    VOnion e1 e2 -> flattenOnion e1 ++ flattenOnion e2
--- Removed because I think that with it present, it invokes that
--- annoying onion equality property that we can never remember is gone.
---    VLabel i e1  -> map (VLabel i) $ flattenOnion e1
+    VOnion e1 e2 -> eFlatten e1 ++ eFlatten e2
     _            -> [e]
 
 -- |Transforms a list representing a flattened onion to one containing
@@ -285,7 +308,7 @@ canonicalizeList xs = map last ys
 --  and that the onion entries be sorted in accordance with the ordering
 --  defined over Values
 canonicalizeOnion :: Value -> Value
-canonicalizeOnion = foldl1' onion . sort . canonicalizeList . flattenOnion
+canonicalizeOnion = foldl1' onion . sort . canonicalizeList . eFlatten
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
 -- onionListLessEq _ [] _  = Just True
@@ -326,11 +349,11 @@ valueToOrd v =
 -- Still useful: commented out to silence "Defined but not used" warnings.
 -- onionEq :: Value -> Value -> Bool
 -- onionEq o1 o2 = c o1 == c o2
---   where c = canonicalizeList . flattenOnion
+--   where c = canonicalizeList . eFlatten
 
 -- onionValueEq :: Value -> Value -> Bool
 -- onionValueEq o v = c o == [v]
---   where c = canonicalizeList . flattenOnion
+--   where c = canonicalizeList . eFlatten
 
 -------------------------------------------------------------------------------
 -- *Substitution Functions
