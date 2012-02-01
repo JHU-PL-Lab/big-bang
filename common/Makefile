@@ -10,9 +10,7 @@ build : .is_configured
 
 .PHONY : register
 register : build
-	if test -e $(REGISTER_TAG); then \
-		cabal register --inplace; \
-	fi
+	test -e $(REGISTER_TAG) && cabal register --inplace
 
 .is_configured :
 	cabal configure $(CONFIGFLAGS) && touch .is_configured
