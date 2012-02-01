@@ -8,6 +8,10 @@ all : build register
 build : .is_configured
 	cabal build
 
+.PHONY : configure
+configure :
+	cabal configure
+
 .PHONY : register
 register : build
 	test -e $(REGISTER_TAG) && cabal register --inplace
