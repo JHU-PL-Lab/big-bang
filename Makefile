@@ -14,7 +14,7 @@ interpreter :
 	cd $@ && $(CONFIGURE) && $(BUILD) && $(REGISTER)
 
 micro-bang :
-	cd $@ && $(CONFIGURE) && $(BUILD) && $(REGISTER)
+	cd $@ && $(CONFIGURE) && $(BUILD)
 
 tests :
 	cd $@ && $(CONFIGURE) && $(BUILD)
