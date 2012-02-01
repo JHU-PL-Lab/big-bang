@@ -8,6 +8,7 @@ Language/BigBang/Syntax/Lexer.hs
 Language/BigBang/Syntax/Parser.hs
 Language/BigBang/Syntax/ParserData.hs
 Parser.info
+.is_configured
 
 *.backup
 *.bak
