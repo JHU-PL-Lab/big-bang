@@ -10,7 +10,7 @@ build : .is_configured
 
 .PHONY : configure
 configure :
-	cabal configure
+	cabal configure && touch .is_configured
 
 .PHONY : register
 register : build
