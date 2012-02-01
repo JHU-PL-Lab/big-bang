@@ -22,4 +22,4 @@ register : build
 .PHONY : clean
 clean :
 	cabal clean
-	rm -f .is_configured
+	$(RM) .is_configured
