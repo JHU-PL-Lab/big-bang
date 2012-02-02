@@ -184,6 +184,7 @@ substituteVars constraints forallVars replAlpha =
     (substituteAlpha constraints)
     (replAlpha, forallVars)
 
+ct :: (LowerBounded a) => Constraints -> a -> [LowerBound a]
 ct cs a = Set.toList $ runReader (concretizeType a) cs
 
 --TODO: case rules use explicit case on Maybe; possibly clean up.
@@ -290,7 +291,12 @@ closeAll cs =
 calculateClosure :: Constraints -> Constraints
 calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
 
+saHelper :: (AlphaSubstitutable a)
+         => (a -> b) -> a -> Reader AlphaSubstitutionEnv b
 saHelper constr a = constr <$> substituteAlpha a
+
+saHelper2 :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
+          => (a1 -> a2 -> b) -> a1 -> a2 -> Reader AlphaSubstitutionEnv b
 saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
 
 instance AlphaSubstitutable TauUp where
@@ -317,9 +323,17 @@ instance AlphaSubstitutable PolyFuncData where
             substituteAlpha' =
               local (second $ flip Set.difference alphas) . substituteAlpha
 
+csaHelper :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
+          => (a1 -> a2 -> hist -> b)
+          -> a1 -> a2 -> hist -> Reader AlphaSubstitutionEnv b
 csaHelper constr a1 a2 hist =
   constr <$> substituteAlpha a1 <*> substituteAlpha a2 <*> pure hist
 
+csaHelper3 :: (AlphaSubstitutable a1,
+               AlphaSubstitutable a2,
+               AlphaSubstitutable a3)
+           => (a1 -> a2 -> a3 -> hist -> b)
+           -> a1 -> a2 -> a3 ->  hist -> Reader AlphaSubstitutionEnv b
 csaHelper3 constr a1 a2 a3 hist =
   constr
     <$> substituteAlpha a1
