@@ -2,10 +2,15 @@ CONFIGFLAGS=--disable-executable-profiling --disable-library-profiling
 REGISTER_TAG=.do_register
 
 .PHONY : all
-all : build register
+all : configure build register
 
 .PHONY : build
-build : .is_configured
+# Forcing configuration on every build for the time being.
+#build : .is_configured
+# If project B depends on project A and project A changes, project B must be
+# reconfigured.  Unfortunately, it's hard to tell when project A *changes*;
+# for the time being, we'll just reconfigure and pay the time.
+build : configure
 	cabal build
 
 .PHONY : configure
