@@ -9,6 +9,7 @@ Language/BigBang/Syntax/Parser.hs
 Language/BigBang/Syntax/ParserData.hs
 Parser.info
 .is_configured
+.big-bang.cabal.db
 
 *.backup
 *.bak

@@ -5,6 +5,7 @@ all : $(PROJECTS)
 
 .PHONY : clean
 clean : $(foreach proj,$(PROJECTS),clean_$(proj))
+	rm -rf .big-bang.cabal.db
 
 .PHONY : configure
 configure : $(foreach proj,$(PROJECTS),configure_$(proj))
