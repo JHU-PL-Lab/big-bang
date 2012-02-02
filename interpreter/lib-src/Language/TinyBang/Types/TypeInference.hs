@@ -200,21 +200,23 @@ inferType expr =
       a2 <- inferType e2
       tell1 $ T.LazyOp op a1 a2 <: a0 .: histFIXME
       return a0
-    A.EagerOp op e1 e2 -> error "Eager operations are not implemented yet" op e1 e2
-        -- do
-        --   t1 <- inferType e1
-        --   t2 <- inferType e2
-        --   return $ T.TdEagerOp t1 op t2
---    A.Equal e1 e2 -> error "Equality is not implemented yet"
-          -- alpha <- freshVar
-          -- alpha' <- freshVar
-          -- gamma <- ask
-          -- tell $ Set.fromList $ map (.: T.Inferred expr gamma) $
-          --       map (<: T.TucAlpha alpha') $ map
-          --       (\x -> T.TdcLabel (labelName x) $ T.TdcPrim T.PrimUnit)
-          --       ["True","False"]
-          -- naryOp expr gamma [e1,e2] (T.TucAlpha alpha) (T.TdcAlpha alpha')
-      -- TODO: Make these definitions do something
+    A.EagerOp op e1 e2 -> do
+      a0 <- freshVar
+      a1 <- inferType e1
+      a2 <- inferType e2
+      au <- freshVar
+      acu <- freshVar
+      tell $ Set.fromList $
+        [ T.PrimUnit <: au .: histFIXME
+        , Cell au <: acu .: histFIXME
+        , T.TdLabel (labelName "True") acu <: a0 .: histFIXME
+        , T.TdLabel (labelName "False") acu <: a0 .: histFIXME
+        ]
+      tell $ Set.fromList $ case op of
+        Equal -> [ T.Comparable a1 a2 histFIXME , T.Comparable a2 a1 histFIXME ]
+        LessEqual -> [ T.Comparable a1 a2 histFIXME ]
+        GreaterEqual -> [ T.Comparable a2 a1 histFIXME ]
+      return a0
     A.Def x e1 e2 -> do
       --TODO: Something about shadowing
       a1 <- inferType e1
@@ -262,6 +264,7 @@ extractConstraintTypeVars c =
                 CellSetSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellAlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
                 LazyOpSubtype _ a1 a2 a3 _ -> insert3Weak set a1 a2 a3
+                Comparable a1 a2 _ -> insert2Weak set a1 a2
                 T.Case a gs _ ->
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs

@@ -95,6 +95,7 @@ data Constraint
   | CellAlphaSubtype CellAlpha CellAlpha ConstraintHistory
   | LazyOpSubtype
       LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
+  | Comparable InterAlpha InterAlpha ConstraintHistory
   | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
@@ -109,6 +110,7 @@ data ConstraintOrdinal
   | OrdCSS CellAlpha InterAlpha
   | OrdCAS CellAlpha CellAlpha
   | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
+  | OrdCmp InterAlpha InterAlpha
   | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
@@ -125,6 +127,7 @@ constraintOrdinal c =
     CellSetSubtype   a  tu    _ -> OrdCSS    a  tu
     CellAlphaSubtype a1 a2    _ -> OrdCAS    a1 a2
     LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
+    Comparable       a1 a2    _ -> OrdCmp    a1 a2
     Case             a  gs    _ -> OrdCase   a gs
     Bottom                    h -> OrdBottom h
 
@@ -291,6 +294,8 @@ instance Display Constraint where
         subtype a1 a2
       LazyOpSubtype op a1 a2 a3 _ ->
         subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3
+      Comparable a1 a2 _ ->
+        text "cmp(" <> makeDoc a1 <> text "," <> makeDoc a2 <> text ")"
       Case a gs _ ->
         text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
         (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)

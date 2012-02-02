@@ -357,6 +357,8 @@ instance AlphaSubstitutable Constraint where
         csaHelper CellAlphaSubtype a1 a2 hist
       LazyOpSubtype op a1 a2 a3 hist ->
         csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
+      Comparable a1 a2 hist ->
+        csaHelper Comparable a1 a2 hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a
