@@ -8,12 +8,13 @@ import qualified Language.TinyBang.Ast as A
 
 -- TODO: write prop_testInteger using quickcheck
 
-testInteger :: Integer -> Test
+testInteger :: (?debug :: Bool) => Integer -> Test
 testInteger i = lexParseEval (show i)
                              [TokIntegerLiteral i]
                              (A.PrimInt i)
                              (A.VPrimInt i)
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Integer tests" $ TestList $
   [ testInteger 1234567890
   , testInteger (-1234567890)

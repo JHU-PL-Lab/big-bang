@@ -13,6 +13,7 @@ efour = A.PrimInt 4
 four = A.VPrimInt 4
 two = A.VPrimInt 2
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
           A.Def idX efour varX

@@ -6,7 +6,6 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Test.ExpressionUtils as E
   ( false
-  , true
   )
 import Language.TinyBang.Test.ExpressionUtils
   ( varX
@@ -22,6 +21,7 @@ import Language.TinyBang.Test.NameUtils
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Types.Types as T
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "General case tests" $ TestList
   [ xEval "case 1 of {int -> 0}"
           (V.pi 0)

@@ -10,7 +10,7 @@ import Utils.Render.Display
 -- TODO: Refactor this or eliminate it.
 -- TODO: Use quickcheck to write a test that pretty print + parse is idempotent.
 
-tests :: Test
+tests :: (?debug :: Bool) => Test
 tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTests-}]
 
 -- Test cases that ensure that primitive literals are printed correctly

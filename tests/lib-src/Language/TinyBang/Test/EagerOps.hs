@@ -6,6 +6,7 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Eager operations tests" $ TestList
   [
 -- TODO: uncomment when eager ops work

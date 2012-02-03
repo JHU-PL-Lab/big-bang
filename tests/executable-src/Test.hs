@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
 import Test.HUnit
+import System.Console.CmdArgs
 
 import qualified Language.TinyBang.Test.Onions as Onions
 import qualified Language.TinyBang.Test.Functions as Functions
@@ -20,6 +22,7 @@ import qualified Language.TinyBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.TinyBang.Test.Projection as Projection
 import qualified Language.TinyBang.Test.State as State
 
+tests :: (?debug :: Bool) => [Test]
 tests =
   [ Onions.tests
   , Functions.tests
@@ -40,4 +43,14 @@ tests =
   , State.tests
   ]
 
-main = runTestTT $ TestList tests
+data Options = Options { debug :: Bool }
+  deriving (Data, Typeable, Eq, Show)
+
+defOpts :: Options
+defOpts = Options {debug = def &= name "d"}
+
+main :: IO Counts
+main = do
+  opts <- cmdArgs defOpts
+  let ?debug = debug opts
+  runTestTT $ TestList tests

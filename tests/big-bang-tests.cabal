@@ -71,6 +71,7 @@ Library
   Build-depends:       base, array, containers == 0.4.0.0, mtl, big-bang, HUnit, pretty, big-bang-utils
 
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans -fno-warn-missing-signatures
+  extensions:          ImplicitParams
 
 Executable test-suite
   hs-source-dirs:      executable-src
@@ -79,7 +80,7 @@ Executable test-suite
   Main-is:             Test.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang, big-bang-tests, HUnit, big-bang-utils
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang, big-bang-tests, HUnit, big-bang-utils, cmdargs
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
@@ -88,3 +89,4 @@ Executable test-suite
 
   -- Enable compiler warnings
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
+  extensions:          ImplicitParams

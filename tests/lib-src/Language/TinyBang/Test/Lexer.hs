@@ -4,9 +4,6 @@ module Language.TinyBang.Test.Lexer
 where
 
 import Language.TinyBang.Test.UtilFunctions
-import qualified Language.TinyBang.Ast as A
-
-import Language.TinyBang.Syntax.Lexer
 
 -- TODO: write a whitespace test using quickcheck
 -- TODO: write show instance for list of tokens
@@ -17,6 +14,7 @@ lexesAs :: (String, Token) -> Test
 lexesAs (str, tok) =
   xLexs str [tok]
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Miscellaneous lexer tests" $ TestList $
   [ xLexs "" []
   , xLexs " " []

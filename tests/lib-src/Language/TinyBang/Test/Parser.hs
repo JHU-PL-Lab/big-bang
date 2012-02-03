@@ -5,6 +5,7 @@ where
 
 import Language.TinyBang.Test.UtilFunctions
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Miscellaneous parser tests" $ TestList
   [ fPars ""
   , fPars "(expr"

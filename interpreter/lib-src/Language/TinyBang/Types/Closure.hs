@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts, ImplicitParams #-}
 module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
@@ -32,6 +32,9 @@ import Language.TinyBang.Types.Alphas ( InterAlpha
 
 import Data.Function.Utils (leastFixedPoint)
 import Data.Set.Utils (singIf)
+
+import Debug.Trace (trace)
+import Utils.Render.Display (display)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -288,8 +291,12 @@ closeAll cs =
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.
-calculateClosure :: Constraints -> Constraints
-calculateClosure c = closeSingleContradictions $ leastFixedPoint closeAll c
+calculateClosure :: (?debug :: Bool) => Constraints -> Constraints
+calculateClosure c = ddisp $ closeSingleContradictions $ leastFixedPoint closeAll $ ddisp $ c
+  where ddisp x =
+          if ?debug
+            then trace ("{-----\n" ++ display x ++ "\n-----}") x
+            else x
 
 saHelper :: (AlphaSubstitutable a)
          => (a -> b) -> a -> Reader AlphaSubstitutionEnv b

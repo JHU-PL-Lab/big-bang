@@ -13,6 +13,7 @@ import Language.TinyBang.Test.ExpressionUtils
   )
 import qualified Language.TinyBang.Ast as A
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Miscellaneous tests" $ TestList
   [ xPars "'s''t''r''i''n''g'" $
           multiAppl [ (A.PrimChar 's')

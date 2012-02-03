@@ -9,16 +9,10 @@ import Language.TinyBang.Test.NameUtils
   ( lblA
   , lblB
   , lblC
-  , lblRef
   , idX
   )
 
-import Language.TinyBang.Test.ExpressionUtils
-  ( varX
-  )
-
 import qualified Language.TinyBang.Ast as A
-import Language.TinyBang.Syntax.Lexer
 
 import qualified Data.IntMap as IntMap
 
@@ -28,6 +22,7 @@ mkState = IntMap.fromList
 -- TODO: write quickcheck test to generate a permutable onion and verify that
 -- its permutations are equivalent.
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Tests of basic onion properties" $ TestList
   [ lexParseEval "`A 1 & `B 2"
                  [ TokLabelPrefix

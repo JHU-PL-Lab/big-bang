@@ -17,6 +17,8 @@ module Language.TinyBang.Test.UtilFunctions
 )
 where
 
+import Prelude hiding (lex)
+
 import Test.HUnit
 import qualified Data.IntMap as IntMap
 
@@ -35,7 +37,7 @@ import Utils.Render.Display (display, Display)
 type TinyBangCode = String
 type Result = (A.Value, IntMap.IntMap A.Value)
 
-xEval :: (Display v, Evaluated v) => TinyBangCode -> v -> Test
+xEval :: (Display v, Evaluated v, ?debug :: Bool) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -52,7 +54,7 @@ xEval code expectedResult =
         label = show code ++
                 " was expected to produce " ++ display expectedResult
 
-xType :: TinyBangCode -> Test
+xType :: (?debug :: Bool) => TinyBangCode -> Test
 xType code =
   label ~: TestCase $ case evalStringTop code of
     EvalResult _ _ -> assertSuccess
@@ -65,7 +67,7 @@ xType code =
 assertSuccess :: Assertion
 assertSuccess = return ()
 
-xCont :: TinyBangCode -> Test
+xCont :: (?debug :: Bool) => TinyBangCode -> Test
 xCont code =
   label ~: case result of
     Contradiction _ _ -> TestCase $ assertSuccess
@@ -77,7 +79,7 @@ xCont code =
                 " was expected to produce a contradiction"
         result = evalStringTop code
 
-xNotC :: TinyBangCode -> Test
+xNotC :: (?debug :: Bool) => TinyBangCode -> Test
 xNotC code =
   label ~: case result of
     TypecheckFailure _ (TI.NotClosed _) _ -> TestCase $ assertSuccess
@@ -95,7 +97,7 @@ xLexs code expected =
     Right tokens -> assertEqual "" expected tokens
   where label = "Lexing " ++ show code
 
-xPars :: TinyBangCode -> A.Expr -> Test
+xPars :: (?debug :: Bool) => TinyBangCode -> A.Expr -> Test
 xPars code expected =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -106,7 +108,7 @@ xPars code expected =
   where label = "Parsing " ++ show code
         eq = assertEqual "" expected
 
-fPars :: TinyBangCode -> Test
+fPars :: (?debug :: Bool) => TinyBangCode -> Test
 fPars code =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -117,7 +119,7 @@ fPars code =
   where label = "Parsing " ++ show code
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
-lexParseEval :: (Display a, Evaluated a)
+lexParseEval :: (Display a, Evaluated a, ?debug :: Bool)
              => TinyBangCode -> [Token] -> A.Expr -> a -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex

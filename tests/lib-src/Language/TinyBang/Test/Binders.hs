@@ -9,6 +9,7 @@ import qualified Language.TinyBang.Ast as A
 idX = ident "x"
 varX = A.Var idX
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Binder tests" $ TestList
   [ xPars "case 4 of {x:_ -> x = 2 in x}" $
           A.Case (A.PrimInt 4)

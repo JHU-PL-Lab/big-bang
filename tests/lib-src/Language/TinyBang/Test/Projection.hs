@@ -11,6 +11,7 @@ import qualified Language.TinyBang.Ast as A
 zero = A.VPrimInt 0
 one = A.VPrimInt 1
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
   [ xEval "case `A 5 & `A 'a' of {`A x -> x}"
           (A.VPrimChar 'a')

@@ -10,6 +10,7 @@ import qualified Data.IntMap as IntMap
 
 zero = A.VPrimInt 0
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Onion subtraction tests" $ TestList
   [ xEval "`A 0 & -`A"
           A.VEmptyOnion

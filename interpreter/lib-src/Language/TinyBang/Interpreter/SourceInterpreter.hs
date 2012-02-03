@@ -1,3 +1,4 @@
+{-# LANGUAGE ImplicitParams #-}
 module Language.TinyBang.Interpreter.SourceInterpreter
 ( evalStringTop
 , EvalStringResult(..)
@@ -42,14 +43,14 @@ type EvalStringM a = Either EvalStringResultErrorWrapper a
 -- |Performs top-level evaluation of a Big Bang source string.  This routine is
 --  provided for convenience and testing.  It attempts to lex, parse, typecheck
 --  and evaluate the code, producing an appropriate result.
-evalStringTop :: String -> EvalStringResult
+evalStringTop :: (?debug :: Bool) => String -> EvalStringResult
 evalStringTop s =
     let result = eAll s in
     case result of
         Left (FailureWrapper err) -> err
         Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
 
-eAll :: String -> EvalStringM A.Expr
+eAll :: (?debug :: Bool) => String -> EvalStringM A.Expr
 eAll s = do
     tokens <- eLex s
     ast <- eParse tokens
@@ -77,7 +78,7 @@ eTypeInfer e =
                 TypecheckFailure e err cs
         Right a -> return (a,cs)
 
-eClose :: A.Expr -> T.Constraints -> EvalStringM T.Constraints
+eClose :: (?debug :: Bool) => A.Expr -> T.Constraints -> EvalStringM T.Constraints
 eClose e cs =
     let closed = C.calculateClosure cs in
     if Set.null $ Set.filter isBottom closed

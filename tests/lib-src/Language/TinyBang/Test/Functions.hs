@@ -20,6 +20,7 @@ import Language.TinyBang.Test.SourceUtils
 
 import qualified Language.TinyBang.Ast as A
 
+tests :: (?debug :: Bool) => Test
 tests = TestLabel "Test functions" $ TestList
   [ xEval "fun x -> x"
           identFuncX

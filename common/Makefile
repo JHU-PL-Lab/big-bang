@@ -23,7 +23,6 @@ clean_configure :
 
 .PHONY : register
 register : build
-	echo "$(PACKAGE_NAME)"
 	if test -e $(REGISTER_TAG); then \
 	    ghc-pkg --package-conf=$(CABAL_DB_NAME) unregister --force $(PACKAGE_NAME) || true; \
 	    ghc-pkg --package-conf=dist/package.conf.inplace describe $(PACKAGE_NAME) |\

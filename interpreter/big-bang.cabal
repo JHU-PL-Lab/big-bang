@@ -73,7 +73,7 @@ Executable interpreter
   Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang, big-bang-utils
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang, big-bang-utils, cmdargs
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
