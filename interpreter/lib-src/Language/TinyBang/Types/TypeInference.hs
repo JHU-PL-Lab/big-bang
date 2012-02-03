@@ -212,10 +212,6 @@ inferType expr =
         , T.TdLabel (labelName "True") acu <: a0 .: histFIXME
         , T.TdLabel (labelName "False") acu <: a0 .: histFIXME
         ]
-      tell $ Set.fromList $ case op of
-        Equal -> [ T.Comparable a1 a2 histFIXME , T.Comparable a2 a1 histFIXME ]
-        LessEqual -> [ T.Comparable a1 a2 histFIXME ]
-        GreaterEqual -> [ T.Comparable a2 a1 histFIXME ]
       return a0
     A.Def x e1 e2 -> do
       --TODO: Something about shadowing

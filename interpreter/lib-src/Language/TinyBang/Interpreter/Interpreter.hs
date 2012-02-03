@@ -277,7 +277,7 @@ eval e = do
               eAtomCompare :: Value -> Value -> EvalM Bool
               eAtomCompare v1 v2 =
                 case (v1,v2) of
-                  (VPrimUnit,VPrimUnit) -> return True
+                  (VPrimUnit, VPrimUnit) -> return True
                   (VPrimInt p1, VPrimInt p2) -> return $ p1 <= p2
                   (VPrimChar p1, VPrimChar p2) -> return $ p1 <= p2
                   (VLabel n1 c1, VLabel n2 c2) | n1 == n2 -> do
@@ -285,6 +285,7 @@ eval e = do
                     v2' <- readCell c2
                     eCompare v1' v2'
                   (VFunc _ _, VFunc _ _) -> return $ v1 == v2
+                  _ | (valueToOrd v1) < (valueToOrd v2) -> return True
                   _ -> return False
 
 -- |Flattens onions to a list whose elements are guaranteed not to
@@ -320,11 +321,11 @@ canonicalizeOnion = foldl1' onion . sort . canonicalizeList . eFlatten
 --     GT -> onionListLessEq cmp (x:xs) ys
 
 data ValueOrdinal
-  = OrdLabel LabelName
-  | OrdFunc
+  = OrdPrimUnit
   | OrdPrimInt
   | OrdPrimChar
-  | OrdPrimUnit
+  | OrdLabel LabelName
+  | OrdFunc
   deriving (Eq, Ord)
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
@@ -339,11 +340,11 @@ eqValues = (==) `on` valueToOrd
 valueToOrd :: Value -> ValueOrdinal
 valueToOrd v =
   case v of
-    VLabel n _ -> OrdLabel n
-    VFunc _ _ -> OrdFunc
+    VPrimUnit -> OrdPrimUnit
     VPrimInt _ -> OrdPrimInt
     VPrimChar _ -> OrdPrimChar
-    VPrimUnit -> OrdPrimUnit
+    VLabel n _ -> OrdLabel n
+    VFunc _ _ -> OrdFunc
     _ -> error "This value should not be inside an onion"
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
