@@ -393,8 +393,6 @@ instance AlphaSubstitutable Constraint where
           <$> substituteAlpha a
           <*> mapM substituteAlpha guards
           <*> return hist
-      Final a hist ->
-        csaHelper Final a hist
       Bottom hist -> return $ Bottom hist
 
 instance AlphaSubstitutable Guard where
