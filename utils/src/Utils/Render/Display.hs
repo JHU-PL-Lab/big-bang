@@ -76,6 +76,9 @@ displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
 instance Display Doc where
     makeDoc = id
 
+instance Display Bool where
+    makeDoc = text . show
+
 instance Display Char where
     makeDoc = char
     makeListDoc = doubleQuotes . text
