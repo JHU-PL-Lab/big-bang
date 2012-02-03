@@ -330,10 +330,18 @@ instance AlphaSubstitutable PolyFuncData where
             substituteAlpha' =
               local (second $ flip Set.difference alphas) . substituteAlpha
 
-csaHelper :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
-          => (a1 -> a2 -> hist -> b)
-          -> a1 -> a2 -> hist -> Reader AlphaSubstitutionEnv b
-csaHelper constr a1 a2 hist =
+
+
+csaHelper :: (AlphaSubstitutable a)
+          => (a -> hist -> b)
+          -> a -> hist -> Reader AlphaSubstitutionEnv b
+csaHelper constr a hist =
+  constr <$> substituteAlpha a <*> pure hist
+
+csaHelper2 :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
+           => (a1 -> a2 -> hist -> b)
+           -> a1 -> a2 -> hist -> Reader AlphaSubstitutionEnv b
+csaHelper2 constr a1 a2 hist =
   constr <$> substituteAlpha a1 <*> substituteAlpha a2 <*> pure hist
 
 csaHelper3 :: (AlphaSubstitutable a1,
@@ -363,28 +371,30 @@ instance AlphaSubstitutable AnyAlpha where
 instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
       LowerSubtype td a hist ->
-        csaHelper LowerSubtype td a hist
+        csaHelper2 LowerSubtype td a hist
       UpperSubtype a tu hist ->
-        csaHelper UpperSubtype a tu hist
+        csaHelper2 UpperSubtype a tu hist
       AlphaSubtype a1 a2 hist ->
-        csaHelper AlphaSubtype a1 a2 hist
+        csaHelper2 AlphaSubtype a1 a2 hist
       CellSubtype ia ca hist ->
-        csaHelper CellSubtype ia ca hist
+        csaHelper2 CellSubtype ia ca hist
       CellGetSubtype ca ia hist ->
-        csaHelper CellGetSubtype ca ia hist
+        csaHelper2 CellGetSubtype ca ia hist
       CellSetSubtype ca ia hist ->
-        csaHelper CellSetSubtype ca ia hist
+        csaHelper2 CellSetSubtype ca ia hist
       CellAlphaSubtype a1 a2 hist ->
-        csaHelper CellAlphaSubtype a1 a2 hist
+        csaHelper2 CellAlphaSubtype a1 a2 hist
       LazyOpSubtype op a1 a2 a3 hist ->
         csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
       Comparable a1 a2 hist ->
-        csaHelper Comparable a1 a2 hist
+        csaHelper2 Comparable a1 a2 hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a
           <*> mapM substituteAlpha guards
           <*> return hist
+      Final a hist ->
+        csaHelper Final a hist
       Bottom hist -> return $ Bottom hist
 
 instance AlphaSubstitutable Guard where

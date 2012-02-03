@@ -295,7 +295,7 @@ instance Display Constraint where
       LazyOpSubtype op a1 a2 a3 _ ->
         subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3
       Comparable a1 a2 _ ->
-        text "cmp(" <> makeDoc a1 <> text "," <> makeDoc a2 <> text ")"
+        text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2)
       Case a gs _ ->
         text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
         (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
