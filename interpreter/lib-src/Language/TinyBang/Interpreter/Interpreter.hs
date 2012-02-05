@@ -24,6 +24,7 @@ import Data.Function (on)
 import Data.List(foldl1', sort, sortBy, groupBy, nubBy)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
+import Control.Monad.ListM (sortByM)
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 
 import Debug.Trace
@@ -255,8 +256,22 @@ eval e = do
               eGreaterEq :: Value -> Value -> EvalM Value
               eGreaterEq v1 v2 = eLessEq v2 v1
               eCompare :: Value -> Value -> EvalM Bool
-              eCompare v1 v2 = eSublist (eFilter $ eFlatten v1)
-                                        (eFilter $ eFlatten v2)
+              eCompare v1 v2 = eListLessEq (liftM reverse $ sortByM eAtomOrder $
+                                                eFilter $ eFlatten v1)
+                                           (liftM reverse $ sortByM eAtomOrder $
+                                                eFilter $ eFlatten v2)
+              eAtomOrder :: Value -> Value -> EvalM Ordering
+              eAtomOrder v1 v2 = do
+                b1 <- eAtomCompare v1 v2
+                b2 <- eAtomCompare v2 v1
+                case (b1,b2) of
+                  (True,True) -> return EQ
+                  (True,False) -> return LT
+                  (False,True) -> return GT
+                  (False,False) -> 
+                    error $ "eAtomCompare returned false for <= and >= "++
+                            "of arguments (" ++ display v1 ++ "), " ++
+                            "(" ++ display v2 ++ ")"
               eFilter :: [Value] -> [Value]
               eFilter vs = reverse $ nubBy eTestMatch (reverse vs)
               eTestMatch :: Value -> Value -> Bool
@@ -268,12 +283,19 @@ eval e = do
                   (VLabel n _, VLabel n' _) -> n == n'
                   (VFunc _ _, VFunc _ _) -> True
                   _ -> False
-              eSublist :: [Value] -> [Value] -> EvalM Bool
-              eSublist vs1 vs2 =
-                (liftM and) $ mapM inVs2 vs1 -- is every v1 in vs2?
-                where inVs2 :: Value -> EvalM Bool
-                      inVs2 v1 = -- is v1 in vs2?
-                        (liftM or) $ mapM (eAtomCompare v1) vs2
+              eListLessEq :: EvalM [Value] -> EvalM [Value] -> EvalM Bool
+              eListLessEq mvs1 mvs2 = do
+                vs1 <- mvs1
+                vs2 <- mvs2
+                case (vs1,vs2) of
+                  ([],_) -> return True
+                  (_,[]) -> return False
+                  (v1:r1,v2:r2) -> do
+                    ord <- eAtomOrder v1 v2
+                    case ord of
+                      LT -> return True
+                      GT -> return False
+                      EQ -> eListLessEq (return r1) (return r2)
               eAtomCompare :: Value -> Value -> EvalM Bool
               eAtomCompare v1 v2 =
                 case (v1,v2) of
