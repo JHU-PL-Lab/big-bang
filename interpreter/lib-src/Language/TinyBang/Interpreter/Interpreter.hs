@@ -14,9 +14,10 @@ module Language.TinyBang.Interpreter.Interpreter
 , onion
 ) where
 
-import Control.Monad (liftM)
 import Control.Monad.Error (Error, strMsg, throwError)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
+import Control.Monad.Reader (ReaderT, Reader, asks, ask, runReader)
+import Control.Monad.Identity (Identity)
 import Control.Arrow (second)
 import Control.Applicative ((<$>))
 import Data.Maybe (mapMaybe, maybeToList)
@@ -24,7 +25,6 @@ import Data.Function (on)
 import Data.List(foldl1', sort, sortBy, groupBy, nubBy)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
-import Control.Monad.ListM (sortByM)
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 
 import Debug.Trace
@@ -87,11 +87,24 @@ instance Display EvalError where
 
 -- I'm not sure if this or the other order of the monad transformers is
 -- preferable to the alternative. TODO: figure it out.
-type EvalM a = StateT Map (Either EvalError) a
+type EvalM a = StateT CellMap (Either EvalError) a
+type EnvReader a = Reader CellMap a
 type Cell = Int
 type NextCell = Int
-type Map = (NextCell, IntMap Value)
+type CellMap = (NextCell, IntMap Value)
 type Result = (Value, IntMap Value)
+
+class CellReadable m where
+  readCell :: Cell -> m Value
+
+instance CellReadable (StateT CellMap (Either EvalError)) where
+  readCell i = gets snd >>= return . (! i)
+
+instance CellReadable (ReaderT CellMap Identity) where
+  readCell i = asks snd >>= return . (! i)
+
+runEvalMReader :: EnvReader a -> EvalM a
+runEvalMReader envReader = get >>= return . runReader envReader
 
 newCell :: Value -> EvalM Cell
 newCell v = do
@@ -99,8 +112,8 @@ newCell v = do
   put (i + 1, IntMap.insert i v m)
   return i
 
-readCell :: Cell -> EvalM Value
-readCell i = gets snd >>= return . (! i)
+--readCell :: Cell -> EvalM Value
+--readCell i = gets snd >>= return . (! i)
 
 writeCell :: Cell -> Value -> EvalM ()
 writeCell i v = modify (second $ IntMap.adjust (const v) i)
@@ -243,24 +256,26 @@ eval e = do
         where eEqual :: Value -> Value -> EvalM Value
               eEqual v1 v2 = do
                 c <- newCell VPrimUnit
-                b1 <- eCompare v1 v2
-                b2 <- eCompare v2 v1
+                b1 <- runEvalMReader $ eCompare v1 v2
+                b2 <- runEvalMReader $ eCompare v2 v1
                 let n = if b1 && b2 then "True" else "False"
                 return $ VLabel (labelName n) c
               eLessEq :: Value -> Value -> EvalM Value
               eLessEq v1 v2 = do
                 c <- newCell VPrimUnit
-                b <- eCompare v1 v2
+                b <- runEvalMReader $ eCompare v1 v2
                 let n = if b then "True" else "False"
                 return $ VLabel (labelName n) c
               eGreaterEq :: Value -> Value -> EvalM Value
               eGreaterEq v1 v2 = eLessEq v2 v1
-              eCompare :: Value -> Value -> EvalM Bool
-              eCompare v1 v2 = eListLessEq (liftM reverse $ sortByM eAtomOrder $
-                                                eFilter $ eFlatten v1)
-                                           (liftM reverse $ sortByM eAtomOrder $
-                                                eFilter $ eFlatten v2)
-              eAtomOrder :: Value -> Value -> EvalM Ordering
+              eCompare :: Value -> Value -> EnvReader Bool
+              eCompare v1 v2 = do
+                env <- ask
+                let cmp x y = runReader (eAtomOrder x y) env
+                eListLessEq
+                  (reverse $ sortBy cmp $ eFilter $ eFlatten v1)
+                  (reverse $ sortBy cmp $ eFilter $ eFlatten v2)
+              eAtomOrder :: Value -> Value -> EnvReader Ordering
               eAtomOrder v1 v2 = do
                 b1 <- eAtomCompare v1 v2
                 b2 <- eAtomCompare v2 v1
@@ -268,7 +283,7 @@ eval e = do
                   (True,True) -> return EQ
                   (True,False) -> return LT
                   (False,True) -> return GT
-                  (False,False) -> 
+                  (False,False) ->
                     error $ "eAtomCompare returned false for <= and >= "++
                             "of arguments (" ++ display v1 ++ "), " ++
                             "(" ++ display v2 ++ ")"
@@ -283,10 +298,8 @@ eval e = do
                   (VLabel n _, VLabel n' _) -> n == n'
                   (VFunc _ _, VFunc _ _) -> True
                   _ -> False
-              eListLessEq :: EvalM [Value] -> EvalM [Value] -> EvalM Bool
-              eListLessEq mvs1 mvs2 = do
-                vs1 <- mvs1
-                vs2 <- mvs2
+              eListLessEq :: [Value] -> [Value] -> EnvReader Bool
+              eListLessEq vs1 vs2 = do
                 case (vs1,vs2) of
                   ([],_) -> return True
                   (_,[]) -> return False
@@ -295,8 +308,8 @@ eval e = do
                     case ord of
                       LT -> return True
                       GT -> return False
-                      EQ -> eListLessEq (return r1) (return r2)
-              eAtomCompare :: Value -> Value -> EvalM Bool
+                      EQ -> eListLessEq r1 r2
+              eAtomCompare :: Value -> Value -> EnvReader Bool
               eAtomCompare v1 v2 =
                 case (v1,v2) of
                   (VPrimUnit, VPrimUnit) -> return True
