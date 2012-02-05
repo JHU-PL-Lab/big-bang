@@ -21,6 +21,7 @@ import qualified Language.TinyBang.Test.Primitive.Int as Primitive.Int
 import qualified Language.TinyBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.TinyBang.Test.Projection as Projection
 import qualified Language.TinyBang.Test.State as State
+import qualified Language.TinyBang.Test.ListEncoding as ListEncoding
 
 tests :: (?debug :: Bool) => [Test]
 tests =
@@ -41,6 +42,7 @@ tests =
   , Primitive.Unit.tests
   , Projection.tests
   , State.tests
+  , ListEncoding.tests
   ]
 
 data Options = Options { debug :: Bool }

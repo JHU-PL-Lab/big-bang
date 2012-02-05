@@ -52,6 +52,7 @@ Library
     Language.TinyBang.Test.Functions
     Language.TinyBang.Test.LazyOps
     Language.TinyBang.Test.Lexer
+    Language.TinyBang.Test.ListEncoding
     Language.TinyBang.Test.Misc
     Language.TinyBang.Test.NameUtils
     Language.TinyBang.Test.OnionSubtraction
