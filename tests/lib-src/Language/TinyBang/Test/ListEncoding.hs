@@ -42,6 +42,20 @@ srcSum4 = "def accum = 0 in fun this -> fun xs ->"
           ++ "       {`tl b -> accum = [+] accum a in this b }"
           ++ " }"
 
+srcFoldl = "fun this -> fun f -> fun z -> fun xs ->"
+           ++ " case xs of"
+           ++ " { `nil junk -> z;"
+           ++ "   `hd a -> case xs of"
+           ++ "       {`tl b -> this f (f z a) b}"
+           ++ " }"
+
+srcFoldr = "fun this -> fun f -> fun z -> fun xs ->"
+           ++ " case xs of"
+           ++ " { `nil junk -> z;"
+           ++ "   `hd a -> case xs of"
+           ++ "       {`tl b -> f a (this f z b)}"
+           ++ " }"
+
 testSum xs = map ($ V.pi $ sum xs)
   [ xEval $ srcMultiAppl
       [srcY, srcSum1, srcMakeList xs]
@@ -51,11 +65,17 @@ testSum xs = map ($ V.pi $ sum xs)
       [srcY, srcSum3, "`acc 0 & " ++ srcMakeList xs]
   , xEval $ srcMultiAppl
       [srcY, srcSum4, srcMakeList xs]
+  , xEval $ srcMultiAppl
+      [srcY, srcFoldl, srcPlus, "0", srcMakeList xs]
+  , xEval $ srcMultiAppl
+      [srcY, srcFoldr, srcPlus, "0", srcMakeList xs]
   ]
+  where srcPlus = "fun x -> fun y -> [+] x y"
 
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "List encoding tests" $ TestList $ concat
   [ testSum []
+  , testSum [1]
+  , testSum [1,2]
   , testSum [1,2,3]
-  , testSum [3,2,1]
   ]
