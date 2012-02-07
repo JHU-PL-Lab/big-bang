@@ -72,10 +72,13 @@ testSum xs = map ($ V.pi $ sum xs)
   ]
   where srcPlus = "fun x -> fun y -> [+] x y"
 
+-- TODO: quickcheck that testsum works for all lists.
+
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "List encoding tests" $ TestList $ concat
   [ testSum []
   , testSum [1]
   , testSum [1,2]
   , testSum [1,2,3]
+  , testSum [1,2,3,4,5,6,7,8,9]
   ]
