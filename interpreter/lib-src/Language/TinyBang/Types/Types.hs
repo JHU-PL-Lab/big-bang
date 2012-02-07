@@ -152,15 +152,15 @@ instance Ord Constraint where
 
 data InterAlphaChain
   = IATerm TauDown
-  | IALink InterAlpha InterAlphaChain
-  | IAHead TauUp InterAlphaChain
+  | IALink InterAlpha Constraint InterAlphaChain
+  | IAHead TauUp Constraint InterAlphaChain
   deriving (Eq, Ord, Show)
 
 data CellAlphaChain
   = CATerm Cell
-  | CALink CellAlpha CellAlphaChain
-  | CAHeadG CellGet CellAlphaChain
-  | CAHeadS CellSet CellAlphaChain
+  | CALink CellAlpha Constraint CellAlphaChain
+  | CAHeadG CellGet Constraint CellAlphaChain
+  | CAHeadS CellSet Constraint CellAlphaChain
   deriving (Eq, Ord, Show)
 
 -- |A type describing the which rule generated a constraint and why.
