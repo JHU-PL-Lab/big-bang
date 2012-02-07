@@ -1,5 +1,6 @@
 {
 {-# OPTIONS_GHC -w #-}
+{-# LANGUAGE ImplicitParams #-}
 
 module Language.MicroBang.Syntax.Parser
 ( parseMicroBang
@@ -132,7 +133,7 @@ instance Display ParseError where
                             maybe "<EOS>" display $ listToMaybe tokens
             in text "unexpected" <+> text desc <+> text "token"
 instance Show ParseError where
-    show = display
+    show x = let ?debug = False in display x
 
 type ParseM a = ErrorT ParseError Identity a
 

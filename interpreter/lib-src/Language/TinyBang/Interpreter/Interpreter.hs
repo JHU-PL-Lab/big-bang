@@ -1,6 +1,8 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE FlexibleInstances,
+             MultiParamTypeClasses,
+             TupleSections,
+             ImplicitParams
+             #-}
 
 {- |A module defining a Big Bang interpreter.
 -}
@@ -127,7 +129,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
-evalTop :: Expr -> Either EvalError Result
+evalTop :: (?debug :: Bool) => Expr -> Either EvalError Result
 evalTop e =
     fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
@@ -158,7 +160,7 @@ onion v VEmptyOnion = v
 onion v1 v2 = VOnion v1 v2
 
 -- |Evaluates a Big Bang expression.
-eval :: Expr -> EvalM Value
+eval :: (?debug :: Bool) => Expr -> EvalM Value
 
 -- The next four cases are covered by the value rule
 eval e = do
@@ -253,7 +255,8 @@ eval e = do
           Equal -> eEqual v1 v2
           LessEqual -> eLessEq v1 v2
           GreaterEqual -> eGreaterEq v1 v2
-        where eEqual :: Value -> Value -> EvalM Value
+        where eEqual :: (?debug :: Bool)
+                     => Value -> Value -> EvalM Value
               eEqual v1 v2 = do
                 c <- newCell VPrimUnit
                 b1 <- runEvalMReader $ eCompare v1 v2
@@ -268,14 +271,16 @@ eval e = do
                 return $ VLabel (labelName n) c
               eGreaterEq :: Value -> Value -> EvalM Value
               eGreaterEq v1 v2 = eLessEq v2 v1
-              eCompare :: Value -> Value -> EnvReader Bool
+              eCompare :: (?debug :: Bool)
+                       => Value -> Value -> EnvReader Bool
               eCompare v1 v2 = do
                 env <- ask
                 let cmp x y = runReader (eAtomOrder x y) env
                 eListLessEq
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v1)
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v2)
-              eAtomOrder :: Value -> Value -> EnvReader Ordering
+              eAtomOrder :: (?debug :: Bool)
+                         => Value -> Value -> EnvReader Ordering
               eAtomOrder v1 v2 = do
                 b1 <- eAtomCompare v1 v2
                 b2 <- eAtomCompare v2 v1

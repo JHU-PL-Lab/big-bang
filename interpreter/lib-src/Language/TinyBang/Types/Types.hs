@@ -1,4 +1,9 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE MultiParamTypeClasses,
+             GeneralizedNewtypeDeriving,
+             FlexibleInstances,
+             TypeSynonymInstances,
+             ImplicitParams
+             #-}
 module Language.TinyBang.Types.Types
 ( TauUp(..)
 , TauDown(..)
@@ -160,7 +165,7 @@ data CellAlphaChain
 
 -- |A type describing the which rule generated a constraint and why.
 data ConstraintHistory
-  -- | Takes an AST nod and the environment local to that node
+  -- | Takes an AST node and the environment local to that node
   = Inferred
       A.Expr
       (Map Ident CellAlpha)
@@ -192,7 +197,7 @@ data ConstraintHistory
       CellAlphaChain
       InterAlphaChain
   -- | The first argument is t <|: a -> a, where t is not a function
-  | ContradictionAppliction
+  | ContradictionApplication
       InterAlphaChain
   -- | The first argument is a case constraint.
   --   The second argument is a td <|: alpha.
@@ -294,27 +299,84 @@ instance Display TauChi where
 instance Display Constraint where
   makeDoc c =
     --TODO: FIXME display history or remove this comment
-    case c of
-      LowerSubtype a b _ -> subtype a b
-      UpperSubtype a b _ -> subtype a b
-      AlphaSubtype a b _ -> subtype a b
-      CellSubtype ia ca _ ->
-        subtype (text "Cell" <> parens (makeDoc ia)) ca
-      CellGetSubtype ca ia _ ->
-        subtype ca $ text "CellG" <> parens (makeDoc ia)
-      CellSetSubtype ca ia _ ->
-        subtype ca $ text "CellS" <> parens (makeDoc ia)
-      CellAlphaSubtype a1 a2 _ ->
-        subtype a1 a2
-      LazyOpSubtype op a1 a2 a3 _ ->
-        subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3
-      Comparable a1 a2 _ ->
-        text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2)
-      Case a gs _ ->
-        text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
-        (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
-        $+$ rbrace
-      Bottom _ -> text "_|_" -- $$ (text . show) ch
+    let (base,hist) =
+          case c of
+            LowerSubtype a b h -> (subtype a b, h)
+            UpperSubtype a b h -> (subtype a b, h)
+            AlphaSubtype a b h -> (subtype a b, h)
+            CellSubtype ia ca h ->
+              (subtype (text "Cell" <> parens (makeDoc ia)) ca, h)
+            CellGetSubtype ca ia h ->
+              (subtype ca $ text "CellG" <> parens (makeDoc ia), h)
+            CellSetSubtype ca ia h ->
+              (subtype ca $ text "CellS" <> parens (makeDoc ia), h)
+            CellAlphaSubtype a1 a2 h ->
+              (subtype a1 a2, h)
+            LazyOpSubtype op a1 a2 a3 h ->
+              (subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3, h)
+            Comparable a1 a2 h ->
+              (text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2), h)
+            Case a gs h ->
+              (text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
+               (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
+               $+$ rbrace
+              ,h)
+            Bottom h -> (text "_|_", h)
+    in
+    if ?debug then base $+$ (nest indentSize $ makeDoc hist)
+              else base
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
+
+instance Display ConstraintHistory where
+  makeDoc hist =
+    case hist of
+      Inferred e env -> text "from expr" <+> makeDoc e <+> text "with env"
+                        <+> makeDoc env
+      ClosureCase c cn -> text "by case because" $+$
+                          (nest indentSize $ makeDoc c <+> tAnd
+                                         $+$ makeDoc cn)
+      ClosureApplication cn1 cn2 -> text "by application because" $+$
+                                    (nest indentSize $ makeDoc cn1 <+> tAnd
+                                                   $+$ makeDoc cn2)
+      ClosureLop c cn1 cn2 -> text "by lazy operation because" $+$
+                              (nest indentSize $ makeDoc c <+> tAnd
+                                             $+$ makeDoc cn1 <+> tAnd
+                                             $+$ makeDoc cn2)
+      ClosureCellForward cn1 cn2 -> text "by cell forward prop. because" $+$
+                                    (nest indentSize $ makeDoc cn1 <+> tAnd
+                                                   $+$ makeDoc cn2)
+      ClosureCellBackward cn1 cn2 -> text "by cell backward prop. because" $+$
+                                     (nest indentSize $ makeDoc cn1 <+> tAnd
+                                                    $+$ makeDoc cn2)
+      ContradictionApplication cn ->
+        text "by application contradiction because" $+$
+        (nest indentSize $ makeDoc cn)
+      ContradictionCase c cn -> text "by case contradiction because" $+$
+                                (nest indentSize $ makeDoc c <+> tAnd
+                                               $+$ makeDoc cn)
+      ContradictionLop c cn -> text "by lazy op. contradiction because" $+$
+                               (nest indentSize $ makeDoc c <+> tAnd
+                                              $+$ makeDoc cn)
+    where tAnd = text "and"
+
+-- TODO: print proof that subtypes in chain are valid
+instance Display InterAlphaChain where
+  makeDoc ch =
+    case ch of
+      IATerm td -> makeDoc td
+      IALink ia ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ia
+      IAHead tu ch' -> makeDoc ch' <+> text "<:" <+> makeDoc tu
+
+-- TODO: print proof that subtypes in chain are valid
+instance Display CellAlphaChain where
+  makeDoc ch =
+    case ch of 
+      CATerm (Cell ia) -> text "Cell(" <> makeDoc ia <> text ")"
+      CALink ca ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ca
+      CAHeadG (CellGet ia) ch' ->
+        makeDoc ch' <+> text "<:" <+> text "CellG(" <> makeDoc ia <> text ")"
+      CAHeadS (CellSet ia) ch' ->
+        makeDoc ch' <+> text "<:" <+> text "CellS(" <> makeDoc ia <> text ")"
+

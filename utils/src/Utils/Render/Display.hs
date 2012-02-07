@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImplicitParams #-}
 
 -- |This module defines a type class and a number of default instances for
 --  displaying human-readable forms of data.  This is distinct from the
@@ -30,20 +31,23 @@ import Text.PrettyPrint
 indentSize :: Int
 indentSize = 4
 
-makeDocForList :: (Display a)
+makeDocForList :: (?debug :: Bool, Display a)
                => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
 makeDocForList = makeDocForListBy makeDoc
 
 -- |A function for displaying a list of elements.  This function will
 --  adjust the appearance of the list based on its parameters.
-makeDocForListBy :: (a -> Doc)
+makeDocForListBy :: (?debug :: Bool)
+                 => (a -> Doc)
                  -> (String -> [Doc] -> Doc)
                  -> String
                  -> [a]
                  -> Doc
 makeDocForListBy toDoc f s lst = makeDocForDocList f s $ map toDoc lst
 
-makeDocForDocList :: (String -> [Doc] -> Doc) -> String -> [Doc] -> Doc
+makeDocForDocList :: (?debug :: Bool)
+                  => (String -> [Doc] -> Doc)
+                  -> String -> [Doc] -> Doc
 makeDocForDocList
         catF -- ^The function producing the document concatenator
         punc -- ^The punctuation to place between each document
@@ -51,7 +55,7 @@ makeDocForDocList
   = let dcat = catF $ render $ hcat docs in
     dcat $ punctuate (text punc) docs
 
-makeCommaSeparatedDocForList :: (Display a) => [a] -> Doc
+makeCommaSeparatedDocForList :: (?debug :: Bool, Display a) => [a] -> Doc
 makeCommaSeparatedDocForList lst =
     makeDocForList catByComma ", " lst
 
@@ -59,15 +63,15 @@ catByComma :: String -> [Doc] -> Doc
 catByComma x = if elem ',' x then vcat else hcat
 
 class Display a where
-    display :: a -> String
-    displayList :: [a] -> String
-    makeDoc :: a -> Doc
-    makeListDoc :: [a] -> Doc
+    display :: (?debug :: Bool) => a -> String
+    displayList :: (?debug :: Bool) => [a] -> String
+    makeDoc :: (?debug :: Bool) => a -> Doc
+    makeListDoc :: (?debug :: Bool) => [a] -> Doc
     display = render . makeDoc
     displayList = render . makeListDoc
     makeListDoc = brackets . makeCommaSeparatedDocForList
 
-displayMap :: (Display k, Display v) =>
+displayMap :: (?debug :: Bool, Display k, Display v) =>
               (a -> [(k, v)]) -> a -> Doc
 displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
              . toList

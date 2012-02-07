@@ -1,5 +1,6 @@
 {
 {-# OPTIONS_GHC -w #-}
+{-# LANGUAGE ImplicitParams #-}
 
 module Language.TinyBang.Syntax.Parser
 ( parseTinyBang
@@ -165,7 +166,7 @@ instance Display ParseError where
                             maybe "<EOS>" display $ listToMaybe tokens
             in text "unexpected" <+> text desc <+> text "token"
 instance Show ParseError where
-    show = display
+    show err = let ?debug = False in display err
 
 type ParseM a = ErrorT ParseError Identity a
 

@@ -90,7 +90,7 @@ isBottom c = case c of
     T.Bottom _ -> True
     _ -> False
 
-eEval :: A.Expr -> EvalSuccessOrFailure
+eEval :: (?debug :: Bool) => A.Expr -> EvalSuccessOrFailure
 eEval e =
     case I.evalTop e of
         Left err -> EvalFailure err

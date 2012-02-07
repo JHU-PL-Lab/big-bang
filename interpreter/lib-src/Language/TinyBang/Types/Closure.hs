@@ -252,7 +252,7 @@ findNonFunctionApplications cs = Set.fromList $ do
   let chain' = IAHead t chain
   case tau of
     TdFunc (PolyFuncData {}) -> mzero
-    _ -> return $ Bottom $ ContradictionAppliction chain
+    _ -> return $ Bottom $ ContradictionApplication chain
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
