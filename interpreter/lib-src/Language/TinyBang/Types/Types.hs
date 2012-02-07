@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, TypeSynonymInstances #-}
 module Language.TinyBang.Types.Types
 ( TauUp(..)
 , TauDown(..)
@@ -17,6 +17,8 @@ module Language.TinyBang.Types.Types
 , Cell(..)
 , ForallVars
 , LazyOp(..)
+, InterAlphaChain (..)
+, CellAlphaChain (..)
 , module Language.TinyBang.Types.Alphas
 ) where
 
@@ -38,8 +40,11 @@ import Utils.Render.Display
 -- These data types are used to represent Little Bang's type grammar.
 
 newtype CellGet = CellGet InterAlpha
+  deriving (Eq, Ord, Show)
 newtype CellSet = CellSet InterAlpha
+  deriving (Eq, Ord, Show)
 newtype Cell    = Cell    InterAlpha
+  deriving (Eq, Ord, Show)
 data    LazyOp  = LazyOp  LazyOperator InterAlpha InterAlpha
 
 -- |The datatype used to represent upper bound types.
@@ -137,6 +142,22 @@ instance Eq Constraint where
 instance Ord Constraint where
   compare = compare `on` constraintOrdinal
 
+-- TODO: These data structures allow malformed values, but they're
+-- being used only for debugging; possibly change them later
+
+data InterAlphaChain
+  = IATerm TauDown
+  | IALink InterAlpha InterAlphaChain
+  | IAHead TauUp InterAlphaChain
+  deriving (Eq, Ord, Show)
+
+data CellAlphaChain
+  = CATerm Cell
+  | CALink CellAlpha CellAlphaChain
+  | CAHeadG CellGet CellAlphaChain
+  | CAHeadS CellSet CellAlphaChain
+  deriving (Eq, Ord, Show)
+
 -- |A type describing the which rule generated a constraint and why.
 data ConstraintHistory
   -- | Takes an AST nod and the environment local to that node
@@ -144,53 +165,50 @@ data ConstraintHistory
       A.Expr
       (Map Ident CellAlpha)
   | IDontCare
-  -- | The first argument is a td <: alpha.
-  --   The second argument is an alpha <: tu.
-  | ClosureTransitivity
-      Constraint
-      Constraint
-  -- | The first argument is a td <: alpha.
-  --   The second argument is a label alpha <: tu.
-  | ClosureLabel
-      Constraint
-      Constraint
-  -- | The first argument is a td <: alpha1.
-  --   The second argument is a td <: alpha2.
-  --   The third argument is an alpha1 & alpha2 <: tu.
-  | ClosureOnion
-      Constraint
-      Constraint
-      Constraint
-  -- | The first argument is a td <: alpha.
-  --   The second argument is a case constraint.
+  -- | The first argument is a case constraint.
+  --   The second argument is a td <|: alpha.
   | ClosureCase
       Constraint
-      Constraint
-  -- | The first argument is a td <: alpha.
-  --   The second argument is a forall-quantified function <: alpha -> alpha.
+      InterAlphaChain
+  -- | The first argument is a forall-quantified function <: alpha -> alpha.
+  --   The second argument is a Cell(alpha) <|: alpha.
+
+-- TODO: Consider immediate compatibility and chains; does this rule need to
+-- take two chains?
   | ClosureApplication
       Constraint
+      InterAlphaChain
+  -- | The first argument is of the form a1 lop a2 <: a3.
+  --   The second argument is int <|: a1
+  --   The third argument is int <|: a2
+  | ClosureLop
       Constraint
-  -- | The first argument is a td <: alpha.
-  --   The second argument is a case constraint.
+      InterAlphaChain
+      InterAlphaChain
+  -- | The first argument is Cell(a) <|: CellG(a')
+  --   The second argument is t <|: a
+  | ClosureCellForward
+      CellAlphaChain
+      InterAlphaChain
+  -- | The first argument is Cell(a') <|: CellS(a)
+  --   The second argument is t <|: a
+  | ClosureCellBackward
+      CellAlphaChain
+      InterAlphaChain
+  -- | The first argument is t <|: a -> a, where t is not a function
+  | ContradictionAppliction
+      InterAlphaChain
+  -- | The first argument is a case constraint.
+  --   The second argument is a td <|: alpha.
   | ContradictionCase
       Constraint
+      InterAlphaChain
+  -- | The first argument is of the form a1 lop a2 <: a3.
+  --   The second argument is t <|: a[12]
+  --   Where t is not int
+  | ContradictionLop
       Constraint
-  -- | The argument is a prim1 <: prim2 where prim1 /= prim2.
-  | ContradictionPrimMismatch
-      Constraint
-  -- | The argument is a lbl tdo <: prim.
-  | ContradictionLabelPrim
-      Constraint
-  -- | The argument is a prim <: alpha -> alpha.
-  | ContradictionPrimFunc
-      Constraint
-  -- | The argument is a forall-quantified function <: prim.
-  | ContradictionFuncPrim
-      Constraint
-  -- | The argument is a lbl td <: alpha -> alpha.
-  | ContradictionLabelFunc
-      Constraint
+      InterAlphaChain
   deriving (Eq, Ord, Show)
 
 -- |A type representing guards in Little Bang case constraints.
@@ -201,31 +219,31 @@ class MkConstraint a b where
   (<:) :: a -> b -> ConstraintHistory -> Constraint
 
 -- Not using the type synonyms to avoid weirdness with FlexibleInstances.
-instance MkConstraint TauDown (SomeAlpha InterType) where
+instance MkConstraint TauDown InterAlpha where
   (<:) = LowerSubtype
 
-instance MkConstraint (SomeAlpha InterType) TauUp where
+instance MkConstraint InterAlpha TauUp where
   (<:) = UpperSubtype
 
-instance MkConstraint (SomeAlpha InterType) (SomeAlpha InterType) where
+instance MkConstraint InterAlpha InterAlpha where
   (<:) = AlphaSubtype
 
-instance MkConstraint Cell (SomeAlpha CellType) where
+instance MkConstraint Cell CellAlpha where
   (Cell ia) <: ca = CellSubtype ia ca
 
-instance MkConstraint (SomeAlpha CellType) CellGet where
+instance MkConstraint CellAlpha CellGet where
   ca <: (CellGet ia) = CellGetSubtype ca ia
 
-instance MkConstraint (SomeAlpha CellType) CellSet where
+instance MkConstraint CellAlpha CellSet where
   ca <: (CellSet ia) = CellSetSubtype ca ia
 
-instance MkConstraint (SomeAlpha CellType) (SomeAlpha CellType) where
+instance MkConstraint CellAlpha CellAlpha where
   (<:) = CellAlphaSubtype
 
-instance MkConstraint LazyOp (SomeAlpha InterType) where
+instance MkConstraint LazyOp InterAlpha where
   (LazyOp op a1 a2) <: a3 = LazyOpSubtype op a1 a2 a3
 
-instance MkConstraint PrimitiveType (SomeAlpha InterType) where
+instance MkConstraint PrimitiveType InterAlpha where
   p <: a = TdPrim p <: a
 
 -- -- |An infix function for creating subtype contraints (for convenience).

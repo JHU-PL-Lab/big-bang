@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts, ImplicitParams #-}
+{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts, ImplicitParams, TypeSynonymInstances #-}
 module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
@@ -135,8 +135,8 @@ class (Eq a, Ord (LowerBound a)) => LowerBounded a where
   findCLowerBounds :: Constraints -> [(LowerBound a, a)]
   findILowerBounds :: Constraints -> [(a, a)]
 
-instance LowerBounded (SomeAlpha InterType) where
-  type LowerBound (SomeAlpha InterType)= TauDown
+instance LowerBounded InterAlpha where
+  type LowerBound InterAlpha = TauDown
 
   findCLowerBounds cs = do
     LowerSubtype td a' _ <- Set.toAscList cs
@@ -146,8 +146,8 @@ instance LowerBounded (SomeAlpha InterType) where
     AlphaSubtype ret a' _ <- Set.toAscList cs
     return (ret, a')
 
-instance LowerBounded (SomeAlpha CellType) where
-  type LowerBound (SomeAlpha CellType) = InterAlpha
+instance LowerBounded CellAlpha where
+  type LowerBound CellAlpha = InterAlpha
 
   findCLowerBounds cs = do
     CellSubtype td a' _ <- Set.toAscList cs
