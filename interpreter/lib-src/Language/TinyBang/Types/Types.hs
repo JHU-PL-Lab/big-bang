@@ -366,17 +366,17 @@ instance Display InterAlphaChain where
   makeDoc ch =
     case ch of
       IATerm td -> makeDoc td
-      IALink ia ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ia
-      IAHead tu ch' -> makeDoc ch' <+> text "<:" <+> makeDoc tu
+      IALink ia _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ia
+      IAHead tu _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc tu
 
 -- TODO: print proof that subtypes in chain are valid
 instance Display CellAlphaChain where
   makeDoc ch =
     case ch of 
       CATerm (Cell ia) -> text "Cell(" <> makeDoc ia <> text ")"
-      CALink ca ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ca
-      CAHeadG (CellGet ia) ch' ->
+      CALink ca _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ca
+      CAHeadG (CellGet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellG(" <> makeDoc ia <> text ")"
-      CAHeadS (CellSet ia) ch' ->
+      CAHeadS (CellSet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellS(" <> makeDoc ia <> text ")"
 
