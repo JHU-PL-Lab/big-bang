@@ -117,44 +117,44 @@ class (Eq a, Ord (LowerBound a), Ord (Chain a)) => LowerBounded a where
     rec <- Set.unions <$> mapM concretizeIlb ilbs
     return $ Set.union (Set.fromList clbs) rec
 
-  concretizeIlb :: a -> CReader (Set (LowerBound a, Chain a))
-  concretizeIlb ilb =
-    concretizeType ilb >>= return . Set.map (second $ extendChain ilb)
+  concretizeIlb :: (a, Constraint) -> CReader (Set (LowerBound a, Chain a))
+  concretizeIlb (ilb, c) =
+    concretizeType ilb >>= return . Set.map (second $ extendChain ilb c)
 
   concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a)]
   concreteLowerBounds a = do
     cs <- ask
     return $ do
-      (lb, a') <- findCLowerBounds cs
+      (lb, a', c) <- findCLowerBounds cs
       guard $ a == a'
-      return (lb, mkChain a lb)
+      return (lb, mkChain a c lb)
 
-  intermediateLowerBounds :: a -> CReader [a]
+  intermediateLowerBounds :: a -> CReader [(a, Constraint)]
   intermediateLowerBounds a = do
     cs <- ask
     return $ do
-      (ret, a') <- findILowerBounds cs
+      (ret, a', c) <- findILowerBounds cs
       guard $ a == a'
-      return ret
+      return (ret, c)
 
-  findCLowerBounds :: Constraints -> [(LowerBound a, a)]
-  findILowerBounds :: Constraints -> [(a, a)]
-  mkChain :: a -> LowerBound a -> Chain a
-  extendChain :: a -> Chain a -> Chain a
+  findCLowerBounds :: Constraints -> [(LowerBound a, a, Constraint)]
+  findILowerBounds :: Constraints -> [(a, a, Constraint)]
+  mkChain :: a -> Constraint -> LowerBound a -> Chain a
+  extendChain :: a -> Constraint -> Chain a -> Chain a
 
 instance LowerBounded InterAlpha where
   type LowerBound InterAlpha = TauDown
   type Chain InterAlpha = InterAlphaChain
 
   findCLowerBounds cs = do
-    LowerSubtype td a' _ <- Set.toAscList cs
-    return (td, a')
+    c@(LowerSubtype td a' _) <- Set.toAscList cs
+    return (td, a', c)
 
   findILowerBounds cs = do
-    AlphaSubtype ret a' _ <- Set.toAscList cs
-    return (ret, a')
+    c@(AlphaSubtype ret a' _) <- Set.toAscList cs
+    return (ret, a', c)
 
-  mkChain a = IALink a . IATerm
+  mkChain a c = IALink a c . IATerm
   extendChain = IALink
 
 instance LowerBounded CellAlpha where
@@ -162,14 +162,14 @@ instance LowerBounded CellAlpha where
   type Chain CellAlpha = CellAlphaChain
 
   findCLowerBounds cs = do
-    CellSubtype td a' _ <- Set.toAscList cs
-    return (td, a')
+    c@(CellSubtype td a' _) <- Set.toAscList cs
+    return (td, a', c)
 
   findILowerBounds cs = do
-    CellAlphaSubtype ret a' _ <- Set.toAscList cs
-    return (ret, a')
+    c@(CellAlphaSubtype ret a' _) <- Set.toAscList cs
+    return (ret, a', c)
 
-  mkChain a = CALink a . CATerm . Cell
+  mkChain a c = CALink a c . CATerm . Cell
   extendChain = CALink
 
 -- concretizeInterAlpha :: InterAlpha -> CReader (Set TauDown)
@@ -235,10 +235,10 @@ findCaseContradictions cs = Set.fromList $ do
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do
-  UpperSubtype a t@(TuFunc ai' ao') _ <- Set.toList cs
+  c@(UpperSubtype a t@(TuFunc ai' ao') _) <- Set.toList cs
   (TdFunc (PolyFuncData foralls ai ao cs'), funcChain) <- ct cs a
   (ca3, caChain) <- ct cs ai'
-  let funcChain' = IAHead t funcChain
+  let funcChain' = IAHead t c funcChain
       hist = ClosureApplication funcChain' caChain
       cs'' = Set.union cs' $
                Set.fromList [ Cell ca3 <: ai .: hist
@@ -247,9 +247,9 @@ closeApplications cs = Set.unions $ do
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do
-  UpperSubtype a t@(TuFunc {}) _ <- Set.toList cs
+  c@(UpperSubtype a t@(TuFunc {}) _) <- Set.toList cs
   (tau, chain) <- ct cs a
-  let chain' = IAHead t chain
+  let chain' = IAHead t c chain
   case tau of
     TdFunc (PolyFuncData {}) -> mzero
     _ -> return $ Bottom $ ContradictionAppliction chain
@@ -275,18 +275,18 @@ findLopContradictions cs = Set.fromList $ do
 
 propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
-  CellGetSubtype a a1 _ <- Set.toList cs
+  c@(CellGetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
   (t2, t2Chain) <- ct cs a2
-  let a2Chain' = CAHeadG (CellGet a1) a2Chain
+  let a2Chain' = CAHeadG (CellGet a1) c a2Chain
   return $ t2 <: a1 .: ClosureCellForward a2Chain' t2Chain
 
 propogateCellsBackward :: Constraints -> Constraints
 propogateCellsBackward cs = Set.fromList $ do
-  CellSetSubtype a a1 _ <- Set.toList cs
+  c@(CellSetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
   (t2, t2Chain) <- ct cs a1
-  let a2Chain' = CAHeadS (CellSet a1) a2Chain
+  let a2Chain' = CAHeadS (CellSet a1) c a2Chain
   return $ t2 <: a2 .: ClosureCellBackward a2Chain t2Chain
 
 -- |This closure calculation function produces appropriate bottom values for
