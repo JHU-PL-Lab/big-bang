@@ -17,18 +17,18 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , SubTerm(..)
                                      , ForallVars
                                      , Cell(..)
+                                     , CellGet(..)
+                                     , CellSet(..)
+                                     , InterAlpha
+                                     , InterAlphaChain (..)
+                                     , CellAlpha
+                                     , CellAlphaChain (..)
+                                     , SomeAlpha
+                                     , AlphaType
+                                     , AnyAlpha
+                                     , AlphaSubstitutionEnv
+                                     , substituteAlphaHelper
                                      )
-
-import Language.TinyBang.Types.Alphas ( InterAlpha
-                                      , CellAlpha
-                                      , SomeAlpha
-                                      , InterType
-                                      , CellType
-                                      , AlphaType
-                                      , AnyAlpha
-                                      , AlphaSubstitutionEnv
-                                      , substituteAlphaHelper
-                                      )
 
 import Data.Function.Utils (leastFixedPoint)
 import Data.Set.Utils (singIf)
@@ -42,14 +42,11 @@ import Data.Maybe (listToMaybe, catMaybes)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad (guard, join, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
-import Control.Arrow (second)
+import Control.Arrow (first, second, (&&&))
 
 type CReader = Reader Constraints
 
 --type CWriter out ret = Writer (Set out) ret
-
-histFIXME :: ConstraintHistory
-histFIXME = IDontCare
 
 -- |A function modeling immediate compatibility.  This function takes a type and
 --  a guard in a match case.  If the input type is compatible with the guard,
@@ -61,7 +58,7 @@ histFIXME = IDontCare
 
 immediatelyCompatible :: TauDown
                       -> TauChi
-                      -> CReader (Maybe TauDown)
+                      -> CReader (Maybe (TauDown, InterAlphaChain))
 immediatelyCompatible tau chi =
   case (tau,chi) of
     (_,ChiAny) -> rJust tau
@@ -76,9 +73,11 @@ immediatelyCompatible tau chi =
       rFilter $ Set.toList t2s ++ Set.toList t1s
     (TdFunc _, ChiFun) -> rJust tau
     _ -> return $ Nothing
-    where rJust = return . Just
+    where rJust = return . Just . (id &&& IATerm)
           rFilter xs =
-            listToMaybe . catMaybes <$> mapM (`immediatelyCompatible` chi) xs
+            listToMaybe . catMaybes <$> mapM helper xs
+          helper (t, _) =
+            immediatelyCompatible t chi
 
 tSubMatch :: SubTerm -> TauChi -> Bool
 tSubMatch subTerm chi =
@@ -106,23 +105,29 @@ tCaseBind history tau chi =
 --TODO: Docstring this function
 
 -- This is particularly similar to an abstract class in the java sense
-class (Eq a, Ord (LowerBound a)) => LowerBounded a where
+class (Eq a, Ord (LowerBound a), Ord (Chain a)) => LowerBounded a where
   type LowerBound a
+  type Chain a
 
-  concretizeType :: a -> CReader (Set (LowerBound a))
+  concretizeType :: a -> CReader (Set (LowerBound a, Chain a))
   concretizeType a = do
+    -- clbs are the concrete lower bounds and chains
     clbs <- concreteLowerBounds a
     ilbs <- intermediateLowerBounds a
-    rec <- Set.unions <$> mapM concretizeType ilbs
+    rec <- Set.unions <$> mapM concretizeIlb ilbs
     return $ Set.union (Set.fromList clbs) rec
 
-  concreteLowerBounds :: a -> CReader [LowerBound a]
+  concretizeIlb :: a -> CReader (Set (LowerBound a, Chain a))
+  concretizeIlb ilb =
+    concretizeType ilb >>= return . Set.map (second $ extendChain ilb)
+
+  concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a)]
   concreteLowerBounds a = do
     cs <- ask
     return $ do
       (lb, a') <- findCLowerBounds cs
       guard $ a == a'
-      return lb
+      return (lb, mkChain a lb)
 
   intermediateLowerBounds :: a -> CReader [a]
   intermediateLowerBounds a = do
@@ -134,9 +139,12 @@ class (Eq a, Ord (LowerBound a)) => LowerBounded a where
 
   findCLowerBounds :: Constraints -> [(LowerBound a, a)]
   findILowerBounds :: Constraints -> [(a, a)]
+  mkChain :: a -> LowerBound a -> Chain a
+  extendChain :: a -> Chain a -> Chain a
 
 instance LowerBounded InterAlpha where
   type LowerBound InterAlpha = TauDown
+  type Chain InterAlpha = InterAlphaChain
 
   findCLowerBounds cs = do
     LowerSubtype td a' _ <- Set.toAscList cs
@@ -146,8 +154,12 @@ instance LowerBounded InterAlpha where
     AlphaSubtype ret a' _ <- Set.toAscList cs
     return (ret, a')
 
+  mkChain a = IALink a . IATerm
+  extendChain = IALink
+
 instance LowerBounded CellAlpha where
   type LowerBound CellAlpha = InterAlpha
+  type Chain CellAlpha = CellAlphaChain
 
   findCLowerBounds cs = do
     CellSubtype td a' _ <- Set.toAscList cs
@@ -156,6 +168,9 @@ instance LowerBounded CellAlpha where
   findILowerBounds cs = do
     CellAlphaSubtype ret a' _ <- Set.toAscList cs
     return (ret, a')
+
+  mkChain a = CALink a . CATerm . Cell
+  extendChain = CALink
 
 -- concretizeInterAlpha :: InterAlpha -> CReader (Set TauDown)
 -- concretizeInterAlpha a = do
@@ -187,86 +202,92 @@ substituteVars constraints forallVars replAlpha =
     (substituteAlpha constraints)
     (replAlpha, forallVars)
 
-ct :: (LowerBounded a) => Constraints -> a -> [LowerBound a]
+ct :: (LowerBounded a) => Constraints -> a -> [(LowerBound a, Chain a)]
 ct cs a = Set.toList $ runReader (concretizeType a) cs
 
 --TODO: case rules use explicit case on Maybe; possibly clean up.
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ do
-  Case a guards _ <- Set.toList cs
-  tau <- ct cs a
+  c@(Case a guards _) <- Set.toList cs
+  (tau, _) <- ct cs a
   -- Handle contradictions elsewhere, both to improve readability and to be more
   -- like the document.
   Just ret <- return $ join $ listToMaybe $ do
     Guard tauChi cs' <- guards
     case runReader (immediatelyCompatible tau tauChi) cs of
       Nothing -> return $ Nothing
-      Just tau' ->
-        return $ Just $ Set.union cs' $ tCaseBind histFIXME tau' tauChi
+      Just (tau', chain') ->
+        let hist = ClosureCase c chain' in
+        return $ Just $ Set.union cs' $ tCaseBind hist tau' tauChi
   return ret
 
 findCaseContradictions :: Constraints -> Constraints
 findCaseContradictions cs = Set.fromList $ do
-  Case a guards _ <- Set.toList cs
-  tau <- ct cs a
+  c@(Case a guards _) <- Set.toList cs
+  (tau, chain) <- ct cs a
   isCont <- return $ null $ do
     Guard tauChi _ <- guards
     case runReader (immediatelyCompatible tau tauChi) cs of
       Nothing -> mzero
       Just _ -> return ()
   guard isCont
-  return $ Bottom histFIXME
+  return $ Bottom $ ContradictionCase c chain
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do
-  UpperSubtype a (TuFunc ai' ao') _ <- Set.toList cs
-  TdFunc (PolyFuncData foralls ai ao cs') <- ct cs a
-  ca3 <- ct cs ai'
-  let cs'' = Set.union cs' $
-               Set.fromList [ Cell ca3 <: ai .: histFIXME
-                            , ao <: ao' .: histFIXME]
+  UpperSubtype a t@(TuFunc ai' ao') _ <- Set.toList cs
+  (TdFunc (PolyFuncData foralls ai ao cs'), funcChain) <- ct cs a
+  (ca3, caChain) <- ct cs ai'
+  let funcChain' = IAHead t funcChain
+      hist = ClosureApplication funcChain' caChain
+      cs'' = Set.union cs' $
+               Set.fromList [ Cell ca3 <: ai .: hist
+                            , ao <: ao' .: hist ]
   return $ substituteVars cs'' foralls ai'
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do
-  UpperSubtype a (TuFunc {}) _ <- Set.toList cs
-  tau <- ct cs a
+  UpperSubtype a t@(TuFunc {}) _ <- Set.toList cs
+  (tau, chain) <- ct cs a
+  let chain' = IAHead t chain
   case tau of
     TdFunc (PolyFuncData {}) -> mzero
-    _ -> return $ Bottom histFIXME
+    _ -> return $ Bottom $ ContradictionAppliction chain
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
 -- TODO: assumes all lops are int -> int -> int
-  LazyOpSubtype _ a1 a2 a _ <- Set.toList cs
-  TdPrim PrimInt <- ct cs a1
-  TdPrim PrimInt <- ct cs a2
-  return $ TdPrim PrimInt <: a .: histFIXME
+  c@(LazyOpSubtype _ a1 a2 a _) <- Set.toList cs
+  (TdPrim PrimInt, chain1) <- ct cs a1
+  (TdPrim PrimInt, chain2) <- ct cs a2
+  return $ TdPrim PrimInt <: a .: ClosureLop c chain1 chain2
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
-  LazyOpSubtype _ a1 a2 _ _ <- Set.toList cs
+  c@(LazyOpSubtype _ a1 a2 _ _) <- Set.toList cs
   -- Not quite like the document.
   -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
   -- changed.
-  tau <- ct cs a1 ++ ct cs a2
+  (tau, chain) <- ct cs a1 ++ ct cs a2
   case tau of
     TdPrim PrimInt -> mzero
-    _ -> return $ Bottom histFIXME
+    _ -> return $ Bottom $ ContradictionLop c chain
 
 propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
   CellGetSubtype a a1 _ <- Set.toList cs
-  a2 <- ct cs a
-  t2 <- ct cs a2
-  return $ t2 <: a1 .: histFIXME
+  (a2, a2Chain) <- ct cs a
+  (t2, t2Chain) <- ct cs a2
+  let a2Chain' = CAHeadG (CellGet a1) a2Chain
+  return $ t2 <: a1 .: ClosureCellForward a2Chain' t2Chain
 
 propogateCellsBackward :: Constraints -> Constraints
 propogateCellsBackward cs = Set.fromList $ do
   CellSetSubtype a a1 _ <- Set.toList cs
-  a2 <- ct cs a
-  t2 <- ct cs a1
-  return $ t2 <: a2 .: histFIXME
+  (a2, a2Chain) <- ct cs a
+  (t2, t2Chain) <- ct cs a1
+  let a2Chain' = CAHeadS (CellSet a1) a2Chain
+  return $ t2 <: a2 .: ClosureCellBackward a2Chain t2Chain
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').

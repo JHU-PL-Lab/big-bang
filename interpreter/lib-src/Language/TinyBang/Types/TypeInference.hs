@@ -44,9 +44,6 @@ import Utils.Render.Display
 type Gamma = Map Ident CellAlpha
 type NextFreshVar = T.AlphaId
 
-histFIXME :: T.ConstraintHistory
-histFIXME = T.IDontCare
-
 -- |An error type for the type inference routine.
 data TypeInferenceError
       -- |Indicates that an expression contained an unbound variable.
@@ -84,31 +81,34 @@ inferTypeTop expr =
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM InterAlpha
-inferType expr =
+inferType expr = do
+  gamma <- ask
+  let inferred = T.Inferred expr gamma
+      tellInferred c = do
+        tell1 $ c .: inferred
   case expr of
     A.Var x -> do
       a2 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- freshVar
-      tell1 $ a2 <: CellGet a1 .: histFIXME
+      tellInferred $ a2 <: CellGet a1
       return a1
     A.Label n e -> do
       a1 <- freshVar
       a2 <- inferType e
       a3 <- freshVar
-      tell1 $ Cell a2 <: a3 .: histFIXME
-      tell1 $ TdLabel n a3 <: a1 .: histFIXME
+      tellInferred $ Cell a2 <: a3
+      tellInferred $ TdLabel n a3 <: a1
       return a1
     A.Onion e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ TdOnion a1 a2 <: a0 .: histFIXME
+      tellInferred $ TdOnion a1 a2 <: a0
       return a0
     A.Func i e -> do
       a1 <- freshVar
       a2 <- freshVar
       (a3, constraints) <- capture (Map.insert i a2) e
-      gamma <- ask
       vars <-
         return $ Set.difference
           ( Set.union (extractConstraintTypeVars constraints)
@@ -116,33 +116,31 @@ inferType expr =
           ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
       let funcType = T.TdFunc
             (T.PolyFuncData vars a2 a3 constraints)
-      tell1 $ funcType <: a1 .: T.Inferred expr gamma
+      tellInferred $ funcType <: a1
       return a1
     A.Appl e1 e2 -> do
       a1' <- freshVar
       a2' <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      gamma <- ask
-      tell1 $ a1 <: T.TuFunc a1' a2' .: T.Inferred expr gamma
-      tell1 $ Cell a2 <: a1' .: T.Inferred expr gamma
+      tellInferred $ a1 <: T.TuFunc a1' a2'
+      tellInferred $ Cell a2 <: a1'
       return a2'
     A.PrimInt _ -> do
       a <- freshVar
-      tell1 $ T.PrimInt <: a .: histFIXME
+      tellInferred $ T.PrimInt <: a
       return a
     A.PrimChar _ -> do
       a <- freshVar
-      tell1 $ T.PrimChar <: a .: histFIXME
+      tellInferred $ T.PrimChar <: a
       return a
     A.PrimUnit -> do
       a <- freshVar
-      tell1 $ T.PrimUnit <: a .: histFIXME
+      tellInferred $ T.PrimUnit <: a
       return a
     A.Case e branches -> do
       a1' <- freshVar
       a2' <- inferType e
-      gamma <- ask
 
       bundle <- sequence $ do
         A.Branch binder chi branchExpr <- branches
@@ -154,7 +152,7 @@ inferType expr =
         let mAlphaConstraints = inferForBranch branchGamma branchExpr
             buildGuard (an, constraints) =
               T.Guard tauChi $
-                Set.insert (an <: a1' .: histFIXME) $
+                Set.insert (an <: a1' .: inferred) $
                 Set.union constraints newConstraints
         return $ buildGuard <$> mAlphaConstraints
 
@@ -180,7 +178,7 @@ inferType expr =
                           a3 <- freshVar
                           return
                             ( Map.singleton x a3
-                            , Set.singleton $ Cell a1 <: a3 .: histFIXME
+                            , Set.singleton $ Cell a1 <: a3 .: inferred
                             )
                         Nothing -> return mempty
             inferForBranch branchGamma branchExpr =
@@ -188,17 +186,17 @@ inferType expr =
     A.OnionSub e s -> do
       a1 <- freshVar
       a2 <- inferType e
-      tell1 $ TdOnionSub a2 s <: a1 .: histFIXME
+      tellInferred $ TdOnionSub a2 s <: a1
       return a1
     A.EmptyOnion -> do
       a <- freshVar
-      tell1 $ TdEmptyOnion <: a .: histFIXME
+      tellInferred $ TdEmptyOnion <: a
       return a
     A.LazyOp op e1 e2 -> do
       a0 <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ T.LazyOp op a1 a2 <: a0 .: histFIXME
+      tellInferred $ T.LazyOp op a1 a2 <: a0
       return a0
     A.EagerOp op e1 e2 -> do
       a0 <- freshVar
@@ -206,11 +204,11 @@ inferType expr =
       a2 <- inferType e2
       au <- freshVar
       acu <- freshVar
-      tell $ Set.fromList $
-        [ T.PrimUnit <: au .: histFIXME
-        , Cell au <: acu .: histFIXME
-        , T.TdLabel (labelName "True") acu <: a0 .: histFIXME
-        , T.TdLabel (labelName "False") acu <: a0 .: histFIXME
+      mapM_ tellInferred $
+        [ T.PrimUnit <: au
+        , Cell au <: acu
+        , T.TdLabel (labelName "True") acu <: a0
+        , T.TdLabel (labelName "False") acu <: a0
         ]
       return a0
     A.Def x e1 e2 -> do
@@ -218,7 +216,7 @@ inferType expr =
       a1 <- inferType e1
       a3 <- freshVar
       a2 <- local (Map.insert x a3) $ inferType e2
-      tell1 $ Cell a1 <: a3 .: histFIXME
+      tellInferred $ Cell a1 <: a3
       return a2
     A.Assign a e1 e2 -> do
       x <- return $! case a of
@@ -227,7 +225,7 @@ inferType expr =
       a3 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
       a1 <- inferType e1
       a2 <- inferType e2
-      tell1 $ a3 <: CellSet a1 .: histFIXME
+      tellInferred $ a3 <: CellSet a1
       return a2
     A.ExprCell _ -> error "Implementation error; infer called on ExprCell"
     where tell1 :: T.Constraint -> TIM ()

@@ -164,20 +164,16 @@ data ConstraintHistory
   = Inferred
       A.Expr
       (Map Ident CellAlpha)
-  | IDontCare
   -- | The first argument is a case constraint.
   --   The second argument is a td <|: alpha.
   | ClosureCase
       Constraint
       InterAlphaChain
-  -- | The first argument is a forall-quantified function <: alpha -> alpha.
+  -- | The first argument is a forall-quantified function <|: alpha -> alpha.
   --   The second argument is a Cell(alpha) <|: alpha.
-
--- TODO: Consider immediate compatibility and chains; does this rule need to
--- take two chains?
   | ClosureApplication
-      Constraint
       InterAlphaChain
+      CellAlphaChain
   -- | The first argument is of the form a1 lop a2 <: a3.
   --   The second argument is int <|: a1
   --   The third argument is int <|: a2
