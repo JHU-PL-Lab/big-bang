@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances,
              MultiParamTypeClasses,
              TupleSections,
-             ImplicitParams
+             ImplicitParams,
+             GADTs
              #-}
 
 {- |A module defining a Big Bang interpreter.
@@ -20,6 +21,7 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
 import Control.Monad.Reader (ReaderT, Reader, asks, ask, runReader)
 import Control.Monad.Identity (Identity)
+import Control.Monad (liftM2, join)
 import Control.Arrow (second)
 import Control.Applicative ((<$>))
 import Data.Maybe (mapMaybe, maybeToList)
@@ -28,13 +30,16 @@ import Data.List(foldl1', sort, sortBy, groupBy, nubBy)
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
-
-import Debug.Trace
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
   ( Branch(..)
   , Branches
   , Chi(..)
+  , ChiStruct
   , Expr(..)
   , Value(..)
   , Assignable(..)
@@ -159,6 +164,8 @@ onion VEmptyOnion v = v
 onion v VEmptyOnion = v
 onion v1 v2 = VOnion v1 v2
 
+type IdMap = Map Ident CellId
+
 -- |Evaluates a Big Bang expression.
 eval :: (?debug :: Bool) => Expr -> EvalM Value
 
@@ -201,35 +208,110 @@ eval e = do
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
-        let answers = mapMaybe (eMatch v) branches
-        case answers of
-          [] -> throwError $ UnmatchedCase v branches
-          answer:_ -> eval =<< answer
-        where eMatch :: Value -> Branch -> Maybe (EvalM Expr)
-              eMatch v (Branch b chi e1) = do
-                v' <- eSearch v chi
-                let e2 = case b of
-                          Nothing -> return e1
-                          Just x -> do
-                            c <- newCell v'
-                            return $ subst c x e1
-                case (chi, v') of
-                  -- Don't need to compare names -- eSearch already did
-                  (ChiLabel _ x', VLabel _ c) -> return $ subst c x' <$> e2
-                  _ -> return $ e2
+--        let answers = mapMaybe (eMatch v) branches
+        let findAnswer bs =
+              case bs of
+                [] -> throwError $ UnmatchedCase v branches
+                b:bs' -> do
+                  mExpr <- eMatch v b
+                  case mExpr of
+                    Nothing -> findAnswer bs'
+                    Just e -> return e
+        eval =<< findAnswer branches
+        where eMatch :: Value -> Branch -> EvalM (Maybe Expr)
+              eMatch v (Branch chi e1) = do
+                m <- eSearch v chi
+                return $ do
+                  (_, b) <- m
+                  return $ eSubstAll e1 b
+              eSubstAll :: Expr -> IdMap -> Expr
+              eSubstAll e b = Map.foldWithKey (flip subst) e b
+              eSearch :: Value
+                      -> Chi a
+                      -> EvalM (Maybe (Value, IdMap))
               eSearch v chi =
-                case (chi, v) of
-                  (ChiAny, _) -> Just v
-                  (ChiPrim T.PrimInt, VPrimInt _) -> Just v
-                  (ChiPrim T.PrimChar, VPrimChar _) -> Just v
-                  (ChiPrim T.PrimUnit, VPrimUnit) -> Just v
-                  (ChiLabel n _, VLabel n' _) | n == n' -> Just v
-                  (ChiFun, VFunc _ _) -> Just v
-                  (_, VOnion v1 v2) ->
-                    case eSearch v2 chi of
-                      Nothing -> eSearch v1 chi
-                      ret -> ret
-                  _ -> Nothing
+                case chi of
+                  ChiSimple mx -> Just . (v,) <$> mapMaybeVar mx
+                  ChiComplex chiBind -> eSearch v chiBind
+                  chiStruct@(ChiOnionOne {}) -> searchAll chiStruct
+                  chiStruct@(ChiOnionMany {}) -> searchAll chiStruct
+                  ChiParen mx chiBound -> do
+                    mPair <- eSearch v chiBound
+                    idMap <- mapMaybeVar mx
+                    return $ addBinding idMap <$> mPair
+                  ChiPrimary mx chiBound -> do
+                    mPair <- eSearch v chiBound
+                    idMap <- mapMaybeVar mx
+                    return $ addBinding idMap <$> mPair
+                  ChiPrim prim -> return $ matchPrim prim
+                  ChiLabelSimple lbl mx -> do -- EvalM monad
+                    idMap <- mapMaybeVar mx
+                    return $ do -- Maybe monad
+                      pair <- matchSimpleLabel lbl
+                      return $ addBinding idMap pair
+                  ChiLabelComplex lbl chiBind -> do -- EvalM monad
+                    mPair <- matchComplexLabel lbl chiBind
+                    case mPair of
+                      Just pair -> Just <$> newLabel pair
+                      Nothing -> return Nothing
+                    where newLabel (v,m) = do
+                            c1 <- newCell v
+                            return (VLabel lbl c1, m)
+                where mapMaybeVar :: Maybe Ident -> EvalM IdMap
+                      mapMaybeVar mx =
+                        case mx of
+                          Nothing -> return Map.empty
+                          Just x -> Map.singleton x <$> newCell v
+                      addBinding :: IdMap -> (Value, IdMap) -> (Value, IdMap)
+                      addBinding b (v, bs) =
+                        (v, bs `Map.union` b)
+                      addBindingM :: EvalM IdMap
+                                  -> EvalM (Value, IdMap)
+                                  -> EvalM (Value, IdMap)
+                      addBindingM = liftM2 addBinding
+                      matchPrim :: T.PrimitiveType -> Maybe (Value, IdMap)
+                      matchPrim prim =
+                        case (prim, v) of
+                          (T.PrimInt, VPrimInt _) -> yes
+                          (T.PrimChar, VPrimChar _) -> yes
+                          (T.PrimUnit, VPrimUnit) -> yes
+                          _ -> no
+                          where yes = Just (v, Map.empty)
+                                no = Nothing
+                      matchSimpleLabel :: LabelName -> Maybe (Value, IdMap)
+                      matchSimpleLabel lbl =
+                        case v of
+                          VLabel lbl' _ | lbl == lbl' ->
+                            Just (v, Map.empty)
+                          _ -> Nothing
+                      matchComplexLabel :: LabelName
+                                        -> Chi a
+                                        -> EvalM (Maybe (Value, IdMap))
+                      matchComplexLabel lbl chiBind =
+                        case v of
+                          VLabel lbl' c0 | lbl == lbl' ->
+                            flip eSearch chiBind =<< readCell c0
+                          _ -> return Nothing
+                        -- I'm not quite comfortable with this yet...
+                        -- It breaks an abstraction
+                        where runEvalM :: EvalM a
+                                       -> CellMap
+                                       -> Either EvalError a
+                              runEvalM evalM (int, env) = do
+                                fst <$> runStateT evalM (int, env)
+                              doubleJoin :: EvalM (Maybe (EvalM (Maybe a)))
+                                         -> EvalM (Maybe a)
+                              doubleJoin emema = do -- EvalM
+                                state <- get
+                                mema <- emema
+                                let meima = do -- Maybe
+                                      ema <- mema
+                                      return $ runEvalM ema state
+                                case meima of
+                                  Nothing -> return Nothing
+                                  Just eima -> either throwError return eima
+                      searchAll :: ChiStruct -> EvalM (Maybe (Value, IdMap))
+                      searchAll = undefined
       Def i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
@@ -428,18 +510,10 @@ subst c x e =
     Case e' branches ->
       let e'' = subst c x e' in
       Case e'' $ map substBranch branches
-      where substBranch branch@(Branch mident chi branchExpr) =
-              let boundIdents =
-                    maybeToList mident ++
-                    case chi of
-                      ChiPrim _ -> []
-                      ChiLabel _ i -> [i]
-                      ChiFun -> []
-                      ChiAny -> []
-              in
-              if elem x boundIdents
+      where substBranch branch@(Branch chi branchExpr) =
+              if Set.member x $ ePatVars chi
                   then branch
-                  else Branch mident chi $ subst c x branchExpr
+                  else Branch chi $ subst c x branchExpr
     OnionSub e' s -> OnionSub (subst c x e') s
     EmptyOnion -> EmptyOnion
     LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
@@ -454,6 +528,25 @@ subst c x e =
           let a' = if i == x then (ACell c) else a in
           Assign a' (subst c x e1) (subst c x e2)
     ExprCell _ -> e
+
+ePatVars :: Chi a -> Set Ident
+ePatVars chi =
+  case chi of
+    ChiSimple mx -> maybeIdent mx
+    ChiComplex chiStruct -> ePatVars chiStruct
+    ChiOnionOne chiBind -> ePatVars chiBind
+    ChiOnionMany chiBind chiStruct -> both chiBind chiStruct
+    ChiParen mx chiStruct -> varAndMore mx chiStruct
+    ChiPrimary mx chiPrimary -> varAndMore mx chiPrimary
+    ChiPrim _ -> Set.empty
+    ChiLabelSimple _ mx -> maybeIdent mx
+    ChiLabelComplex _ chiBind -> ePatVars chiBind
+    ChiFun -> Set.empty
+  where maybeIdent mx = maybe Set.empty Set.singleton mx
+        both :: Chi a -> Chi b -> Set Ident
+        both x y = Set.union (ePatVars y) (ePatVars x)
+        varAndMore :: Maybe Ident -> Chi a -> Set Ident
+        varAndMore mx chi = Set.union (ePatVars chi) (maybeIdent mx)
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated
