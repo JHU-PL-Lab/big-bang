@@ -1,7 +1,11 @@
-{-# LANGUAGE FlexibleInstances#-}
+{-# LANGUAGE FlexibleInstances, EmptyDataDecls, GADTs, StandaloneDeriving #-}
 module Language.TinyBang.Ast
 ( Expr(..)
 , Chi(..)
+, ChiMain
+, ChiStruct
+, ChiBind
+, ChiPrimary
 , Branches
 , Branch(..)
 , Value(..)
@@ -30,7 +34,7 @@ import Language.TinyBang.Types.UtilTypes
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
 import Utils.Render.Display
-  
+
 -------------------------------------------------------------------------------
 
 type CellId = Int
@@ -69,17 +73,72 @@ data Value
 data Assignable = ACell CellId | AIdent Ident
   deriving (Eq, Ord, Show)
 
--- |Data type describing type patterns for case expressions.
-data Chi
-  = ChiPrim T.PrimitiveType
-  | ChiLabel LabelName Ident
-  | ChiFun
-  | ChiAny
-  deriving (Eq, Ord, Show)
+
+-- TODO: fix this boilerplate using -XDataKinds in ghc 7.4
+data ChiMainType
+data ChiStructType
+data ChiBindType
+data ChiPrimaryType
+
+type ChiMain = Chi ChiMainType
+type ChiStruct = Chi ChiStructType
+type ChiBind = Chi ChiBindType
+type ChiPrimary = Chi ChiPrimaryType
+
+-- |Data type describing top level type patterns in case expressions;
+--  corresponds to chi in the document.
+data Chi a where
+  ChiSimple       :: Maybe Ident -> ChiMain
+  ChiComplex      :: ChiStruct   -> ChiMain
+
+  ChiOnionOne     :: ChiBind              -> ChiStruct
+  ChiOnionMany    :: ChiBind -> ChiStruct -> ChiStruct
+
+  ChiParen        :: Maybe Ident -> ChiStruct  -> ChiBind
+  ChiPrimary      :: Maybe Ident -> ChiPrimary -> ChiBind
+
+  ChiPrim         :: T.PrimitiveType                -> ChiPrimary
+  ChiLabelSimple  :: LabelName       -> Maybe Ident -> ChiPrimary
+  ChiLabelComplex :: LabelName       -> ChiBind     -> ChiPrimary
+  ChiFun          ::                                   ChiPrimary
+
+deriving instance Show (Chi a)
+deriving instance Eq (Chi a)
+deriving instance Ord (Chi a)
+
+-- -- |Data type describing top level type patterns in case expressions;
+-- --  corresponds to chi in the document.
+-- data Chi
+--   = ChiSimple (Maybe Ident)
+--   | ChiComplex ChiStruct
+--   deriving (Eq, Ord, Show)
+
+-- -- |Data type describing patterns which impose structure on what they bind;
+-- --  corresponds to chi^S in the document.
+-- data ChiStruct
+--   = ChiBindOne ChiBind
+--   | ChiBindMany ChiBind ChiStruct
+--   deriving (Eq, Ord, Show)
+
+-- -- |Data type describing patterns which may have final binders attached;
+-- --  corresponds to chi^B in the document.
+-- data ChiBind
+--   = ChiParen (Maybe Ident) ChiStruct
+--   | ChiPrimary (Maybe Ident) ChiPrimary
+--   deriving (Eq, Ord, Show)
+
+-- -- |Data type describing the base case of patterns;
+-- --  corresponds to chi^P in the document.
+-- data ChiPrimary
+--   = ChiPrim T.PrimitiveType
+--   | ChiLabelSimple LabelName (Maybe Ident)
+--   | ChiLabelComplex LabelName ChiBind
+--   | ChiFun
+--   deriving (Eq, Ord, Show)
 
 -- |Alias for case branches
 type Branches = [Branch]
-data Branch = Branch (Maybe Ident) Chi Expr
+data Branch = Branch ChiMain Expr
   deriving (Eq, Ord, Show)
 
 -- |Trivial conversion from values to exprs
@@ -130,15 +189,12 @@ instance Display Value where
       _ -> makeDoc $ exprFromValue x
 
 instance Display Branch where
-  makeDoc (Branch mident chi e) =
-    maybe empty ((<> colon) . text . unIdent) mident <+>
-    (case chi of
-      ChiPrim p -> makeDoc p
-      ChiLabel n i ->
-        char '`' <> (text $ unLabelName n) <+> (text $ unIdent i)
-      ChiFun -> text "fun"
-      ChiAny -> text "_"
-    ) <+> text "->" <+> makeDoc e
+  makeDoc (Branch chi e) =
+    makeDoc chi <+> text "->" <+> makeDoc e
+
+-- TODO: Fix this. This is not an appropriate display instance.
+instance Display (Chi a) where
+  makeDoc = text . show
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
