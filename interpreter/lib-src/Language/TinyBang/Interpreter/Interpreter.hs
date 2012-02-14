@@ -254,11 +254,14 @@ eval e = do
                             -- If the value is not an onion, it's a singleton.
                               _ -> eSearch v chiBound
                   ChiPrim prim -> return $ matchPrim prim
-                  ChiLabelSimple lbl mx -> do -- EvalM monad
-                    idMap <- mapMaybeVar mx
-                    return $ do -- Maybe monad
-                      pair <- matchSimpleLabel lbl
-                      return $ addBinding idMap pair
+                  ChiLabelSimple lbl mx ->
+                    return $ case v of
+                      VLabel lbl' c | lbl == lbl' ->
+                        Just (v, maybe
+                                   Map.empty
+                                   (\x -> Map.singleton x c)
+                                   mx)
+                      _ -> Nothing
                   ChiLabelComplex lbl chiBind -> do -- EvalM monad
                     mPair <- matchComplexLabel lbl chiBind
                     case mPair of
@@ -285,12 +288,6 @@ eval e = do
                           _ -> no
                           where yes = Just (v, Map.empty)
                                 no = Nothing
-                      matchSimpleLabel :: LabelName -> Maybe (Value, IdMap)
-                      matchSimpleLabel lbl =
-                        case v of
-                          VLabel lbl' _ | lbl == lbl' ->
-                            Just (v, Map.empty)
-                          _ -> Nothing
                       matchComplexLabel :: LabelName
                                         -> Chi a
                                         -> EvalM (Maybe (Value, IdMap))
