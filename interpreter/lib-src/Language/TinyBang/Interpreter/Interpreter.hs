@@ -21,10 +21,8 @@ import Control.Monad.Error (Error, strMsg, throwError)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
 import Control.Monad.Reader (ReaderT, Reader, asks, ask, runReader)
 import Control.Monad.Identity (Identity)
-import Control.Monad (liftM2, join)
 import Control.Arrow (second)
 import Control.Applicative ((<$>))
-import Data.Maybe (mapMaybe, maybeToList)
 import Data.Function (on)
 import Data.List(foldl1', sort, sortBy, groupBy, nubBy)
 import qualified Data.IntMap as IntMap
@@ -216,7 +214,7 @@ eval e = do
                   mExpr <- eMatch v b
                   case mExpr of
                     Nothing -> findAnswer bs'
-                    Just e -> return e
+                    Just expr -> return expr
         eval =<< findAnswer branches
         where eMatch :: Value -> Branch -> EvalM (Maybe Expr)
               eMatch v (Branch chi e1) = do
@@ -225,7 +223,7 @@ eval e = do
                   (_, b) <- m
                   return $ eSubstAll e1 b
               eSubstAll :: Expr -> IdMap -> Expr
-              eSubstAll e b = Map.foldWithKey (flip subst) e b
+              eSubstAll expr b = Map.foldrWithKey (flip subst) expr b
               eSearch :: Value
                       -> Chi a
                       -> EvalM (Maybe (Value, IdMap))
@@ -254,21 +252,18 @@ eval e = do
                     case mPair of
                       Just pair -> Just <$> newLabel pair
                       Nothing -> return Nothing
-                    where newLabel (v,m) = do
-                            c1 <- newCell v
+                    where newLabel (v',m) = do
+                            c1 <- newCell v'
                             return (VLabel lbl c1, m)
+                  ChiFun -> return $ Just (v, Map.empty)
                 where mapMaybeVar :: Maybe Ident -> EvalM IdMap
                       mapMaybeVar mx =
                         case mx of
                           Nothing -> return Map.empty
                           Just x -> Map.singleton x <$> newCell v
                       addBinding :: IdMap -> (Value, IdMap) -> (Value, IdMap)
-                      addBinding b (v, bs) =
-                        (v, bs `Map.union` b)
-                      addBindingM :: EvalM IdMap
-                                  -> EvalM (Value, IdMap)
-                                  -> EvalM (Value, IdMap)
-                      addBindingM = liftM2 addBinding
+                      addBinding b (v', bs) =
+                        (v', bs `Map.union` b)
                       matchPrim :: T.PrimitiveType -> Maybe (Value, IdMap)
                       matchPrim prim =
                         case (prim, v) of
@@ -311,7 +306,19 @@ eval e = do
                                   Nothing -> return Nothing
                                   Just eima -> either throwError return eima
                       searchAll :: ChiStruct -> EvalM (Maybe (Value, IdMap))
-                      searchAll = undefined
+                      searchAll chiStruct =
+                        case chiStruct of
+                          ChiOnionOne chiBind -> eSearch v chiBind
+-- Possibly do something with fold rather than explicit recursion
+                          ChiOnionMany chiBind chiStruct' -> do -- EvalM
+                            mLeft <- eSearch v chiBind
+                            mRest <- searchAll chiStruct'
+                            return $ do -- Maybe
+                              (vLeft, idMapLeft) <- mLeft
+                              (vRest, idMapRest) <- mRest
+                              return $ ( onion vLeft vRest
+                                       , Map.union idMapRest idMapLeft
+                                       )
       Def i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
@@ -546,7 +553,7 @@ ePatVars chi =
         both :: Chi a -> Chi b -> Set Ident
         both x y = Set.union (ePatVars y) (ePatVars x)
         varAndMore :: Maybe Ident -> Chi a -> Set Ident
-        varAndMore mx chi = Set.union (ePatVars chi) (maybeIdent mx)
+        varAndMore mx chi' = Set.union (ePatVars chi') (maybeIdent mx)
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated
