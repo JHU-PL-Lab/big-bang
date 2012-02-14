@@ -192,9 +192,24 @@ instance Display Branch where
   makeDoc (Branch chi e) =
     makeDoc chi <+> text "->" <+> makeDoc e
 
--- TODO: Fix this. This is not an appropriate display instance.
 instance Display (Chi a) where
-  makeDoc = text . show
+  makeDoc chi =
+    case chi of
+      ChiSimple mx -> docDummyMx mx
+      ChiComplex chiStruct -> makeDoc chiStruct
+      ChiOnionOne chiBind -> makeDoc chiBind
+      ChiOnionMany chiBind chiStruct ->
+        makeDoc chiBind <+> text "&" <+> makeDoc chiStruct
+      ChiParen mx chiStruct ->
+        docPreMx mx <+> makeDoc chiStruct
+      ChiPrimary mx chiPri ->
+        docPreMx mx <+> makeDoc chiPri
+      ChiPrim p -> makeDoc p
+      ChiLabelSimple lbl mx -> makeDoc lbl <+> docDummyMx mx
+      ChiLabelComplex lbl chiBind -> makeDoc lbl <+> makeDoc chiBind
+      ChiFun -> text "fun"
+    where docDummyMx mx = text $ maybe "_" unIdent mx
+          docPreMx mx = maybe empty (text . (++":") . unIdent) mx
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
