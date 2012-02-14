@@ -129,6 +129,7 @@ Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
 
 Pattern :   '_'                     { A.ChiSimple Nothing }
         |   ident                   { A.ChiSimple $ Just $ ident $1 }
+        |   PatternStruct           { A.ChiComplex $1 }
 
 PatternStruct
         :   PatternBind             { A.ChiOnionOne $1 }
@@ -139,9 +140,9 @@ PatternBind
         :   '(' PatternStruct ')'   { A.ChiParen Nothing $2 }
         |   ident ':' '(' PatternStruct ')'
                                     { A.ChiParen (Just $ ident $1) $4 }
-        |   '(' PatternPrimary ')'  { A.ChiPrimary Nothing $2 }
-        |   ident ':' '(' PatternPrimary ')'
-                                    { A.ChiPrimary (Just $ ident $1) $4 }
+        |   PatternPrimary          { A.ChiPrimary Nothing $1 }
+        |   ident ':' PatternPrimary
+                                    { A.ChiPrimary (Just $ ident $1) $3 }
 
 PatternPrimary
         :   PrimitiveType           { A.ChiPrim $1 }
