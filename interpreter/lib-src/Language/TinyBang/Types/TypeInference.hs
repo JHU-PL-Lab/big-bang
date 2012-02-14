@@ -138,7 +138,7 @@ inferType expr = do
       a <- freshVar
       tellInferred $ T.PrimUnit <: a
       return a
-    A.Case e branches -> do
+    A.Case e branches -> error "Not Implemented" {- do
       a1' <- freshVar
       a2' <- inferType e
 
@@ -183,6 +183,7 @@ inferType expr = do
                         Nothing -> return mempty
             inferForBranch branchGamma branchExpr =
               capture (Map.union branchGamma) branchExpr
+-}
     A.OnionSub e s -> do
       a1 <- freshVar
       a2 <- inferType e
