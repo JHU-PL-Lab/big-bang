@@ -48,10 +48,6 @@ Library
   hs-source-dirs:      lib-src
 
   Exposed-Modules:
---        Language.MicroBang.Ast
---        Language.MicroBang.Syntax.Lexer
---        Language.MicroBang.Syntax.Parser
---        Language.MicroBang.Types.UtilTypes
         Language.TinyBang.Ast
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
