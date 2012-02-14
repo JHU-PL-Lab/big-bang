@@ -37,6 +37,7 @@ import Language.TinyBang.Ast
   ( Branch(..)
   , Branches
   , Chi(..)
+  , ChiPrimary
   , ChiStruct
   , Expr(..)
   , Value(..)
@@ -238,39 +239,15 @@ eval e = do
                     idMap <- mapMaybeVar mx
                     return $ addBinding idMap <$> mPair
                   ChiPrimary mx chiBound -> do
-                    mPair <- recurseSearch
+                    mPair <- eSearch v chiBound
                     idMap <- mapMaybeVar mx
                     return $ addBinding idMap <$> mPair
-                    where recurseSearch =
-                            case v of
-                              VOnion vLeft vRight -> do
-                                -- Try to match the right side
-                                mResult <- eSearch vRight chiBound
-                                case mResult of
-                                  -- If it works, we're done
-                                  Just _ -> return mResult
-                                  -- Otherwise, try the left side
-                                  Nothing -> eSearch vLeft chiBound
-                            -- If the value is not an onion, it's a singleton.
-                              _ -> eSearch v chiBound
-                  ChiPrim prim -> return $ matchPrim prim
+                  ChiPrim prim -> recurseSearch v chi $ return . (matchPrim prim)
                   ChiLabelSimple lbl mx ->
-                    return $ case v of
-                      VLabel lbl' c | lbl == lbl' ->
-                        Just (v, maybe
-                                   Map.empty
-                                   (\x -> Map.singleton x c)
-                                   mx)
-                      _ -> Nothing
-                  ChiLabelComplex lbl chiBind -> do -- EvalM monad
-                    mPair <- matchComplexLabel lbl chiBind
-                    case mPair of
-                      Just pair -> Just <$> newLabel pair
-                      Nothing -> return Nothing
-                    where newLabel (v',m) = do
-                            c1 <- newCell v'
-                            return (VLabel lbl c1, m)
-                  ChiFun -> return $ Just (v, Map.empty)
+                    recurseSearch v chi $ matchLabelSimple lbl mx
+                  ChiLabelComplex lbl chiBind ->
+                    recurseSearch v chi $ matchLabelComplex lbl chiBind
+                  ChiFun -> recurseSearch v chi $ return . Just . (,Map.empty)
                 where mapMaybeVar :: Maybe Ident -> EvalM IdMap
                       mapMaybeVar mx =
                         case mx of
@@ -279,46 +256,65 @@ eval e = do
                       addBinding :: IdMap -> (Value, IdMap) -> (Value, IdMap)
                       addBinding b (v', bs) =
                         (v', bs `Map.union` b)
-                      matchPrim :: T.PrimitiveType -> Maybe (Value, IdMap)
-                      matchPrim prim =
-                        case (prim, v) of
+                      -- | Takes a (possibly onion) value, a primary pattern,
+                      --   and a function to evaluate non-onion values to a
+                      --   result.  Handles breaking onion values apart to find
+                      --   the first matching result.
+                      recurseSearch :: Value -> ChiPrimary
+                                    -> (Value -> EvalM (Maybe (Value, IdMap)))
+                                    -> EvalM (Maybe (Value, IdMap))
+                      recurseSearch v' chiBound f =
+                        case v' of
+                          VOnion vLeft vRight -> do
+                            -- Try to match the right side
+                            mResult <- eSearch vRight chiBound
+                            case mResult of
+                              -- If it works, we're done
+                              Just _ -> return mResult
+                              -- Otherwise, try the left side
+                              Nothing -> eSearch vLeft chiBound
+                          -- If the value is not an onion, it's a singleton.
+                          _ -> f v'
+                      matchPrim :: T.PrimitiveType -> Value -> Maybe (Value, IdMap)
+                      matchPrim prim v' =
+                        case (prim, v') of
                           (T.PrimInt, VPrimInt _) -> yes
                           (T.PrimChar, VPrimChar _) -> yes
                           (T.PrimUnit, VPrimUnit) -> yes
                           _ -> no
-                          where yes = Just (v, Map.empty)
+                          where yes = Just (v', Map.empty)
                                 no = Nothing
-                      matchComplexLabel :: LabelName
-                                        -> Chi a
+                      matchLabelSimple :: LabelName -> Maybe Ident -> Value
+                                       -> EvalM (Maybe (Value, IdMap))
+                      matchLabelSimple lbl mx v' =
+                        return $ case v' of
+                          VLabel lbl' c | lbl == lbl' ->
+                            Just (v', maybe
+                                       Map.empty
+                                       (\x -> Map.singleton x c)
+                                       mx)
+                          _ -> Nothing
+                      matchLabelComplex :: LabelName -> Chi a -> Value
                                         -> EvalM (Maybe (Value, IdMap))
-                      matchComplexLabel lbl chiBind =
-                        case v of
-                          VLabel lbl' c0 | lbl == lbl' ->
-                            flip eSearch chiBind =<< readCell c0
-                          _ -> return Nothing
-                        -- I'm not quite comfortable with this yet...
-                        -- It breaks an abstraction
-                        where runEvalM :: EvalM a
-                                       -> CellMap
-                                       -> Either EvalError a
-                              runEvalM evalM (int, env) = do
-                                fst <$> runStateT evalM (int, env)
-                              doubleJoin :: EvalM (Maybe (EvalM (Maybe a)))
-                                         -> EvalM (Maybe a)
-                              doubleJoin emema = do -- EvalM
-                                state <- get
-                                mema <- emema
-                                let meima = do -- Maybe
-                                      ema <- mema
-                                      return $ runEvalM ema state
-                                case meima of
-                                  Nothing -> return Nothing
-                                  Just eima -> either throwError return eima
+                      matchLabelComplex lbl chiBind v' =
+                        do -- EvalM monad
+                         mPair <- (
+                            case v' of
+                              VLabel lbl' c0 | lbl == lbl' ->
+                                flip eSearch chiBind =<< readCell c0
+                              _ -> return Nothing
+                            )
+                         case mPair of
+                           Just pair -> Just <$> newLabel pair
+                           Nothing -> return Nothing
+                         where newLabel (v'',m) = do
+                                 c1 <- newCell v''
+                                 return (VLabel lbl c1, m)
                       searchAll :: ChiStruct -> EvalM (Maybe (Value, IdMap))
                       searchAll chiStruct =
                         case chiStruct of
                           ChiOnionOne chiBind -> eSearch v chiBind
--- Possibly do something with fold rather than explicit recursion
+-- TODO: Possibly do something with fold rather than explicit recursion
                           ChiOnionMany chiBind chiStruct' -> do -- EvalM
                             mLeft <- eSearch v chiBind
                             mRest <- searchAll chiStruct'
