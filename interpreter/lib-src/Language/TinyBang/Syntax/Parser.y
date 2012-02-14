@@ -124,16 +124,33 @@ Branches:   Branch ';' Branches     { $1:$3 }
         |   Branch                  { [$1] }
 
 
-Branch  :   Pattern '->' Exp
-                                    { A.Branch Nothing $1 $3 }
-        |   ident ':' Pattern '->' Exp
-                                    { A.Branch (Just $ ident $1) $3 $5 }
+Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
 
 
-Pattern :   PrimitiveType           { A.ChiPrim $1 }
-        |   '`' ident ident         { A.ChiLabel (labelName $2) (ident $3) }
+Pattern :   '_'                     { A.ChiSimple Nothing }
+        |   ident                   { A.ChiSimple $ Just $ ident $1 }
+
+PatternStruct
+        :   PatternBind             { A.ChiOnionOne $1 }
+        |   PatternBind '&' PatternStruct
+                                    { A.ChiOnionMany $1 $3 }
+
+PatternBind
+        :   '(' PatternStruct ')'   { A.ChiParen Nothing $2 }
+        |   ident ':' '(' PatternStruct ')'
+                                    { A.ChiParen (Just $ ident $1) $4 }
+        |   '(' PatternPrimary ')'  { A.ChiPrimary Nothing $2 }
+        |   ident ':' '(' PatternPrimary ')'
+                                    { A.ChiPrimary (Just $ ident $1) $4 }
+
+PatternPrimary
+        :   PrimitiveType           { A.ChiPrim $1 }
+        |   '`' ident ident         { A.ChiLabelSimple
+		                              (labelName $2) (Just $ ident $3) }
+        |   '`' ident '_'           { A.ChiLabelSimple
+		                              (labelName $2) Nothing }
+        |   '`' ident PatternBind   { A.ChiLabelComplex (labelName $2) $3 }
         |   fun                     { A.ChiFun }
-        |   '_'                     { A.ChiAny }
 
 PrimitiveType
         :   int                     { T.PrimInt }
