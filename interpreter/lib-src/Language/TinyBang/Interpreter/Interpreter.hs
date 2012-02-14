@@ -238,9 +238,21 @@ eval e = do
                     idMap <- mapMaybeVar mx
                     return $ addBinding idMap <$> mPair
                   ChiPrimary mx chiBound -> do
-                    mPair <- eSearch v chiBound
+                    mPair <- recurseSearch
                     idMap <- mapMaybeVar mx
                     return $ addBinding idMap <$> mPair
+                    where recurseSearch =
+                            case v of
+                              VOnion vLeft vRight -> do
+                                -- Try to match the right side
+                                mResult <- eSearch vRight chiBound
+                                case mResult of
+                                  -- If it works, we're done
+                                  Just _ -> return mResult
+                                  -- Otherwise, try the left side
+                                  Nothing -> eSearch vLeft chiBound
+                            -- If the value is not an onion, it's a singleton.
+                              _ -> eSearch v chiBound
                   ChiPrim prim -> return $ matchPrim prim
                   ChiLabelSimple lbl mx -> do -- EvalM monad
                     idMap <- mapMaybeVar mx
