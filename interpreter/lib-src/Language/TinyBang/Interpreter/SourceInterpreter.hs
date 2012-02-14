@@ -1,6 +1,7 @@
 {-# LANGUAGE ImplicitParams #-}
 module Language.TinyBang.Interpreter.SourceInterpreter
 ( evalStringTop
+, evalStringTopNoTypecheck
 , EvalStringResult(..)
 , EvalSuccessOrFailure(..)
 , I.canonicalize
@@ -39,6 +40,19 @@ instance Error EvalStringResultErrorWrapper where
     strMsg = error
 
 type EvalStringM a = Either EvalStringResultErrorWrapper a
+
+evalStringTopNoTypecheck :: (?debug :: Bool) => String -> EvalStringResult
+evalStringTopNoTypecheck s =
+    let result = eNoTypecheck s in
+    case result of
+      Left (FailureWrapper err) -> err
+      Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
+
+eNoTypecheck :: (?debug :: Bool) => String -> EvalStringM A.Expr
+eNoTypecheck s = do
+    tokens <- eLex s
+    ast <- eParse tokens
+    return ast
 
 -- |Performs top-level evaluation of a Big Bang source string.  This routine is
 --  provided for convenience and testing.  It attempts to lex, parse, typecheck
