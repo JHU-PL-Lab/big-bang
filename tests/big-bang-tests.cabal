@@ -44,7 +44,6 @@ Library
   hs-source-dirs:      lib-src
 
   Exposed-Modules:
-    Language.TinyBang.Test.Binders
     Language.TinyBang.Test.Case
     Language.TinyBang.Test.EagerOps
     Language.TinyBang.Test.EmptyOnion

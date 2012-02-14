@@ -66,13 +66,15 @@ tests = TestLabel "Test functions" $ TestList
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
           (A.Func idX
              (A.Case varX
-                     [ A.Branch Nothing
-                              (A.ChiLabel (labelName "True")
-                                          (ident "a"))
+                     [ A.Branch
+                        (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing 
+                              (A.ChiLabelSimple (labelName "True")
+                                          (Just $ ident "a")))
                               (A.PrimInt 1)
-                     , A.Branch Nothing
-                              (A.ChiLabel (labelName "False")
-                                          (ident "a"))
+                     , A.Branch
+                        (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
+                              (A.ChiLabelSimple (labelName "False")
+                                          (Just $ ident "a")))
                               (A.PrimInt 0)
                      ]))
   ]

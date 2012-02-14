@@ -6,7 +6,6 @@ import System.Console.CmdArgs
 
 import qualified Language.TinyBang.Test.Onions as Onions
 import qualified Language.TinyBang.Test.Functions as Functions
-import qualified Language.TinyBang.Test.Binders as Binders
 import qualified Language.TinyBang.Test.Case as Case
 import qualified Language.TinyBang.Test.EagerOps as EagerOps
 import qualified Language.TinyBang.Test.EmptyOnion as EmptyOnion
@@ -27,7 +26,6 @@ tests :: (?debug :: Bool) => [Test]
 tests =
   [ Onions.tests
   , Functions.tests
-  , Binders.tests
   , Case.tests
   , EagerOps.tests
   , EmptyOnion.tests
