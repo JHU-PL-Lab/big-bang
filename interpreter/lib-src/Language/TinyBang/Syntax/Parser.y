@@ -126,8 +126,8 @@ Branches:   Branch ';' Branches     { $1:$3 }
 Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
 
 
-Pattern :   '_'                     { A.ChiSimple Nothing }
-        |   ident                   { A.ChiSimple $ Just $ ident $1 }
+Pattern :   ident                   { A.ChiSimple $
+                                        ( if $1 == "_" then Nothing else Just $ ident $1 ) }
         |   PatternStruct           { A.ChiComplex $1 }
 
 PatternStruct
@@ -146,9 +146,8 @@ PatternBind
 PatternPrimary
         :   PrimitiveType           { A.ChiPrim $1 }
         |   '`' ident ident         { A.ChiLabelSimple
-		                              (labelName $2) (Just $ ident $3) }
-        |   '`' ident '_'           { A.ChiLabelSimple
-		                              (labelName $2) Nothing }
+		                                (labelName $2)
+                                        (if $3 == "_" then Nothing else Just $ ident $3) }
         |   '`' ident PatternBind   { A.ChiLabelComplex (labelName $2) $3 }
         |   fun                     { A.ChiFun }
 
