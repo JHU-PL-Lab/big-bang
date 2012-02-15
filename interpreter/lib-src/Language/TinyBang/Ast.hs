@@ -171,13 +171,6 @@ instance Display Expr where
     EmptyOnion -> text "(&)"
     LazyOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
     EagerOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
-    {-
-       TODO: deal with the fact that the following isn't actually code
-       options include:
-           * errors on ASTs containing builtin nodes
-           * namespacing trick (e.g., Plus translates to
-               "Language.TinyBang.Builtins.([+]) e1 e2"
-    -}
     Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     ExprCell c -> text "Cell #" <> int c
