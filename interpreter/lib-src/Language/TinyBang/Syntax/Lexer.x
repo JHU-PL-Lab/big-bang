@@ -44,7 +44,6 @@ tokens :-
     \{                                  { constTok TokOpenBlock }
     \}                                  { constTok TokCloseBlock }
     \;                                  { constTok TokSeparator }
-    _                                   { constTok TokUnder }
     :                                   { constTok TokColon }
     def                                 { constTok TokDef }
     \[\+\]                              { constTok TokOpPlus }
@@ -59,7 +58,7 @@ tokens :-
     \-unit                              { constTok TokSubUnit }
     \-`                                 { constTok TokSubLabelPrefix }
     \-fun                               { constTok TokSubFun }
-    $alpha [$alpha $digit _ ']*         { strTok $ TokIdentifier }
+    [ $alpha _ ] [$alpha $digit _ ']*   { strTok $ TokIdentifier }
 
 {
 type LexerResult = Either String [Token]
@@ -94,7 +93,6 @@ data Token =
     | TokInteger
     | TokChar
     | TokUnit
-    | TokUnder
     | TokOpenParen
     | TokCloseParen
     | TokIntegerLiteral Integer
@@ -131,7 +129,6 @@ instance Display Token where
         TokInteger -> "int"
         TokChar -> "char"
         TokUnit -> "unit"
-        TokUnder -> "underscore"
         TokOpenParen -> "open parenthesis"
         TokCloseParen -> "close parenthesis"
         TokIntegerLiteral _ -> "int literal"

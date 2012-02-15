@@ -56,7 +56,6 @@ import System.IO
         '{'             { L.TokOpenBlock }
         '}'             { L.TokCloseBlock }
         ';'             { L.TokSeparator }
-        '_'             { L.TokUnder }
         ':'             { L.TokColon }
         def             { L.TokDef }
         '='             { L.TokEquals }
