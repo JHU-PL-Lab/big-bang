@@ -21,9 +21,9 @@ import qualified Language.TinyBang.Types.UtilTypes as TUT
 --  those ASTs.  This list of variables is guaranteed to be infinite in size.
 freshVars :: [ TA.Expr ] -> [ TUT.Ident ]
 freshVars es =
-  let names = map (TUT.ident . ("bbvar" ++)) $ map show [(0::Int)..] in
+  let names = map (TUT.ident . ("freshTmp" ++)) $ map show [(0::Int)..] in
   let free = Set.unions $ map TA.exprFreeVars es in
-  let goodNames = filter (`Set.member` free) names in
+  let goodNames = filter (not . (`Set.member` free)) names in
   goodNames
 
 -- |Translates a Little Bang AST to a Tiny Bang AST.
