@@ -49,6 +49,7 @@ Library
 
   Exposed-Modules:
         Language.LittleBang.Ast
+        Language.LittleBang.Interpreter.SourceInterpreter
         Language.LittleBang.Syntax.Lexer
         Language.LittleBang.Syntax.Parser
         Language.LittleBang.Translator
