@@ -46,6 +46,7 @@ import Language.TinyBang.Ast
   , EagerOperator(..)
   , SubTerm(..)
   , CellId
+  , ePatVars
   )
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
@@ -540,25 +541,6 @@ subst c x e =
           let a' = if i == x then (ACell c) else a in
           Assign a' (subst c x e1) (subst c x e2)
     ExprCell _ -> e
-
-ePatVars :: Chi a -> Set Ident
-ePatVars chi =
-  case chi of
-    ChiSimple mx -> maybeIdent mx
-    ChiComplex chiStruct -> ePatVars chiStruct
-    ChiOnionOne chiBind -> ePatVars chiBind
-    ChiOnionMany chiBind chiStruct -> both chiBind chiStruct
-    ChiParen mx chiStruct -> varAndMore mx chiStruct
-    ChiPrimary mx chiPrimary -> varAndMore mx chiPrimary
-    ChiPrim _ -> Set.empty
-    ChiLabelSimple _ mx -> maybeIdent mx
-    ChiLabelComplex _ chiBind -> ePatVars chiBind
-    ChiFun -> Set.empty
-  where maybeIdent mx = maybe Set.empty Set.singleton mx
-        both :: Chi a -> Chi b -> Set Ident
-        both x y = Set.union (ePatVars y) (ePatVars x)
-        varAndMore :: Maybe Ident -> Chi a -> Set Ident
-        varAndMore mx chi' = Set.union (ePatVars chi') (maybeIdent mx)
 
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated

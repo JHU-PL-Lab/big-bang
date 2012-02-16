@@ -17,10 +17,14 @@ module Language.TinyBang.Ast
 , Assignable(..)
 , Evaluated(..)
 , CellId
+, ePatVars
+, exprFreeVars
 ) where
 
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Language.TinyBang.Types.UtilTypes
   ( LabelName
@@ -152,6 +156,54 @@ exprFromValue v = case value v of
   VPrimChar c  -> PrimChar c
   VPrimUnit    -> PrimUnit
   VEmptyOnion  -> EmptyOnion
+
+-- TODO: refactor the pattern stuff into its own module?
+-- |Obtains the set of bound variables in a pattern.
+ePatVars :: Chi a -> Set Ident
+ePatVars chi =
+  case chi of
+    ChiSimple mx -> maybeIdent mx
+    ChiComplex chiStruct -> ePatVars chiStruct
+    ChiOnionOne chiBind -> ePatVars chiBind
+    ChiOnionMany chiBind chiStruct -> both chiBind chiStruct
+    ChiParen mx chiStruct -> varAndMore mx chiStruct
+    ChiPrimary mx chiPrimary -> varAndMore mx chiPrimary
+    ChiPrim _ -> Set.empty
+    ChiLabelSimple _ mx -> maybeIdent mx
+    ChiLabelComplex _ chiBind -> ePatVars chiBind
+    ChiFun -> Set.empty
+  where maybeIdent mx = maybe Set.empty Set.singleton mx
+        both :: Chi a -> Chi b -> Set Ident
+        both x y = Set.union (ePatVars y) (ePatVars x)
+        varAndMore :: Maybe Ident -> Chi a -> Set Ident
+        varAndMore mx chi' = Set.union (ePatVars chi') (maybeIdent mx)
+
+-- |Obtains the set of free variables for a given expression.
+exprFreeVars :: Expr -> Set Ident
+exprFreeVars e =
+  case e of
+    Var i -> Set.singleton i
+    Label _ e' -> exprFreeVars e'
+    Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
+    Func i e' -> i `Set.delete` exprFreeVars e'
+    Appl e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
+    PrimInt _ -> Set.empty
+    PrimChar _ -> Set.empty
+    PrimUnit -> Set.empty
+    Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
+      map (\(Branch chi e'') ->
+              exprFreeVars e'' `Set.difference` ePatVars chi) brs
+    OnionSub e' _ -> exprFreeVars e'
+    EmptyOnion -> Set.empty
+    LazyOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2 
+    EagerOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
+    Def i e1 e2 -> (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
+    Assign a e1 e2 ->
+        ((case a of
+            AIdent i -> (Set.delete i)
+            ACell _ -> id) $ exprFreeVars e2)
+          `Set.union` exprFreeVars e1
+    ExprCell _ -> Set.empty
 
 instance Display Expr where
   makeDoc a = case a of
