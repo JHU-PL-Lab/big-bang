@@ -1,4 +1,4 @@
-PROJECTS=utils interpreter micro-bang tests
+PROJECTS=utils micro-bang tiny-bang little-bang tests
 
 .PHONY : all
 all : $(PROJECTS)

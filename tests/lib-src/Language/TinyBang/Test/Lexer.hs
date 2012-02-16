@@ -153,7 +153,6 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
     ,  ("{"     , TokOpenBlock)
     ,  ("}"     , TokCloseBlock)
     ,  (";"     , TokSeparator)
-    ,  ("_"     , TokUnder)
     ,  (":"     , TokColon)
     ,  ("def"   , TokDef)
     ,  ("[+]"   , TokOpPlus)
