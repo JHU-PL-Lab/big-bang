@@ -60,19 +60,21 @@ type ChiPrimary = Chi ChiPrimaryType
 -- |Data type describing top level type patterns in case expressions;
 --  corresponds to chi in the document.
 data Chi a where
-  ChiSimple       :: Maybe Ident -> ChiMain
-  ChiComplex      :: ChiStruct   -> ChiMain
+  ChiTopVar       :: Ident                   -> ChiMain
+  ChiTopOnion     :: ChiPrimary -> ChiStruct -> ChiMain
+  ChiTopBind      :: ChiBind                 -> ChiMain
 
-  ChiOnionOne     :: ChiBind              -> ChiStruct
-  ChiOnionMany    :: ChiBind -> ChiStruct -> ChiStruct
+  ChiOnionMany    :: ChiPrimary -> ChiStruct -> ChiStruct
+  ChiOnionOne     :: ChiPrimary              -> ChiStruct
 
-  ChiParen        :: Maybe Ident -> ChiStruct  -> ChiBind
-  ChiPrimary      :: Maybe Ident -> ChiPrimary -> ChiBind
+  ChiBound        :: Ident -> ChiBind -> ChiBind
+  ChiUnbound      :: ChiPrimary       -> ChiBind  
 
   ChiPrim         :: T.PrimitiveType                -> ChiPrimary
-  ChiLabelSimple  :: LabelName       -> Maybe Ident -> ChiPrimary
-  ChiLabelComplex :: LabelName       -> ChiBind     -> ChiPrimary
+  ChiLabelShallow :: LabelName       -> Ident       -> ChiPrimary
+  ChiLabelDeep    :: LabelName       -> ChiBind     -> ChiPrimary
   ChiFun          ::                                   ChiPrimary
+  ChiInnerStruct  :: ChiStruct                      -> ChiPrimary
 
 deriving instance Show (Chi a)
 deriving instance Eq (Chi a)
@@ -111,19 +113,16 @@ instance Display Branch where
 instance Display (Chi a) where
   makeDoc chi =
     case chi of
-      ChiSimple mx -> docDummyMx mx
-      ChiComplex chiStruct -> makeDoc chiStruct
-      ChiOnionOne chiBind -> makeDoc chiBind
-      ChiOnionMany chiBind chiStruct ->
-        makeDoc chiBind <+> text "&" <+> makeDoc chiStruct
-      ChiParen mx chiStruct ->
-        docPreMx mx <+> makeDoc chiStruct
-      ChiPrimary mx chiPri ->
-        docPreMx mx <+> makeDoc chiPri
+      ChiTopVar x -> iDoc x
+      ChiTopOnion p s -> makeDoc p <+> text "&" <+> makeDoc s
+      ChiTopBind b -> makeDoc b
+      ChiOnionMany p s -> makeDoc p <+> text "&" <+> makeDoc s
+      ChiOnionOne p -> makeDoc p
+      ChiBound i b -> iDoc i <> text ":" <> makeDoc b
+      ChiUnbound p -> makeDoc p
       ChiPrim p -> makeDoc p
-      ChiLabelSimple lbl mx -> makeDoc lbl <+> docDummyMx mx
-      ChiLabelComplex lbl chiBind -> makeDoc lbl <+> makeDoc chiBind
+      ChiLabelShallow lbl x -> makeDoc lbl <+> iDoc x 
+      ChiLabelDeep lbl b -> makeDoc lbl <+> makeDoc b
       ChiFun -> text "fun"
-    where docDummyMx mx = text $ maybe "_" unIdent mx
-          docPreMx mx = maybe empty (text . (++":") . unIdent) mx
-
+      ChiInnerStruct s -> parens $ makeDoc s
+    where iDoc = text . unIdent

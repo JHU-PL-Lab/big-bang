@@ -41,15 +41,15 @@ tests = TestLabel "General case tests" $ TestList
                       \    `True a -> `False (); \
                       \    fun -> (fun x -> x)}" $
           A.Case varX
-            [ A.Branch (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
+            [ A.Branch (A.ChiTopBind $ A.ChiUnbound
                             (A.ChiPrim T.PrimInt)) $ A.PrimInt 5
-            , A.Branch (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
+            , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             (A.ChiPrim T.PrimChar)) $ A.PrimChar 'a'
-            , A.Branch (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
+            , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             (A.ChiPrim T.PrimUnit)) A.PrimUnit
-            , A.Branch (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
-                            (A.ChiLabelSimple lblTrue (Just $ ident "a"))) E.false
-            , A.Branch (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
+            , A.Branch (A.ChiTopBind $ A.ChiUnbound
+                            (A.ChiLabelShallow lblTrue $ ident "a")) E.false
+            , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             A.ChiFun) $ A.Func idX varX
             ]
 

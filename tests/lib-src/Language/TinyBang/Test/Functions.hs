@@ -67,14 +67,14 @@ tests = TestLabel "Test functions" $ TestList
           (A.Func idX
              (A.Case varX
                      [ A.Branch
-                        (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing 
-                              (A.ChiLabelSimple (labelName "True")
-                                          (Just $ ident "a")))
+                        (A.ChiTopBind $ A.ChiUnbound $ 
+                              (A.ChiLabelShallow (labelName "True")
+                                          (ident "a")))
                               (A.PrimInt 1)
                      , A.Branch
-                        (A.ChiComplex $ A.ChiOnionOne $ A.ChiPrimary Nothing
-                              (A.ChiLabelSimple (labelName "False")
-                                          (Just $ ident "a")))
+                        (A.ChiTopBind $ A.ChiUnbound $ 
+                              (A.ChiLabelShallow (labelName "False")
+                                          (ident "a")))
                               (A.PrimInt 0)
                      ]))
   ]
