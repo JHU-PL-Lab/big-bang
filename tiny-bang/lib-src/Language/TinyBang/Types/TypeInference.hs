@@ -199,10 +199,12 @@ inferType expr = do
       a2 <- inferType e2
       tellInferred $ T.LazyOp op a1 a2 <: a0
       return a0
-    A.EagerOp op e1 e2 -> do
+    A.EagerOp _ e1 e2 -> do
+      -- Currently, all eager operations ignore the result types and just
+      -- return a boolean.
       a0 <- freshVar
-      a1 <- inferType e1
-      a2 <- inferType e2
+      _ <- inferType e1
+      _ <- inferType e2
       au <- freshVar
       acu <- freshVar
       mapM_ tellInferred $
