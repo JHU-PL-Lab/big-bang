@@ -1,4 +1,10 @@
-{-# LANGUAGE TupleSections, TypeFamilies, FlexibleInstances, FlexibleContexts, ImplicitParams, TypeSynonymInstances #-}
+{-# LANGUAGE TupleSections
+           , TypeFamilies
+           , FlexibleInstances
+           , FlexibleContexts
+           , ImplicitParams
+           , TypeSynonymInstances
+           , GADTs #-}
 module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
@@ -28,78 +34,117 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , AnyAlpha
                                      , AlphaSubstitutionEnv
                                      , substituteAlphaHelper
+                                     , histFIXME
                                      )
 
 import Data.Function.Utils (leastFixedPoint)
-import Data.Set.Utils (singIf)
 
 import Debug.Trace (trace)
 import Utils.Render.Display (display)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (listToMaybe, catMaybes)
+import Data.Maybe (listToMaybe, isNothing)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
-import Control.Monad (guard, join, mzero)
+import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
-import Control.Arrow (first, second, (&&&))
+import Control.Arrow (second)
 
 type CReader = Reader Constraints
 
 --type CWriter out ret = Writer (Set out) ret
 
--- |A function modeling immediate compatibility.  This function takes a type and
---  a guard in a match case.  If the input type is compatible with the guard,
---  this function returns @CompatibleAs t@, where t is the type as which the
---  original type is compatible; otherwise, @NotCompatible@ is
---  returned. MaybeCompatible is returned if the result is not yet determinable,
---  as in the case of lazy operations not yet being closed over.  This function
---  is equivalent to the _ <:: _ ~ _ relation in the documentation.
+-- |A function modeling pattern compatibility.  This function takes a type and
+--  a guard in a match case.  This function returns a list of the constraint
+--  sets under which the input type is compatible with the guard.  If the type
+--  is incompatible, an empty list is returned.
+patternCompatible :: TauDown -> TauChi a
+                  -> CReader [Constraints]
+-- TODO: a compatibility history should be returned as well to retain the proof
+patternCompatible tau chi =
+  case chi of
+    TauChiTopVar a -> return $ [Set.singleton (tau <: a .: histFIXME )]
+    TauChiTopOnion p s -> do -- Maybe
+      c1s <- patternCompatible tau p
+      c2s <- patternCompatible tau s
+      return [Set.union c1 c2 | c1 <- c1s, c2 <- c2s]
+    TauChiTopBind b -> patternCompatible tau b
+    TauChiOnionMany p s -> do -- Maybe
+      c1s <- patternCompatible tau p
+      c2s <- patternCompatible tau s
+      return [Set.union c1 c2 | c1 <- c1s, c2 <- c2s]
+    TauChiOnionOne p -> patternCompatible tau p
+    TauChiBound a b -> do -- Maybe
+      c <- patternCompatible tau b
+      return $ map (Set.insert (tau <: a .: histFIXME)) c
+    TauChiUnbound p -> patternCompatible tau p
+    TauChiPrim p -> destructOnOnion $
+      \t -> return $
+        case t of
+          TdPrim p' | p == p' -> [Set.empty]
+          _ -> []
+    TauChiLabelShallow n a2 -> destructOnOnion $
+      \t -> return $
+        case t of
+          TdLabel n' a1 | n == n' -> [Set.singleton (a1 <: a2 .: histFIXME)]
+          _ -> []
+    TauChiLabelDeep n b -> destructOnOnion $
+      \t ->
+        case t of
+          TdLabel n' ac | n == n' -> do -- CReader
+            aihs <- concretizeType ac
+            -- TODO: care about history!
+            let ais = Set.toList $ Set.map fst aihs
+            concretizations <- mapM concretizeType ais
+            let taus = concatMap (Set.toList . Set.map fst) concretizations
+            concat <$> mapM (flip patternCompatible b) taus
+          _ -> return []
+    TauChiFun -> destructOnOnion $
+      \t -> return $
+        case t of
+          TdFunc _ -> [Set.empty]
+          _ -> []
+    TauChiInnerStruct s -> patternCompatible tau s
+  where destructOnOnion :: (TauDown -> CReader [Constraints])
+                        -> CReader [Constraints]
+        destructOnOnion handler =
+          case tau of
+            TdOnion a1 a2 -> do -- CReader
+              t1hs <- concretizeType a1
+              t2hs <- concretizeType a2
+              -- TODO: care about history!
+              let t1s = Set.toList $ Set.map fst t1hs
+              let t2s = Set.toList $ Set.map fst t2hs
+              -- For each compatible t2, we have a set of results
+              -- For any incompatible t2, we use results from the
+              -- t1s.  The following are of type [[Constraints]]
+              -- where the presence of [] in the outer list shows
+              -- an incompatibility.
+              t1compats <- mapM (flip patternCompatible chi) t1s
+              t2compats <- mapM (flip patternCompatible chi) t2s
+              return $ concat $ t2compats ++
+                (if elem [] t2compats then t1compats else [])
+            TdOnionSub a s ->
+              -- Produce a result if and only if we don't match the onion
+              -- subtraction term.
+              if tSubMatch s chi
+                then return []
+                else
+                  do -- CReader
+                    ths <- concretizeType a
+                    -- TODO: care about history!
+                    let ts = Set.toList $ Set.map fst ths
+                    (liftM concat) $ mapM (flip patternCompatible chi) ts
+            _ -> handler tau
 
-immediatelyCompatible :: TauDown
-                      -> TauChi
-                      -> CReader (Maybe (TauDown, InterAlphaChain))
-immediatelyCompatible tau chi =
-  case (tau,chi) of
-    (_,ChiAny) -> rJust tau
-    (TdPrim p, ChiPrim p') | p == p' -> rJust tau
-    (TdLabel n _, ChiLabel n' _) | n == n' -> rJust tau
-    (TdOnionSub a s, _) | not $ tSubMatch s chi -> do
-      ts <- concretizeType a
-      rFilter $ Set.toList ts
-    (TdOnion a1 a2, _) -> do
-      t1s <- concretizeType a1
-      t2s <- concretizeType a2
-      rFilter $ Set.toList t2s ++ Set.toList t1s
-    (TdFunc _, ChiFun) -> rJust tau
-    _ -> return $ Nothing
-    where rJust = return . Just . (id &&& IATerm)
-          rFilter xs =
-            listToMaybe . catMaybes <$> mapM helper xs
-          helper (t, _) =
-            immediatelyCompatible t chi
-
-tSubMatch :: SubTerm -> TauChi -> Bool
+tSubMatch :: SubTerm -> TauChi a -> Bool
 tSubMatch subTerm chi =
   case (chi, subTerm) of
-    (ChiPrim p, SubPrim p') -> p == p'
-    (ChiLabel n _, SubLabel n') -> n == n'
-    (ChiFun, SubFunc) -> True
+    (TauChiPrim p, SubPrim p') -> p == p'
+    (TauChiLabelShallow n _, SubLabel n') -> n == n'
+    (TauChiLabelDeep n _, SubLabel n') -> n == n'
+    (TauChiFun, SubFunc) -> True
     _ -> False
-
--- |A function modeling TCaseBind.  This function creates an appropriate set of
---  constraints to add when a given case branch is taken.  Its primary purpose
---  is to bind a label variable (such as `A x) to the contents of the input.
-tCaseBind :: ConstraintHistory
-          -> TauDown
-          -> TauChi
-          -> Constraints
-tCaseBind history tau chi =
-    case (tau,chi) of
-        (TdLabel n tau', ChiLabel n' a) ->
-            (tau' <: a .: history)
-                `singIf` (n == n')
-        _ -> Set.empty
 
 --TODO: Consider adding chains to history and handling them here
 --TODO: Docstring this function
@@ -205,33 +250,32 @@ substituteVars constraints forallVars replAlpha =
 ct :: (LowerBounded a) => Constraints -> a -> [(LowerBound a, Chain a)]
 ct cs a = Set.toList $ runReader (concretizeType a) cs
 
---TODO: case rules use explicit case on Maybe; possibly clean up.
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ do
   c@(Case a guards _) <- Set.toList cs
   (tau, _) <- ct cs a
-  -- Handle contradictions elsewhere, both to improve readability and to be more
-  -- like the document.
-  Just ret <- return $ join $ listToMaybe $ do
-    Guard tauChi cs' <- guards
-    case runReader (immediatelyCompatible tau tauChi) cs of
-      Nothing -> return $ Nothing
-      Just (tau', chain') ->
-        let hist = ClosureCase c chain' in
-        return $ Just $ Set.union cs' $ tCaseBind hist tau' tauChi
-  return ret
+  -- Given a concretization, the first guard which matches is the one that
+  -- applies.  We'll build a list of the matches and filter on it.
+  return $ maybe Set.empty Set.unions $ caseGuardResults cs guards tau
 
 findCaseContradictions :: Constraints -> Constraints
 findCaseContradictions cs = Set.fromList $ do
   c@(Case a guards _) <- Set.toList cs
   (tau, chain) <- ct cs a
-  isCont <- return $ null $ do
-    Guard tauChi _ <- guards
-    case runReader (immediatelyCompatible tau tauChi) cs of
-      Nothing -> mzero
-      Just _ -> return ()
-  guard isCont
+  guard $ isNothing $ caseGuardResults cs guards tau
   return $ Bottom $ ContradictionCase c chain
+
+-- |A utility function used in case analysis.  Given a reader constraint set,
+--  a list of guards, and a type, this function produces Just a list of
+--  constraints (if the type matched one of the guards) or Nothing if none of
+--  the guards matched.
+caseGuardResults :: Constraints -> [Guard] -> TauDown -> Maybe [Constraints]
+caseGuardResults cs guards tau =
+  listToMaybe $ filter (not . null) $ map check guards
+  where check :: Guard -> [Constraints]
+        check (Guard tauChi cs') =
+          map (Set.union cs') $
+            runReader (patternCompatible tau tauChi) cs
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do
@@ -252,7 +296,7 @@ findNonFunctionApplications cs = Set.fromList $ do
   let chain' = IAHead t c chain
   case tau of
     TdFunc (PolyFuncData {}) -> mzero
-    _ -> return $ Bottom $ ContradictionApplication chain
+    _ -> return $ Bottom $ ContradictionApplication chain'
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
@@ -287,7 +331,7 @@ propogateCellsBackward cs = Set.fromList $ do
   (a2, a2Chain) <- ct cs a
   (t2, t2Chain) <- ct cs a1
   let a2Chain' = CAHeadS (CellSet a1) c a2Chain
-  return $ t2 <: a2 .: ClosureCellBackward a2Chain t2Chain
+  return $ t2 <: a2 .: ClosureCellBackward a2Chain' t2Chain
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
@@ -422,12 +466,24 @@ instance AlphaSubstitutable Guard where
         <$> substituteAlpha tauChi
         <*> substituteAlpha constraints
 
-instance AlphaSubstitutable TauChi where
-  substituteAlpha c = case c of
-      ChiPrim p -> return $ ChiPrim p
-      ChiLabel n a -> ChiLabel n <$> substituteAlpha a
-      ChiFun -> return ChiFun
-      ChiAny -> return ChiAny
+instance AlphaSubstitutable (TauChi a) where
+  substituteAlpha c =
+    case c of
+      TauChiTopVar a -> TauChiTopVar <$> substituteAlpha a
+      TauChiTopOnion s p ->
+        TauChiTopOnion <$> substituteAlpha s <*> substituteAlpha p
+      TauChiTopBind b -> TauChiTopBind <$> substituteAlpha b
+      TauChiOnionMany s p ->
+        TauChiOnionMany <$> substituteAlpha s <*> substituteAlpha p
+      TauChiOnionOne p -> TauChiOnionOne <$> substituteAlpha p
+      TauChiBound a b ->
+        TauChiBound <$> substituteAlpha a <*> substituteAlpha b
+      TauChiUnbound p -> TauChiUnbound <$> substituteAlpha p
+      TauChiPrim _ -> return c
+      TauChiLabelShallow n a -> TauChiLabelShallow n <$> substituteAlpha a
+      TauChiLabelDeep n b -> TauChiLabelDeep n <$> substituteAlpha b
+      TauChiFun -> return c
+      TauChiInnerStruct s -> TauChiInnerStruct <$> substituteAlpha s
 
 instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
   substituteAlpha = fmap Set.fromList . mapM substituteAlpha . Set.toList

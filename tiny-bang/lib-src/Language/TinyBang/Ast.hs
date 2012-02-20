@@ -6,6 +6,10 @@ module Language.TinyBang.Ast
 , ChiStruct
 , ChiBind
 , ChiPrimary
+, ChiMainType
+, ChiStructType
+, ChiBindType
+, ChiPrimaryType
 , Branches
 , Branch(..)
 , Value(..)
