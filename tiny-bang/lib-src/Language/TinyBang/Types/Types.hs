@@ -9,6 +9,7 @@
 module Language.TinyBang.Types.Types
 ( TauUp(..)
 , TauDown(..)
+, TauProj(..)
 , PolyFuncData(..)
 , PrimitiveType(..)
 , TauChi(..)
@@ -67,6 +68,13 @@ data TauDown
   | TdFunc PolyFuncData
   | TdOnionSub InterAlpha SubTerm
   | TdEmptyOnion
+  deriving (Eq, Ord, Show)
+
+-- |The datatype used to represent projection types.
+data TauProj
+  = TpPrim PrimitiveType
+  | TpLabel LabelName
+  | TpFun
   deriving (Eq, Ord, Show)
 
 type ForallVars = Set AnyAlpha

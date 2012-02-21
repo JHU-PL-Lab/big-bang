@@ -30,7 +30,6 @@ import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
@@ -203,8 +202,9 @@ eval e = do
         v1 <- eval e1
         v2 <- eval e2
         cellId <- newCell v2
-        case v1 of
-          VFunc i body -> eval $ subst cellId i body
+        let v1' = eProj T.TpFun v1
+        case v1' of
+          Just (VFunc i body) -> eval $ subst cellId i body
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
@@ -323,9 +323,12 @@ eval e = do
       LazyOp op e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
-        case (op, v1, v2) of
-          (Plus,  VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x + y
-          (Minus, VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x - y
+        let eProjInt = eProj $ T.TpPrim T.PrimInt
+        case (op, eProjInt v1, eProjInt v2) of
+          (Plus,  Just (VPrimInt x), Just (VPrimInt y)) ->
+            return $ VPrimInt $ x + y
+          (Minus, Just (VPrimInt x), Just (VPrimInt y)) ->
+            return $ VPrimInt $ x - y
           _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
       EagerOp op e1 e2 -> do
         v1 <- eval e1
@@ -566,3 +569,17 @@ canonicalize' (v, imap) =
             filter ((`IntMap.member` remap) . fst) $ IntMap.assocs imap'
         pairRemap (cell, contents) =
           (remap ! cell, valueRemap contents)
+
+-- |Projects values by type.
+eProj :: T.TauProj -> Value -> Maybe Value
+eProj tproj v =
+  case (tproj, v) of
+    (T.TpPrim T.PrimInt, VPrimInt _) -> Just v
+    (T.TpPrim T.PrimChar, VPrimChar _) -> Just v
+    (T.TpPrim T.PrimUnit, VPrimUnit) -> Just v
+    (T.TpLabel n, VLabel n' _) | n == n' -> Just v
+    (T.TpFun, VFunc _ _) -> Just v
+    (_, VOnion v1 v2) ->
+      maybe (eProj tproj v1) Just (eProj tproj v2)
+    _ -> Nothing
+

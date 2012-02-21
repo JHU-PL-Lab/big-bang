@@ -16,6 +16,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , TauDown(..)
                                      , TauUp(..)
                                      , TauChi(..)
+                                     , TauProj(..)
                                      , ConstraintHistory(..)
                                      , PolyFuncData(..)
                                      , Guard(..)
@@ -144,6 +145,48 @@ tSubMatch subTerm chi =
     (TauChiLabelShallow n _, SubLabel n') -> n == n'
     (TauChiLabelDeep n _, SubLabel n') -> n == n'
     (TauChiFun, SubFunc) -> True
+    _ -> False
+
+-- |Represents the type projection function from the documentation.  This
+--  function determines the types which can be projected from a given type
+--  using a specific projector.  There may be many such types; for instance,
+--  an onion of a1 & a2 \ { `A int <: a1, `A unit <: a2, int <: a2 } might
+--  project either `A int or `A unit for the projector `A (depending on the
+--  flow taken).  An empty list indicates that no projection is legal.
+tProj :: TauDown -> TauProj -> CReader [TauDown]
+tProj tau tproj =
+  case (tau, tproj) of
+    (TdPrim p, TpPrim p') | p == p' -> return [tau]
+    (TdLabel n _, TpLabel n') | n == n' -> return [tau]
+    (TdOnion a1 a2, _) -> do -- CReader
+      t1hs <- concretizeType a1
+      t2hs <- concretizeType a2
+      -- TODO: care about history!
+      let t1s = Set.toList $ Set.map fst t1hs
+      let t2s = Set.toList $ Set.map fst t2hs
+      t1projs <- mapM (flip tProj tproj) t1s
+      t2projs <- mapM (flip tProj tproj) t2s
+      return $ concat $ t2projs ++
+        (if elem [] t2projs then t1projs else [])
+    (TdOnionSub a s, _) ->
+      if tSubProj s tproj
+        then return []
+        else do -- CReader
+          ths <- concretizeType a
+          -- TODO: care about history
+          let ts = Set.toList $ Set.map fst ths
+          concat <$> mapM (flip tProj tproj) ts
+    (TdFunc _, TpFun) -> return [tau]
+    _ -> return []
+
+-- Performs a check to ensure that projection can occur through an onion
+-- subtraction type.
+tSubProj :: SubTerm -> TauProj -> Bool
+tSubProj s tproj =
+  case (tproj,s) of
+    (TpPrim p, SubPrim p') -> p == p'
+    (TpLabel n, SubLabel n') -> n == n'
+    (TpFun, SubFunc) -> True
     _ -> False
 
 --TODO: Consider adding chains to history and handling them here
@@ -278,9 +321,10 @@ caseGuardResults cs guards tau =
             runReader (patternCompatible tau tauChi) cs
 
 closeApplications :: Constraints -> Constraints
-closeApplications cs = Set.unions $ do
+closeApplications cs = Set.unions $ do -- List
   c@(UpperSubtype a t@(TuFunc ai' ao') _) <- Set.toList cs
-  (TdFunc (PolyFuncData foralls ai ao cs'), funcChain) <- ct cs a
+  (td, funcChain) <- ct cs a
+  TdFunc (PolyFuncData foralls ai ao cs') <- runReader (tProj td TpFun) cs
   (ca3, caChain) <- ct cs ai'
   let funcChain' = IAHead t c funcChain
       hist = ClosureApplication funcChain' caChain
@@ -290,12 +334,13 @@ closeApplications cs = Set.unions $ do
   return $ substituteVars cs'' foralls ai'
 
 findNonFunctionApplications :: Constraints -> Constraints
-findNonFunctionApplications cs = Set.fromList $ do
+findNonFunctionApplications cs = Set.fromList $ do -- List
   c@(UpperSubtype a t@(TuFunc {}) _) <- Set.toList cs
   (tau, chain) <- ct cs a
   let chain' = IAHead t c chain
-  case tau of
-    TdFunc (PolyFuncData {}) -> mzero
+  tau' <- runReader (tProj tau TpFun) cs
+  case tau' of
+    TdFunc _ -> mzero
     _ -> return $ Bottom $ ContradictionApplication chain'
 
 closeLops :: Constraints -> Constraints
