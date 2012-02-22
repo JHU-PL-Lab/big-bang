@@ -338,10 +338,8 @@ findNonFunctionApplications cs = Set.fromList $ do -- List
   c@(UpperSubtype a t@(TuFunc {}) _) <- Set.toList cs
   (tau, chain) <- ct cs a
   let chain' = IAHead t c chain
-  tau' <- runReader (tProj tau TpFun) cs
-  case tau' of
-    TdFunc _ -> mzero
-    _ -> return $ Bottom $ ContradictionApplication chain'
+  guard $ null $ runReader (tProj tau TpFun) cs
+  return $ Bottom $ ContradictionApplication chain'
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
