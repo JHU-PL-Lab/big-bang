@@ -3,6 +3,7 @@ module Language.TinyBang.Test.Case
 )
 where
 
+import Language.TinyBang.Test.SourceUtils
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Test.ExpressionUtils as E
   ( false
@@ -52,6 +53,17 @@ tests = TestLabel "General case tests" $ TestList
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             A.ChiFun) $ A.Func idX varX
             ]
+  -- Check to make sure that path sensitivity does not exist, as we don't
+  -- expect it to.
+  , xCont (srcY ++ "(fun this -> fun v ->                       \
+                   \    case v of {                             \
+                   \      unit -> 0;                            \
+                   \      `A _ ->                               \
+                   \        case v of {                         \
+                   \          `B y -> [+] 1 (this y)            \
+                   \        }                                   \
+                   \    }                                       \
+                   \) (`A 0 & `B (`A 0 & `B ()))                ")
 
   -- TODO: we require more unit tests!  Especially things for deep patterns, etc.
   ]
