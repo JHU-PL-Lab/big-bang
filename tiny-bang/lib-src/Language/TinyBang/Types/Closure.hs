@@ -206,40 +206,39 @@ class ( Display a
   type Chain a
 
   concretizeType :: a -> CReader (Set (LowerBound a, Chain a))
-  concretizeType a =
-    concretizeType' a >>= return . (Set.map (\(x,y,_) -> (x,y)))
+  concretizeType = concretizeType' Set.empty
   
-  concretizeType' :: a -> CReader (Set (LowerBound a, Chain a, Set a))
-  concretizeType' a = do
-    -- clbs are the concrete lower bounds and chains
-    clbs <- concreteLowerBounds a
-    ilbs <- intermediateLowerBounds a
-    rec <- Set.unions <$> mapM concretizeIlb ilbs
-    return $ Set.union (Set.fromList clbs) rec
+  concretizeType' :: Set a -> a -> CReader (Set (LowerBound a, Chain a))
+  concretizeType' visited a =
+    if Set.member a visited
+      then return Set.empty
+      else do
+        -- clbs are the concrete lower bounds and chains
+        clbs <- concreteLowerBounds a
+        ilbs <- intermediateLowerBounds a
+        rec <- Set.unions <$> mapM (concretizeIlb (Set.insert a visited)) ilbs
+        return $ Set.union (Set.fromList clbs) rec
 
-  concretizeIlb :: (a, Constraint) -> CReader (Set (LowerBound a, Chain a, Set a))
-  concretizeIlb (a, c) = do
-    set <- concretizeType' a
-    return $ Set.fromList $ do
-      (lb, ch, vis) <- Set.toList set
-      guard $ not $ Set.member a vis
-      return (lb, extendChain a c ch, Set.insert a vis)
+  concretizeIlb :: Set a -> (a, a, Constraint)
+                -> CReader (Set (LowerBound a, Chain a))
+  concretizeIlb visited (la, ua, c) =
+    concretizeType' visited la >>= return . Set.map (second $ extendChain ua c)
 
-  concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a, Set a)]
+  concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a)]
   concreteLowerBounds a = do
     cs <- ask
     return $ do
       (lb, a', c) <- findCLowerBounds cs
       guard $ a == a'
-      return (lb, mkChain a c lb, Set.singleton a)
+      return (lb, mkChain a c lb)
 
-  intermediateLowerBounds :: a -> CReader [(a, Constraint)]
+  intermediateLowerBounds :: a -> CReader [(a, a, Constraint)]
   intermediateLowerBounds a = do
     cs <- ask
     return $ do
       (ret, a', c) <- findILowerBounds cs
       guard $ a == a'
-      return (ret, c)
+      return (ret, a, c)
 
   findCLowerBounds :: Constraints -> [(LowerBound a, a, Constraint)]
   findILowerBounds :: Constraints -> [(a, a, Constraint)]
