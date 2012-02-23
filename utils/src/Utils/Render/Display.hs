@@ -93,6 +93,9 @@ instance (Display a) => Display [a] where
 instance (Display a) => Display (Set a) where
     makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
 
+instance (Display a) => Display (Maybe a) where
+    makeDoc = maybe (text "Nothing") ((text "Just" <+>) . makeDoc)
+
 instance (Display k, Display v) => Display (Map k v) where
     makeDoc = displayMap Map.toList
 instance (Display v) => Display (IntMap v) where
