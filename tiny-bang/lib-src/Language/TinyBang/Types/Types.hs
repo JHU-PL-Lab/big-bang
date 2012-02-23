@@ -241,11 +241,13 @@ data ConstraintHistory
   | ContradictionLop
       Constraint
       InterAlphaChain
+  -- TODO: eliminate this case
+  | HistFIXME
   deriving (Eq, Ord, Show)
 
 -- TODO: deprecate this
-histFIXME :: a
-histFIXME = error "History not implemented here!"
+histFIXME :: ConstraintHistory
+histFIXME = HistFIXME --error "History not implemented here!"
 
 -- |A type representing guards in Little Bang case constraints.
 data Guard = Guard TauChiMain Constraints
@@ -414,6 +416,7 @@ instance Display ConstraintHistory where
       ContradictionLop c cn -> text "by lazy op. contradiction because" $+$
                                (nest indentSize $ makeDoc c <+> tAnd
                                               $+$ makeDoc cn)
+      HistFIXME -> text "because of reasons!!"
     where tAnd = text "and"
 
 -- TODO: print proof that subtypes in chain are valid
