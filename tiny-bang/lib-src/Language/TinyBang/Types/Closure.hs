@@ -207,7 +207,7 @@ class ( Display a
 
   concretizeType :: a -> CReader (Set (LowerBound a, Chain a))
   concretizeType a =
-    concretizeType' a >>= return . (Set.map (\(a,b,_) -> (a,b)))
+    concretizeType' a >>= return . (Set.map (\(x,y,_) -> (x,y)))
   
   concretizeType' :: a -> CReader (Set (LowerBound a, Chain a, Set a))
   concretizeType' a = do
@@ -417,22 +417,22 @@ findNonFunctionApplications cs = Set.fromList $ do -- List
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
--- TODO: assumes all lops are int -> int -> int
   c@(LazyOpSubtype _ a1 a2 a _) <- Set.toList cs
-  (TdPrim PrimInt, chain1) <- ct cs a1
-  (TdPrim PrimInt, chain2) <- ct cs a2
+  (td1, chain1) <- ct cs a1
+  (td2, chain2) <- ct cs a2
+  -- NOTE: assumes that all lops are int -> int -> int
+  guard $ not . null $ runReader (tProj td1 $ TpPrim PrimInt) cs
+  guard $ not . null $ runReader (tProj td2 $ TpPrim PrimInt) cs
   return $ TdPrim PrimInt <: a .: ClosureLop c chain1 chain2
 
 findLopContradictions :: Constraints -> Constraints
 findLopContradictions cs = Set.fromList $ do
   c@(LazyOpSubtype _ a1 a2 _ _) <- Set.toList cs
-  -- Not quite like the document.
-  -- FIXME: when we have lops that aren't int -> int -> int, this needs to be
-  -- changed.
-  (tau, chain) <- ct cs a1 ++ ct cs a2
-  case tau of
-    TdPrim PrimInt -> mzero
-    _ -> return $ Bottom $ ContradictionLop c chain
+  -- NOTE: assumes that all lops are int -> int -> int
+  (td, chain) <- ct cs a1 ++ ct cs a2
+  if null $ runReader (tProj td $ TpPrim PrimInt) cs
+    then return $ Bottom $ ContradictionLop c chain
+    else mzero
 
 propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
