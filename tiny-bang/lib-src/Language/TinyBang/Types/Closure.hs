@@ -4,7 +4,8 @@
            , FlexibleContexts
            , ImplicitParams
            , TypeSynonymInstances
-           , GADTs #-}
+           , GADTs
+           , ScopedTypeVariables #-}
 module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
@@ -41,11 +42,12 @@ import Language.TinyBang.Types.Types ( (<:)
 import Data.Function.Utils (leastFixedPoint)
 
 import Debug.Trace (trace)
-import Utils.Render.Display (display)
+import Utils.Render.Display (display, Display)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe (listToMaybe, isNothing)
+import Data.Tuple (swap)
+import Data.Maybe (listToMaybe, isNothing, mapMaybe)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
@@ -193,29 +195,43 @@ tSubProj s tproj =
 --TODO: Docstring this function
 
 -- This is particularly similar to an abstract class in the java sense
-class (Eq a, Ord (LowerBound a), Ord (Chain a)) => LowerBounded a where
+class ( Display a
+      , Eq a
+      , Ord a
+      , Ord (LowerBound a)
+      , Ord (Chain a)
+      , Display (Chain a))
+      => LowerBounded a where
   type LowerBound a
   type Chain a
 
   concretizeType :: a -> CReader (Set (LowerBound a, Chain a))
-  concretizeType a = do
+  concretizeType a =
+    concretizeType' a >>= return . (Set.map (\(a,b,_) -> (a,b)))
+  
+  concretizeType' :: a -> CReader (Set (LowerBound a, Chain a, Set a))
+  concretizeType' a = do
     -- clbs are the concrete lower bounds and chains
     clbs <- concreteLowerBounds a
     ilbs <- intermediateLowerBounds a
     rec <- Set.unions <$> mapM concretizeIlb ilbs
     return $ Set.union (Set.fromList clbs) rec
 
-  concretizeIlb :: (a, Constraint) -> CReader (Set (LowerBound a, Chain a))
-  concretizeIlb (ilb, c) =
-    concretizeType ilb >>= return . Set.map (second $ extendChain ilb c)
+  concretizeIlb :: (a, Constraint) -> CReader (Set (LowerBound a, Chain a, Set a))
+  concretizeIlb (a, c) = do
+    set <- concretizeType' a
+    return $ Set.fromList $ do
+      (lb, ch, vis) <- Set.toList set
+      guard $ not $ Set.member a vis
+      return (lb, extendChain a c ch, Set.insert a vis)
 
-  concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a)]
+  concreteLowerBounds :: a -> CReader [(LowerBound a, Chain a, Set a)]
   concreteLowerBounds a = do
     cs <- ask
     return $ do
       (lb, a', c) <- findCLowerBounds cs
       guard $ a == a'
-      return (lb, mkChain a c lb)
+      return (lb, mkChain a c lb, Set.singleton a)
 
   intermediateLowerBounds :: a -> CReader [(a, Constraint)]
   intermediateLowerBounds a = do
@@ -289,6 +305,64 @@ substituteVars constraints forallVars replAlpha =
   runReader
     (substituteAlpha constraints)
     (replAlpha, forallVars)
+
+-- |Performs cycle detection on a set of constraints.
+cycleDetectGeneric :: forall a. (AlphaType a)
+                   => (Constraint -> Maybe (SomeAlpha a, SomeAlpha a))
+                        -- ^A function used to extract appropriate subtyping
+                        --  information from a constraint.  If the constraint
+                        --  represents a subtype of the appropriate variables,
+                        --  it returns Just that pair of variables with the
+                        --  subtype first.  Otherwise, it returns Nothing.
+                   -> Constraints
+                        -- ^The set of constraints to check for cycles.
+                   -> Set (Set (SomeAlpha a))
+                        -- ^A set of resulting cycles; each cycle is a set of
+                        --  type variables which can be equivocated.
+cycleDetectGeneric f cs =
+  -- Start by finding all appropriate constraints and creating the
+  -- cycle detecting triple from them.  The triple elements are a set of
+  -- visited type variables, the lower bounding type variable, and the
+  -- upper bounding type variable.  The set always contains the current
+  -- lower bounding type variable.
+  let initial = Set.fromList $ map (tupleToTriple Set.empty) $ map swap pairs in
+  let result = leastFixedPoint step $ initial in
+  Set.map (\(s,_,_) -> s) $ Set.filter (\(_,a,b) -> a == b) result
+  where step :: (AlphaType a)
+             => Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+             -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+        step s = Set.unions $ map onestep $ Set.toList s
+        onestep :: (AlphaType a)
+                => (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+                -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+        onestep x@(s,a,b) =
+          if a == b
+            then Set.singleton x
+            else
+              Set.insert x $ Set.fromList $ map (tupleToTriple s) $
+                do -- List
+                  (a',b') <- pairs
+                  guard $ a == a'
+                  return (b',b)
+        tupleToTriple :: (AlphaType a)
+                      => Set (SomeAlpha a)
+                      -> (SomeAlpha a, SomeAlpha a)
+                      -> (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+        tupleToTriple s (a,b) = (Set.insert a s, a, b)
+        pairs :: [(SomeAlpha a, SomeAlpha a)]
+        pairs = mapMaybe f $ Set.toList cs
+
+cycleDetectInter :: Constraints -> Set (Set InterAlpha)
+cycleDetectInter = cycleDetectGeneric $ \c ->
+  case c of
+    AlphaSubtype a b _ -> Just (a,b)
+    _ -> Nothing
+
+cycleDetectCell :: Constraints -> Set (Set CellAlpha)
+cycleDetectCell = cycleDetectGeneric $ \c ->
+  case c of
+    CellAlphaSubtype a b _ -> Just (a,b)
+    _ -> Nothing
 
 ct :: (LowerBounded a) => Constraints -> a -> [(LowerBound a, Chain a)]
 ct cs a = Set.toList $ runReader (concretizeType a) cs
@@ -364,7 +438,7 @@ propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
   c@(CellGetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
-  (t2, t2Chain) <- ct cs a2
+  (t2, t2Chain) <- ct cs a2 
   let a2Chain' = CAHeadG (CellGet a1) c a2Chain
   return $ t2 <: a1 .: ClosureCellForward a2Chain' t2Chain
 
@@ -381,11 +455,11 @@ propogateCellsBackward cs = Set.fromList $ do
 closeSingleContradictions :: Constraints -> Constraints
 closeSingleContradictions cs =
   Set.unions $ map ($ cs)
-    [ id
-    , findCaseContradictions
-    , findNonFunctionApplications
-    , findLopContradictions
-    ]
+        [ id
+        , findCaseContradictions
+        , findNonFunctionApplications
+        , findLopContradictions
+        ]
 
 closeAll :: Constraints -> Constraints
 closeAll cs =
