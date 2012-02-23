@@ -223,8 +223,8 @@ instance Display (Chi a) where
       ChiBound i b -> iDoc i <> text ":" <> makeDoc b
       ChiUnbound p -> makeDoc p
       ChiPrim p -> makeDoc p
-      ChiLabelShallow lbl x -> makeDoc lbl <+> iDoc x 
-      ChiLabelDeep lbl b -> makeDoc lbl <+> makeDoc b
+      ChiLabelShallow lbl x -> text "`" <+> makeDoc lbl <+> iDoc x 
+      ChiLabelDeep lbl b -> text "`" <+> makeDoc lbl <+> makeDoc b
       ChiFun -> text "fun"
       ChiInnerStruct s -> parens $ makeDoc s
     where iDoc = text . unIdent
