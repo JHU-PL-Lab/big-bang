@@ -128,5 +128,17 @@ tests = TestLabel "General case tests" $ TestList
           \}                                                    "
         $ V.pi 1
 
-  -- TODO: we require more unit tests!
+  -- Verify pattern checking.
+  , xDLbl "case `A 0 of {                                       \
+          \  `A x & `A y -> 0                                   \
+          \}                                                    "
+  , xDBnd "case `A 0 & `B 0 of {                                \
+          \  `A x & `B x -> 0                                   \
+          \}                                                    "
+  , xEval "case `A `A `A 4 of {                                 \
+          \  `A `A `A x -> x                                    \
+          \}                                                    "
+        $ V.pi 4
+
+  -- TODO: we require more unit tests!  (verify inner binder mutation, etc.)
   ]
