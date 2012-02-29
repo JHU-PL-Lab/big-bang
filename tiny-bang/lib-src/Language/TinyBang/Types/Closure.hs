@@ -298,7 +298,9 @@ instance LowerBounded CellAlpha where
 
 -- |A function which performs substitution on a set of constraints.  All
 --  variables in the alpha set are replaced with corresponding versions that
---  have the specified alpha in their call sites list.
+--  have the specified alpha in their call sites list.  This function
+--  corresponds to the Application Substitution Definition in the language
+--  specification.
 substituteVars :: Constraints -> ForallVars -> CellAlpha -> Constraints
 substituteVars constraints forallVars replAlpha =
   runReader
