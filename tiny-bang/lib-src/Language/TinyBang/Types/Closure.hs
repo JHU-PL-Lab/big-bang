@@ -451,12 +451,21 @@ propagateCellsBackward cs = Set.fromList $ do
   let a2Chain' = CAHeadS (CellSet a1) c a2Chain
   return $ t2 <: a2 .: ClosureCellBackward a2Chain' t2Chain
 
-findIllegalAssignments :: Constraints -> Constraints
-findIllegalAssignments cs = Set.fromList $ do
+-- TODO: Add propagateImmutable
+
+findIllegalFinalAssignments :: Constraints -> Constraints
+findIllegalFinalAssignments cs = Set.fromList $ do
   CellSetSubtype a _ _ <- Set.toList cs
   a2 <- ct cs a
   Final a2' _ <- Set.toList cs
-  -- TODO: Also check for immutable
+  guard $ fst a2 == a2'
+  return $ Bottom histFIXME
+
+findIllegalImmutableAssignments :: Constraints -> Constraints
+findIllegalImmutableAssignments cs = Set.fromList $ do
+  CellSetSubtype a _ _ <- Set.toList cs
+  a2 <- ct cs a
+  Immutable a2' _ <- Set.toList cs
   guard $ fst a2 == a2'
   return $ Bottom histFIXME
 
@@ -469,6 +478,8 @@ closeSingleContradictions cs =
         , findCaseContradictions
         , findNonFunctionApplications
         , findLopContradictions
+        , findIllegalFinalAssignments
+        , findIllegalImmutableAssignments
         ]
 
 closeAll :: Constraints -> Constraints
