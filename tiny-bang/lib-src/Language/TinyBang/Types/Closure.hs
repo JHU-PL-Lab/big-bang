@@ -451,7 +451,16 @@ propagateCellsBackward cs = Set.fromList $ do
   let a2Chain' = CAHeadS (CellSet a1) c a2Chain
   return $ t2 <: a2 .: ClosureCellBackward a2Chain' t2Chain
 
--- TODO: Add propagateImmutable
+propagateImmutable :: Constraints -> Constraints
+propagateImmutable cs = Set.fromList $ do
+  c@(Immutable a1 _) <- Set.toList cs
+  (a, aChain) <- ct cs a1
+  case a of
+    TdOnion a2 a3 -> [Immutable a2 histFIXME, Immutable a3 histFIXME]
+    TdLabel _ a2 -> do
+      (a3, a3Chain) <- ct cs a2
+      [Immutable a3 histFIXME]
+    _ -> []
 
 findIllegalFinalAssignments :: Constraints -> Constraints
 findIllegalFinalAssignments cs = Set.fromList $ do
