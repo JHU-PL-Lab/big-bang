@@ -435,16 +435,16 @@ findLopContradictions cs = Set.fromList $ do
     then return $ Bottom $ ContradictionLop c chain
     else mzero
 
-propogateCellsForward :: Constraints -> Constraints
-propogateCellsForward cs = Set.fromList $ do
+propagateCellsForward :: Constraints -> Constraints
+propagateCellsForward cs = Set.fromList $ do
   c@(CellGetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
   (t2, t2Chain) <- ct cs a2
   let a2Chain' = CAHeadG (CellGet a1) c a2Chain
   return $ t2 <: a1 .: ClosureCellForward a2Chain' t2Chain
 
-propogateCellsBackward :: Constraints -> Constraints
-propogateCellsBackward cs = Set.fromList $ do
+propagateCellsBackward :: Constraints -> Constraints
+propagateCellsBackward cs = Set.fromList $ do
   c@(CellSetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
   (t2, t2Chain) <- ct cs a1
@@ -478,8 +478,8 @@ closeAll cs =
     , closeCases
     , closeApplications
     , closeLops
-    , propogateCellsForward
-    , propogateCellsBackward
+    , propagateCellsForward
+    , propagateCellsBackward
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.
