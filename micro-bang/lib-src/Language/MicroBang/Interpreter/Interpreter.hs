@@ -102,6 +102,7 @@ data EvalError =
     | NonFunctionApplication
     | CaseContradiction
     | IntegerOperationFailure
+    | ConstraintFailure
     deriving (Eq, Show)
 instance Error EvalError where
   strMsg = error
@@ -120,6 +121,12 @@ type EvalStringM a = Either EvalStringResultErrorWrapper a
 
 -- From TinyBang SourceInterpreter.
 data EvalSuccessOrFailure = EvalSuccess Value | EvalFailure EvalError
+instance Display EvalSuccessOrFailure where
+  makeDoc esof =
+    case esof of
+      EvalSuccess v -> text "EvalS:" <+> (makeDoc v)
+      EvalFailure ee-> text "EvalF" <+> (makeDoc ee)
+
 
 -- |A result type for evalStringTop
 data EvalStringResult
@@ -133,7 +140,7 @@ data EvalStringResult
 instance Display EvalStringResult where
   makeDoc esr =
     case esr of
-      EvalResult e esof -> text "Got a result!"
+      EvalResult e esof -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
       Contradiction e cs-> text "Contradiction"
       DerivationFailure e cs -> text "DerivationFailure"
       ParseFailure pe -> text "ParseFailure"
@@ -162,10 +169,12 @@ type CEM a = ErrorT ConstraintEvaluatorError
 evalTop :: Expr -> Either EvalError Value
 evalTop e =
   let cemProgPt = derive e in
-  --let (progPt, cs) = runCEM (Map.empty) 0 in
-  --let cs' = close cs in
-  --lookup progPt cs'
-  Right VEmptyOnion
+  let (progPt, cs) = runCEM cemProgPt (Map.empty) 0 in
+    case progPt of
+      Left f -> Left ConstraintFailure
+      Right p ->
+        let cs' = close cs in
+          Right (retrieve p cs')
 
 
 derive :: Expr -> CEM ProgramPoint
@@ -181,8 +190,13 @@ derive PrimUnit = error "PrimUnit"
 derive (Case e bs) = error "Case"
 derive (BinOp op e1 e2) = error "BinOp"
 
---runCEM :: (Map.Map k a) -> Int -> (ProgramPoint, Constraints)
---close :: Constraints -> Constraints
---retrieve :: ProgramPoint -> Constraints -> Value
+runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
+runCEM c r s = evalRWS (runErrorT c) r s
+
+close :: Constraints -> Constraints
+close cs = cs
+
+retrieve :: ProgramPoint -> Constraints -> Value
+retrieve p cs = VEmptyOnion
 
 
