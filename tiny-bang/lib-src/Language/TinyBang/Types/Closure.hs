@@ -456,9 +456,9 @@ propagateCellsBackward cs = Set.fromList $ do
 findIllegalFinalAssignments :: Constraints -> Constraints
 findIllegalFinalAssignments cs = Set.fromList $ do
   CellSetSubtype a _ _ <- Set.toList cs
-  a2 <- ct cs a
+  (a2, a2chain) <- ct cs a
   Final a2' _ <- Set.toList cs
-  guard $ fst a2 == a2'
+  guard $ a2 == a2'
   return $ Bottom histFIXME
 
 findIllegalImmutableAssignments :: Constraints -> Constraints
