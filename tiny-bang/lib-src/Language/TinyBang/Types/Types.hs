@@ -105,7 +105,7 @@ data TauChi a where
   TauChiOnionOne        :: TauChiPrimary                 -> TauChiStruct
 
   TauChiBound           :: InterAlpha -> TauChiBind -> TauChiBind
-  TauChiUnbound         :: TauChiPrimary            -> TauChiBind  
+  TauChiUnbound         :: TauChiPrimary            -> TauChiBind
 
   TauChiPrim            :: PrimitiveType                  -> TauChiPrimary
   TauChiLabelShallow    :: LabelName       -> CellAlpha   -> TauChiPrimary
@@ -137,6 +137,7 @@ data Constraint
   | LazyOpSubtype
       LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
   | Comparable InterAlpha InterAlpha ConstraintHistory
+  | Final InterAlpha ConstraintHistory
   | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
@@ -152,6 +153,7 @@ data ConstraintOrdinal
   | OrdCAS CellAlpha CellAlpha
   | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
   | OrdCmp InterAlpha InterAlpha
+  | OrdFin InterAlpha
   | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
@@ -169,6 +171,7 @@ constraintOrdinal c =
     CellAlphaSubtype a1 a2    _ -> OrdCAS    a1 a2
     LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
     Comparable       a1 a2    _ -> OrdCmp    a1 a2
+    Final            a1       _ -> OrdFin    a1
     Case             a  gs    _ -> OrdCase   a gs
     Bottom                    h -> OrdBottom h
 
@@ -377,6 +380,7 @@ instance Display Constraint where
                (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
                $+$ rbrace
               ,h)
+            Final a h -> (text "final" <> parens (makeDoc a), h)
             Bottom h -> (text "_|_", h)
     in
     if ?debug then base $+$ (nest indentSize $ makeDoc hist)
@@ -430,11 +434,10 @@ instance Display InterAlphaChain where
 -- TODO: print proof that subtypes in chain are valid
 instance Display CellAlphaChain where
   makeDoc ch =
-    case ch of 
+    case ch of
       CATerm (Cell ia) -> text "Cell(" <> makeDoc ia <> text ")"
       CALink ca _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ca
       CAHeadG (CellGet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellG(" <> makeDoc ia <> text ")"
       CAHeadS (CellSet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellS(" <> makeDoc ia <> text ")"
-

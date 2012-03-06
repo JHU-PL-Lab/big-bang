@@ -131,6 +131,7 @@ inferType expr = do
       a2 <- inferType e2
       tellInferred $ a1 <: T.TuFunc a1' a2'
       tellInferred $ Cell a2 <: a1'
+      tellInferred $ Final a2
       return a2'
     A.PrimInt _ -> do
       a <- freshVar
@@ -238,6 +239,7 @@ extractConstraintTypeVars c =
                 CellAlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
                 LazyOpSubtype _ a1 a2 a3 _ -> insert3Weak set a1 a2 a3
                 Comparable a1 a2 _ -> insert2Weak set a1 a2
+                Final a _ -> insertWeak set a
                 T.Case a gs _ ->
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs
@@ -326,6 +328,7 @@ tPatCheck chiMain = tPatCheckInner chiMain
 tDigestBranch :: A.Chi a -> TIM (Gamma, Constraints, T.TauChi a)
 tDigestBranch chi =
   case chi of
+    --TODO: Do we want binders to be final? Not making them final yet.
     A.ChiTopVar x -> do
       ai <- freshVar
       ac <- freshVar
@@ -365,4 +368,3 @@ tDigestBranch chi =
     A.ChiInnerStruct s -> do
       (g,c,ts) <- tDigestBranch s
       return (g, c, T.TauChiInnerStruct ts)
-

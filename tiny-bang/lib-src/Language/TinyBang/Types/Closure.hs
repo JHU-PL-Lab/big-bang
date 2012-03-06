@@ -207,7 +207,7 @@ class ( Display a
 
   concretizeType :: a -> CReader (Set (LowerBound a, Chain a))
   concretizeType = concretizeType' Set.empty
-  
+
   concretizeType' :: Set a -> a -> CReader (Set (LowerBound a, Chain a))
   concretizeType' visited a =
     if Set.member a visited
@@ -439,7 +439,7 @@ propogateCellsForward :: Constraints -> Constraints
 propogateCellsForward cs = Set.fromList $ do
   c@(CellGetSubtype a a1 _) <- Set.toList cs
   (a2, a2Chain) <- ct cs a
-  (t2, t2Chain) <- ct cs a2 
+  (t2, t2Chain) <- ct cs a2
   let a2Chain' = CAHeadG (CellGet a1) c a2Chain
   return $ t2 <: a1 .: ClosureCellForward a2Chain' t2Chain
 
@@ -450,6 +450,15 @@ propogateCellsBackward cs = Set.fromList $ do
   (t2, t2Chain) <- ct cs a1
   let a2Chain' = CAHeadS (CellSet a1) c a2Chain
   return $ t2 <: a2 .: ClosureCellBackward a2Chain' t2Chain
+
+findIllegalAssignments :: Constraints -> Constraints
+findIllegalAssignments cs = Set.fromList $ do
+  CellSetSubtype a _ _ <- Set.toList cs
+  a2 <- ct cs a
+  Final a2' _ <- Set.toList cs
+  -- TODO: Also check for immutable
+  guard $ fst a2 == a2'
+  return $ Bottom histFIXME
 
 -- |This closure calculation function produces appropriate bottom values for
 --  immediate contradictions (such as tprim <: tprim' where tprim != tprim').
@@ -571,6 +580,8 @@ instance AlphaSubstitutable Constraint where
         csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
       Comparable a1 a2 hist ->
         csaHelper2 Comparable a1 a2 hist
+      Final a hist ->
+        csaHelper Final a hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a
