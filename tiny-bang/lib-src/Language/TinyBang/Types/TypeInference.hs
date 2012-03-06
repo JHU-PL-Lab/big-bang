@@ -240,6 +240,7 @@ extractConstraintTypeVars c =
                 LazyOpSubtype _ a1 a2 a3 _ -> insert3Weak set a1 a2 a3
                 Comparable a1 a2 _ -> insert2Weak set a1 a2
                 Final a _ -> insertWeak set a
+                Immutable a _ -> insertWeak set a
                 T.Case a gs _ ->
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs

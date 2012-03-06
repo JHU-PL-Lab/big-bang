@@ -582,6 +582,8 @@ instance AlphaSubstitutable Constraint where
         csaHelper2 Comparable a1 a2 hist
       Final a hist ->
         csaHelper Final a hist
+      Immutable a hist ->
+        csaHelper Immutable a hist
       Case a guards hist ->
         Case
           <$> substituteAlpha a

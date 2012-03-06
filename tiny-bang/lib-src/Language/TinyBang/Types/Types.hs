@@ -138,6 +138,7 @@ data Constraint
       LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
   | Comparable InterAlpha InterAlpha ConstraintHistory
   | Final InterAlpha ConstraintHistory
+  | Immutable InterAlpha ConstraintHistory
   | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
@@ -154,6 +155,7 @@ data ConstraintOrdinal
   | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
   | OrdCmp InterAlpha InterAlpha
   | OrdFin InterAlpha
+  | OrdImmutable InterAlpha
   | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
@@ -172,6 +174,7 @@ constraintOrdinal c =
     LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
     Comparable       a1 a2    _ -> OrdCmp    a1 a2
     Final            a1       _ -> OrdFin    a1
+    Immutable        a1       _ -> OrdImmutable a1
     Case             a  gs    _ -> OrdCase   a gs
     Bottom                    h -> OrdBottom h
 
@@ -381,6 +384,7 @@ instance Display Constraint where
                $+$ rbrace
               ,h)
             Final a h -> (text "final" <> parens (makeDoc a), h)
+            Immutable a h -> (text "immutable" <> parens (makeDoc a), h)
             Bottom h -> (text "_|_", h)
     in
     if ?debug then base $+$ (nest indentSize $ makeDoc hist)
