@@ -129,7 +129,7 @@ inferType expr = do
       a2' <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tellInferred $ a1 <: T.TuFunc a1' a2'
+      tellInferred $ a1 <: T.UpFun a1' a2'
       tellInferred $ Cell a2 <: a1'
       tellInferred $ Final a2
       return a2'
@@ -230,8 +230,10 @@ extractConstraintTypeVars c =
     Foldable.foldl foldConstraints Set.empty c
     where foldConstraints set el =
             case el of
+--TODO: should this substitute variables found in the tau down?
                 LowerSubtype _ a _ -> insertWeak set a
-                UpperSubtype a _ _ -> insertWeak set a
+--TODO: should this substitute the in and out variables of the function?
+                UpperSubtype a _ _ _ -> insertWeak set a
                 AlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellGetSubtype a1 a2 _ -> insert2Weak set a1 a2
