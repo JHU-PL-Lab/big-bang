@@ -71,7 +71,7 @@ data SDown
   | SDOnion ProgramPoint ProgramPoint
   | SDOnionSub ProgramPoint FOnionSub
   | SDEmptyOnion
-  | SDFunction ProgramPoint ProgramPoint Constraints
+  | SDFunction [ProgramPoint] ProgramPoint ProgramPoint Constraints
   | SDBadness
   deriving (Show, Eq, Ord)
 data FOnionSub = FSubInt | FSubUnit | FSubLabel LabelName | FSubFun
@@ -233,7 +233,8 @@ derive (Func ident e) = do
   p2 <- freshVar
   (p3, f) <- capture (Map.insert ident p2) e
   p1 <- freshVar
-  tell (Set.singleton (SLower (SDFunction p2 p3 f) p1))
+  let ps = extractPs f
+  tell (Set.singleton (SLower (SDFunction ps p2 p3 f) p1))
   return p1
 derive EmptyOnion = do
   p1 <- freshVar
@@ -251,7 +252,16 @@ derive (OnionSub e sub) = do
   tell (Set.singleton (SLower (SDOnionSub p2 (convertSubTermToFOnionSub sub)) p1))
   return p1
 
-
+--TODO: make it a Set of prog points, not a list
+extractPs :: Constraints -> [ProgramPoint]
+extractPs cs = fold grabCs [] cs where
+  grabCs :: Constraint -> [ProgramPoint] -> [ProgramPoint]
+  grabCs c ps = case c of
+    (SLower sd p) -> p:ps --TODO
+    (SIntermediate p1 p2) -> p1:p2:ps
+    (SUpper p su) -> p:ps
+    (SOp p1 _ p2 p3) -> p1:p2:p3:ps
+    (SCase p1 _) -> p1:ps --TODO
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
@@ -269,7 +279,7 @@ retrieve p cs =
       SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
       SDOnionSub p1 s1 -> error "Subtration Onion?"
       SDEmptyOnion -> VEmptyOnion
-      SDFunction p1 p2 cs -> error "Function...what do I do..."
+      SDFunction ps p1 p2 cs -> error "Function...what do I do..."
       SDBadness -> error "Lightening"
 
   where
