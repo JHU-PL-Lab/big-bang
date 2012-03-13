@@ -128,30 +128,29 @@ Branches:   Branch ';' Branches     { $1:$3 }
 Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
 
 
-Pattern :   ident                   { A.ChiSimple $
-                                        if $1 == "_" then Nothing else Just $ ident $1 }
-        |   PatternStruct           { A.ChiComplex $1 }
+Pattern :   ident                  
+                                    { A.ChiTopVar $ ident $1 }
+        |   PatternPrimary '&' PatternStruct
+                                    { A.ChiTopOnion $1 $3 }
+        |   PatternBind
+                                    { A.ChiTopBind $1 }
 
 PatternStruct
-        :   PatternBind             { A.ChiOnionOne $1 }
-        |   PatternBind '&' PatternStruct
+        :   PatternPrimary '&' PatternStruct
                                     { A.ChiOnionMany $1 $3 }
+        |   PatternPrimary
+                                    { A.ChiOnionOne $1 }
 
 PatternBind
-        :   '(' PatternStruct ')'   { A.ChiParen Nothing $2 }
-        |   ident ':' '(' PatternStruct ')'
-                                    { A.ChiParen (Just $ ident $1) $4 }
-        |   PatternPrimary          { A.ChiPrimary Nothing $1 }
-        |   ident ':' PatternPrimary
-                                    { A.ChiPrimary (Just $ ident $1) $3 }
+        :   ident ':' PatternBind   { A.ChiBound (ident $1) $3 }
+        |   PatternPrimary          { A.ChiUnbound $1 }
 
 PatternPrimary
         :   PrimitiveType           { A.ChiPrim $1 }
-        |   '`' ident ident         { A.ChiLabelSimple
-		                                (labelName $2)
-                                        (if $3 == "_" then Nothing else Just $ ident $3) }
-        |   '`' ident PatternBind   { A.ChiLabelComplex (labelName $2) $3 }
+        |   '`' ident ident         { A.ChiLabelShallow (labelName $2) $ ident $3 }
+        |   '`' ident PatternBind   { A.ChiLabelDeep (labelName $2) $3 }
         |   fun                     { A.ChiFun }
+        |   '(' PatternStruct ')'   { A.ChiInnerStruct $2 }
 
 PrimitiveType
         :   int                     { PrimInt }

@@ -30,7 +30,6 @@ import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
@@ -203,8 +202,9 @@ eval e = do
         v1 <- eval e1
         v2 <- eval e2
         cellId <- newCell v2
-        case v1 of
-          VFunc i body -> eval $ subst cellId i body
+        let v1' = eProj T.TpFun v1
+        case v1' of
+          Just (VFunc i body) -> eval $ subst cellId i body
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
@@ -219,51 +219,46 @@ eval e = do
                     Just expr -> return expr
         eval =<< findAnswer branches
         where eMatch :: Value -> Branch -> EvalM (Maybe Expr)
-              eMatch v (Branch chi e1) = do
+              eMatch v (Branch chi e1) = do -- EvalM
                 m <- eSearch v chi
-                return $ do
-                  (_, b) <- m
+                return $ do -- Maybe
+                  b <- m
                   return $ eSubstAll e1 b
               eSubstAll :: Expr -> IdMap -> Expr
               eSubstAll expr b = Map.foldrWithKey (flip subst) expr b
               eSearch :: Value
                       -> Chi a
-                      -> EvalM (Maybe (Value, IdMap))
+                      -> EvalM (Maybe IdMap)
               eSearch v chi =
                 case chi of
-                  ChiSimple mx -> Just . (v,) <$> mapMaybeVar mx
-                  ChiComplex chiBind -> eSearch v chiBind
-                  chiStruct@(ChiOnionOne {}) -> searchAll chiStruct
-                  chiStruct@(ChiOnionMany {}) -> searchAll chiStruct
-                  ChiParen mx chiBound -> do
-                    mPair <- eSearch v chiBound
-                    idMap <- mapMaybeVar mx
-                    return $ addBinding idMap <$> mPair
-                  ChiPrimary mx chiBound -> do
-                    mPair <- eSearch v chiBound
-                    idMap <- mapMaybeVar mx
-                    return $ addBinding idMap <$> mPair
-                  ChiPrim prim -> recurseSearch v chi $ return . (matchPrim prim)
-                  ChiLabelSimple lbl mx ->
-                    recurseSearch v chi $ matchLabelSimple lbl mx
-                  ChiLabelComplex lbl chiBind ->
+                  ChiTopVar x -> Just <$> (Map.singleton x <$> newCell v)
+                  ChiTopOnion chiPri chiStruct ->
+                    searchAll (chiPri, Just chiStruct)
+                  ChiTopBind chiBind -> eSearch v chiBind
+                  ChiOnionMany chiPri chiStruct ->
+                    searchAll (chiPri, Just chiStruct)
+                  ChiOnionOne chiPri -> searchAll (chiPri, Nothing)
+                  ChiBound i chiBind -> do
+                    idMap <- eSearch v chiBind
+                    c <- newCell v
+                    return $ maybe Nothing (Just . Map.insert i c) idMap
+                  ChiUnbound chiPri -> eSearch v chiPri
+                  ChiPrim prim ->
+                    recurseSearch v chi $ return . (matchPrim prim)
+                  ChiLabelShallow lbl x ->
+                    recurseSearch v chi $ matchLabelSimple lbl x
+                  ChiLabelDeep lbl chiBind ->
                     recurseSearch v chi $ matchLabelComplex lbl chiBind
-                  ChiFun -> recurseSearch v chi $ return . Just . (,Map.empty)
-                where mapMaybeVar :: Maybe Ident -> EvalM IdMap
-                      mapMaybeVar mx =
-                        case mx of
-                          Nothing -> return Map.empty
-                          Just x -> Map.singleton x <$> newCell v
-                      addBinding :: IdMap -> (Value, IdMap) -> (Value, IdMap)
-                      addBinding b (v', bs) =
-                        (v', bs `Map.union` b)
-                      -- | Takes a (possibly onion) value, a primary pattern,
+                  ChiFun ->
+                    recurseSearch v chi $ const $ return $ Just Map.empty
+                  ChiInnerStruct chiStruct -> eSearch v chiStruct
+                where -- | Takes a (possibly onion) value, a primary pattern,
                       --   and a function to evaluate non-onion values to a
                       --   result.  Handles breaking onion values apart to find
                       --   the first matching result.
                       recurseSearch :: Value -> ChiPrimary
-                                    -> (Value -> EvalM (Maybe (Value, IdMap)))
-                                    -> EvalM (Maybe (Value, IdMap))
+                                    -> (Value -> EvalM (Maybe IdMap))
+                                    -> EvalM (Maybe IdMap)
                       recurseSearch v' chiBound f =
                         case v' of
                           VOnion vLeft vRight -> do
@@ -276,55 +271,44 @@ eval e = do
                               Nothing -> eSearch vLeft chiBound
                           -- If the value is not an onion, it's a singleton.
                           _ -> f v'
-                      matchPrim :: T.PrimitiveType -> Value -> Maybe (Value, IdMap)
+                      matchPrim :: T.PrimitiveType -> Value -> Maybe IdMap
                       matchPrim prim v' =
                         case (prim, v') of
                           (T.PrimInt, VPrimInt _) -> yes
                           (T.PrimChar, VPrimChar _) -> yes
                           (T.PrimUnit, VPrimUnit) -> yes
                           _ -> no
-                          where yes = Just (v', Map.empty)
+                          where yes = Just Map.empty
                                 no = Nothing
-                      matchLabelSimple :: LabelName -> Maybe Ident -> Value
-                                       -> EvalM (Maybe (Value, IdMap))
-                      matchLabelSimple lbl mx v' =
+                      matchLabelSimple :: LabelName -> Ident -> Value
+                                       -> EvalM (Maybe IdMap)
+                      matchLabelSimple lbl x v' =
                         return $ case v' of
                           VLabel lbl' c | lbl == lbl' ->
-                            Just (v', maybe
-                                       Map.empty
-                                       (\x -> Map.singleton x c)
-                                       mx)
+                            Just (Map.singleton x c)
                           _ -> Nothing
                       matchLabelComplex :: LabelName -> Chi a -> Value
-                                        -> EvalM (Maybe (Value, IdMap))
+                                        -> EvalM (Maybe IdMap)
                       matchLabelComplex lbl chiBind v' =
-                        do -- EvalM monad
-                         mPair <- (
-                            case v' of
-                              VLabel lbl' c0 | lbl == lbl' ->
-                                flip eSearch chiBind =<< readCell c0
-                              _ -> return Nothing
-                            )
-                         case mPair of
-                           Just pair -> Just <$> newLabel pair
-                           Nothing -> return Nothing
-                         where newLabel (v'',m) = do
-                                 c1 <- newCell v''
-                                 return (VLabel lbl c1, m)
-                      searchAll :: ChiStruct -> EvalM (Maybe (Value, IdMap))
-                      searchAll chiStruct =
-                        case chiStruct of
-                          ChiOnionOne chiBind -> eSearch v chiBind
--- TODO: Possibly do something with fold rather than explicit recursion
-                          ChiOnionMany chiBind chiStruct' -> do -- EvalM
-                            mLeft <- eSearch v chiBind
-                            mRest <- searchAll chiStruct'
+                        case v' of
+                          VLabel lbl' c0 | lbl == lbl' ->
+                            flip eSearch chiBind =<< readCell c0
+                          _ -> return Nothing
+                      searchAll :: (ChiPrimary, Maybe ChiStruct)
+                                -> EvalM (Maybe IdMap)
+                      searchAll (p,ms) =
+                        case ms of
+                          Nothing -> eSearch v p
+                          Just s -> do -- EvalM
+                            mLeft <- eSearch v p
+                            mRest <- searchAll $
+                              case s of
+                                ChiOnionOne p' -> (p',Nothing)
+                                ChiOnionMany p' s' -> (p',Just s')
                             return $ do -- Maybe
-                              (vLeft, idMapLeft) <- mLeft
-                              (vRest, idMapRest) <- mRest
-                              return $ ( onion vLeft vRest
-                                       , Map.union idMapRest idMapLeft
-                                       )
+                              idMapLeft <- mLeft
+                              idMapRest <- mRest
+                              return $ Map.union idMapRest idMapLeft
       Def i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
@@ -339,9 +323,12 @@ eval e = do
       LazyOp op e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
-        case (op, v1, v2) of
-          (Plus,  VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x + y
-          (Minus, VPrimInt x, VPrimInt y) -> return $ VPrimInt $ x - y
+        let eProjInt = eProj $ T.TpPrim T.PrimInt
+        case (op, eProjInt v1, eProjInt v2) of
+          (Plus,  Just (VPrimInt x), Just (VPrimInt y)) ->
+            return $ VPrimInt $ x + y
+          (Minus, Just (VPrimInt x), Just (VPrimInt y)) ->
+            return $ VPrimInt $ x - y
           _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
       EagerOp op e1 e2 -> do
         v1 <- eval e1
@@ -582,3 +569,17 @@ canonicalize' (v, imap) =
             filter ((`IntMap.member` remap) . fst) $ IntMap.assocs imap'
         pairRemap (cell, contents) =
           (remap ! cell, valueRemap contents)
+
+-- |Projects values by type.
+eProj :: T.TauProj -> Value -> Maybe Value
+eProj tproj v =
+  case (tproj, v) of
+    (T.TpPrim T.PrimInt, VPrimInt _) -> Just v
+    (T.TpPrim T.PrimChar, VPrimChar _) -> Just v
+    (T.TpPrim T.PrimUnit, VPrimUnit) -> Just v
+    (T.TpLabel n, VLabel n' _) | n == n' -> Just v
+    (T.TpFun, VFunc _ _) -> Just v
+    (_, VOnion v1 v2) ->
+      maybe (eProj tproj v1) Just (eProj tproj v2)
+    _ -> Nothing
+

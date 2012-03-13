@@ -10,6 +10,8 @@ import qualified Language.TinyBang.Ast as A
 
 zero = A.VPrimInt 0
 one = A.VPrimInt 1
+two = A.VPrimInt 2
+four = A.VPrimInt 4
 
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
@@ -37,14 +39,22 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
           one
   , xType "case `A 5 of { `A x -> x }"
 
-  -- Test that implicit projection of functions fails
-  , xCont "(1 & (fun x -> x)) 1"
+  -- Test that implicit projection of functions succeeds
+  , xEval "(1 & (fun x -> x)) 1"
+          one
 
-  -- Test that implicit projection of lazy ops fails
-  , xCont "[+] (2 & 'b') 2"
+  -- Test that implicit projection of lazy ops succeeds
+  , xEval "[+] (2 & 'b') 2" $
+          four
   , xCont "[+] (`True () & 'z') 2"
-  , xCont "[+] (2 & 'x') ('y' & 2)"
-  , xCont "[+] (2 & ('a' & ())) ((2 & 'b') & ())"
-  , xCont "[+] (1 & ('a' & ())) ('a' & (1 & ()))"
-  , xCont "[+] (1 & 'a') ('a' & 1 & ())"
+  , xEval "[+] (2 & 'x') ('y' & 2)" $
+          four
+  , xEval "[+] (2 & ('a' & ())) ((2 & 'b') & ())" $
+          four
+  , xEval "[+] (1 & ('a' & ())) ('a' & (1 & ()))" $
+          two
+  , xEval "[+] (1 & 'a') ('a' & 1 & ())" $
+          two
+  , xEval "[+] 1 (1 & 2 & 3 & ())" $
+          four
   ]

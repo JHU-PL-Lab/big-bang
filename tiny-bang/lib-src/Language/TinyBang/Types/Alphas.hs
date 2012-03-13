@@ -106,7 +106,7 @@ callSites lst = CallSites lst
 -- |This function transforms a specified alpha into a call site list.  The
 --  resulting call site list is in the reverse order form dictated by the
 --  CallSites structure; that is, the list [{'3},{'2},{'1}] represents the type
---  variable with the exponent expression '1^('2^'3).  The resulting call site
+--  variable with the exponent expression ['1,'2,'3].  The resulting call site
 --  list is suitable for use in type variable substitution for polymorphic
 --  functions.  This function is used in closure.
 

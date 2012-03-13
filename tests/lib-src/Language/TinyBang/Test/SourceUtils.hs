@@ -13,9 +13,9 @@ import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.Test.UtilFunctions
 
 srcY  :: TinyBangCode
-srcY  = "fun body ->"
+srcY  = "(fun body ->"
         ++ " (fun f -> fun arg -> f f arg)"
-        ++ " (fun this -> fun arg -> body (this this) arg)"
+        ++ " (fun this -> fun arg -> body (this this) arg))"
 
 srcMultiAppl :: [TinyBangCode] -> TinyBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"

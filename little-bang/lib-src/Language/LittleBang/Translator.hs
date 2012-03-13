@@ -21,9 +21,9 @@ import qualified Language.TinyBang.Types.UtilTypes as TUT
 --  those ASTs.  This list of variables is guaranteed to be infinite in size.
 freshVars :: [ TA.Expr ] -> [ TUT.Ident ]
 freshVars es =
-  let names = map (TUT.ident . ("bbvar" ++)) $ map show [(0::Int)..] in
+  let names = map (TUT.ident . ("freshTmp" ++)) $ map show [(0::Int)..] in
   let free = Set.unions $ map TA.exprFreeVars es in
-  let goodNames = filter (`Set.member` free) names in
+  let goodNames = filter (not . (`Set.member` free)) names in
   goodNames
 
 -- |Translates a Little Bang AST to a Tiny Bang AST.
@@ -64,9 +64,9 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.Label n e' -> TA.Label (convTiny n) (convTiny e')
       LA.Onion e1 e2 ->
         TA.Case TA.EmptyOnion
-          [ TA.Branch (TA.ChiSimple $ Just self) $
+          [ TA.Branch (TA.ChiTopVar self) $
               TA.Case (convTiny e1)
-                [ TA.Branch (TA.ChiSimple $ Just self) $
+                [ TA.Branch (TA.ChiTopVar self) $
                     TA.Onion (TA.Var self) $ convTiny e2 ] ]
       LA.OnionSub e' s -> TA.OnionSub (convTiny e') (convTiny s)
       LA.EmptyOnion -> TA.EmptyOnion
@@ -75,7 +75,7 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
         let (e1',e2') = (convTiny e1, convTiny e2) in
         let free = head $ freshVars [e1',e2'] in
         TA.Case e1'
-          [ TA.Branch (TA.ChiSimple $ Just free) $
+          [ TA.Branch (TA.ChiTopVar free) $
               TA.Appl (TA.Appl (TA.Var free) (TA.Var free)) e2' ]
       LA.PrimInt i -> TA.PrimInt i
       LA.PrimChar c -> TA.PrimChar c
@@ -84,8 +84,8 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.Case e' brs -> TA.Case (convTiny e') (convTiny brs)
       LA.Def i e1 e2 ->
         TA.Case (TA.Label ref $ convTiny e1)
-          [ TA.Branch (TA.ChiComplex $ TA.ChiOnionOne $ TA.ChiPrimary Nothing $
-                         TA.ChiLabelSimple ref $ Just $ convTiny i) $
+          [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
+                         TA.ChiLabelShallow ref $ convTiny i) $
               convTiny e2 ]
       LA.Assign i e1 e2 ->
         TA.Assign (TA.AIdent $ convTiny i) (convTiny e1) (convTiny e2)
@@ -108,28 +108,31 @@ instance ConvertibleToTinyBang LA.Branch TA.Branch where
 instance ConvertibleToTinyBang LA.ChiMain TA.ChiMain where
   convTiny chi =
     case chi of
-      LA.ChiSimple mi -> TA.ChiSimple $ convTiny mi
-      LA.ChiComplex chiS -> TA.ChiComplex $ convTiny chiS
+      LA.ChiTopVar x -> TA.ChiTopVar $ convTiny x
+      LA.ChiTopOnion chiP chiS ->
+        TA.ChiTopOnion (convTiny chiP) (convTiny chiS)
+      LA.ChiTopBind chiB ->
+        TA.ChiTopBind $ convTiny chiB
 
 instance ConvertibleToTinyBang LA.ChiStruct TA.ChiStruct where
   convTiny chi =
     case chi of
-      LA.ChiOnionOne chiB -> TA.ChiOnionOne $ convTiny chiB
-      LA.ChiOnionMany chiB chiS ->
-        TA.ChiOnionMany (convTiny chiB) (convTiny chiS)
+      LA.ChiOnionOne chiP -> TA.ChiOnionOne $ convTiny chiP
+      LA.ChiOnionMany chiP chiS ->
+        TA.ChiOnionMany (convTiny chiP) (convTiny chiS)
 
 instance ConvertibleToTinyBang LA.ChiBind TA.ChiBind where
   convTiny chi =
     case chi of
-      LA.ChiParen mi chiS -> TA.ChiParen (convTiny mi) (convTiny chiS)
-      LA.ChiPrimary mi chiP -> TA.ChiPrimary (convTiny mi) (convTiny chiP)
+      LA.ChiBound i chiB -> TA.ChiBound (convTiny i) (convTiny chiB)
+      LA.ChiUnbound chiP -> TA.ChiUnbound $ convTiny chiP
 
 instance ConvertibleToTinyBang LA.ChiPrimary TA.ChiPrimary where
   convTiny chi =
     case chi of
       LA.ChiPrim p -> TA.ChiPrim $ convTiny p
-      LA.ChiLabelSimple n mi -> TA.ChiLabelSimple (convTiny n) (convTiny mi)
-      LA.ChiLabelComplex n chiB ->
-        TA.ChiLabelComplex (convTiny n) (convTiny chiB)
+      LA.ChiLabelShallow n i -> TA.ChiLabelShallow (convTiny n) (convTiny i)
+      LA.ChiLabelDeep n chiB -> TA.ChiLabelDeep (convTiny n) (convTiny chiB)
       LA.ChiFun -> TA.ChiFun
+      LA.ChiInnerStruct chiS -> TA.ChiInnerStruct $ convTiny chiS
 

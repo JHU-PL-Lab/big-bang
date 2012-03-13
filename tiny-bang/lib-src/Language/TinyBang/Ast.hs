@@ -6,6 +6,10 @@ module Language.TinyBang.Ast
 , ChiStruct
 , ChiBind
 , ChiPrimary
+, ChiMainType
+, ChiStructType
+, ChiBindType
+, ChiPrimaryType
 , Branches
 , Branch(..)
 , Value(..)
@@ -92,53 +96,25 @@ type ChiPrimary = Chi ChiPrimaryType
 -- |Data type describing top level type patterns in case expressions;
 --  corresponds to chi in the document.
 data Chi a where
-  ChiSimple       :: Maybe Ident -> ChiMain
-  ChiComplex      :: ChiStruct   -> ChiMain
+  ChiTopVar       :: Ident                   -> ChiMain
+  ChiTopOnion     :: ChiPrimary -> ChiStruct -> ChiMain
+  ChiTopBind      :: ChiBind                 -> ChiMain
 
-  ChiOnionOne     :: ChiBind              -> ChiStruct
-  ChiOnionMany    :: ChiBind -> ChiStruct -> ChiStruct
+  ChiOnionMany    :: ChiPrimary -> ChiStruct -> ChiStruct
+  ChiOnionOne     :: ChiPrimary              -> ChiStruct
 
-  ChiParen        :: Maybe Ident -> ChiStruct  -> ChiBind
-  ChiPrimary      :: Maybe Ident -> ChiPrimary -> ChiBind
+  ChiBound        :: Ident -> ChiBind -> ChiBind
+  ChiUnbound      :: ChiPrimary       -> ChiBind  
 
   ChiPrim         :: T.PrimitiveType                -> ChiPrimary
-  ChiLabelSimple  :: LabelName       -> Maybe Ident -> ChiPrimary
-  ChiLabelComplex :: LabelName       -> ChiBind     -> ChiPrimary
+  ChiLabelShallow :: LabelName       -> Ident       -> ChiPrimary
+  ChiLabelDeep    :: LabelName       -> ChiBind     -> ChiPrimary
   ChiFun          ::                                   ChiPrimary
+  ChiInnerStruct  :: ChiStruct                      -> ChiPrimary
 
 deriving instance Show (Chi a)
 deriving instance Eq (Chi a)
 deriving instance Ord (Chi a)
-
--- -- |Data type describing top level type patterns in case expressions;
--- --  corresponds to chi in the document.
--- data Chi
---   = ChiSimple (Maybe Ident)
---   | ChiComplex ChiStruct
---   deriving (Eq, Ord, Show)
-
--- -- |Data type describing patterns which impose structure on what they bind;
--- --  corresponds to chi^S in the document.
--- data ChiStruct
---   = ChiBindOne ChiBind
---   | ChiBindMany ChiBind ChiStruct
---   deriving (Eq, Ord, Show)
-
--- -- |Data type describing patterns which may have final binders attached;
--- --  corresponds to chi^B in the document.
--- data ChiBind
---   = ChiParen (Maybe Ident) ChiStruct
---   | ChiPrimary (Maybe Ident) ChiPrimary
---   deriving (Eq, Ord, Show)
-
--- -- |Data type describing the base case of patterns;
--- --  corresponds to chi^P in the document.
--- data ChiPrimary
---   = ChiPrim T.PrimitiveType
---   | ChiLabelSimple LabelName (Maybe Ident)
---   | ChiLabelComplex LabelName ChiBind
---   | ChiFun
---   deriving (Eq, Ord, Show)
 
 -- |Alias for case branches
 type Branches = [Branch]
@@ -162,21 +138,20 @@ exprFromValue v = case value v of
 ePatVars :: Chi a -> Set Ident
 ePatVars chi =
   case chi of
-    ChiSimple mx -> maybeIdent mx
-    ChiComplex chiStruct -> ePatVars chiStruct
-    ChiOnionOne chiBind -> ePatVars chiBind
-    ChiOnionMany chiBind chiStruct -> both chiBind chiStruct
-    ChiParen mx chiStruct -> varAndMore mx chiStruct
-    ChiPrimary mx chiPrimary -> varAndMore mx chiPrimary
+    ChiTopVar x -> Set.singleton x
+    ChiTopOnion p s -> both p s
+    ChiTopBind b -> ePatVars b
+    ChiOnionMany p s -> both p s
+    ChiOnionOne p -> ePatVars p
+    ChiBound i b -> Set.insert i $ ePatVars b
+    ChiUnbound p -> ePatVars p
     ChiPrim _ -> Set.empty
-    ChiLabelSimple _ mx -> maybeIdent mx
-    ChiLabelComplex _ chiBind -> ePatVars chiBind
+    ChiLabelShallow _ x -> Set.singleton x
+    ChiLabelDeep _ b -> ePatVars b
     ChiFun -> Set.empty
-  where maybeIdent mx = maybe Set.empty Set.singleton mx
-        both :: Chi a -> Chi b -> Set Ident
+    ChiInnerStruct s -> ePatVars s
+  where both :: Chi a -> Chi b -> Set Ident
         both x y = Set.union (ePatVars y) (ePatVars x)
-        varAndMore :: Maybe Ident -> Chi a -> Set Ident
-        varAndMore mx chi' = Set.union (ePatVars chi') (maybeIdent mx)
 
 -- |Obtains the set of free variables for a given expression.
 exprFreeVars :: Expr -> Set Ident
@@ -240,21 +215,19 @@ instance Display Branch where
 instance Display (Chi a) where
   makeDoc chi =
     case chi of
-      ChiSimple mx -> docDummyMx mx
-      ChiComplex chiStruct -> makeDoc chiStruct
-      ChiOnionOne chiBind -> makeDoc chiBind
-      ChiOnionMany chiBind chiStruct ->
-        makeDoc chiBind <+> text "&" <+> makeDoc chiStruct
-      ChiParen mx chiStruct ->
-        docPreMx mx <+> makeDoc chiStruct
-      ChiPrimary mx chiPri ->
-        docPreMx mx <+> makeDoc chiPri
+      ChiTopVar x -> iDoc x
+      ChiTopOnion p s -> makeDoc p <+> text "&" <+> makeDoc s
+      ChiTopBind b -> makeDoc b
+      ChiOnionMany p s -> makeDoc p <+> text "&" <+> makeDoc s
+      ChiOnionOne p -> makeDoc p
+      ChiBound i b -> iDoc i <> text ":" <> makeDoc b
+      ChiUnbound p -> makeDoc p
       ChiPrim p -> makeDoc p
-      ChiLabelSimple lbl mx -> makeDoc lbl <+> docDummyMx mx
-      ChiLabelComplex lbl chiBind -> makeDoc lbl <+> makeDoc chiBind
+      ChiLabelShallow lbl x -> text "`" <> makeDoc lbl <+> iDoc x 
+      ChiLabelDeep lbl b -> text "`" <> makeDoc lbl <+> makeDoc b
       ChiFun -> text "fun"
-    where docDummyMx mx = text $ maybe "_" unIdent mx
-          docPreMx mx = maybe empty (text . (++":") . unIdent) mx
+      ChiInnerStruct s -> parens $ makeDoc s
+    where iDoc = text . unIdent
 
 instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i

@@ -3,6 +3,9 @@ module Language.TinyBang.Test.UtilFunctions
 , xType
 , xCont
 , xNotC
+, xDLbl
+, xDBnd
+, xErrT
 , xLexs
 , xPars
 , fPars
@@ -27,7 +30,7 @@ import Language.TinyBang.Ast (vmPair, Evaluated)
 import Language.TinyBang.Syntax.Lexer (Token)
 import qualified Language.TinyBang.Ast as A (Expr, Value)
 import qualified Language.TinyBang.Types.TypeInference as TI
-  (TypeInferenceError (NotClosed))
+  (TypeInferenceError (..))
 import qualified Language.TinyBang.Syntax.Lexer as L
   (lexTinyBang)
 import Language.TinyBang.Syntax.Lexer (Token(..))
@@ -89,6 +92,29 @@ xNotC code =
   where label = show code ++
                 " was expected to produce a contradiction"
         result = evalStringTop code
+
+xErrT :: (?debug :: Bool)
+      => String -> (TI.TypeInferenceError -> Bool) -> TinyBangCode -> Test
+xErrT msg pred code =
+  label ~: case result of
+    TypecheckFailure _ tie _ | pred tie -> TestCase $ assertSuccess
+    _ -> TestCase $ assertFailure $
+         "Expected " ++ msg ++ " but instead got " ++ display result
+  where label = show code ++
+                " was expected to produce " ++ msg
+        result = evalStringTop code
+
+xDBnd :: (?debug :: Bool) => TinyBangCode -> Test
+xDBnd = xErrT "DoubleBound" $ \x ->
+          case x of
+            TI.DoubleBound{} -> True
+            _ -> False
+
+xDLbl :: (?debug :: Bool) => TinyBangCode -> Test
+xDLbl = xErrT "DoubleLabel" $ \x ->
+          case x of
+            TI.DoubleLabel{} -> True
+            _ -> False
 
 xLexs :: TinyBangCode -> [Token] -> Test
 xLexs code expected =

@@ -28,8 +28,8 @@ tests :: (?debug :: Bool) => Test
 tests = TestLabel "Eager operations tests" $ TestList $ concat
   [ [ xType (srcMultiAppl [srcY, srcSummate, "5"])
     , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
-    , xType (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
-    , xType (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
+    , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
+    , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
     , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
 
   -- Test evaluation of some recursive arithmetic evaluations

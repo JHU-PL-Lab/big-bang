@@ -2,11 +2,14 @@
              GeneralizedNewtypeDeriving,
              FlexibleInstances,
              TypeSynonymInstances,
-             ImplicitParams
+             ImplicitParams,
+             GADTs,
+             StandaloneDeriving
              #-}
 module Language.TinyBang.Types.Types
 ( TauUp(..)
 , TauDown(..)
+, TauProj(..)
 , PolyFuncData(..)
 , PrimitiveType(..)
 , TauChi(..)
@@ -24,6 +27,7 @@ module Language.TinyBang.Types.Types
 , LazyOp(..)
 , InterAlphaChain (..)
 , CellAlphaChain (..)
+, histFIXME
 , module Language.TinyBang.Types.Alphas
 ) where
 
@@ -66,6 +70,13 @@ data TauDown
   | TdEmptyOnion
   deriving (Eq, Ord, Show)
 
+-- |The datatype used to represent projection types.
+data TauProj
+  = TpPrim PrimitiveType
+  | TpLabel LabelName
+  | TpFun
+  deriving (Eq, Ord, Show)
+
 type ForallVars = Set AnyAlpha
 -- |A wrapper type containing the polymorphic function type information.
 data PolyFuncData =
@@ -78,13 +89,33 @@ data PolyFuncData =
 --
 -- These types are used to describe type patterns in Little Bang.
 
--- |A type representing the patterns produced by guards.
-data TauChi
-  = ChiPrim PrimitiveType
-  | ChiLabel LabelName CellAlpha
-  | ChiFun
-  | ChiAny
-  deriving (Eq, Ord, Show)
+type TauChiMain = TauChi A.ChiMainType
+type TauChiStruct = TauChi A.ChiStructType
+type TauChiBind = TauChi A.ChiBindType
+type TauChiPrimary = TauChi A.ChiPrimaryType
+
+-- |Data type describing top level type pattern types in case expressions;
+--  corresponds to tau-chi in the document.
+data TauChi a where
+  TauChiTopVar          :: InterAlpha                    -> TauChiMain
+  TauChiTopOnion        :: TauChiPrimary -> TauChiStruct -> TauChiMain
+  TauChiTopBind         :: TauChiBind                    -> TauChiMain
+
+  TauChiOnionMany       :: TauChiPrimary -> TauChiStruct -> TauChiStruct
+  TauChiOnionOne        :: TauChiPrimary                 -> TauChiStruct
+
+  TauChiBound           :: InterAlpha -> TauChiBind -> TauChiBind
+  TauChiUnbound         :: TauChiPrimary            -> TauChiBind
+
+  TauChiPrim            :: PrimitiveType                  -> TauChiPrimary
+  TauChiLabelShallow    :: LabelName       -> CellAlpha   -> TauChiPrimary
+  TauChiLabelDeep       :: LabelName       -> TauChiBind  -> TauChiPrimary
+  TauChiFun             ::                                   TauChiPrimary
+  TauChiInnerStruct     :: TauChiStruct                   -> TauChiPrimary
+
+deriving instance Show (TauChi a)
+deriving instance Eq (TauChi a)
+deriving instance Ord (TauChi a)
 
 ------------------------------------------------------------------------------
 -- *Constraints
@@ -106,6 +137,8 @@ data Constraint
   | LazyOpSubtype
       LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
   | Comparable InterAlpha InterAlpha ConstraintHistory
+  | Final InterAlpha ConstraintHistory
+  | Immutable InterAlpha ConstraintHistory
   | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
@@ -121,6 +154,8 @@ data ConstraintOrdinal
   | OrdCAS CellAlpha CellAlpha
   | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
   | OrdCmp InterAlpha InterAlpha
+  | OrdFin InterAlpha
+  | OrdImmutable InterAlpha
   | OrdCase InterAlpha [Guard]
   | OrdBottom ConstraintHistory
   deriving (Eq, Ord)
@@ -138,6 +173,8 @@ constraintOrdinal c =
     CellAlphaSubtype a1 a2    _ -> OrdCAS    a1 a2
     LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
     Comparable       a1 a2    _ -> OrdCmp    a1 a2
+    Final            a1       _ -> OrdFin    a1
+    Immutable        a1       _ -> OrdImmutable a1
     Case             a  gs    _ -> OrdCase   a gs
     Bottom                    h -> OrdBottom h
 
@@ -210,10 +247,16 @@ data ConstraintHistory
   | ContradictionLop
       Constraint
       InterAlphaChain
+  -- TODO: eliminate this case
+  | HistFIXME
   deriving (Eq, Ord, Show)
 
+-- TODO: deprecate this
+histFIXME :: ConstraintHistory
+histFIXME = HistFIXME --error "History not implemented here!"
+
 -- |A type representing guards in Little Bang case constraints.
-data Guard = Guard TauChi Constraints
+data Guard = Guard TauChiMain Constraints
     deriving (Eq, Ord, Show)
 
 class MkConstraint a b where
@@ -288,17 +331,36 @@ instance Display PolyFuncData where
     makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
     char '\\' <+> (parens $ makeDoc constraints)
 
-instance Display TauChi where
+instance Display TauChiMain where
   makeDoc tauChi =
     case tauChi of
-      ChiPrim p -> makeDoc p
-      ChiLabel n au -> char '`' <> makeDoc n <+> makeDoc au
-      ChiFun -> text "fun"
-      ChiAny -> text "_"
+      TauChiTopVar x -> makeDoc x
+      TauChiTopOnion p s -> makeDoc p <+> text "&" <+> makeDoc s
+      TauChiTopBind b -> makeDoc b
+
+instance Display TauChiStruct where
+  makeDoc tauChi =
+    case tauChi of
+      TauChiOnionMany p s -> makeDoc p <+> text "&" <+> makeDoc s
+      TauChiOnionOne p -> makeDoc p
+
+instance Display TauChiBind where
+  makeDoc tauChi =
+    case tauChi of
+      TauChiBound i b -> makeDoc i <> text ":" <> makeDoc b
+      TauChiUnbound p -> makeDoc p
+
+instance Display TauChiPrimary where
+  makeDoc tauChi =
+    case tauChi of
+      TauChiPrim p -> makeDoc p
+      TauChiLabelShallow lbl x -> makeDoc lbl <+> makeDoc x
+      TauChiLabelDeep lbl b -> makeDoc lbl <+> makeDoc b
+      TauChiFun -> text "fun"
+      TauChiInnerStruct s -> parens $ makeDoc s
 
 instance Display Constraint where
   makeDoc c =
-    --TODO: FIXME display history or remove this comment
     let (base,hist) =
           case c of
             LowerSubtype a b h -> (subtype a b, h)
@@ -321,12 +383,15 @@ instance Display Constraint where
                (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
                $+$ rbrace
               ,h)
+            Final a h -> (text "final" <> parens (makeDoc a), h)
+            Immutable a h -> (text "immutable" <> parens (makeDoc a), h)
             Bottom h -> (text "_|_", h)
     in
     if ?debug then base $+$ (nest indentSize $ makeDoc hist)
               else base
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
+          subtype :: (Display a, Display b) => a -> b -> Doc
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
 
 instance Display ConstraintHistory where
@@ -359,6 +424,7 @@ instance Display ConstraintHistory where
       ContradictionLop c cn -> text "by lazy op. contradiction because" $+$
                                (nest indentSize $ makeDoc c <+> tAnd
                                               $+$ makeDoc cn)
+      HistFIXME -> text "because of reasons!!"
     where tAnd = text "and"
 
 -- TODO: print proof that subtypes in chain are valid
@@ -372,11 +438,10 @@ instance Display InterAlphaChain where
 -- TODO: print proof that subtypes in chain are valid
 instance Display CellAlphaChain where
   makeDoc ch =
-    case ch of 
+    case ch of
       CATerm (Cell ia) -> text "Cell(" <> makeDoc ia <> text ")"
       CALink ca _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ca
       CAHeadG (CellGet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellG(" <> makeDoc ia <> text ")"
       CAHeadS (CellSet ia) _ ch' ->
         makeDoc ch' <+> text "<:" <+> text "CellS(" <> makeDoc ia <> text ")"
-
