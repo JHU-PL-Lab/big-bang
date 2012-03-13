@@ -233,7 +233,7 @@ derive (Func ident e) = do
   p2 <- freshVar
   (p3, f) <- capture (Map.insert ident p2) e
   p1 <- freshVar
-  let ps = extractPs f
+  let ps = p2:p3:extractPs f
   tell (Set.singleton (SLower (SDFunction ps p2 p3 f) p1))
   return p1
 derive EmptyOnion = do
@@ -257,7 +257,12 @@ extractPs :: Constraints -> [ProgramPoint]
 extractPs cs = fold grabCs [] cs where
   grabCs :: Constraint -> [ProgramPoint] -> [ProgramPoint]
   grabCs c ps = case c of
-    (SLower sd p) -> p:ps --TODO
+    (SLower sd p1) -> case sd of
+      SDLabel _ p2 -> p1:p2:ps
+      SDOnion p2 p3 -> p1:p2:p3:ps
+      SDOnionSub p2 _ -> p1:p2:ps
+      SDFunction pl p2 p3 f -> p1:p2:p3:ps --TODO
+      _ -> p1:ps
     (SIntermediate p1 p2) -> p1:p2:ps
     (SUpper p su) -> p:ps
     (SOp p1 _ p2 p3) -> p1:p2:p3:ps
