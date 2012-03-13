@@ -211,7 +211,14 @@ derive (BinOp op e1 e2) = do
   p0 <- freshVar
   tell (Set.singleton (SOp p1 op p2 p0))
   return p0
-derive (Appl e1 e2) = error "Appl"
+derive (Appl e1 e2) = do
+  p1 <- derive e1
+  p2 <- derive e2
+  p1' <- freshVar
+  p2' <- freshVar
+  tell (Set.singleton (SUpper p1 (p1', p2')))
+  tell (Set.singleton (SIntermediate p2 p1'))
+  return p2'
 derive (Case e bs) = error "Case"
 
 derive AST.PrimUnit = do
