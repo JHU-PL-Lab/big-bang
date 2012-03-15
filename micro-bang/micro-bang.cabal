@@ -48,6 +48,8 @@ Library
   hs-source-dirs:      lib-src
 
   Exposed-Modules:
+        Language.MicroBang.Interpreter.SourceInterpreter
+        Language.MicroBang.Interpreter.Interpreter
         Language.MicroBang.Ast
         Language.MicroBang.Syntax.Lexer
         Language.MicroBang.Syntax.Parser
@@ -63,7 +65,7 @@ Executable interpreter
   Main-is:             Interpreter.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, big-bang-utils
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, split, micro-bang, big-bang-utils
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex, happy
