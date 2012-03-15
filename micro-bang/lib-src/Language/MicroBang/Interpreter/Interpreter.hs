@@ -71,7 +71,7 @@ data SDown
   | SDOnion ProgramPoint ProgramPoint
   | SDOnionSub ProgramPoint FOnionSub
   | SDEmptyOnion
-  | SDFunction [ProgramPoint] ProgramPoint ProgramPoint Constraints
+  | SDFunction (Set ProgramPoint) ProgramPoint ProgramPoint Constraints
   | SDBadness
   deriving (Show, Eq, Ord)
 data FOnionSub = FSubInt | FSubUnit | FSubLabel LabelName | FSubFun
@@ -233,7 +233,7 @@ derive (Func ident e) = do
   p2 <- freshVar
   (p3, f) <- capture (Map.insert ident p2) e
   p1 <- freshVar
-  let ps = p2:p3:extractPs f
+  let ps = p2 `Set.insert` (p3 `Set.insert` (extractPs f))
   tell (Set.singleton (SLower (SDFunction ps p2 p3 f) p1))
   return p1
 derive EmptyOnion = do
@@ -253,20 +253,23 @@ derive (OnionSub e sub) = do
   return p1
 
 --TODO: make it a Set of prog points, not a list
-extractPs :: Constraints -> [ProgramPoint]
-extractPs cs = fold grabCs [] cs where
-  grabCs :: Constraint -> [ProgramPoint] -> [ProgramPoint]
+extractPs :: Constraints -> Set ProgramPoint
+extractPs cs = fold grabCs Set.empty cs where
+  grabCs :: Constraint -> Set ProgramPoint -> Set ProgramPoint
   grabCs c ps = case c of
     (SLower sd p1) -> case sd of
-      SDLabel _ p2 -> p1:p2:ps
-      SDOnion p2 p3 -> p1:p2:p3:ps
-      SDOnionSub p2 _ -> p1:p2:ps
-      SDFunction pl p2 p3 f -> p1:p2:p3:ps --TODO
-      _ -> p1:ps
-    (SIntermediate p1 p2) -> p1:p2:ps
-    (SUpper p su) -> p:ps
-    (SOp p1 _ p2 p3) -> p1:p2:p3:ps
-    (SCase p1 _) -> p1:ps --TODO
+      SDLabel _ p2 -> p1 `Set.insert` (p2 `Set.insert` ps)
+      SDOnion p2 p3 -> p1 `Set.insert`
+          (p2 `Set.insert` (p3 `Set.insert` ps))
+      SDOnionSub p2 _ -> p1 `Set.insert` (p2 `Set.insert` ps)
+      SDFunction pl p2 p3 f -> p1 `Set.insert`
+          (p2 `Set.insert` (p3 `Set.insert` ps)) --TODO
+      _ -> p1 `Set.insert` ps
+    (SIntermediate p1 p2) -> p1 `Set.insert` (p2 `Set.insert` ps)
+    (SUpper p su) -> p `Set.insert` ps
+    (SOp p1 _ p2 p3) -> p1 `Set.insert` (p2 `Set.insert`
+              (p3 `Set.insert` ps))
+    (SCase p1 _) -> p1 `Set.insert` ps --TODO
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
