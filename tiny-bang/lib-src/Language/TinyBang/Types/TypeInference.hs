@@ -129,7 +129,7 @@ inferType expr = do
       a2' <- freshVar
       a1 <- inferType e1
       a2 <- inferType e2
-      tellInferred $ a1 <: T.TuFunc a1' a2'
+      tellInferred $ a1 <: T.UpFun a1' a2'
       tellInferred $ Cell a2 <: a1'
       tellInferred $ Final a2
       return a2'
@@ -230,8 +230,8 @@ extractConstraintTypeVars c =
     Foldable.foldl foldConstraints Set.empty c
     where foldConstraints set el =
             case el of
-                LowerSubtype _ a _ -> insertWeak set a
-                UpperSubtype a _ _ -> insertWeak set a
+                LowerSubtype t a _ -> insertWeak (foldTau set t) a
+                UpperSubtype a1 a2 a3 _ -> insert3Weak set a1 a2 a3
                 AlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellGetSubtype a1 a2 _ -> insert2Weak set a1 a2
@@ -245,6 +245,17 @@ extractConstraintTypeVars c =
                     let set' = insertWeak set a in
                     foldl foldGuards set' gs
                 T.Bottom _ -> set
+          foldTau set tau =
+            case tau of
+              TdPrim _ -> set
+              TdLabel _ a -> insertWeak set a
+              TdOnion a1 a2 -> insert2Weak set a1 a2
+              TdFunc (T.PolyFuncData as ca ia cs) -> Set.union set $
+                Set.difference
+                  (insert2Weak (extractConstraintTypeVars cs) ca ia)
+                  as
+              TdOnionSub a _ -> insertWeak set a
+              TdEmptyOnion -> set
           foldGuards set (T.Guard tauChi constraints) =
             Set.unions [set, chiAlphas tauChi,
                         extractConstraintTypeVars constraints]

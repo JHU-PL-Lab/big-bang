@@ -7,8 +7,7 @@
              StandaloneDeriving
              #-}
 module Language.TinyBang.Types.Types
-( TauUp(..)
-, TauDown(..)
+( TauDown(..)
 , TauProj(..)
 , PolyFuncData(..)
 , PrimitiveType(..)
@@ -23,6 +22,7 @@ module Language.TinyBang.Types.Types
 , CellGet(..)
 , CellSet(..)
 , Cell(..)
+, UpFun(..)
 , ForallVars
 , LazyOp(..)
 , InterAlphaChain (..)
@@ -55,10 +55,11 @@ newtype CellSet = CellSet InterAlpha
 newtype Cell    = Cell    InterAlpha
   deriving (Eq, Ord, Show)
 data    LazyOp  = LazyOp  LazyOperator InterAlpha InterAlpha
+data    UpFun   = UpFun   CellAlpha    InterAlpha
 
--- |The datatype used to represent upper bound types.
-data TauUp = TuFunc CellAlpha InterAlpha
-  deriving (Eq, Ord, Show)
+-- -- |The datatype used to represent upper bound types.
+-- data TauUp = TuFunc CellAlpha InterAlpha
+--   deriving (Eq, Ord, Show)
 
 -- |The datatype used to represent lower bound types.
 data TauDown
@@ -128,7 +129,7 @@ type Constraints = Set Constraint
 -- |A type describing constraints in Little Bang.
 data Constraint
   = LowerSubtype TauDown InterAlpha ConstraintHistory
-  | UpperSubtype InterAlpha TauUp ConstraintHistory
+  | UpperSubtype InterAlpha CellAlpha InterAlpha ConstraintHistory
   | AlphaSubtype InterAlpha InterAlpha ConstraintHistory
   | CellSubtype InterAlpha CellAlpha ConstraintHistory
   | CellGetSubtype CellAlpha InterAlpha ConstraintHistory
@@ -146,7 +147,7 @@ data Constraint
 -- |A datatype used to simplify writing Ord and Eq instances for Constraint.
 data ConstraintOrdinal
   = OrdLS TauDown InterAlpha
-  | OrdUS InterAlpha TauUp
+  | OrdUS InterAlpha CellAlpha InterAlpha
   | OrdAS InterAlpha InterAlpha
   | OrdCLS InterAlpha CellAlpha
   | OrdCGS CellAlpha InterAlpha
@@ -165,7 +166,7 @@ constraintOrdinal :: Constraint -> ConstraintOrdinal
 constraintOrdinal c =
   case c of
     LowerSubtype     td a     _ -> OrdLS     td a
-    UpperSubtype     a  tu    _ -> OrdUS     a  tu
+    UpperSubtype     a  ca ia _ -> OrdUS     a  ca ia
     AlphaSubtype     a1 a2    _ -> OrdAS     a1 a2
     CellSubtype      td a     _ -> OrdCLS    td a
     CellGetSubtype   a  tu    _ -> OrdCGS    a  tu
@@ -190,7 +191,7 @@ instance Ord Constraint where
 data InterAlphaChain
   = IATerm TauDown
   | IALink InterAlpha Constraint InterAlphaChain
-  | IAHead TauUp Constraint InterAlphaChain
+  | IAHead CellAlpha InterAlpha Constraint InterAlphaChain
   deriving (Eq, Ord, Show)
 
 data CellAlphaChain
@@ -266,8 +267,8 @@ class MkConstraint a b where
 instance MkConstraint TauDown InterAlpha where
   (<:) = LowerSubtype
 
-instance MkConstraint InterAlpha TauUp where
-  (<:) = UpperSubtype
+instance MkConstraint InterAlpha UpFun where
+  a <: (UpFun ca ia) = UpperSubtype a ca ia
 
 instance MkConstraint InterAlpha InterAlpha where
   (<:) = AlphaSubtype
@@ -290,11 +291,6 @@ instance MkConstraint LazyOp InterAlpha where
 instance MkConstraint PrimitiveType InterAlpha where
   p <: a = TdPrim p <: a
 
--- -- |An infix function for creating subtype contraints (for convenience).
--- --  meant to be used in conjunction with '(.:)'
--- (<:) :: TauDown -> TauUp -> ConstraintHistory -> Constraint
--- (<:) = Subtype
-
 -- |An alias for application with precedence set so that @a <: b .: c@ creates
 --  a subtype constraint with history @c@
 (.:) :: (ConstraintHistory -> Constraint) -> ConstraintHistory -> Constraint
@@ -307,11 +303,6 @@ infix 1 .:
 -- $DisplayTypeClasses
 --
 -- Implementations of display routines for type structures.
-
-instance Display TauUp where
-  makeDoc tau =
-    case tau of
-      TuFunc au a -> makeDoc au <+> text "->" <+> makeDoc a
 
 instance Display TauDown where
   makeDoc tau =
@@ -364,7 +355,7 @@ instance Display Constraint where
     let (base,hist) =
           case c of
             LowerSubtype a b h -> (subtype a b, h)
-            UpperSubtype a b h -> (subtype a b, h)
+            UpperSubtype a b c h -> (subtype a $ dispFun b c, h)
             AlphaSubtype a b h -> (subtype a b, h)
             CellSubtype ia ca h ->
               (subtype (text "Cell" <> parens (makeDoc ia)) ca, h)
@@ -393,6 +384,8 @@ instance Display Constraint where
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
           subtype :: (Display a, Display b) => a -> b -> Doc
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
+          dispFun :: (Display a, Display b) => a -> b -> Doc
+          dispFun a b = makeDoc a <+> text "->" <+> makeDoc b
 
 instance Display ConstraintHistory where
   makeDoc hist =
@@ -433,7 +426,8 @@ instance Display InterAlphaChain where
     case ch of
       IATerm td -> makeDoc td
       IALink ia _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc ia
-      IAHead tu _ ch' -> makeDoc ch' <+> text "<:" <+> makeDoc tu
+      IAHead ca ia _ ch' ->
+        makeDoc ch' <+> text "<:" <+> makeDoc ca <+> text "->" <+> makeDoc ia
 
 -- TODO: print proof that subtypes in chain are valid
 instance Display CellAlphaChain where

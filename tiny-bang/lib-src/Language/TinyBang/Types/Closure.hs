@@ -15,7 +15,6 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , Constraints
                                      , Constraint(..)
                                      , TauDown(..)
-                                     , TauUp(..)
                                      , TauChi(..)
                                      , TauProj(..)
                                      , ConstraintHistory(..)
@@ -397,11 +396,11 @@ caseGuardResults cs guards tau =
 
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do -- List
-  c@(UpperSubtype a t@(TuFunc ai' ao') _) <- Set.toList cs
+  c@(UpperSubtype a ai' ao' _) <- Set.toList cs
   (td, funcChain) <- ct cs a
   TdFunc (PolyFuncData foralls ai ao cs') <- runReader (tProj td TpFun) cs
   (ca3, caChain) <- ct cs ai'
-  let funcChain' = IAHead t c funcChain
+  let funcChain' = IAHead ai' ao' c funcChain
       hist = ClosureApplication funcChain' caChain
       cs'' = Set.union cs' $
                Set.fromList [ Cell ca3 <: ai .: hist
@@ -410,9 +409,9 @@ closeApplications cs = Set.unions $ do -- List
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do -- List
-  c@(UpperSubtype a t@(TuFunc {}) _) <- Set.toList cs
+  c@(UpperSubtype a ai' ao' _) <- Set.toList cs
   (tau, chain) <- ct cs a
-  let chain' = IAHead t c chain
+  let chain' = IAHead ai' ao' c chain
   guard $ null $ runReader (tProj tau TpFun) cs
   return $ Bottom $ ContradictionApplication chain'
 
@@ -518,10 +517,6 @@ saHelper2 :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
           => (a1 -> a2 -> b) -> a1 -> a2 -> Reader AlphaSubstitutionEnv b
 saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
 
-instance AlphaSubstitutable TauUp where
-  substituteAlpha tu = case tu of
-    TuFunc a1 a2 -> saHelper2 TuFunc a1 a2
-
 instance AlphaSubstitutable TauDown where
   substituteAlpha td = case td of
     TdLabel n a -> saHelper (TdLabel n) a
@@ -541,8 +536,6 @@ instance AlphaSubstitutable PolyFuncData where
                              => a -> Reader AlphaSubstitutionEnv a
             substituteAlpha' =
               local (second $ flip Set.difference alphas) . substituteAlpha
-
-
 
 csaHelper :: (AlphaSubstitutable a)
           => (a -> hist -> b)
@@ -584,8 +577,8 @@ instance AlphaSubstitutable Constraint where
   substituteAlpha c = case c of
       LowerSubtype td a hist ->
         csaHelper2 LowerSubtype td a hist
-      UpperSubtype a tu hist ->
-        csaHelper2 UpperSubtype a tu hist
+      UpperSubtype a ca ia hist ->
+        csaHelper3 UpperSubtype a ca ia hist
       AlphaSubtype a1 a2 hist ->
         csaHelper2 AlphaSubtype a1 a2 hist
       CellSubtype ia ca hist ->
