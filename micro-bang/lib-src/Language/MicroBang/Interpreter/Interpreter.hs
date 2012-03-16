@@ -284,7 +284,6 @@ derive (OnionSub e sub) = do
   tell (Set.singleton (SLower (SDOnionSub p2 (convertSubTermToFOnionSub sub)) p1))
   return p1
 
---TODO: make it a Set of prog points, not a list
 extractPs :: Constraints -> Set ProgramPoint
 extractPs cs = fold grabCs Set.empty cs where
   grabCs :: Constraint -> Set ProgramPoint -> Set ProgramPoint
