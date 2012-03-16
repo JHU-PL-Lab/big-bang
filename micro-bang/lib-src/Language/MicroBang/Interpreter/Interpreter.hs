@@ -92,7 +92,7 @@ data Constraint
   | SIntermediate ProgramPoint ProgramPoint
   | SUpper ProgramPoint SUp
   | SOp ProgramPoint Operator ProgramPoint ProgramPoint
-  | SCase ProgramPoint [(SX, [Constraints])]
+  | SCase ProgramPoint [(SX, Constraints)]
   deriving (Show, Ord, Eq)
 
 
@@ -219,7 +219,39 @@ derive (Appl e1 e2) = do
   tell (Set.singleton (SUpper p1 (p1', p2')))
   tell (Set.singleton (SIntermediate p2 p1'))
   return p2'
-derive (Case e bs) = error "Case"
+derive (Case e bs) = do
+  p2' <- derive e
+  p3' <- freshVar
+  p1' <- freshVar
+  let (ms, sxs) = unzip $ map (edigestbranch p2' p3') bs
+  trips <- sequence $ zipWith3 (capturebranch) ms sxs bs
+  tell (Set.singleton (SCase p2' (map (convertToConstraint p1') trips)))
+  return p1'
+  where
+    convertToConstraint :: ProgramPoint -> (SX, ProgramPoint, Constraints) -> (SX, Constraints)
+    convertToConstraint p1 (sx, pn, cs) =
+      (sx, Set.union cs (Set.singleton (SIntermediate pn p1)))
+
+    capturebranch :: M -> SX -> Branch -> CEM (SX, ProgramPoint, Constraints)
+    capturebranch m sx (Branch mi chi e) = do
+      (p, cs) <- capture (Map.union m) e
+      return (sx, p, cs)
+
+    edigestbranch :: ProgramPoint -> ProgramPoint -> Branch -> (M, SX)
+    edigestbranch p1 p2 (Branch mi x e) =
+      let m' = (case mi of
+              Nothing -> Map.empty
+              Just ix -> Map.insert ix p1 Map.empty)
+        in
+      (case x of
+              ChiAny -> (m', XAny)
+              ChiPrim UT.PrimInt -> (m', XTInt)
+              ChiPrim UT.PrimUnit -> (m', XTUnit)
+              ChiLabel ln li -> case mi of
+                Nothing -> ((Map.insert li p2 m'), XLabel ln p2)
+                Just ix -> if ix == li then error "bad branch"
+                  else ((Map.insert li p2 m'), XLabel ln p2)
+              ChiFun -> (m', XFun))
 
 derive AST.PrimUnit = do
   p1 <- freshVar
@@ -262,14 +294,26 @@ extractPs cs = fold grabCs Set.empty cs where
       SDOnion p2 p3 -> p1 `Set.insert`
           (p2 `Set.insert` (p3 `Set.insert` ps))
       SDOnionSub p2 _ -> p1 `Set.insert` (p2 `Set.insert` ps)
-      SDFunction pl p2 p3 f -> p1 `Set.insert`
-          (p2 `Set.insert` (p3 `Set.insert` ps)) --TODO
+      SDFunction pl p2 p3 f -> (p1 `Set.insert`
+                (p2 `Set.insert` (p3 `Set.insert` ps)))
+                `Set.union` ((extractPs f) Set.\\ pl)
       _ -> p1 `Set.insert` ps
     (SIntermediate p1 p2) -> p1 `Set.insert` (p2 `Set.insert` ps)
     (SUpper p su) -> p `Set.insert` ps
     (SOp p1 _ p2 p3) -> p1 `Set.insert` (p2 `Set.insert`
               (p3 `Set.insert` ps))
-    (SCase p1 _) -> p1 `Set.insert` ps --TODO
+    (SCase p1 sxcs) -> p1 `Set.insert` (ps `Set.union` extractBranches sxcs)
+      where
+        extractBranches :: [(SX, Constraints)] -> Set ProgramPoint
+        extractBranches sxcs = foldr (Set.union . extractBranch) Set.empty sxcs
+        extractBranch :: (SX, Constraints) -> Set ProgramPoint
+        extractBranch (sx, cs) =
+          let ps' = case sx of
+               (XLabel _ p) -> (Set.singleton p)
+               _ -> Set.empty
+          in
+          ps' `Set.union` (extractPs cs)
+
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
@@ -287,7 +331,7 @@ retrieve p cs =
       SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
       SDOnionSub p1 s1 -> error "Subtration Onion?"
       SDEmptyOnion -> VEmptyOnion
-      SDFunction ps p1 p2 cs -> error "Function...what do I do..."
+      SDFunction ps p1 p2 f -> error "Function...what do I do..."
       SDBadness -> error "Lightening"
 
   where
