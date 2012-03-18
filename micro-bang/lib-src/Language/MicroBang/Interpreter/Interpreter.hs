@@ -61,6 +61,8 @@ instance Display ConstraintEvaluatorError where
 data ProgramPoint = ProgramPoint Integer
   deriving (Show, Eq, Ord)
 
+data PI = PInt | PUnit | PLabel LabelName | PFun
+  deriving (Show, Eq, Ord)
 data SX = XAny | XTInt | XTUnit | XLabel LabelName ProgramPoint | XFun
   deriving (Show, Eq, Ord)
 type SUp = (ProgramPoint, ProgramPoint)
@@ -200,11 +202,11 @@ derive (Var i) = do -- M|-x:p1\Null, where x:p1 E M
   --case p1 of
   --  Nothing -> throwError $ NotClosed i
   --  Just p -> return p
-derive (Label labelName e) = do
+derive (Label ln e) = do
   -- p1 \ {lbl p2<:p1}U F, where e:p2\F
   p2 <- (derive e)
   p1 <- freshVar
-  tell (Set.singleton (SLower (SDLabel labelName p2) p1))
+  tell (Set.singleton (SLower (SDLabel ln p2) p1))
   return p1
 derive (BinOp op e1 e2) = do
   p1 <- derive e1
@@ -299,7 +301,7 @@ extractPs cs = fold grabCs Set.empty cs where
                 `Set.union` ((extractPs f) Set.\\ pl)
       _ -> p1 `Set.insert` ps
     (SIntermediate p1 p2) -> p1 `Set.insert` (p2 `Set.insert` ps)
-    (SUpper p su) -> p `Set.insert` ps
+    (SUpper p (p1,p2)) -> p `Set.insert` (p1 `Set.insert` (p2 `Set.insert` ps))
     (SOp p1 _ p2 p3) -> p1 `Set.insert` (p2 `Set.insert`
               (p3 `Set.insert` ps))
     (SCase p1 sxcs) -> p1 `Set.insert` (ps `Set.union` extractBranches sxcs)
@@ -321,6 +323,58 @@ close :: Constraints -> Constraints
 close cs = error $ show cs
   --run evaluation closure rules
 
+-- Find all the s' for which "SDown is projected by SX as s'"
+project :: Constraints -> SDown -> PI -> Set (Maybe SDown)
+project cs0 sd pi0 =
+  case (sd, pi0) of
+    (SDUnit, PUnit) -> Set.singleton (Just SDUnit)
+    (SDUnit, _) -> Set.singleton Nothing
+
+    (SDInt _, PInt) -> Set.singleton (Just sd)
+    (SDInt _, _) -> Set.singleton Nothing
+
+    (SDLabel ln _, PLabel pln) | ln == pln -> Set.singleton (Just sd)
+    (SDLabel _ _, _) -> Set.singleton Nothing
+
+    (SDOnion p1 p2, pi1) ->
+      let s2s = concretization cs0 p2 in
+      let proj2 = projectLots s2s pi1 in
+      proj2
+      --Onion Right Projection (above)
+      `Set.union`
+      -- Onion Left Projection (below)
+      ( if any (\s2' -> s2' == Nothing) (Set.toList proj2) then
+          (Set.singleton Nothing)
+        else
+          (let s1s = concretization cs0 p1 in
+            projectLots s1s pi1))
+
+    (SDOnionSub p1 fos1, pi1) ->
+      if tsubproj fos1 pi1 then
+        Set.singleton Nothing
+      else
+        projectLots (concretization cs0 p1) pi1
+      where
+        tsubproj :: FOnionSub -> PI -> Bool
+        tsubproj FSubInt PInt = True
+        tsubproj FSubUnit PUnit = True
+        tsubproj (FSubLabel sln) (PLabel pln) | sln == pln = True
+        tsubproj FSubFun PFun = True
+        tsubproj _ _ = False
+    (SDEmptyOnion, _) -> Set.singleton Nothing
+
+    (SDFunction _ _ _ _, PFun) -> Set.singleton (Just sd)
+    (SDFunction _ _ _ _, _) -> Set.singleton Nothing
+
+    (SDBadness, _ ) -> Set.singleton Nothing
+
+  where
+    projectLots :: (Set SDown) -> PI -> Set (Maybe SDown)
+    projectLots ss0 pin = Set.fold (Set.union) Set.empty $ Set.fromList
+      (let ss1 = Set.toList ss0 in
+            (do
+                    s <- ss1
+                    return $ project cs0 s pin))
 -- Find all the possible concretizations of a given starting point
 concretization :: Constraints -> ProgramPoint -> Set SDown
 concretization cs0 p0 =
