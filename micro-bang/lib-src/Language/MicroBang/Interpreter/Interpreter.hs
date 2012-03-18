@@ -380,7 +380,7 @@ project cs0 sd pi0 =
 concretization :: Constraints -> ProgramPoint -> Set SDown
 concretization cs0 p0 =
   let ps = fst (until (\ ( _ , new) -> new == Set.empty)
-        (collectPs) (Set.empty, Set.singleton p0))
+        (collectPs) (Set.singleton p0, Set.singleton p0))
         in
   Set.fold (Set.union) (Set.empty) $ Set.map (findSDowns) ps
   where
