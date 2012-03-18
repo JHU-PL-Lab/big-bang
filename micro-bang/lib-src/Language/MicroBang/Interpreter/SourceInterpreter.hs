@@ -3,25 +3,13 @@ module Language.MicroBang.Interpreter.SourceInterpreter
 
 
 
-import Control.Monad.Error (Error, strMsg, throwError)
-import qualified Data.Set as Set
-import Data.IntMap (IntMap)
+import Control.Monad.Error (throwError)
 
-import qualified Language.MicroBang.Ast as A
 import qualified Language.MicroBang.Interpreter.Interpreter as I
 import qualified Language.MicroBang.Syntax.Lexer as L
 import qualified Language.MicroBang.Syntax.Parser as P
 
-import Language.MicroBang.Ast
-  ( Expr(..)
-  , Operator(..)
-  , Chi(..)
-  , Branches
-  , Branch(..)
-  , Value(..)
-  , exprFromValue
-  , Evaluated(..)
-  )
+import Language.MicroBang.Ast (Expr(..))
 
 
 
