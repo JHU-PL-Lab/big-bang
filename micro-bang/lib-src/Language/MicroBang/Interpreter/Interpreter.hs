@@ -17,7 +17,7 @@ import Data.Monoid (Monoid, mempty)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set, fold)
+import Data.Set (Set, fold, map, filter)
 import qualified Data.Set as Set
 
 import qualified Language.MicroBang.Syntax.Lexer as L
@@ -223,9 +223,9 @@ derive (Case e bs) = do
   p2' <- derive e
   p3' <- freshVar
   p1' <- freshVar
-  let (ms, sxs) = unzip $ map (edigestbranch p2' p3') bs
+  let (ms, sxs) = unzip $ Prelude.map (edigestbranch p2' p3') bs
   trips <- sequence $ zipWith3 (capturebranch) ms sxs bs
-  tell (Set.singleton (SCase p2' (map (convertToConstraint p1') trips)))
+  tell (Set.singleton (SCase p2' (Prelude.map (convertToConstraint p1') trips)))
   return p1'
   where
     convertToConstraint :: ProgramPoint -> (SX, ProgramPoint, Constraints) -> (SX, Constraints)
@@ -304,20 +304,55 @@ extractPs cs = fold grabCs Set.empty cs where
     (SCase p1 sxcs) -> p1 `Set.insert` (ps `Set.union` extractBranches sxcs)
       where
         extractBranches :: [(SX, Constraints)] -> Set ProgramPoint
-        extractBranches sxcs = foldr (Set.union . extractBranch) Set.empty sxcs
+        extractBranches sxcs' = foldr (Set.union . extractBranch) Set.empty sxcs'
         extractBranch :: (SX, Constraints) -> Set ProgramPoint
-        extractBranch (sx, cs) =
+        extractBranch (sx, cs') =
           let ps' = case sx of
                (XLabel _ p) -> (Set.singleton p)
                _ -> Set.empty
           in
-          ps' `Set.union` (extractPs cs)
+          ps' `Set.union` (extractPs cs')
 
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
 close :: Constraints -> Constraints
 close cs = error $ show cs
+  --run evaluation closure rules
+
+-- Find all the possible concretizations of a given starting point
+concretization :: Constraints -> ProgramPoint -> Set SDown
+concretization cs p0 =
+  let ps = fst (until (\ ( _ , new) -> new == Set.empty)
+        (collectPs) (Set.empty, Set.singleton p0))
+        in
+  Set.fold (Set.union) (Set.empty) $
+    Set.map (findSDowns) ps
+  where
+    -- given an (old,new) pair of sets, produce a new one
+    collectPs :: (Set ProgramPoint, Set ProgramPoint) -> (Set ProgramPoint, Set ProgramPoint)
+    collectPs (ps0, ps1) =
+      let ps' = Set.fold (Set.union) (Set.empty)
+            (Set.map (concretization_step) ps1) in
+      (ps0 `Set.union` ps', ps' Set.\\ ps0)
+
+    -- Find all the SDowns flowingTo the given ProgramPoint
+    findSDowns :: ProgramPoint -> Set SDown
+    findSDowns p = Set.map (\(SLower sd _) -> sd)
+      (Set.filter (\c -> case c of
+        SLower _ p' -> p == p'
+        _ -> False) cs)
+
+    -- Find all the program points that are "one step" from the given one
+    concretization_step :: ProgramPoint -> Set ProgramPoint
+    concretization_step p =
+        Set.map (\si -> case si of
+              SIntermediate p2 _ -> p2
+              _ -> error "filter is broken")
+            (Set.filter (\c ->
+              case c of
+                SIntermediate p2 p1 -> p == p1
+                _ -> False) cs)
 
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
