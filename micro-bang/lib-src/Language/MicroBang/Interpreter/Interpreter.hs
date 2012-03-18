@@ -6,6 +6,7 @@ module Language.MicroBang.Interpreter.Interpreter
   , EvalStringM(..)
   , EvalStringResultErrorWrapper(..)) where
 
+import Control.Monad (guard)
 import Control.Monad.RWS (RWS, evalRWS, censor)
 import Control.Monad.Error (Error, ErrorT, strMsg, throwError, runErrorT)
 import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
@@ -322,13 +323,15 @@ close cs = error $ show cs
 
 -- Find all the possible concretizations of a given starting point
 concretization :: Constraints -> ProgramPoint -> Set SDown
-concretization cs p0 =
+concretization cs0 p0 =
   let ps = fst (until (\ ( _ , new) -> new == Set.empty)
         (collectPs) (Set.empty, Set.singleton p0))
         in
   Set.fold (Set.union) (Set.empty) $
     Set.map (findSDowns) ps
   where
+    -- have Set, want List :( since Set pretends not to be a monad
+    cs = Set.toList(cs0)
     -- given an (old,new) pair of sets, produce a new one
     collectPs :: (Set ProgramPoint, Set ProgramPoint) -> (Set ProgramPoint, Set ProgramPoint)
     collectPs (ps0, ps1) =
@@ -338,21 +341,19 @@ concretization cs p0 =
 
     -- Find all the SDowns flowingTo the given ProgramPoint
     findSDowns :: ProgramPoint -> Set SDown
-    findSDowns p = Set.map (\(SLower sd _) -> sd)
-      (Set.filter (\c -> case c of
-        SLower _ p' -> p == p'
-        _ -> False) cs)
+    findSDowns p = Set.fromList $
+      do
+        SLower sd p' <- cs
+        guard (p' == p)
+        return sd
 
     -- Find all the program points that are "one step" from the given one
     concretization_step :: ProgramPoint -> Set ProgramPoint
-    concretization_step p =
-        Set.map (\si -> case si of
-              SIntermediate p2 _ -> p2
-              _ -> error "filter is broken")
-            (Set.filter (\c ->
-              case c of
-                SIntermediate p2 p1 -> p == p1
-                _ -> False) cs)
+    concretization_step p = Set.fromList $
+      do
+        SIntermediate p2 p1 <- cs
+        guard (p1 == p)
+        return p2
 
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
