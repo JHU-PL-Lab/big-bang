@@ -339,16 +339,16 @@ project cs0 sd pi0 =
 
     (SDOnion p1 p2, pi1) ->
       let s2s = concretization cs0 p2 in
-      let proj2 = projectLots s2s pi1 in
+      let proj2 = (projectLots s2s pi1) Set.\\ (Set.singleton Nothing) in
       proj2
       --Onion Right Projection (above)
       `Set.union`
       -- Onion Left Projection (below)
-      ( if any (\s2' -> s2' == Nothing) (Set.toList proj2) then
-          (Set.singleton Nothing)
-        else
+      (if (Set.toList proj2) == [] then
           (let s1s = concretization cs0 p1 in
-            projectLots s1s pi1))
+            projectLots s1s pi1)
+        else
+          Set.empty)
 
     (SDOnionSub p1 fos1, pi1) ->
       if tsubproj fos1 pi1 then
