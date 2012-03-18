@@ -117,6 +117,7 @@ instance Display EvalError where
       NonFunctionApplication -> text "NonFunction Application"
       CaseContradiction -> text "Case Contradiction"
       IntegerOperationFailure -> text "Integer Operation Failure"
+      ConstraintFailure -> text "Constraint Failure"
 -- use makeDoc to call recursively to print subtypes
 -- use <+> to concatenate with recursive makeDoc calls
 
