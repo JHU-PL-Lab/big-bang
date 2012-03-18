@@ -236,12 +236,12 @@ derive (Case e bs) = do
       (sx, Set.union cs (Set.singleton (SIntermediate pn p1)))
 
     capturebranch :: M -> SX -> Branch -> CEM (SX, ProgramPoint, Constraints)
-    capturebranch m sx (Branch mi chi e) = do
+    capturebranch m sx (Branch _ _ e) = do
       (p, cs) <- capture (Map.union m) e
       return (sx, p, cs)
 
     edigestbranch :: ProgramPoint -> ProgramPoint -> Branch -> (M, SX)
-    edigestbranch p1 p2 (Branch mi x e) =
+    edigestbranch p1 p2 (Branch mi x _) =
       let m' = (case mi of
               Nothing -> Map.empty
               Just ix -> Map.insert ix p1 Map.empty)
