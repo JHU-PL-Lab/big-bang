@@ -3,25 +3,24 @@ module Language.MicroBang.Interpreter.Interpreter
   , EvalError(..)
   , EvalSuccessOrFailure(..)
   , EvalStringResult(..)
-  , EvalStringM(..)
+  , EvalStringM
   , EvalStringResultErrorWrapper(..)) where
 
 import Control.Monad (guard)
 import Control.Monad.RWS (RWS, evalRWS, censor)
 import Control.Monad.Error (Error, ErrorT, strMsg, throwError, runErrorT)
-import Control.Monad.State (StateT, runStateT, get, put, gets, modify)
-import Control.Monad.Reader (ReaderT, Reader, asks, ask, runReader, local)
-import Control.Monad.Identity (Identity)
-import Control.Monad.Writer (tell, listen, execWriter, Writer)
+import Control.Monad.State (get, put)
+import Control.Monad.Reader (ask, local)
+import Control.Monad.Writer (tell, listen)
 
 import Data.Monoid (Monoid, mempty)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set, fold, map, filter)
+import Data.Set (Set, fold)
 import qualified Data.Set as Set
 
-import qualified Language.MicroBang.Syntax.Lexer as L
+
 import qualified Language.MicroBang.Syntax.Parser as P
 
 
