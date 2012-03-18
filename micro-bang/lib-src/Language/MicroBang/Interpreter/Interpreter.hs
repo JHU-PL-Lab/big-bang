@@ -419,9 +419,10 @@ retrieve p cs =
       SDInt i -> VPrimInt i
       SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
       SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
-      SDOnionSub p1 s1 -> error "Subtration Onion?"
+      SDOnionSub p1 s1 -> error $ "Subtration Onion: " ++ (show p1) ++ show s1
       SDEmptyOnion -> VEmptyOnion
-      SDFunction ps p1 p2 f -> error "Function...what do I do..."
+      SDFunction ps p1 p2 f -> error $ "Function...what do I do..."
+          ++ show ps ++ show p1 ++ show p2 ++ show f
       SDBadness -> error "Lightening"
 
   where
