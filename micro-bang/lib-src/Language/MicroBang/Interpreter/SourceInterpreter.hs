@@ -1,17 +1,10 @@
-module Language.MicroBang.Interpreter.SourceInterpreter
-( evalStringTop) where
-
-
+module Language.MicroBang.Interpreter.SourceInterpreter (evalStringTop) where
 
 import Control.Monad.Error (throwError)
-
 import qualified Language.MicroBang.Interpreter.Interpreter as I
 import qualified Language.MicroBang.Syntax.Lexer as L
 import qualified Language.MicroBang.Syntax.Parser as P
-
 import Language.MicroBang.Ast (Expr(..))
-
-
 
 ---- |Performs top-level evaluation of a Micro Bang source string.  This routine is
 --  provided for convenience and testing.  It attempts to lex, parse, typecheck
