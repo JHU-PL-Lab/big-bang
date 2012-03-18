@@ -327,11 +327,11 @@ concretization cs0 p0 =
   let ps = fst (until (\ ( _ , new) -> new == Set.empty)
         (collectPs) (Set.empty, Set.singleton p0))
         in
-  Set.fold (Set.union) (Set.empty) $
-    Set.map (findSDowns) ps
+  Set.fold (Set.union) (Set.empty) $ Set.map (findSDowns) ps
   where
     -- have Set, want List :( since Set pretends not to be a monad
     cs = Set.toList(cs0)
+
     -- given an (old,new) pair of sets, produce a new one
     collectPs :: (Set ProgramPoint, Set ProgramPoint) -> (Set ProgramPoint, Set ProgramPoint)
     collectPs (ps0, ps1) =
