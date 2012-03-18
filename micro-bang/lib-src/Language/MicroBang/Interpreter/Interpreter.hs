@@ -44,7 +44,7 @@ data ConstraintEvaluatorError
       -- |Indicates that the binder and label use the same variable.
       | DoubleBound Ident
       -- TODO: Add NotImplemented
-    deriving (Show)
+    deriving (Show, Eq)
 instance Error ConstraintEvaluatorError where
     strMsg = error
 instance Display ConstraintEvaluatorError where
@@ -106,7 +106,7 @@ data EvalError =
     | NonFunctionApplication
     | CaseContradiction
     | IntegerOperationFailure
-    | ConstraintFailure
+    | ConstraintFailure ConstraintEvaluatorError
     deriving (Eq, Show)
 instance Error EvalError where
   strMsg = error
@@ -117,7 +117,7 @@ instance Display EvalError where
       NonFunctionApplication -> text "NonFunction Application"
       CaseContradiction -> text "Case Contradiction"
       IntegerOperationFailure -> text "Integer Operation Failure"
-      ConstraintFailure -> text "Constraint Failure"
+      ConstraintFailure cee -> text $ "Constraint Failure" ++ show cee
 -- use makeDoc to call recursively to print subtypes
 -- use <+> to concatenate with recursive makeDoc calls
 
@@ -146,9 +146,9 @@ instance Display EvalStringResult where
   makeDoc esr =
     case esr of
       EvalResult e esof -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
-      Contradiction e cs-> text "Contradiction"
-      DerivationFailure e cs -> text "DerivationFailure"
-      ParseFailure pe -> text "ParseFailure"
+      Contradiction e cs-> text $ "Contradiction" ++ show e ++ " " ++ show cs
+      DerivationFailure e cs -> text $ "DerivationFailure" ++ show e ++ " " ++ show cs
+      ParseFailure pe -> text $ "ParseFailure" ++ show pe
       LexFailure s -> text "LexFailure" <+> text s
 
 
@@ -185,7 +185,7 @@ evalTop e =
   let cemProgPt = derive e in
   let (progPt, cs) = runCEM cemProgPt (Map.empty) 0 in
     case progPt of
-      Left f -> Left ConstraintFailure
+      Left f -> Left (ConstraintFailure f)
       Right p ->
         let cs' = close cs in
           Right (retrieve p cs')
