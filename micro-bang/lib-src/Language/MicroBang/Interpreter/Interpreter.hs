@@ -34,7 +34,8 @@ import Language.MicroBang.Ast as AST
   --, exprFromValue
   --, Evaluated(..)
   --)
-import Language.MicroBang.Types.UtilTypes as UT
+import Language.MicroBang.Types.UtilTypes (LabelName, Ident, unIdent)
+import qualified Language.MicroBang.Types.UtilTypes as UT
 import Utils.Render.Display
 
 
@@ -236,8 +237,8 @@ derive (Case e bs) = do
       (sx, Set.union cs (Set.singleton (SIntermediate pn p1)))
 
     capturebranch :: M -> SX -> Branch -> CEM (SX, ProgramPoint, Constraints)
-    capturebranch m sx (Branch _ _ e) = do
-      (p, cs) <- capture (Map.union m) e
+    capturebranch m sx (Branch _ _ eb) = do
+      (p, cs) <- capture (Map.union m) eb
       return (sx, p, cs)
 
     edigestbranch :: ProgramPoint -> ProgramPoint -> Branch -> (M, SX)
