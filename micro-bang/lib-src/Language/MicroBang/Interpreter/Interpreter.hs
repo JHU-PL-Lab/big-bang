@@ -323,8 +323,70 @@ runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Cons
 runCEM c r s = evalRWS (runErrorT c) r s
 
 close :: Constraints -> Constraints
-close cs = error $ show cs
+close cs =
+  let newCs = Set.unions $
+        map ($ cs) [id, app, caseAnalysis, addition, trueEq, falseEq] in
+  error $ show newCs
   --run evaluation closure rules
+  where
+    app :: Constraints -> Constraints
+    app cs0 = Set.unions $
+      do
+      (SUpper p0 (p1',p2')) <-Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p0
+      s2 <- Set.toList $ concretization cs0 p1'
+      Just (SDFunction ps' p1 p2 f) <- Set.toList $ project cs0 s1 PFun
+      return (Set.map (appSub (Set.toList ps') p1')(
+          Set.insert (SLower s2 p1) $
+          Set.insert (SIntermediate p2 p2') f))
+
+    caseAnalysis cs0 = cs0
+
+    addition cs0 = cs0
+
+    trueEq cs0 = cs0
+
+    falseEq cs0 = cs0
+
+appSub :: [ProgramPoint] -> ProgramPoint -> Constraint -> Constraint
+appSub ps0 p0 c = case c of
+  SLower sd p1 -> SLower (subSDown ps0 p0 sd) (subProgPoint ps0 p0 p1)
+  SIntermediate p1 p2 -> SIntermediate (subProgPoint ps0 p0 p1) (subProgPoint ps0 p0 p2)
+  SUpper p1 (p2, p3) -> SUpper (subProgPoint ps0 p0 p1) ((subProgPoint ps0 p0 p2),(subProgPoint ps0 p0 p3))
+  SOp p1 o p2 p3 -> SOp (subProgPoint ps0 p0 p1) o (subProgPoint ps0 p0 p2) (subProgPoint ps0 p0 p3)
+  SCase p1 bs -> SCase (subProgPoint ps0 p0 p1) (map (subBranch ps0 p0) bs)
+  where
+    subProgPoint :: [ProgramPoint] -> ProgramPoint -> ProgramPoint -> ProgramPoint
+    subProgPoint ps0' p0' p1@(ProgramPoint l pL) =
+      if pL == [] then
+        ( if any (==p1) ps0'
+          then (ProgramPoint l (econtourlist p0'))
+          else p1)
+      else p1 --shouldn't be here...
+      where
+        econtourlist :: ProgramPoint -> [Set ProgramPointLabel]
+        econtourlist (ProgramPoint l' pL') = (Set.singleton l') : pL'
+
+    subSDown :: [ProgramPoint] -> ProgramPoint -> SDown -> SDown
+    subSDown ps0' p0' sd = case sd of
+      SDLabel ln p1 -> SDLabel ln (subProgPoint ps0' p0' p1)
+      SDOnion p1 p2 -> SDOnion (subProgPoint ps0' p0' p1) (subProgPoint ps0' p0' p2)
+      SDOnionSub p1 sub -> SDOnionSub (subProgPoint ps0' p0' p1) sub
+      SDFunction ps1 p1 p2 cs ->
+        let ps' = Set.toList ((Set.fromList ps0') Set.\\ ps1) in
+        SDFunction ps1
+          (subProgPoint ps' p0' p1)
+          (subProgPoint ps' p0' p2)
+          (Set.map (appSub ps' p0') cs)
+      _ -> sd --unit, int, empty onion, badness
+
+    subSX :: [ProgramPoint] -> ProgramPoint -> SX -> SX
+    subSX ps0' p0' (XLabel ln p1) = (XLabel ln (subProgPoint ps0' p0' p1))
+    subSX _ _ sx = sx
+
+    subBranch :: [ProgramPoint] -> ProgramPoint -> (SX, Constraints) -> (SX, Constraints)
+    subBranch ps0' p0' (sx, cs) = (subSX ps0' p0' sx, Set.map (appSub ps0' p0') cs)
+
 
 flowCompatible :: Constraints -> SDown -> SX -> Set Fdot
 flowCompatible cs0 sd sx =
