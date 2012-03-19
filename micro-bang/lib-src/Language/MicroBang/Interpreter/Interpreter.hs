@@ -324,6 +324,54 @@ close :: Constraints -> Constraints
 close cs = error $ show cs
   --run evaluation closure rules
 
+type Fdot = Maybe (Set Constraint)
+flowCompatible :: Constraints -> SDown -> SX -> Set Fdot
+flowCompatible cs0 sd sx =
+  case (sd, sx) of
+    (_, XAny) -> nil
+    (SDUnit, XTUnit) -> nil
+    (SDUnit, _) -> splat
+    (SDInt _, XTInt) -> nil
+    (SDInt _, _) -> splat
+    (SDFunction _ _ _ _, XFun) -> nil
+    (SDFunction _ _ _ _, _) -> splat
+    (SDLabel sln sp, XLabel xln xp) | sln == xln ->
+        one (SIntermediate sp xp)
+    (SDLabel _ _, _) -> splat
+
+    --any case already taken care of above
+    (SDOnion p1 p2, _) ->
+      fold (Set.union) Set.empty $ Set.map flowOnion (concretization cs0 p2)
+      where
+        flowOnion :: SDown -> Set Fdot
+        flowOnion s = let fl2 = flowCompatible cs0 s sx in
+          if fl2 == splat then (flowLots (concretization cs0 p1))
+          else fl2
+        flowLots :: Set SDown -> Set Fdot
+        flowLots = fold flowCompatibleUnion Set.empty
+        flowCompatibleUnion :: SDown -> Set Fdot -> Set Fdot
+        flowCompatibleUnion s = Set.union (flowCompatible cs0 s sx)
+    --any case already taken care of above
+    (SDOnionSub p1 sub, _) ->
+      if esubmatch sub sx then
+        splat
+      else
+        fold (\s outset -> Set.union outset (flowCompatible cs0 s sx))
+            Set.empty (concretization cs0 p1)
+      where
+        esubmatch :: FOnionSub -> SX -> Bool
+        esubmatch FSubInt XTInt = True
+        esubmatch FSubUnit XTUnit = True
+        esubmatch (FSubLabel sln) (XLabel xln _) | sln == xln = True
+        esubmatch FSubFun XFun = True
+        esubmatch _ _ = False
+    (SDEmptyOnion, _) -> splat
+    (SDBadness, _) -> splat
+  where
+    nil = Set.singleton $ Just Set.empty
+    splat = Set.singleton Nothing
+    one c = Set.singleton (Just (Set.singleton c))
+
 -- Find all the s' for which "SDown is projected by SX as s'"
 project :: Constraints -> SDown -> PI -> Set (Maybe SDown)
 project cs0 sd pi0 =
