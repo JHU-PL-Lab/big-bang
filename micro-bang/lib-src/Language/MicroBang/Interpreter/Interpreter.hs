@@ -324,11 +324,15 @@ runCEM c r s = evalRWS (runErrorT c) r s
 
 close :: Constraints -> Constraints
 close cs =
-  let newCs = Set.unions $
-        map ($ cs) [id, app, caseAnalysis, addition, trueEq, falseEq] in
-  (trace (show newCs)) newCs
-  --run evaluation closure rules
+  let newCs = fst $ until
+        (\(old,new) -> old == new)
+        (\(_,cs0) -> (cs0, close_step cs0))
+        (Set.empty, cs) in
+  ((trace (show newCs)) newCs)
   where
+    close_step cs' = Set.unions $
+      map ($ cs') [id, app, caseAnalysis, addition, trueEq, falseEq]
+
     app :: Constraints -> Constraints
     app cs0 = Set.unions $
       do
