@@ -87,6 +87,7 @@ convertSubTermToFOnionSub (UT.SubPrim (UT.PrimUnit)) = FSubUnit
 convertSubTermToFOnionSub (UT.SubLabel ln) = FSubLabel ln
 convertSubTermToFOnionSub UT.SubFunc = FSubFun
 
+type Fdot = Maybe Constraints
 -- Constraints
 -- |A type alias defining the form of constraints.
 type Constraints = Set Constraint
@@ -325,7 +326,6 @@ close :: Constraints -> Constraints
 close cs = error $ show cs
   --run evaluation closure rules
 
-type Fdot = Maybe (Set Constraint)
 flowCompatible :: Constraints -> SDown -> SX -> Set Fdot
 flowCompatible cs0 sd sx =
   case (sd, sx) of
