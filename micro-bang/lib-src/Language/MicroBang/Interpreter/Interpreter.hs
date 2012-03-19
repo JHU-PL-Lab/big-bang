@@ -20,7 +20,7 @@ import qualified Data.Map as Map
 import Data.Set (Set, fold)
 import qualified Data.Set as Set
 
-
+import Debug.Trace(trace)
 import qualified Language.MicroBang.Syntax.Parser as P
 
 
@@ -34,7 +34,7 @@ import Language.MicroBang.Ast as AST
   --, exprFromValue
   --, Evaluated(..)
   --)
-import Language.MicroBang.Types.UtilTypes (LabelName, Ident, unIdent)
+import Language.MicroBang.Types.UtilTypes (LabelName, labelName, Ident, unIdent)
 import qualified Language.MicroBang.Types.UtilTypes as UT
 import Utils.Render.Display
 
@@ -326,7 +326,7 @@ close :: Constraints -> Constraints
 close cs =
   let newCs = Set.unions $
         map ($ cs) [id, app, caseAnalysis, addition, trueEq, falseEq] in
-  error $ show newCs
+  (trace (show newCs)) newCs
   --run evaluation closure rules
   where
     app :: Constraints -> Constraints
@@ -340,14 +340,49 @@ close cs =
           Set.insert (SLower s2 p1) $
           Set.insert (SIntermediate p2 p2') f))
 
+    caseAnalysis :: Constraints -> Constraints
     caseAnalysis cs0 = cs0
+    --caseAnalysis cs0 = Set.unions $
+    --  do
+    --  (SCase p bs) <- Set.toList cs0
+    --  s <- Set.toList $ concretization cs0 p
+    --  let goodBs = dropWhile (\(sx,_) -> (Set.toList (flowCompatible cs0 s sx)) == [Nothing]) bs
+    --  if goodBs == [] then return [] else
+    --    (let (sx, cs') = head goodBs
+    --            Just fi <- Set.toList $ flowCompatible cs0 s sx
+    --            return (Set.union cs' fi))
 
-    addition cs0 = cs0
+    addition :: Constraints -> Constraints
+    addition cs0 = Set.unions $
+      do
+      (SOp p1 Plus p2 p3) <- Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p1
+      s2 <- Set.toList $ concretization cs0 p2
+      Just (SDInt i1) <- Set.toList $ project cs0 s1 PInt
+      Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
+      return $ Set.singleton $ SLower (SDInt (i1 + i2)) p3
 
-    trueEq cs0 = cs0
+    trueEq cs0 = Set.unions $
+      do
+      (SOp p1 Equal p2 p3) <- Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p1
+      s2 <- Set.toList $ concretization cs0 p2
+      Just (SDInt i1) <- Set.toList $ project cs0 s1 PInt
+      Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
+      guard (i1 == i2)
+      return $ Set.singleton $ SLower (SDLabel (labelName "True") punit) p3
 
-    falseEq cs0 = cs0
+    falseEq cs0 = Set.unions $
+      do
+      (SOp p1 Equal p2 p3) <- Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p1
+      s2 <- Set.toList $ concretization cs0 p2
+      Just (SDInt i1) <- Set.toList $ project cs0 s1 PInt
+      Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
+      guard (i1 /= i2)
+      return $ Set.singleton $ SLower (SDLabel (labelName "False") punit) p3
 
+    punit = (ProgramPoint (-1) [])
 appSub :: [ProgramPoint] -> ProgramPoint -> Constraint -> Constraint
 appSub ps0 p0 c = case c of
   SLower sd p1 -> SLower (subSDown ps0 p0 sd) (subProgPoint ps0 p0 p1)
