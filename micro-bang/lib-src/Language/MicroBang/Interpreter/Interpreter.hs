@@ -562,22 +562,17 @@ concretization cs0 p0 =
 
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
-  case fold (find p) Nothing cs of
-    Nothing -> error "Could not retrieve"
-    Just sd -> case sd of
-      SDUnit -> VPrimUnit
-      SDInt i -> VPrimInt i
-      SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
-      SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
-      SDOnionSub p1 s1 -> error $ "Subtration Onion: " ++ (show p1) ++ show s1
-        --TODO
-      SDEmptyOnion -> VEmptyOnion
-      SDFunction ps p1 p2 f -> error $ "Function...what do I do..."
-          ++ show ps ++ show p1 ++ show p2 ++ show f --TODO
-      SDBadness -> error "Lightening"
+  let sds = Set.toList $ concretization cs p in
+  if sds == [] then error "retrieve: no concretization"
+  else case head sds of
+    SDUnit -> VPrimUnit
+    SDInt i -> VPrimInt i
+    SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
+    SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
+    SDOnionSub p1 s1 -> error $ "Subtration Onion: " ++ (show p1) ++ show s1
+      --TODO
+    SDEmptyOnion -> VEmptyOnion
+    SDFunction ps p1 p2 f -> --VFunc (ident "x") e
+        error $ "Fun" ++ show ps ++ show p1 ++ show p2 ++ show f --TODO
+    SDBadness -> error "Lightening"
 
-  where
-    find :: ProgramPoint -> Constraint -> Maybe SDown -> Maybe SDown
-    find p1 (SLower sd p2) Nothing | (p1 == p2) = Just sd
-    find _ _ Nothing = Nothing
-    find _ _ mc = mc
