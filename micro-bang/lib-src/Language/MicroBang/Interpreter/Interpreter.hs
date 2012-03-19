@@ -58,7 +58,8 @@ instance Display ConstraintEvaluatorError where
           (text $ unIdent i)
 
 -- Program Points
-data ProgramPoint = ProgramPoint Integer
+type ProgramPointLabel = Integer
+data ProgramPoint = ProgramPoint ProgramPointLabel [Set ProgramPointLabel]
   deriving (Show, Eq, Ord)
 
 data PI = PInt | PUnit | PLabel LabelName | PFun
@@ -163,7 +164,7 @@ freshVar :: CEM ProgramPoint
 freshVar = do
     idx <- get
     put $ idx + 1
-    return $ ProgramPoint idx
+    return $ ProgramPoint idx []
 
 
 
