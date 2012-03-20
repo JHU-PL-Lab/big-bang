@@ -374,7 +374,9 @@ close cs =
       Just (SDInt i1) <- Set.toList $ project cs0 s1 PInt
       Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
       guard (i1 == i2)
-      return $ Set.singleton $ SLower (SDLabel (labelName "True") punit) p3
+      return $ Set.fromList $
+        [SLower (SDLabel (labelName "True") punit) p3,
+        SLower SDUnit punit]
 
     falseEq cs0 = Set.unions $
       do
@@ -384,7 +386,9 @@ close cs =
       Just (SDInt i1) <- Set.toList $ project cs0 s1 PInt
       Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
       guard (i1 /= i2)
-      return $ Set.singleton $ SLower (SDLabel (labelName "False") punit) p3
+      return $ Set.fromList $
+        [SLower (SDLabel (labelName "False") punit) p3,
+        SLower SDUnit punit]
 
     punit = (ProgramPoint (-1) [])
 appSub :: [ProgramPoint] -> ProgramPoint -> Constraint -> Constraint
