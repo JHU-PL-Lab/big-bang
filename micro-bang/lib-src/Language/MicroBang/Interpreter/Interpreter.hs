@@ -525,17 +525,17 @@ project :: Constraints -> SDown -> PI -> Set (Maybe SDown)
 project cs0 sd pi0 =
   case (sd, pi0) of
     (SDUnit, PUnit) -> Set.singleton (Just SDUnit)
-    (SDUnit, _) -> Set.singleton Nothing
+    (SDUnit, _) -> splat
 
     (SDInt _, PInt) -> Set.singleton (Just sd)
-    (SDInt _, _) -> Set.singleton Nothing
+    (SDInt _, _) -> splat
 
     (SDLabel ln _, PLabel pln) | ln == pln -> Set.singleton (Just sd)
-    (SDLabel _ _, _) -> Set.singleton Nothing
+    (SDLabel _ _, _) -> splat
 
     (SDOnion p1 p2, pi1) ->
       let s2s = concretization cs0 p2 in
-      let proj2 = (projectLots s2s pi1) Set.\\ (Set.singleton Nothing) in
+      let proj2 = (projectLots s2s pi1) Set.\\ splat in
       proj2
       --Onion Right Projection (above)
       `Set.union`
@@ -548,7 +548,7 @@ project cs0 sd pi0 =
 
     (SDOnionSub p1 fos1, pi1) ->
       if tsubproj fos1 pi1 then
-        Set.singleton Nothing
+        splat
       else
         projectLots (concretization cs0 p1) pi1
       where
@@ -558,14 +558,15 @@ project cs0 sd pi0 =
         tsubproj (FSubLabel sln) (PLabel pln) | sln == pln = True
         tsubproj FSubFun PFun = True
         tsubproj _ _ = False
-    (SDEmptyOnion, _) -> Set.singleton Nothing
+    (SDEmptyOnion, _) -> splat
 
     (SDFunction _ _ _ _, PFun) -> Set.singleton (Just sd)
-    (SDFunction _ _ _ _, _) -> Set.singleton Nothing
+    (SDFunction _ _ _ _, _) -> splat
 
-    (SDBadness, _ ) -> Set.singleton Nothing
+    (SDBadness, _ ) -> splat
 
   where
+    splat = Set.singleton Nothing
     projectLots :: (Set SDown) -> PI -> Set (Maybe SDown)
     projectLots ss0 pin = Set.fold (Set.union) Set.empty $ Set.fromList
       (let ss1 = Set.toList ss0 in
