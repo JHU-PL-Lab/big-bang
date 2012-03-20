@@ -330,6 +330,8 @@ close cs =
         (Set.empty, cs) in
   ((trace (show newCs)) newCs)
   where
+    punit = (ProgramPoint (-1) [])
+
     close_step cs' = Set.unions $
       map ($ cs') [id, app, caseAnalysis, addition, trueEq, falseEq]
 
@@ -345,7 +347,6 @@ close cs =
           Set.insert (SIntermediate p2 p2') f))
 
     caseAnalysis :: Constraints -> Constraints
-    --caseAnalysis cs0 = cs0
     caseAnalysis cs0 = Set.unions $
       do
       (SCase p bs) <- Set.toList cs0
@@ -366,6 +367,7 @@ close cs =
       Just (SDInt i2) <- Set.toList $ project cs0 s2 PInt
       return $ Set.singleton $ SLower (SDInt (i1 + i2)) p3
 
+    trueEq :: Constraints -> Constraints
     trueEq cs0 = Set.unions $
       do
       (SOp p1 Equal p2 p3) <- Set.toList cs0
@@ -378,6 +380,7 @@ close cs =
         [SLower (SDLabel (labelName "True") punit) p3,
         SLower SDUnit punit]
 
+    falseEq :: Constraints -> Constraints
     falseEq cs0 = Set.unions $
       do
       (SOp p1 Equal p2 p3) <- Set.toList cs0
@@ -390,7 +393,7 @@ close cs =
         [SLower (SDLabel (labelName "False") punit) p3,
         SLower SDUnit punit]
 
-    punit = (ProgramPoint (-1) [])
+
 appSub :: [ProgramPoint] -> ProgramPoint -> Constraint -> Constraint
 appSub ps0 p0 c = case c of
   SLower sd p1 -> SLower (subSDown ps0 p0 sd) (subProgPoint ps0 p0 p1)
