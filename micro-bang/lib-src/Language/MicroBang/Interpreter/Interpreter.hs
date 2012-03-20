@@ -190,7 +190,7 @@ evalTop e =
     case progPt of
       Left f -> Left (ConstraintFailure f)
       Right p ->
-        let cs' = close cs in
+        let cs' = close cs p in
           Right (retrieve p cs')
 
 capture :: (M -> M) -> Expr -> CEM (ProgramPoint, Constraints)
@@ -324,15 +324,50 @@ extractPs cs = fold grabCs Set.empty cs where
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
-close :: Constraints -> Constraints
-close cs =
+close :: Constraints -> ProgramPoint -> Constraints
+close cs p =
   let newCs = fst $ until
         (\(old,new) -> old == new)
         (\(_,cs0) -> (cs0, close_step cs0))
         (Set.empty, cs) in
-  ((trace (show newCs)) newCs)
+  let finalCs = fail_step newCs in
+  ((trace (show newCs)) finalCs)
   where
     punit = (ProgramPoint (-1) [])
+    lightening = Set.singleton $ SLower (SDBadness) p
+    splat = Set.singleton Nothing
+
+    fail_step cs' = Set.unions $
+      map ($ cs') [id, failApp, failCase, failIntOp]
+
+    failApp :: Constraints -> Constraints
+    failApp cs0 = Set.unions $
+      do
+      (SUpper p0 (_, _)) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
+      if (project cs0 s PFun) == splat
+          then return lightening
+          else return Set.empty
+
+    failCase :: Constraints -> Constraints
+    failCase cs0 = Set.unions $
+      do
+      (SCase p0 bs) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
+      if all (== (Set.singleton Nothing)) (map ((flowCompatible cs0 s).fst) bs)
+          then return lightening
+          else return Set.empty
+
+    failIntOp :: Constraints -> Constraints
+    failIntOp cs0 = Set.unions $
+      do
+      (SOp p1 _ p2 _) <- Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p1
+      s2 <- Set.toList $ concretization cs0 p2
+      if or [(project cs0 s1 PInt == splat),(project cs0 s2 PInt == splat)]
+        then return lightening
+        else return Set.empty
+
 
     close_step cs' = Set.unions $
       map ($ cs') [id, app, caseAnalysis, addition, trueEq, falseEq]
@@ -351,13 +386,15 @@ close cs =
     caseAnalysis :: Constraints -> Constraints
     caseAnalysis cs0 = Set.unions $
       do
-      (SCase p bs) <- Set.toList cs0
-      s <- Set.toList $ concretization cs0 p
+      (SCase p0 bs) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
       let goodBs = dropWhile (\(sx,_) -> (Set.toList (flowCompatible cs0 s sx)) == [Nothing]) bs
-      --if goodBs == [] then return [] else
-      (sx, cs') <- [head goodBs]
-      Just fi <- Set.toList $ flowCompatible cs0 s sx
-      return (Set.union cs' fi)
+      return (if goodBs == [] then Set.empty else
+                (let (sx, cs') = head goodBs in
+                  Set.unions $
+                  do
+                  Just fi <- Set.toList $ flowCompatible cs0 s sx
+                  return (Set.union cs' fi)))
 
     addition :: Constraints -> Constraints
     addition cs0 = Set.unions $
