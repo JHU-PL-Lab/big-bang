@@ -345,16 +345,16 @@ close cs =
           Set.insert (SIntermediate p2 p2') f))
 
     caseAnalysis :: Constraints -> Constraints
-    caseAnalysis cs0 = cs0
-    --caseAnalysis cs0 = Set.unions $
-    --  do
-    --  (SCase p bs) <- Set.toList cs0
-    --  s <- Set.toList $ concretization cs0 p
-    --  let goodBs = dropWhile (\(sx,_) -> (Set.toList (flowCompatible cs0 s sx)) == [Nothing]) bs
-    --  if goodBs == [] then return [] else
-    --    (let (sx, cs') = head goodBs
-    --            Just fi <- Set.toList $ flowCompatible cs0 s sx
-    --            return (Set.union cs' fi))
+    --caseAnalysis cs0 = cs0
+    caseAnalysis cs0 = Set.unions $
+      do
+      (SCase p bs) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p
+      let goodBs = dropWhile (\(sx,_) -> (Set.toList (flowCompatible cs0 s sx)) == [Nothing]) bs
+      --if goodBs == [] then return [] else
+      (sx, cs') <- [head goodBs]
+      Just fi <- Set.toList $ flowCompatible cs0 s sx
+      return (Set.union cs' fi)
 
     addition :: Constraints -> Constraints
     addition cs0 = Set.unions $
