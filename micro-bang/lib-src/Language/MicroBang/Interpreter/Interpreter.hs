@@ -570,7 +570,7 @@ concretization cs0 p0 =
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
   let sds = Set.toList $ concretization cs p in
-  if sds == [] then error "retrieve: no concretization"
+  if sds == [] then error $ "retrieve: no concretization" ++ (show p)
   else case head sds of
     SDUnit -> VPrimUnit
     SDInt i -> VPrimInt i
