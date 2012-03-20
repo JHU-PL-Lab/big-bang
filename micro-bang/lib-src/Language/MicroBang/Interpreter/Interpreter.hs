@@ -268,10 +268,12 @@ derive (AST.PrimInt i) = do
   tell (Set.singleton (SLower (SDInt i) p1))
   return p1
 derive (Func ident e) = do
+  m <- ask
   p2 <- freshVar
   (p3, f) <- capture (Map.insert ident p2) e
   p1 <- freshVar
-  let ps = p2 `Set.insert` (p3 `Set.insert` (extractPs f))
+  let ps' = p2 `Set.insert` (p3 `Set.insert` (extractPs f))
+  let ps = ps' Set.\\(Set.fromList $ Map.fold (:) [] m)
   tell (Set.singleton (SLower (SDFunction ps p2 p3 f) p1))
   return p1
 derive EmptyOnion = do
