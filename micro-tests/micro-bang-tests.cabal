@@ -1,0 +1,92 @@
+Name:                micro-bang-tests
+
+-- The package version. See the Haskell package versioning policy
+-- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
+-- standards guiding when and how versions should be incremented.
+Version:             0.1
+
+-- A short (one-line) description of the package.
+Synopsis:            Tests for Micro Bang.
+
+-- A longer description of the package.
+Description:         This package contains tests for Big Bang.
+
+-- The license under which the package is released.
+License:             AllRightsReserved
+
+-- The file containing the license text.
+--License-file:        LICENSE
+
+-- The package author(s).
+Author:              Alex Rozenshteyn
+
+-- An email address to which users can send suggestions, bug reports,
+-- and patches.
+Maintainer:          big-bang@jhu.edu
+
+-- A copyright notice.
+Copyright:           (c) 2011-2012 Alex Rozenshteyn, Zachary Palmer, Scott Smith
+
+Category:            Language
+
+Build-type:          Simple
+
+-- Extra files to be distributed with the package, such as examples or
+-- a README.
+-- Extra-source-files:
+
+Stability:           alpha
+
+-- Constraint on the version of Cabal needed to build this package.
+Cabal-version:       >=1.8
+
+Library
+  hs-source-dirs:      lib-src
+
+  Exposed-Modules:
+    Language.MicroBang.Test.Case
+    Language.MicroBang.Test.EagerOps
+    Language.MicroBang.Test.EmptyOnion
+    Language.MicroBang.Test.ExpressionUtils
+    Language.MicroBang.Test.Functions
+    Language.MicroBang.Test.LazyOps
+    Language.MicroBang.Test.Lexer
+    Language.MicroBang.Test.ListEncoding
+    Language.MicroBang.Test.Misc
+    Language.MicroBang.Test.NameUtils
+    Language.MicroBang.Test.OnionSubtraction
+    Language.MicroBang.Test.Onions
+    Language.MicroBang.Test.Parser
+    Language.MicroBang.Test.Peano
+    Language.MicroBang.Test.PrettyPrint
+    Language.MicroBang.Test.Primitive.Char
+    Language.MicroBang.Test.Primitive.Int
+    Language.MicroBang.Test.Primitive.Unit
+    Language.MicroBang.Test.Projection
+    Language.MicroBang.Test.SourceUtils
+    Language.MicroBang.Test.State
+    Language.MicroBang.Test.UtilFunctions
+    Language.MicroBang.Test.ValueUtils
+
+  Build-depends:       base, array, containers == 0.4.0.0, mtl, big-bang-utils, micro-bang, HUnit, pretty
+
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans -fno-warn-missing-signatures
+  extensions:          ImplicitParams
+
+Executable test-suite
+  hs-source-dirs:      executable-src
+
+  -- Main module
+  Main-is:             Test.hs
+
+  -- Packages needed in order to build this package.
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang-utils, micro-bang, micro-bang-tests, HUnit, cmdargs
+
+  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
+  -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
+  --       EOF to return an "internal happy error", but 1.18.5 works otherwise
+  Build-tools:         alex, happy >= 1.18.5
+
+  -- Enable compiler warnings
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
+  extensions:          ImplicitParams
