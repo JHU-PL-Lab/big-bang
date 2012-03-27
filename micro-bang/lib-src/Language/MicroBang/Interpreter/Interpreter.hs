@@ -190,7 +190,7 @@ evalTop e =
     case progPt of
       Left f -> Left (ConstraintFailure f)
       Right p ->
-        let cs' = close cs in
+        let cs' = close cs p in
           Right (retrieve p cs')
 
 capture :: (M -> M) -> Expr -> CEM (ProgramPoint, Constraints)
@@ -268,10 +268,12 @@ derive (AST.PrimInt i) = do
   tell (Set.singleton (SLower (SDInt i) p1))
   return p1
 derive (Func ident e) = do
+  m <- ask
   p2 <- freshVar
   (p3, f) <- capture (Map.insert ident p2) e
   p1 <- freshVar
-  let ps = p2 `Set.insert` (p3 `Set.insert` (extractPs f))
+  let ps' = p2 `Set.insert` (p3 `Set.insert` (extractPs f))
+  let ps = ps' Set.\\(Set.fromList $ Map.fold (:) [] m)
   tell (Set.singleton (SLower (SDFunction ps p2 p3 f) p1))
   return p1
 derive EmptyOnion = do
@@ -322,15 +324,50 @@ extractPs cs = fold grabCs Set.empty cs where
 runCEM :: CEM a -> M -> NextFreshVar -> (Either ConstraintEvaluatorError a, Constraints)
 runCEM c r s = evalRWS (runErrorT c) r s
 
-close :: Constraints -> Constraints
-close cs =
+close :: Constraints -> ProgramPoint -> Constraints
+close cs p =
   let newCs = fst $ until
         (\(old,new) -> old == new)
         (\(_,cs0) -> (cs0, close_step cs0))
         (Set.empty, cs) in
-  ((trace (show newCs)) newCs)
+  let finalCs = fail_step newCs in
+  ((trace (show newCs)) finalCs)
   where
     punit = (ProgramPoint (-1) [])
+    lightening = Set.singleton $ SLower (SDBadness) p
+    splat = Set.singleton Nothing
+
+    fail_step cs' = Set.unions $
+      map ($ cs') [id, failApp, failCase, failIntOp]
+
+    failApp :: Constraints -> Constraints
+    failApp cs0 = Set.unions $
+      do
+      (SUpper p0 (_, _)) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
+      if (project cs0 s PFun) == splat
+          then return lightening
+          else return Set.empty
+
+    failCase :: Constraints -> Constraints
+    failCase cs0 = Set.unions $
+      do
+      (SCase p0 bs) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
+      if all (== (Set.singleton Nothing)) (map ((flowCompatible cs0 s).fst) bs)
+          then return lightening
+          else return Set.empty
+
+    failIntOp :: Constraints -> Constraints
+    failIntOp cs0 = Set.unions $
+      do
+      (SOp p1 _ p2 _) <- Set.toList cs0
+      s1 <- Set.toList $ concretization cs0 p1
+      s2 <- Set.toList $ concretization cs0 p2
+      if or [(project cs0 s1 PInt == splat),(project cs0 s2 PInt == splat)]
+        then return lightening
+        else return Set.empty
+
 
     close_step cs' = Set.unions $
       map ($ cs') [id, app, caseAnalysis, addition, trueEq, falseEq]
@@ -349,13 +386,15 @@ close cs =
     caseAnalysis :: Constraints -> Constraints
     caseAnalysis cs0 = Set.unions $
       do
-      (SCase p bs) <- Set.toList cs0
-      s <- Set.toList $ concretization cs0 p
+      (SCase p0 bs) <- Set.toList cs0
+      s <- Set.toList $ concretization cs0 p0
       let goodBs = dropWhile (\(sx,_) -> (Set.toList (flowCompatible cs0 s sx)) == [Nothing]) bs
-      --if goodBs == [] then return [] else
-      (sx, cs') <- [head goodBs]
-      Just fi <- Set.toList $ flowCompatible cs0 s sx
-      return (Set.union cs' fi)
+      return (if goodBs == [] then Set.empty else
+                (let (sx, cs') = head goodBs in
+                  Set.unions $
+                  do
+                  Just fi <- Set.toList $ flowCompatible cs0 s sx
+                  return (Set.union cs' fi)))
 
     addition :: Constraints -> Constraints
     addition cs0 = Set.unions $
@@ -486,17 +525,17 @@ project :: Constraints -> SDown -> PI -> Set (Maybe SDown)
 project cs0 sd pi0 =
   case (sd, pi0) of
     (SDUnit, PUnit) -> Set.singleton (Just SDUnit)
-    (SDUnit, _) -> Set.singleton Nothing
+    (SDUnit, _) -> splat
 
     (SDInt _, PInt) -> Set.singleton (Just sd)
-    (SDInt _, _) -> Set.singleton Nothing
+    (SDInt _, _) -> splat
 
     (SDLabel ln _, PLabel pln) | ln == pln -> Set.singleton (Just sd)
-    (SDLabel _ _, _) -> Set.singleton Nothing
+    (SDLabel _ _, _) -> splat
 
     (SDOnion p1 p2, pi1) ->
       let s2s = concretization cs0 p2 in
-      let proj2 = (projectLots s2s pi1) Set.\\ (Set.singleton Nothing) in
+      let proj2 = (projectLots s2s pi1) Set.\\ splat in
       proj2
       --Onion Right Projection (above)
       `Set.union`
@@ -509,7 +548,7 @@ project cs0 sd pi0 =
 
     (SDOnionSub p1 fos1, pi1) ->
       if tsubproj fos1 pi1 then
-        Set.singleton Nothing
+        splat
       else
         projectLots (concretization cs0 p1) pi1
       where
@@ -519,14 +558,15 @@ project cs0 sd pi0 =
         tsubproj (FSubLabel sln) (PLabel pln) | sln == pln = True
         tsubproj FSubFun PFun = True
         tsubproj _ _ = False
-    (SDEmptyOnion, _) -> Set.singleton Nothing
+    (SDEmptyOnion, _) -> splat
 
     (SDFunction _ _ _ _, PFun) -> Set.singleton (Just sd)
-    (SDFunction _ _ _ _, _) -> Set.singleton Nothing
+    (SDFunction _ _ _ _, _) -> splat
 
-    (SDBadness, _ ) -> Set.singleton Nothing
+    (SDBadness, _ ) -> splat
 
   where
+    splat = Set.singleton Nothing
     projectLots :: (Set SDown) -> PI -> Set (Maybe SDown)
     projectLots ss0 pin = Set.fold (Set.union) Set.empty $ Set.fromList
       (let ss1 = Set.toList ss0 in
@@ -570,7 +610,7 @@ concretization cs0 p0 =
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
   let sds = Set.toList $ concretization cs p in
-  if sds == [] then error "retrieve: no concretization"
+  if sds == [] then error $ "retrieve: no concretization" ++ (show p)
   else case head sds of
     SDUnit -> VPrimUnit
     SDInt i -> VPrimInt i
