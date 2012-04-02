@@ -33,8 +33,13 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , SomeAlpha
                                      , AlphaType
                                      , AnyAlpha
+                                     , Alpha(..)
+                                     , Contour
+                                     , contour
+                                     , unContour
                                      , AlphaSubstitutionEnv
-                                     , substituteAlphaHelper
+                                     , FunctionLowerBound
+                                     , CallSite
                                      , histFIXME
                                      )
 
@@ -45,12 +50,19 @@ import Utils.Render.Display (display, Display)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
+
+import Data.Map (Map)
+import qualified Data.Map as Map
+
 import Data.Tuple (swap)
 import Data.Maybe (listToMaybe, isNothing, mapMaybe)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
+import Control.Monad.RWS (runRWS, RWS)
+import Control.Monad.Writer (tell)
 import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
+import Control.Exception (assert)
 
 type CReader = Reader Constraints
 
@@ -300,11 +312,13 @@ instance LowerBounded CellAlpha where
 --  have the specified alpha in their call sites list.  This function
 --  corresponds to the Application Substitution Definition in the language
 --  specification.
-substituteVars :: Constraints -> ForallVars -> CellAlpha -> Constraints
-substituteVars constraints forallVars replAlpha =
-  runReader
+substituteVars :: Constraints -> ForallVars
+               -> CellAlpha -> CellAlpha -> Constraints
+substituteVars constraints forallVars replAlpha otherAlpha =
+  (\(a, _, b) -> Set.union a b) $ runRWS
     (substituteAlpha constraints)
-    (replAlpha, forallVars)
+    (forallVars, replAlpha, otherAlpha)
+    ()
 
 -- |Performs cycle detection on a set of constraints.
 cycleDetectGeneric :: forall a. (AlphaType a)
@@ -405,7 +419,7 @@ closeApplications cs = Set.unions $ do -- List
       cs'' = Set.union cs' $
                Set.fromList [ Cell ca3 <: ai .: hist
                             , ao <: ao' .: hist ]
-  return $ substituteVars cs'' foralls ai'
+  return $ substituteVars cs'' foralls ai ai'
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do -- List
@@ -490,6 +504,8 @@ closeSingleContradictions cs =
         , findIllegalImmutableAssignments
         ]
 
+--TODO: modify closure functions to take into account equivalence
+--constraints.
 closeAll :: Constraints -> Constraints
 closeAll cs =
   Set.unions $ map ($ cs)
@@ -510,11 +526,11 @@ calculateClosure c = ddisp $ closeSingleContradictions $ leastFixedPoint closeAl
             else x
 
 saHelper :: (AlphaSubstitutable a)
-         => (a -> b) -> a -> Reader AlphaSubstitutionEnv b
+         => (a -> b) -> a -> TSubstM b
 saHelper constr a = constr <$> substituteAlpha a
 
 saHelper2 :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
-          => (a1 -> a2 -> b) -> a1 -> a2 -> Reader AlphaSubstitutionEnv b
+          => (a1 -> a2 -> b) -> a1 -> a2 -> TSubstM b
 saHelper2 constr a1 a2 = constr <$> substituteAlpha a1 <*> substituteAlpha a2
 
 instance AlphaSubstitutable TauDown where
@@ -528,24 +544,26 @@ instance AlphaSubstitutable TauDown where
 instance AlphaSubstitutable PolyFuncData where
   substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
       PolyFuncData alphas
-        <$> substituteAlpha' alphaIn
-        <*> substituteAlpha' alphaOut
+        <$> pure alphaIn
+        <*> pure alphaOut
         <*> substituteAlpha' constraints
       -- The variables described by the forall list should never be replaced
       where substituteAlpha' :: (AlphaSubstitutable a)
-                             => a -> Reader AlphaSubstitutionEnv a
+                             => a -> TSubstM a
             substituteAlpha' =
-              local (second $ flip Set.difference alphas) . substituteAlpha
+              local newEnv . substituteAlpha
+            newEnv (forallVars, a1', a2') =
+              (Set.difference forallVars alphas, a1', a2')
 
 csaHelper :: (AlphaSubstitutable a)
           => (a -> hist -> b)
-          -> a -> hist -> Reader AlphaSubstitutionEnv b
+          -> a -> hist -> TSubstM b
 csaHelper constr a hist =
   constr <$> substituteAlpha a <*> pure hist
 
 csaHelper2 :: (AlphaSubstitutable a1, AlphaSubstitutable a2)
            => (a1 -> a2 -> hist -> b)
-           -> a1 -> a2 -> hist -> Reader AlphaSubstitutionEnv b
+           -> a1 -> a2 -> hist -> TSubstM b
 csaHelper2 constr a1 a2 hist =
   constr <$> substituteAlpha a1 <*> substituteAlpha a2 <*> pure hist
 
@@ -553,7 +571,7 @@ csaHelper3 :: (AlphaSubstitutable a1,
                AlphaSubstitutable a2,
                AlphaSubstitutable a3)
            => (a1 -> a2 -> a3 -> hist -> b)
-           -> a1 -> a2 -> a3 ->  hist -> Reader AlphaSubstitutionEnv b
+           -> a1 -> a2 -> a3 ->  hist -> TSubstM b
 csaHelper3 constr a1 a2 a3 hist =
   constr
     <$> substituteAlpha a1
@@ -561,11 +579,47 @@ csaHelper3 constr a1 a2 a3 hist =
     <*> substituteAlpha a3
     <*> pure hist
 
+type TSubstM a = RWS AlphaSubstitutionEnv Constraints () a
+
 -- |A typeclass for entities which can substitute their type variables.
 class AlphaSubstitutable a where
   -- |The alpha in the reader environment is added to superscripts.
   --  The set in the reader environment contains alphas to ignore.
-  substituteAlpha :: a -> Reader AlphaSubstitutionEnv a
+  substituteAlpha :: a -> TSubstM a
+
+tContour :: FunctionLowerBound -> CellAlpha -> (Contour, Constraints)
+tContour l1 a =
+  case Map.lookup l1 aContour of
+    Just l3 ->
+      (invocationMap, Set.singleton $ Equivalent l1 l2 l3 histFIXME)
+    Nothing ->
+      (contour $ Map.insert l1 l2 aContour, Set.empty)
+  where invocationMap = alphaContour a
+        aContour = unContour invocationMap
+        l2 = alphaId a
+
+substituteAlphaHelper :: (Alpha a)
+                      => a -> TSubstM a
+substituteAlphaHelper a = do
+  (forallVars, a1', a2') <- ask
+  let lb :: FunctionLowerBound
+      lb = alphaId a1'
+  let cs :: CallSite
+      cs = alphaId a2'
+  let (newContour, newConstraints) = tContour lb a2'
+  if not $ Set.member (alphaWeaken a) forallVars
+    then return a
+    -- The variable we are substituting should never have marked
+    -- call sites.  The only places where polymorphic function
+    -- constraints (forall constraints) are built are by the
+    -- inference rules themselves (which have no notion of call
+    -- sites) and the type replacement function (which does not
+    -- replace forall-ed elements within a forall constraint).
+    else assertEmptyContour a1' $ assertEmptyContour a $
+       tell newConstraints >> return (setAlphaContour a newContour)
+  where assertEmptyContour :: (Alpha a) => a -> b -> b
+        assertEmptyContour alpha f =
+          assert ((Map.size . unContour . alphaContour) alpha == 0) f
 
 instance (AlphaType a) => AlphaSubstitutable (SomeAlpha a) where
   substituteAlpha = substituteAlphaHelper
@@ -591,6 +645,7 @@ instance AlphaSubstitutable Constraint where
         csaHelper2 CellAlphaSubtype a1 a2 hist
       LazyOpSubtype op a1 a2 a3 hist ->
         csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
+      Equivalent {} -> return c
       Comparable a1 a2 hist ->
         csaHelper2 Comparable a1 a2 hist
       Final a hist ->
