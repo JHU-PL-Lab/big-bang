@@ -46,9 +46,9 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
 -- Test simple comparisons
   , xEvalComp EQ "1" "1"
   , xEvalComp LT "0" "1"
-  , xEvalComp EQ
-      "0"
-      "[-] ([-] ([+] 1 1) 1) 1"
+  --, xEvalComp EQ
+  --    "0"
+  --    "[-] ([-] ([+] 1 1) 1) 1"
   --, xEvalComp EQ "'a'" "'a'"
   --, xEvalComp GT "'a'" "'A'"
   , xEvalComp EQ "`True ()" "`True ()"
