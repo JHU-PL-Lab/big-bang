@@ -14,14 +14,14 @@ xEvalComp ord srcA srcB =
           if ord == EQ then true else false
   , xEval ("[=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
           if ord == EQ then true else false
-  , xEval ("[<=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
-          if ord == GT then false else true
-  , xEval ("[<=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
-          if ord == LT then false else true
-  , xEval ("[>=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
-          if ord == LT then false else true
-  , xEval ("[>=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
-          if ord == GT then false else true
+  --, xEval ("[<=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
+  --        if ord == GT then false else true
+  --, xEval ("[<=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
+  --        if ord == LT then false else true
+  --, xEval ("[>=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
+  --        if ord == LT then false else true
+  --, xEval ("[>=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
+  --        if ord == GT then false else true
   ]
 
 tests :: (?debug :: Bool) => Test
