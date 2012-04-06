@@ -26,14 +26,15 @@ xEvalComp ord srcA srcB =
 
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "Eager operations tests" $ TestList $ concat
-  [ [ xType (srcMultiAppl [srcY, srcSummate, "5"])
-    , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
-    , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
-    , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
-    , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
+  [ [
+  --xType (srcMultiAppl [srcY, srcSummate, "5"])
+  --  , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
+  --  , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
+  --  , xCont (srcMultiAppl [srcGreaterOrLess, "'a'", "4"])
+  --  , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
 
   -- Test evaluation of some recursive arithmetic evaluations
-    , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+    xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
              A.VPrimInt 15
     , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
             lblEq
@@ -65,10 +66,10 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   , xEvalComp LT "5" "fun x -> x"
   , xEvalComp LT "'a'" "fun x -> x"
   , xEvalComp LT "`A 0" "fun x -> x"
--- Test function equality by identity
-  , [ xEval "(fun f -> [=] f f) (fun x -> x)" true
-    , xEval "(fun f -> [<=] f f) (fun x -> x)" true
-    , xEval "(fun f -> [>=] f f) (fun x -> x)" true ]
+-- Test function equality by identity: MicroBang does not have those operators
+  --, [ xEval "(fun f -> [=] f f) (fun x -> x)" true
+  --  , xEval "(fun f -> [<=] f f) (fun x -> x)" true
+  --  , xEval "(fun f -> [>=] f f) (fun x -> x)" true ]
 -- Test deep label comparisons
   , xEvalComp LT "`A ()" "`A 1"
   , xEvalComp LT "`A 'a'" "`A `A ()"

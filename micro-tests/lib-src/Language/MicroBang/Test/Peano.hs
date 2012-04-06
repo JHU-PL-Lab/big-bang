@@ -34,12 +34,9 @@ peanoSrcMult =
   \def mult = multHelper zero in                                               "
 
 peanoVal x = case x of
-  0 -> (A.VLabel lblZ 0, makeState [(0,A.VPrimUnit)])
-  1 -> (A.VLabel lblS 0, makeState [(0,A.VLabel lblZ 1), (1,A.VPrimUnit)])
-  _ | x >= 0 ->
-       (A.VLabel lblS x,
-        makeState $ [(0, A.VPrimUnit), (1, A.VLabel lblZ 0)] ++
-                    map (\n -> (n,A.VLabel lblS (n-1))) [2..x])
+  0 -> (A.VLabel lblZ $ A.VPrimUnit)
+  1 -> (A.VLabel lblS $ A.VPrimUnit)
+  _ | x >= 0 -> (A.VLabel lblS $ A.VPrimInt x)
   _ -> error $ "Peano value requested for negative value: " ++ show x
 
 peanoPrelude =

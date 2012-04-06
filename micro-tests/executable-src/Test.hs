@@ -10,16 +10,13 @@ import qualified Language.MicroBang.Test.Case as Case
 import qualified Language.MicroBang.Test.EagerOps as EagerOps
 import qualified Language.MicroBang.Test.EmptyOnion as EmptyOnion
 import qualified Language.MicroBang.Test.LazyOps as LazyOps
-import qualified Language.MicroBang.Test.Lexer as Lexer
 import qualified Language.MicroBang.Test.Misc as Misc
 import qualified Language.MicroBang.Test.OnionSubtraction as OnionSubtraction
 import qualified Language.MicroBang.Test.Parser as Parser
 import qualified Language.MicroBang.Test.Peano as Peano
-import qualified Language.MicroBang.Test.Primitive.Char as Primitive.Char
 import qualified Language.MicroBang.Test.Primitive.Int as Primitive.Int
 import qualified Language.MicroBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.MicroBang.Test.Projection as Projection
-import qualified Language.MicroBang.Test.State as State
 import qualified Language.MicroBang.Test.ListEncoding as ListEncoding
 
 tests :: (?debug :: Bool) => [Test]
@@ -30,16 +27,16 @@ tests =
   , EagerOps.tests
   , EmptyOnion.tests
   , LazyOps.tests
-  , Lexer.tests
+  --, Lexer.tests
   , Misc.tests
   , OnionSubtraction.tests
   , Parser.tests
   , Peano.tests
-  , Primitive.Char.tests
+  --, Primitive.Char.tests
   , Primitive.Int.tests
   , Primitive.Unit.tests
   , Projection.tests
-  , State.tests
+  --, State.tests
   , ListEncoding.tests
   ]
 
