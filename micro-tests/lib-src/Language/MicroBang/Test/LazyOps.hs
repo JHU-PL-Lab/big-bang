@@ -41,10 +41,10 @@ tests = TestLabel "Tests on integer operations" $ TestList
           (V.pi 4)
   , xEval "[+] 2 2"
           (V.pi 4)
-  , xEval "[-] 2 2"
-          (V.pi 0)
-  , xEval "[-] 2 -2"
-          (V.pi 4)
+  --, xEval "[-] 2 2"
+  --        (V.pi 0)
+  --, xEval "[-] 2 -2"
+  --        (V.pi 4)
 --  , xType "(fun x -> [+] x 1) 1"
 ---- Test that arithmetic expressions on non-numeric literals fail to typecheck
 --  , xCont "[+] 1 'a'"
@@ -58,6 +58,6 @@ tests = TestLabel "Tests on integer operations" $ TestList
 --  , xCont "[-] 'a' 'a'"
 --  , xCont "[-] () ()"
 -- Test evaluation of compound arithmetic application
-  , xEval "[+] ([-] 1 -1) ([-] 1 -1)"
-          (V.pi 4)
+  , xEval "[+] ([+] 1 -1) ([+] 1 -1)"
+          (V.pi 0)
   ]
