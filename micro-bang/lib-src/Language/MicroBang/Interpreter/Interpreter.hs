@@ -20,20 +20,9 @@ import qualified Data.Map as Map
 import Data.Set (Set, fold)
 import qualified Data.Set as Set
 
-import Debug.Trace(trace)
 import qualified Language.MicroBang.Syntax.Parser as P
 
-
 import Language.MicroBang.Ast as AST
-  --( Expr(..)
-  --, Operator(..)
-  --, Chi(..)
-  --, Branches
-  --, Branch(..)
-  --, Value(..)
-  --, exprFromValue
-  --, Evaluated(..)
-  --)
 import Language.MicroBang.Types.UtilTypes (LabelName, labelName, Ident, unIdent)
 import qualified Language.MicroBang.Types.UtilTypes as UT
 import Utils.Render.Display
@@ -102,6 +91,7 @@ data Constraint
 
 
 -- Errors
+
 
 -- I.EvalError, From TinyBang Interpreter.
 data EvalError =
@@ -330,8 +320,7 @@ close cs p =
         (\(old,new) -> old == new)
         (\(_,cs0) -> (cs0, close_step cs0))
         (Set.empty, cs) in
-  let finalCs = fail_step newCs in
-  ((trace (show newCs)) finalCs)
+  fail_step newCs
   where
     punit = (ProgramPoint (-1) [])
     lightening = Set.singleton $ SLower (SDBadness) p
