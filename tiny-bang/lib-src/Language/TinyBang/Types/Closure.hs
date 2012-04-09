@@ -22,7 +22,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , Guard(..)
                                      , PrimitiveType(..)
                                      , SubTerm(..)
-                                     , ForallVars
+                                     , ForallVars(..)
                                      , Cell(..)
                                      , CellGet(..)
                                      , CellSet(..)
@@ -37,7 +37,6 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , Contour
                                      , contour
                                      , unContour
-                                     , AlphaSubstitutionEnv
                                      , FunctionLowerBound
                                      , CallSite
                                      , histFIXME
@@ -542,8 +541,9 @@ instance AlphaSubstitutable TauDown where
     _ -> return td
 
 instance AlphaSubstitutable PolyFuncData where
-  substituteAlpha (PolyFuncData alphas alphaIn alphaOut constraints) =
-      PolyFuncData alphas
+  substituteAlpha
+    (PolyFuncData (ForallVars alphas) alphaIn alphaOut constraints) =
+      PolyFuncData (ForallVars alphas)
         <$> pure alphaIn
         <*> pure alphaOut
         <*> substituteAlpha' constraints
@@ -552,8 +552,8 @@ instance AlphaSubstitutable PolyFuncData where
                              => a -> TSubstM a
             substituteAlpha' =
               local newEnv . substituteAlpha
-            newEnv (forallVars, a1', a2') =
-              (Set.difference forallVars alphas, a1', a2')
+            newEnv (ForallVars forallVars, a1', a2') =
+              (ForallVars $ Set.difference forallVars alphas, a1', a2')
 
 csaHelper :: (AlphaSubstitutable a)
           => (a -> hist -> b)
@@ -579,6 +579,7 @@ csaHelper3 constr a1 a2 a3 hist =
     <*> substituteAlpha a3
     <*> pure hist
 
+type AlphaSubstitutionEnv = (ForallVars, CellAlpha, CellAlpha)
 type TSubstM a = RWS AlphaSubstitutionEnv Constraints () a
 
 -- |A typeclass for entities which can substitute their type variables.
@@ -601,7 +602,7 @@ tContour l1 a =
 substituteAlphaHelper :: (Alpha a)
                       => a -> TSubstM a
 substituteAlphaHelper a = do
-  (forallVars, a1', a2') <- ask
+  (ForallVars forallVars, a1', a2') <- ask
   let lb :: FunctionLowerBound
       lb = alphaId a1'
   let cs :: CallSite

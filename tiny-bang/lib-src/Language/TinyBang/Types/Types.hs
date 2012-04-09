@@ -23,7 +23,7 @@ module Language.TinyBang.Types.Types
 , CellSet(..)
 , Cell(..)
 , UpFun(..)
-, ForallVars
+, ForallVars(..)
 , LazyOp(..)
 , InterAlphaChain (..)
 , CellAlphaChain (..)
@@ -78,7 +78,8 @@ data TauProj
   | TpFun
   deriving (Eq, Ord, Show)
 
-type ForallVars = Set AnyAlpha
+newtype ForallVars = ForallVars (Set AnyAlpha)
+  deriving (Eq, Ord, Show)
 -- |A wrapper type containing the polymorphic function type information.
 data PolyFuncData =
   PolyFuncData ForallVars CellAlpha InterAlpha Constraints
@@ -319,7 +320,7 @@ instance Display TauDown where
       TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
 
 instance Display PolyFuncData where
-  makeDoc (PolyFuncData alphas alpha1 alpha2 constraints) =
+  makeDoc (PolyFuncData (ForallVars alphas) alpha1 alpha2 constraints) =
     (if Set.size alphas > 0
       then text "all" <+> (parens $ makeDoc alphas)
       else empty) <+>
