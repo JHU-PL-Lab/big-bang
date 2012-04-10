@@ -12,7 +12,6 @@ module Language.TinyBang.Types.Alphas
 , AnyAlpha
 , SomeAlpha
 , AlphaType
-, AlphaSubstitutionEnv
 , ProgramLabel
 , FunctionLowerBound
 , CallSite
@@ -118,8 +117,6 @@ contour = Contour
 --  variable with the exponent expression ['1,'2,'3].  The resulting call site
 --  list is suitable for use in type variable substitution for polymorphic
 --  functions.  This function is used in closure.
-
-type AlphaSubstitutionEnv = (Set AnyAlpha, CellAlpha, CellAlpha)
 
 instance Display (SomeAlpha a) where
   makeDoc (SomeAlpha i cSites) =

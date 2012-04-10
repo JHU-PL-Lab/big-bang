@@ -27,6 +27,8 @@ module Language.TinyBang.Types.Types
 , LazyOp(..)
 , InterAlphaChain (..)
 , CellAlphaChain (..)
+, ConstraintOrdinal (..)
+, constraintOrdinal
 , histFIXME
 , module Language.TinyBang.Types.Alphas
 ) where
@@ -139,7 +141,7 @@ data Constraint
   | CellAlphaSubtype CellAlpha CellAlpha ConstraintHistory
   | LazyOpSubtype
       LazyOperator InterAlpha InterAlpha InterAlpha ConstraintHistory
-  | Equivalent ProgramLabel ProgramLabel ProgramLabel ConstraintHistory
+  | Equivalent ProgramLabel ProgramLabel ConstraintHistory
   | Comparable InterAlpha InterAlpha ConstraintHistory
   | Final InterAlpha ConstraintHistory
   | Immutable InterAlpha ConstraintHistory
@@ -157,7 +159,7 @@ data ConstraintOrdinal
   | OrdCSS CellAlpha InterAlpha
   | OrdCAS CellAlpha CellAlpha
   | OrdLOS LazyOperator InterAlpha InterAlpha InterAlpha
-  | OrdEqv ProgramLabel ProgramLabel ProgramLabel
+  | OrdEqv ProgramLabel ProgramLabel
   | OrdCmp InterAlpha InterAlpha
   | OrdFin InterAlpha
   | OrdImmutable InterAlpha
@@ -177,7 +179,7 @@ constraintOrdinal c =
     CellSetSubtype   a  tu    _ -> OrdCSS    a  tu
     CellAlphaSubtype a1 a2    _ -> OrdCAS    a1 a2
     LazyOpSubtype op a1 a2 a3 _ -> OrdLOS op a1 a2 a3
-    Equivalent       p1 p2 p3 _ -> OrdEqv    p1 p2 p3
+    Equivalent       p1 p2    _ -> OrdEqv    p1 p2
     Comparable       a1 a2    _ -> OrdCmp    a1 a2
     Final            a1       _ -> OrdFin    a1
     Immutable        a1       _ -> OrdImmutable a1
@@ -372,9 +374,9 @@ instance Display Constraint where
               (subtype a1 a2, h)
             LazyOpSubtype op a1 a2 a3 h ->
               (subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3, h)
-            Equivalent p1 p2 p3 h ->
+            Equivalent p1 p2 h ->
               (hsep
-               [makeDoc p1, text "|-", makeDoc p2, text "~", makeDoc p3]
+               [makeDoc p1, text "-<", makeDoc p2]
               ,h)
             Comparable a1 a2 h ->
               (text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2), h)
