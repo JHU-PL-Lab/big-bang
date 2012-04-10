@@ -213,7 +213,8 @@ class ( Display a
       , Ord a
       , Ord (LowerBound a)
       , Ord (Chain a)
-      , Display (Chain a))
+      , Display (Chain a)
+      , Equivalent a)
       => LowerBounded a where
   type LowerBound a
   type Chain a
@@ -242,7 +243,7 @@ class ( Display a
     cs <- ask
     return $ do
       (lb, a', c) <- findCLowerBounds cs
-      guard $ a == a'
+      guard $ runReader (a ~~ a') cs
       return (lb, mkChain a c lb)
 
   intermediateLowerBounds :: a -> CReader [(a, a, Constraint)]
@@ -250,7 +251,7 @@ class ( Display a
     cs <- ask
     return $ do
       (ret, a', c) <- findILowerBounds cs
-      guard $ a == a'
+      guard $ runReader (a ~~ a') cs
       return (ret, a, c)
 
   findCLowerBounds :: Constraints -> [(LowerBound a, a, Constraint)]
@@ -690,8 +691,17 @@ instance AlphaSubstitutable (TauChi a) where
 instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
   substituteAlpha = fmap Set.fromList . mapM substituteAlpha . Set.toList
 
+-- c should also be in the constraint set
+equivalentConstraints :: Constraints -> Constraint -> Constraints
+equivalentConstraints cs c = Set.fromList $ do -- List
+  c' <- Set.toList cs
+  guard $ runReader (c ~~ c') cs
+  return c'
+
+infix 4 ~~
+
 class Equivalent a where
-  (~~) :: a -> a -> Reader Constraints Bool
+  (~~) :: a -> a -> CReader Bool
 
 instance Equivalent (FunctionLowerBound, CallSite) where
   a ~~ b
@@ -748,7 +758,7 @@ anyM f = fmap or . sequence . map f
 -- In order to avoid making Constraints an instance of Equivalent,
 -- this function is used. FIXME: For FSM's sake, change this!
 constraintSetEquivalence ::
-  Constraints -> Constraints -> Reader Constraints Bool
+  Constraints -> Constraints -> CReader Bool
 constraintSetEquivalence a b = andM [sub a b, sub b a]
   where sub :: Constraints -> Constraints -> Reader Constraints Bool
         sub as bs = andM $ do -- List
