@@ -18,8 +18,8 @@ tests = TestLabel "Onion subtraction tests" $ TestList
           ( A.VLabel (labelName "A") $ A.VPrimInt 0 )
   , xEval "0 & -int"
           A.VEmptyOnion
-  , xEval "0 & -char"
-          zero
+  --, xEval "0 & -char"
+  --        zero
   , xEval "(() & `A 0 & `A ()) & -`A"
           A.VPrimUnit
   , xEval "(`A 0 & `A ()) & -`A"
