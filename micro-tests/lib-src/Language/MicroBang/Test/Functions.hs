@@ -28,8 +28,8 @@ tests = TestLabel "Test functions" $ TestList
           identFuncX
   , xEval "(fun y -> y) (fun x -> x)"
           identFuncX
-  , xEval "def x = fun x -> x in x x"
-          identFuncX
+  --, xEval "def x = fun x -> x in x x"
+  --        identFuncX
   --, xType srcY
   , xEval "fun x -> x x"
           (A.VFunc idX $ A.Appl varX varX)
