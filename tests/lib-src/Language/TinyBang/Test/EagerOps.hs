@@ -10,17 +10,17 @@ import qualified Language.TinyBang.Ast as A
 
 xEvalComp :: (?debug :: Bool) => Ordering -> String -> String -> [Test]
 xEvalComp ord srcA srcB =
-  [ xEval ("[=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
+  [ xEval ("(" ++ srcA ++ ") == (" ++ srcB ++ ")") $
           if ord == EQ then true else false
-  , xEval ("[=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
+  , xEval ("(" ++ srcB ++ ") == (" ++ srcA ++ ")") $
           if ord == EQ then true else false
-  , xEval ("[<=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
+  , xEval ("(" ++ srcA ++ ") <= (" ++ srcB ++ ")") $
           if ord == GT then false else true
-  , xEval ("[<=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
+  , xEval ("(" ++ srcB ++ ") <= (" ++ srcA ++ ")") $
           if ord == LT then false else true
-  , xEval ("[>=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
+  , xEval ("(" ++ srcA ++ ") >= (" ++ srcB ++ ")") $
           if ord == LT then false else true
-  , xEval ("[>=] (" ++ srcB ++ ") (" ++ srcA ++ ")") $
+  , xEval ("(" ++ srcB ++ ") >= (" ++ srcA ++ ")") $
           if ord == GT then false else true
   ]
 
@@ -47,7 +47,7 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   , xEvalComp LT "0" "1"
   , xEvalComp EQ
       "0"
-      "[-] ([-] ([+] 1 1) 1) 1"
+      "((1 + 1) - 1) - 1"
   , xEvalComp EQ "'a'" "'a'"
   , xEvalComp GT "'a'" "'A'"
   , xEvalComp EQ "`True ()" "`True ()"
@@ -66,9 +66,9 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   , xEvalComp LT "'a'" "fun x -> x"
   , xEvalComp LT "`A 0" "fun x -> x"
 -- Test function equality by identity
-  , [ xEval "(fun f -> [=] f f) (fun x -> x)" true
-    , xEval "(fun f -> [<=] f f) (fun x -> x)" true
-    , xEval "(fun f -> [>=] f f) (fun x -> x)" true ]
+  , [ xEval "(fun f -> f == f) (fun x -> x)" true
+    , xEval "(fun f -> f <= f) (fun x -> x)" true
+    , xEval "(fun f -> f >= f) (fun x -> x)" true ]
 -- Test deep label comparisons
   , xEvalComp LT "`A ()" "`A 1"
   , xEvalComp LT "`A 'a'" "`A `A ()"

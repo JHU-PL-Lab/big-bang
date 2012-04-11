@@ -46,11 +46,11 @@ tokens :-
     \;                                  { constTok TokSeparator }
     :                                   { constTok TokColon }
     def                                 { constTok TokDef }
-    \[\+\]                              { constTok TokOpPlus }
-    \[\-\]                              { constTok TokOpMinus }
-    \[\=\]                              { constTok TokOpEquals }
-    \[\<\=\]                            { constTok TokOpLessEquals }
-    \[\>\=\]                            { constTok TokOpGreaterEquals }
+    \+                                  { constTok TokOpPlus }
+    \-                                  { constTok TokOpMinus }
+    \=\=                                { constTok TokOpEquals }
+    \<\=                                { constTok TokOpLessEquals }
+    \>\=                                { constTok TokOpGreaterEquals }
     \=                                  { constTok TokEquals }
     in                                  { constTok TokIn }
     \-int                               { constTok TokSubInteger }
@@ -152,4 +152,3 @@ instance Display Token where
         TokSubLabelPrefix -> "-`"
         TokSubFun -> "-fun"
 }
-

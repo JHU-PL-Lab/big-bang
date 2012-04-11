@@ -9,6 +9,8 @@ import Language.TinyBang.Test.UtilFunctions
 -- TODO: write show instance for list of tokens
 -- TODO: write a test that a list of tokens that is shown lexes to the
 -- original list
+-- TODO: Write a lex-fail construct
+-- TODO: test that [+] and the like fail to lex
 
 lexesAs :: (String, Token) -> Test
 lexesAs (str, tok) =
@@ -155,11 +157,11 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
     ,  (";"     , TokSeparator)
     ,  (":"     , TokColon)
     ,  ("def"   , TokDef)
-    ,  ("[+]"   , TokOpPlus)
-    ,  ("[-]"   , TokOpMinus)
-    ,  ("[=]"   , TokOpEquals)
-    ,  ("[<=]"  , TokOpLessEquals)
-    ,  ("[>=]"  , TokOpGreaterEquals)
+    ,  ("+"     , TokOpPlus)
+    ,  ("-"     , TokOpMinus)
+    ,  ("=="    , TokOpEquals)
+    ,  ("<="    , TokOpLessEquals)
+    ,  (">="    , TokOpGreaterEquals)
     ,  ("="     , TokEquals)
     ,  ("in"    , TokIn)
     ,  ("-int"  , TokSubInteger)
