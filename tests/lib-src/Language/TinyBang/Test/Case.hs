@@ -60,17 +60,17 @@ tests = TestLabel "General case tests" $ TestList
                    \      unit -> 0;                            \
                    \      `A _ ->                               \
                    \        case v of {                         \
-                   \          `B y -> [+] 1 (this y)            \
+                   \          `B y -> 1 + (this y)              \
                    \        }                                   \
                    \    }                                       \
                    \) (`A 0 & `B (`A 0 & `B ()))                ")
   -- Check broad patterns
   , xEval "case `A 1 & `B 2 of {                                \
-          \  `A x & `B y -> [+] x y                             \
+          \  `A x & `B y -> x + y                               \
           \}                                                    "
         $ V.pi 3
   , xEval "case `A 2 & `B 3 & `C 9 of {                         \
-          \  `B x & `A y -> [+] x y                             \
+          \  `B x & `A y -> x + y                               \
           \}                                                    "
         $ V.pi 5
   , xEval "case `A 3 & `B () of {                               \
@@ -79,8 +79,8 @@ tests = TestLabel "General case tests" $ TestList
         $ V.pi 3
   , xEval "case `A 1 & `B 2 of {                                \
           \  `C x -> x ;                                        \
-          \  `A x & `Z z -> [+] 6 z ;                           \
-          \  `A x & `B y -> [+] x y ;                           \
+          \  `A x & `Z z -> 6 + z ;                             \
+          \  `A x & `B y -> x + y ;                             \
           \  `A x -> 9                                          \
           \}                                                    "
         $ V.pi 3
@@ -93,15 +93,15 @@ tests = TestLabel "General case tests" $ TestList
 
   -- Check deep patterns
   , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  `A (`B x & `C y) -> [+] x y                        \
+          \  `A (`B x & `C y) -> x + y                          \
           \}                                                    "
         $ V.pi 3
   , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  (`A `B x) & (`D `E y) -> [+] x y                   \
+          \  (`A `B x) & (`D `E y) -> x + y                     \
           \}                                                    "
         $ V.pi 5
   , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  (`A (`B x & `C y)) & (`D _) -> [+] x y             \
+          \  (`A (`B x & `C y)) & (`D _) -> x + y               \
           \}                                                    "
         $ V.pi 3
   , xCont "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
@@ -110,12 +110,12 @@ tests = TestLabel "General case tests" $ TestList
   , xCont "case `A (`B (`C 0)) of {                             \
           \  `A (`C z) -> z                                     \
           \}                                                    "
-  
+
   -- Ensure that deep patterns bind the entire content without filtering.
   , xEval "case `A 1 & `B 2 of {                                \
           \  x:`A _ ->                                          \
           \    case x of {                                      \
-          \      `A y & `B z -> [+] y z                         \
+          \      `A y & `B z -> y + z                           \
           \    }                                                \
           \}                                                    "
         $ V.pi 3

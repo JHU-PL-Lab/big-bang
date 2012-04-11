@@ -20,7 +20,7 @@ srcSum1 = "fun this -> fun xs ->                                    \
           \ case xs of                                              \
           \ { `nil junk -> 0 ;                                      \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> [+] a (this b);                         \
+          \       {`tl b -> a + (this b);                           \
           \        `nil _ -> 0}                                     \
           \ }                                                       "
 
@@ -28,7 +28,7 @@ srcSum2 = "fun this -> fun accum -> fun xs ->                       \
           \ case xs of                                              \
           \ { `nil junk -> accum ;                                  \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> this ([+] a accum) b;                   \
+          \       {`tl b -> this (a + accum) b;                     \
           \        `nil _ -> accum}                                 \
           \ }                                                       "
 
@@ -37,7 +37,7 @@ srcSum3 = "fun this -> fun xs ->                                    \
           \ case xs of                                              \
           \ { `nil junk -> accum;                                   \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> this (b & `acc ([+] a accum));          \
+          \       {`tl b -> this (b & `acc (a + accum));          \
           \        `nil _ -> accum}                                 \
           \ }}                                                      "
 
@@ -45,7 +45,7 @@ srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
           \ case xs of                                              \
           \ { `nil junk -> accum;                                   \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> accum = [+] accum a in this b ;         \
+          \       {`tl b -> accum = accum + a in this b ;           \
           \        `nil _ -> accum}                                 \
           \ }                                                       "
 
@@ -70,27 +70,27 @@ srcFoldr = "fun this -> fun f -> fun z -> fun xs ->                 \
 srcSum1Pats = "fun this -> fun xs ->                                \
               \ case xs of {                                        \
               \   `nil _ -> 0 ;                                     \
-              \   `hd h & `tl t -> [+] h (this t)                   \
+              \   `hd h & `tl t -> h + (this t)                   \
               \ }                                                   "
 
 srcSum2Pats = "fun this -> fun accum -> fun xs ->                   \
               \ case xs of {                                        \
               \   `nil _ -> accum ;                                 \
-              \   `hd h & `tl t -> this ([+] h accum) t             \
+              \   `hd h & `tl t -> this (h + accum) t             \
               \ }                                                   "
 
 srcSum3Pats = "fun this -> fun xs ->                                \
               \ case xs of {                                        \
               \   `nil _ & `acc accum -> accum ;                    \
               \   `hd h & `tl t & `acc accum ->                     \
-              \     this (t & `acc ([+] h accum))                   \
+              \     this (t & `acc (h + accum))                   \
               \ }                                                   "
 
 srcSum4Pats = "def accum = 0 in                                     \
               \ fun this -> fun xs ->                               \
               \   case xs of {                                      \
               \     `nil _ -> accum ;                               \
-              \     `hd h & `tl t -> accum = [+] accum h in this t  \
+              \     `hd h & `tl t -> accum = accum + h in this t  \
               \   }                                                 "
 
 srcFoldlPats = "fun this -> fun f -> fun z -> fun xs ->             \
@@ -132,7 +132,7 @@ testSum xs = map ($ V.pi $ sum xs)
   , xEval $ srcMultiAppl
       [srcY, srcFoldrPats, srcPlus, "0", srcMakeList xs]
   ]
-  where srcPlus = "fun x -> fun y -> [+] x y"
+  where srcPlus = "fun x -> fun y -> x + y"
 
 -- TODO: quickcheck that testsum works for all lists.
 
