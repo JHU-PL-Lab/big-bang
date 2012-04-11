@@ -113,7 +113,7 @@ tests = TestLabel "General case tests" $ TestList
 
   -- Ensure that deep patterns bind the entire content without filtering.
   , xEval "case `A 1 & `B 2 of {                                \
-          \  x:`A _ ->                                          \
+          \  x:`A t ->                                          \
           \    case x of {                                      \
           \      `A y & `B z -> [+] y z                         \
           \    }                                                \
@@ -122,11 +122,11 @@ tests = TestLabel "General case tests" $ TestList
 
   -- Ensure that outer pattern binders replicate structure rather than the cell
   -- itself.
-  , xEval "def x = 1 in                                         \
-          \case x of {                                          \
-          \  y:int -> x = 2 in y                                \
-          \}                                                    "
-        $ V.pi 1
+  --, xEval "def x = 1 in                                         \
+  --        \case x of {                                          \
+  --        \  y:int -> x = 2 in y                                \
+  --        \}                                                    "
+  --      $ V.pi 1
 
   -- Verify pattern checking.
   --, xDLbl "case `A 0 of {                                       \

@@ -12,7 +12,6 @@ import Language.MicroBang.Test.ExpressionUtils
   ( varX
   )
 import Language.MicroBang.Test.NameUtils
-import Language.MicroBang.Test.UtilFunctions
 import qualified Language.MicroBang.Ast as A
 
 pi = A.VPrimInt

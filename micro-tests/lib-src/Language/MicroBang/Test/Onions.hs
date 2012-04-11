@@ -29,7 +29,7 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                  ( A.VOnion (A.VLabel lblA $ A.VPrimInt 0) (A.VLabel lblB $ A.VPrimInt 1))
   -- Test that right wins
   , xEval "`A 1 & `A 2"
-          (A.VLabel lblA $ A.VPrimInt 0)
+          (A.VOnion (A.VLabel lblA $ A.VPrimInt 1) (A.VLabel lblA $ A.VPrimInt 2))
 
   ---- Test some parsing
   --, xPars "(1 & ('x' & (fun x -> x)))"
