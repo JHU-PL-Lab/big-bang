@@ -49,11 +49,6 @@ tests = TestLabel "Test functions" $ TestList
   -- Ensure that constraints from functions propagate correctly from cells
   , xCont "def f = (fun x -> case x of { int -> x }) in (f 1) & (f ())"
 
-  , xCont $
-    "def Y = " ++ srcY ++ " in " ++
-    "def rid = Y " ++
-    "(fun this -> fun count -> fun x -> case [=] 0 count of {`True _ -> x ; `False _ -> this ([-] count 1) x}) in rid 1 1 & rid 2 ()"
-
   -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl
       [srcY, "fun this -> fun x -> this (`A x & `B x)"]
@@ -72,12 +67,12 @@ tests = TestLabel "Test functions" $ TestList
           (A.Func idX
              (A.Case varX
                      [ A.Branch
-                        (A.ChiTopBind $ A.ChiUnbound $
+                        (A.ChiTopBind $ A.ChiUnbound $ 
                               (A.ChiLabelShallow (labelName "True")
                                           (ident "a")))
                               (A.PrimInt 1)
                      , A.Branch
-                        (A.ChiTopBind $ A.ChiUnbound $
+                        (A.ChiTopBind $ A.ChiUnbound $ 
                               (A.ChiLabelShallow (labelName "False")
                                           (ident "a")))
                               (A.PrimInt 0)
