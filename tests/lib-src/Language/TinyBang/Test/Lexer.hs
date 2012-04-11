@@ -103,8 +103,8 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           ]
   , xLexs "a&-`b"
           [ TokIdentifier "a"
-          , TokOnionCons
-          , TokSubLabelPrefix
+          , TokOnionSub
+          , TokLabelPrefix
           , TokIdentifier "b"
           ]
   , xLexs "`True()"
@@ -142,6 +142,8 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
   ] ++ map lexesAs
     [  ("`"     , TokLabelPrefix)
     ,  ("&"     , TokOnionCons)
+    ,  ("&-"    , TokOnionSub)
+    ,  ("&."    , TokOnionProj)
     ,  ("\\"    , TokLambda)
     ,  ("fun"   , TokFun)
     ,  ("->"    , TokArrow)
@@ -164,9 +166,4 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
     ,  (">="    , TokOpGreaterEquals)
     ,  ("="     , TokEquals)
     ,  ("in"    , TokIn)
-    ,  ("-int"  , TokSubInteger)
-    ,  ("-char" , TokSubChar)
-    ,  ("-unit" , TokSubUnit)
-    ,  ("-`"    , TokSubLabelPrefix)
-    ,  ("-fun"  , TokSubFun)
     ]

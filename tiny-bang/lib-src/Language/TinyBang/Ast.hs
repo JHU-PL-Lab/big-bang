@@ -16,7 +16,7 @@ module Language.TinyBang.Ast
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
-, SubTerm(..)
+, ProjTerm(..)
 , exprFromValue
 , Assignable(..)
 , Evaluated(..)
@@ -37,7 +37,7 @@ import Language.TinyBang.Types.UtilTypes
   , unLabelName
   , LazyOperator(..)
   , EagerOperator(..)
-  , SubTerm(..)
+  , ProjTerm(..)
   )
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
@@ -52,7 +52,8 @@ data Expr
   = Var Ident
   | Label LabelName Expr
   | Onion Expr Expr
-  | OnionSub Expr SubTerm
+  | OnionSub Expr ProjTerm
+  | OnionProj Expr ProjTerm
   | EmptyOnion
   | Func Ident Expr
   | Appl Expr Expr
@@ -104,7 +105,7 @@ data Chi a where
   ChiOnionOne     :: ChiPrimary              -> ChiStruct
 
   ChiBound        :: Ident -> ChiBind -> ChiBind
-  ChiUnbound      :: ChiPrimary       -> ChiBind  
+  ChiUnbound      :: ChiPrimary       -> ChiBind
 
   ChiPrim         :: T.PrimitiveType                -> ChiPrimary
   ChiLabelShallow :: LabelName       -> Ident       -> ChiPrimary
@@ -160,6 +161,8 @@ exprFreeVars e =
     Var i -> Set.singleton i
     Label _ e' -> exprFreeVars e'
     Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
+    OnionProj e' _ -> exprFreeVars e'
+    OnionSub e' _ -> exprFreeVars e'
     Func i e' -> i `Set.delete` exprFreeVars e'
     Appl e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     PrimInt _ -> Set.empty
@@ -168,9 +171,8 @@ exprFreeVars e =
     Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
       map (\(Branch chi e'') ->
               exprFreeVars e'' `Set.difference` ePatVars chi) brs
-    OnionSub e' _ -> exprFreeVars e'
     EmptyOnion -> Set.empty
-    LazyOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2 
+    LazyOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     EagerOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     Def i e1 e2 -> (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign a e1 e2 ->
@@ -194,10 +196,11 @@ instance Display Expr where
     Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
-    OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
+    OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
+    OnionProj e s -> makeDoc e <+> text "&." <+> makeDoc s
     EmptyOnion -> text "(&)"
-    LazyOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
-    EagerOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
+    LazyOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
+    EagerOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
     Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     ExprCell c -> text "Cell #" <> int c
@@ -223,7 +226,7 @@ instance Display (Chi a) where
       ChiBound i b -> iDoc i <> text ":" <> makeDoc b
       ChiUnbound p -> makeDoc p
       ChiPrim p -> makeDoc p
-      ChiLabelShallow lbl x -> text "`" <> makeDoc lbl <+> iDoc x 
+      ChiLabelShallow lbl x -> text "`" <> makeDoc lbl <+> iDoc x
       ChiLabelDeep lbl b -> text "`" <> makeDoc lbl <+> makeDoc b
       ChiFun -> text "fun"
       ChiInnerStruct s -> parens $ makeDoc s

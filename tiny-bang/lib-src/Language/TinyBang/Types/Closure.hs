@@ -21,7 +21,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , PolyFuncData(..)
                                      , Guard(..)
                                      , PrimitiveType(..)
-                                     , SubTerm(..)
+                                     , ProjTerm(..)
                                      , ForallVars(..)
                                      , Cell(..)
                                      , CellGet(..)
@@ -150,13 +150,13 @@ patternCompatible tau chi =
                     (liftM concat) $ mapM (flip patternCompatible chi) ts
             _ -> handler tau
 
-tSubMatch :: SubTerm -> TauChi a -> Bool
+tSubMatch :: ProjTerm -> TauChi a -> Bool
 tSubMatch subTerm chi =
   case (chi, subTerm) of
-    (TauChiPrim p, SubPrim p') -> p == p'
-    (TauChiLabelShallow n _, SubLabel n') -> n == n'
-    (TauChiLabelDeep n _, SubLabel n') -> n == n'
-    (TauChiFun, SubFunc) -> True
+    (TauChiPrim p, ProjPrim p') -> p == p'
+    (TauChiLabelShallow n _, ProjLabel n') -> n == n'
+    (TauChiLabelDeep n _, ProjLabel n') -> n == n'
+    (TauChiFun, ProjFunc) -> True
     _ -> False
 
 -- |Represents the type projection function from the documentation.  This
@@ -188,17 +188,25 @@ tProj tau tproj =
           -- TODO: care about history
           let ts = Set.toList $ Set.map fst ths
           concat <$> mapM (flip tProj tproj) ts
+    (TdOnionProj a s, _) ->
+      if not $ tSubProj s tproj
+         then return []
+         else do
+           ths <- concretizeType a
+           -- TODO: care about history
+           let ts = Set.toList $ Set.map fst ths
+           concat <$> mapM (flip tProj tproj) ts
     (TdFunc _, TpFun) -> return [tau]
     _ -> return []
 
 -- Performs a check to ensure that projection can occur through an onion
 -- subtraction type.
-tSubProj :: SubTerm -> TauProj -> Bool
+tSubProj :: ProjTerm -> TauProj -> Bool
 tSubProj s tproj =
   case (tproj,s) of
-    (TpPrim p, SubPrim p') -> p == p'
-    (TpLabel n, SubLabel n') -> n == n'
-    (TpFun, SubFunc) -> True
+    (TpPrim p, ProjPrim p') -> p == p'
+    (TpLabel n, ProjLabel n') -> n == n'
+    (TpFun, ProjFunc) -> True
     _ -> False
 
 --TODO: Consider adding chains to history and handling them here

@@ -29,6 +29,8 @@ tokens :-
     $white+                             ;
     `                                   { constTok TokLabelPrefix }
     &                                   { constTok TokOnionCons }
+    &\-                                 { constTok TokOnionSub }
+    &\.                                 { constTok TokOnionProj }
     \\                                  { constTok TokLambda }
     fun                                 { constTok TokFun }
     \->                                 { constTok TokArrow }
@@ -53,11 +55,6 @@ tokens :-
     \>\=                                { constTok TokOpGreaterEquals }
     \=                                  { constTok TokEquals }
     in                                  { constTok TokIn }
-    \-int                               { constTok TokSubInteger }
-    \-char                              { constTok TokSubChar }
-    \-unit                              { constTok TokSubUnit }
-    \-`                                 { constTok TokSubLabelPrefix }
-    \-fun                               { constTok TokSubFun }
     [ $alpha _ ] [$alpha $digit _ ']*   { strTok $ TokIdentifier }
 
 {
@@ -85,6 +82,8 @@ strTok f (_,_,s) len = return [f $ take len s]
 data Token =
       TokLabelPrefix
     | TokOnionCons
+    | TokOnionSub
+    | TokOnionProj
     | TokLambda
     | TokFun
     | TokArrow
@@ -110,17 +109,14 @@ data Token =
     | TokOpEquals
     | TokOpLessEquals
     | TokOpGreaterEquals
-    | TokSubInteger
-    | TokSubChar
-    | TokSubUnit
-    | TokSubLabelPrefix
-    | TokSubFun
     deriving (Eq, Show)
 
 instance Display Token where
     makeDoc tok = text $ case tok of
         TokLabelPrefix -> "label prefix"
         TokOnionCons -> "onion constructor"
+        TokOnionSub -> "onion subtractor"
+        TokOnionProj -> "onion projector"
         TokLambda -> "lambda"
         TokFun -> "fun"
         TokArrow -> "arrow"
@@ -146,9 +142,4 @@ instance Display Token where
         TokOpEquals -> "op equals"
         TokOpLessEquals -> "op less than or equal"
         TokOpGreaterEquals -> "op greater than or equal"
-        TokSubInteger -> "-int"
-        TokSubChar -> "-char"
-        TokSubUnit -> "-unit"
-        TokSubLabelPrefix -> "-`"
-        TokSubFun -> "-fun"
 }
