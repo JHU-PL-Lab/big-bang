@@ -238,6 +238,7 @@ extractConstraintTypeVars c =
                 CellSetSubtype a1 a2 _ -> insert2Weak set a1 a2
                 CellAlphaSubtype a1 a2 _ -> insert2Weak set a1 a2
                 LazyOpSubtype _ a1 a2 a3 _ -> insert3Weak set a1 a2 a3
+                Equivalent {} -> set
                 Comparable a1 a2 _ -> insert2Weak set a1 a2
                 Final a _ -> insertWeak set a
                 Immutable a _ -> insertWeak set a

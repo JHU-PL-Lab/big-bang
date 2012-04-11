@@ -13,9 +13,14 @@ module Language.TinyBang.Types.Alphas
 , SomeAlpha
 , AlphaType
 , AlphaSubstitutionEnv
+, ProgramLabel
+, FunctionLowerBound
+, CallSite
+, Contour
+, contour
+, unContour
 , alpha
 , makeNewAlpha
-, substituteAlphaHelper
 ) where
 
 import Utils.Render.Display
@@ -23,20 +28,26 @@ import Utils.Render.Display
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Data.Map (Map)
+import qualified Data.Map as Map
+
 import Control.Monad.Reader (Reader, ask)
 import Control.Exception (assert)
 
--- |The thing we use to identify and distinguish alphas
-type AlphaId = Integer
+-- TODO: make ProgramLabel more precise
+type ProgramLabel = Integer
 
-data SomeAlpha alphaType = SomeAlpha AlphaId CallSites
+-- |The thing we use to identify and distinguish alphas
+type AlphaId = ProgramLabel
+
+data SomeAlpha alphaType = SomeAlpha AlphaId Contour
   deriving (Eq, Ord, Show)
 
-alpha :: (AlphaType a) => AlphaId -> CallSites -> SomeAlpha a
+alpha :: (AlphaType a) => AlphaId -> Contour -> SomeAlpha a
 alpha = SomeAlpha
 
 makeNewAlpha :: (AlphaType a) => AlphaId -> SomeAlpha a
-makeNewAlpha i = alpha i $ callSites []
+makeNewAlpha i = alpha i $ contour $ Map.empty
 
 data InterType
 data CellType
@@ -47,22 +58,22 @@ instance AlphaType CellType
 
 class Alpha a where
   alphaId :: a -> AlphaId
-  alphaCallSites :: a -> CallSites
+  alphaContour :: a -> Contour
   -- setAlphaId :: a -> AlphaId -> a
-  setAlphaCallSites :: a -> CallSites -> a
+  setAlphaContour :: a -> Contour -> a
   alphaWeaken :: a -> AnyAlpha
 
 instance (AlphaType a) => Alpha (SomeAlpha a) where
   alphaId (SomeAlpha i _) = i
-  alphaCallSites (SomeAlpha _ c) = c
+  alphaContour (SomeAlpha _ c) = c
   -- setAlphaId a aid = alpha aid (alphaCallSites a)
-  setAlphaCallSites a css = alpha (alphaId a) css
+  setAlphaContour a css = alpha (alphaId a) css
   alphaWeaken = AnyAlpha
 
 instance Alpha AnyAlpha where
   alphaId (AnyAlpha a) = alphaId a
-  alphaCallSites (AnyAlpha a) = alphaCallSites a
-  setAlphaCallSites a css = setAlphaCallSites a css
+  alphaContour (AnyAlpha a) = alphaContour a
+  setAlphaContour a css = setAlphaContour a css
   alphaWeaken = id
 
 --insertIntoCallSites :: CellAlpha -> AnyAlpha -> AnyAlpha
@@ -82,13 +93,10 @@ instance Ord AnyAlpha where
 instance Show AnyAlpha where
   show (AnyAlpha a) = show a
 
--- |A data structure representing a single call site.
+type FunctionLowerBound = ProgramLabel
+type CallSite = ProgramLabel
 
--- @CallSite@ is a set of @CellAlpha@s because only variables on the input side
--- of a function arrow get added to them.
-newtype CallSite = CallSite (Set CellAlpha)
-  deriving (Eq, Ord, Show)
-
+-- TODO: Update this doc; it references call sites.
 -- |A data structure representing function call sites.  The call site of a
 --  function application is defined by the type parameter used as the domain
 --  of the function type upper bounding the function in that application.  The
@@ -98,11 +106,12 @@ newtype CallSite = CallSite (Set CellAlpha)
 --  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
 --  that, in this case, the use of single variables in the call site list is a
 --  notational sugar for singleton sets.
-newtype CallSites = CallSites { unCallSites :: [CallSite] }
+newtype Contour = Contour { unContour :: Map FunctionLowerBound CallSite }
   deriving (Eq, Ord, Show)
-callSites :: [CallSite] -> CallSites
-callSites lst = CallSites lst
+contour :: Map FunctionLowerBound CallSite -> Contour
+contour = Contour
 
+-- TODO: Update this doc; it references call sites.
 -- |This function transforms a specified alpha into a call site list.  The
 --  resulting call site list is in the reverse order form dictated by the
 --  CallSites structure; that is, the list [{'3},{'2},{'1}] represents the type
@@ -110,43 +119,7 @@ callSites lst = CallSites lst
 --  list is suitable for use in type variable substitution for polymorphic
 --  functions.  This function is used in closure.
 
--- This function takes @CellAlpha@s because @CallSites@ contains them.
-makeCallSites :: CellAlpha -> CallSites
-makeCallSites a =
-    callSites $
-    case rest of
-      [] -> -- In this case, this call site is new to the list
-        (CallSite $ Set.singleton alphaEntry) : map CallSite siteList'
-      (_,cyc):tl -> -- In this case, we found a cycle
-        (CallSite cyc):(map (CallSite . fst) tl)
-    where unCallSite (CallSite c) = c
-          siteList' = map unCallSite $ unCallSites css
-          alphaEntry = makeNewAlpha aid
-          -- A list of pairs, the snd of which is the union of all the fsts so
-          -- far.
-          totals = zip siteList' $ tail $ scanl Set.union Set.empty siteList'
-          rest = dropWhile (not . Set.member alphaEntry . snd) totals
-          aid = alphaId a
-          css = alphaCallSites a
-
-type AlphaSubstitutionEnv = (CellAlpha, Set AnyAlpha)
-
-substituteAlphaHelper :: (Alpha a) => a -> Reader AlphaSubstitutionEnv a
-substituteAlphaHelper a = do
-  (newAlpha, forallVars) <- ask
-  let newCallSites = makeCallSites newAlpha
-  if not $ Set.member (alphaWeaken a) forallVars
-    then return a
-    -- The variable we are substituting should never have marked
-    -- call sites.  The only places where polymorphic function
-    -- constraints (forall constraints) are built are by the
-    -- inference rules themselves (which have no notion of call
-    -- sites) and the type replacement function (which does not
-    -- replace forall-ed elements within a forall constraint).
-    else assert ((length . unCallSites) css == 0) $
-       return $ setAlphaCallSites a newCallSites
-  where css = alphaCallSites a
-
+type AlphaSubstitutionEnv = (Set AnyAlpha, CellAlpha, CellAlpha)
 
 instance Display (SomeAlpha a) where
   makeDoc (SomeAlpha i cSites) =
@@ -159,16 +132,5 @@ instance Display (SomeAlpha a) where
 instance Display AnyAlpha where
   makeDoc (AnyAlpha a) = makeDoc a
 
-instance Display CallSites where
-  makeDoc sites =
-      let siteList = reverse $ unCallSites sites in
-      if length siteList == 0
-          then empty
-          else brackets $ hcat $ punctuate (text ", ") $ map sDoc siteList
-    where sDoc (CallSite set) =
-              if Set.size set == 1
-                  then makeDoc $ Set.findMin set
-                  else makeDoc set
-
-instance Display CallSite where
-  makeDoc (CallSite set) = makeDoc set
+instance Display Contour where
+  makeDoc (Contour c) = makeDoc c
