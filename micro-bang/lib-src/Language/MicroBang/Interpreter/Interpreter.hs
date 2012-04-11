@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import qualified Language.MicroBang.Syntax.Parser as P
 
 import Language.MicroBang.Ast as AST
-import Language.MicroBang.Types.UtilTypes (LabelName, labelName, Ident, unIdent)
+import Language.MicroBang.Types.UtilTypes (LabelName, labelName, Ident, unIdent, ident)
 import qualified Language.MicroBang.Types.UtilTypes as UT
 import Utils.Render.Display
 
@@ -598,7 +598,7 @@ concretization cs0 p0 =
 
 retrieve :: ProgramPoint -> Constraints -> Value
 retrieve p cs =
-  let sds = Set.toList $ concretization cs p in
+  let sds = (Set.toList $ concretization cs p) in
   if sds == [] then error $ "retrieve: no concretization" ++ (show p)
   else case head sds of
     SDUnit -> VPrimUnit
@@ -608,7 +608,11 @@ retrieve p cs =
     SDOnionSub p1 s1 -> error $ "Subtration Onion: " ++ (show p1) ++ show s1
       --TODO
     SDEmptyOnion -> VEmptyOnion
-    SDFunction ps p1 p2 f -> --VFunc (ident "x") e
-        error $ "Fun" ++ show ps ++ show p1 ++ show p2 ++ show f --TODO
+    SDFunction _ (ProgramPoint p1l _) _ _ -> --VFunc (ident "x") e
+        --error $ "Fun" ++ show ps ++ show p1 ++ show p2 ++ show cs' --TODO
+        --let i = retrieve p1 (cs) in --get the Ident...
+        --let bodies = Set.toList $ concretization cs p in
+        --VFunc (ident $ 'x':(show p1l)) (Var (ident "I don't do functions"))
+        VFunc
     SDBadness -> error "Lightening"
 

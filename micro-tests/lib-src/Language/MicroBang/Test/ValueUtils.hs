@@ -16,7 +16,7 @@ import qualified Language.MicroBang.Ast as A
 
 pi = A.VPrimInt
 
-identFuncX = A.VFunc idX varX
+identFuncX = A.VFunc --idX varX
 
 -- The following should only be used when there is no other expected state.
 true = (A.VLabel lblTrue A.VPrimUnit)

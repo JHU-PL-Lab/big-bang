@@ -32,7 +32,7 @@ tests = TestLabel "Test functions" $ TestList
   --        identFuncX
   --, xType srcY
   , xEval "fun x -> x x"
-          (A.VFunc idX $ A.Appl varX varX)
+          (A.VFunc) -- idX $ A.Appl varX varX)
   --, xType "(fun x -> x x) (fun x -> x x)"
   --, xType "def omega = fun x -> x x in omega omega"
 
