@@ -65,25 +65,25 @@ tests = TestLabel "General case tests" $ TestList
   --                 \    }                                       \
   --                 \) (`A 0 & `B (`A 0 & `B ()))                ")
   -- Check broad patterns
-  , xEval "case `A 1 & `B 2 of {                                \
-          \  `A x & `B y -> [+] x y                             \
-          \}                                                    "
-        $ V.pi 3
-  , xEval "case `A 2 & `B 3 & `C 9 of {                         \
-          \  `B x & `A y -> [+] x y                             \
-          \}                                                    "
-        $ V.pi 5
+  --, xEval "case `A 1 & `B 2 of {                                \
+  --        \  `A x & `B y -> [+] x y                             \
+  --        \}                                                    "
+  --      $ V.pi 3
+  --, xEval "case `A 2 & `B 3 & `C 9 of {                         \
+  --        \  `B x & `A y -> [+] x y                             \
+  --        \}                                                    "
+  --      $ V.pi 5
   , xEval "case `A 3 & `B () of {                               \
           \  `A i -> i                                          \
           \}                                                    "
         $ V.pi 3
-  , xEval "case `A 1 & `B 2 of {                                \
-          \  `C x -> x ;                                        \
-          \  `A x & `Z z -> [+] 6 z ;                           \
-          \  `A x & `B y -> [+] x y ;                           \
-          \  `A x -> 9                                          \
-          \}                                                    "
-        $ V.pi 3
+  --, xEval "case `A 1 & `B 2 of {                                \
+  --        \  `C x -> x ;                                        \
+  --        \  `A x & `Z z -> [+] 6 z ;                           \
+  --        \  `A x & `B y -> [+] x y ;                           \
+  --        \  `A x -> 9                                          \
+  --        \}                                                    "
+  --      $ V.pi 3
   --, xCont "case `A 1 & `B 2 of {                                \
   --        \  `A x & `B y & `C z -> 0                            \
   --        \}                                                    "
@@ -92,18 +92,18 @@ tests = TestLabel "General case tests" $ TestList
   --        \}                                                    "
 
   -- Check deep patterns
-  , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  `A (`B x & `C y) -> [+] x y                        \
-          \}                                                    "
-        $ V.pi 3
-  , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  (`A `B x) & (`D `E y) -> [+] x y                   \
-          \}                                                    "
-        $ V.pi 5
-  , xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
-          \  (`A (`B x & `C y)) & (`D _) -> [+] x y             \
-          \}                                                    "
-        $ V.pi 3
+  --, xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
+  --        \  `A (`B x & `C y) -> [+] x y                        \
+  --        \}                                                    "
+  --      $ V.pi 3
+  --, xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
+  --        \  (`A `B x) & (`D `E y) -> [+] x y                   \
+  --        \}                                                    "
+  --      $ V.pi 5
+  --, xEval "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
+  --        \  (`A (`B x & `C y)) & (`D _) -> [+] x y             \
+  --        \}                                                    "
+  --      $ V.pi 3
   --, xCont "case `A (`B 1 & `C 2) & `D (`E 4) of {               \
   --        \  `A (`B _ & `Z x) -> x                              \
   --        \}                                                    "
@@ -112,13 +112,13 @@ tests = TestLabel "General case tests" $ TestList
   --        \}                                                    "
 
   -- Ensure that deep patterns bind the entire content without filtering.
-  , xEval "case `A 1 & `B 2 of {                                \
-          \  x:`A t ->                                          \
-          \    case x of {                                      \
-          \      `A y & `B z -> [+] y z                         \
-          \    }                                                \
-          \}                                                    "
-        $ V.pi 3
+  --, xEval "case `A 1 & `B 2 of {                                \
+  --        \  x:`A t ->                                          \
+  --        \    case x of {                                      \
+  --        \      `A y & `B z -> [+] y z                         \
+  --        \    }                                                \
+  --        \}                                                    "
+  --      $ V.pi 3
 
   -- Ensure that outer pattern binders replicate structure rather than the cell
   -- itself.
