@@ -15,7 +15,7 @@ import qualified Data.IntMap as IntMap
 
 import qualified Language.MicroBang.Types.UtilTypes as T
 import Utils.Render.Display
-  
+
 -------------------------------------------------------------------------------
 
 -- |Data type for representing Big Bang ASTs.
@@ -43,7 +43,7 @@ data Operator
 data Value
   = VLabel T.LabelName Value
   | VOnion Value Value
-  | VFunc T.Ident Expr
+  | VFunc
   | VPrimInt Integer
   | VPrimUnit
   | VEmptyOnion
@@ -67,7 +67,7 @@ exprFromValue :: (Evaluated v) => v -> Expr
 exprFromValue v = case value v of
   VLabel l v1  -> Label l $ exprFromValue v1
   VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
-  VFunc i e    -> Func i e
+  --VFunc i e    -> Func i e
   VPrimInt i   -> PrimInt i
   VPrimUnit    -> PrimUnit
   VEmptyOnion  -> OnionSub PrimUnit $ T.SubPrim T.PrimUnit
