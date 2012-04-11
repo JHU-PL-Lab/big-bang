@@ -40,8 +40,8 @@ tests = TestLabel "Test functions" $ TestList
   , xType "def f = (fun x -> x) in (f 1) & (f ())"
 
   -- Ensure that constraints propogate into functions properly
-  , xCont "(fun f -> f ()) (fun x -> [+] 1 x)"
-  , xCont "(fun x -> [+] x 1) 'a'"
+  , xCont "(fun f -> f ()) (fun x -> 1 + x)"
+  , xCont "(fun x -> x + 1) 'a'"
 
   -- Test that application requires that the first argument be a function
   , xCont "1 'x'"
@@ -62,17 +62,17 @@ tests = TestLabel "Test functions" $ TestList
       [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
 
   -- Check that variable closed-ness works in functions
-  , xNotC "(fun x -> [+] n 2)"
+  , xNotC "(fun x -> n + 2)"
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
           (A.Func idX
              (A.Case varX
                      [ A.Branch
-                        (A.ChiTopBind $ A.ChiUnbound $ 
+                        (A.ChiTopBind $ A.ChiUnbound $
                               (A.ChiLabelShallow (labelName "True")
                                           (ident "a")))
                               (A.PrimInt 1)
                      , A.Branch
-                        (A.ChiTopBind $ A.ChiUnbound $ 
+                        (A.ChiTopBind $ A.ChiUnbound $
                               (A.ChiLabelShallow (labelName "False")
                                           (ident "a")))
                               (A.PrimInt 0)

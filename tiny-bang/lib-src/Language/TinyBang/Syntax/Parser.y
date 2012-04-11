@@ -60,11 +60,11 @@ import System.IO
         def             { L.TokDef }
         '='             { L.TokEquals }
         in              { L.TokIn }
-        '[+]'           { L.TokOpPlus }
-        '[-]'           { L.TokOpMinus }
-        '[=]'           { L.TokOpEquals }
-        '[<=]'          { L.TokOpLessEquals }
-        '[>=]'          { L.TokOpGreaterEquals }
+        '+'             { L.TokOpPlus }
+        '-'             { L.TokOpMinus }
+        '=='            { L.TokOpEquals }
+        '<='            { L.TokOpLessEquals }
+        '>='            { L.TokOpGreaterEquals }
         '-int'          { L.TokSubInteger }
         '-char'         { L.TokSubChar }
         '-unit'         { L.TokSubUnit }
@@ -74,6 +74,8 @@ import System.IO
 %left       in
 %right      '->'
 %left       '&'
+%nonassoc   '==' '<=' '>='
+%left       '+' '-'
 
 %%
 
@@ -126,7 +128,7 @@ Branches:   Branch ';' Branches     { $1:$3 }
 Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
 
 
-Pattern :   ident                  
+Pattern :   ident
                                     { A.ChiTopVar $ ident $1 }
         |   PatternPrimary '&' PatternStruct
                                     { A.ChiTopOnion $1 $3 }
@@ -161,13 +163,13 @@ SubTerm :   '-int'                  { SubPrim PrimInt }
         |   '-`' ident              { SubLabel (labelName $2) }
         |   '-fun'                  { SubFunc }
 
-OpExp   :   Op Primary Primary      { $1 $2 $3 }
+OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
-Op      :   '[+]'                   { \x y -> A.LazyOp A.Plus x y }
-        |   '[-]'                   { \x y -> A.LazyOp A.Minus x y }
-        |   '[=]'                   { \x y -> A.EagerOp A.Equal x y }
-        |   '[<=]'                  { \x y -> A.EagerOp A.LessEqual x y }
-        |   '[>=]'                  { \x y -> A.EagerOp A.GreaterEqual x y }
+Op      :   '+'                     { \x y -> A.LazyOp A.Plus x y }
+        |   '-'                     { \x y -> A.LazyOp A.Minus x y }
+        |   '=='                    { \x y -> A.EagerOp A.Equal x y }
+        |   '<='                    { \x y -> A.EagerOp A.LessEqual x y }
+        |   '>='                    { \x y -> A.EagerOp A.GreaterEqual x y }
 
 {
 data ParseError

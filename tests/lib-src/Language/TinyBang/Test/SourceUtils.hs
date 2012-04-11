@@ -22,22 +22,22 @@ srcMultiAppl [] = error "srcMultiAppl used on empty list"
 srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
 
 srcSummate :: TinyBangCode
-srcSummate = "fun this -> fun x -> case ([=] x 0) of { `True z -> 0 ; `False z -> [+] x (this ([-] x 1))}"
+srcSummate = "fun this -> fun x -> case (x == 0) of { `True z -> 0 ; `False z -> x + (this (x - 1))}"
 
 srcGreaterOrLessUtil :: TinyBangCode
 srcGreaterOrLessUtil =
  "fun this -> fun x -> fun y -> fun z ->"++
-     "case [=] ([-] x y) z of {"++
+     "case (x - y) == z of {"++
           "`True junk -> `GreaterThan () ;"++
           "`False junk ->"++
-                 "case [=] ([-] y x) z of {"++
+                 "case (y - x) == z of {"++
                       "`True junk -> `LessThan () ;"++
-                      "`False junk -> this x y ([+] z 1) }}"
+                      "`False junk -> this x y (z + 1) }}"
 
 srcGreaterOrLess :: TinyBangCode
 srcGreaterOrLess =
  "fun x -> fun y ->"++
-     "case [=] x y of {"++
+     "case x == y of {"++
           "`True junk -> `EqualTo () ;"++
            "`False junk -> "
            ++ srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"]
