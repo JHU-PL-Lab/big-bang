@@ -38,7 +38,7 @@ srcSum3 = "fun this -> fun xs ->                                    \
           \ { `nil junk -> accum;                                   \
           \   `hd a -> case xs of                                   \
           \       {`tl b -> this (b & `acc ([+] a accum));          \
-          \        `nil junk -> accum}                                 \
+          \        `nil underscore -> accum}                                 \
           \ }}                                                      "
 
 srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
@@ -46,7 +46,7 @@ srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
           \ { `nil junk -> accum;                                   \
           \   `hd a -> case xs of                                   \
           \       {`tl b -> accum = [+] accum a in this b ;         \
-          \        `nil junk -> accum}                                 \
+          \        `nil underscore -> accum}                                 \
           \ }                                                       "
 
 srcFoldl = "fun this -> fun f -> fun z -> fun xs ->                 \
@@ -54,7 +54,7 @@ srcFoldl = "fun this -> fun f -> fun z -> fun xs ->                 \
            \ { `nil junk -> z;                                      \
            \   `hd a -> case xs of                                  \
            \       {`tl b -> this f (f z a) b;                      \
-           \        `nil junk -> z}                                    \
+           \        `nil underscore -> z}                                    \
            \ }                                                      "
 
 srcFoldr = "fun this -> fun f -> fun z -> fun xs ->                 \
@@ -62,7 +62,7 @@ srcFoldr = "fun this -> fun f -> fun z -> fun xs ->                 \
            \ { `nil junk -> z;                                      \
            \   `hd a -> case xs of                                  \
            \       {`tl b -> f a (this f z b);                      \
-           \        `nil junk -> z}                                    \
+           \        `nil underscore -> z}                                    \
            \ }                                                      "
 
 -- These forms use multipatterns to simplify their cases.
