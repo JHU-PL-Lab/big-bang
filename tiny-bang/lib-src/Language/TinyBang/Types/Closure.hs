@@ -210,8 +210,7 @@ class ( Display a
       , Ord a
       , Ord (LowerBound a)
       , Ord (Chain a)
-      , Display (Chain a)
-      , Equivalent a)
+      , Display (Chain a))
       => LowerBounded a where
   type LowerBound a
   type Chain a
@@ -240,7 +239,7 @@ class ( Display a
     cs <- ask
     return $ do
       (lb, a', c) <- findCLowerBounds cs
-      guard $ runReader (a ~~ a') cs
+      guard $ a == a'
       return (lb, mkChain a c lb)
 
   intermediateLowerBounds :: a -> CReader [(a, a, Constraint)]
@@ -248,7 +247,7 @@ class ( Display a
     cs <- ask
     return $ do
       (ret, a', c) <- findILowerBounds cs
-      guard $ runReader (a ~~ a') cs
+      guard $ a == a'
       return (ret, a, c)
 
   findCLowerBounds :: Constraints -> [(LowerBound a, a, Constraint)]
