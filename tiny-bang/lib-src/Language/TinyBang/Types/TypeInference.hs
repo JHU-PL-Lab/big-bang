@@ -121,7 +121,7 @@ inferType expr = do
           $ Set.fromList [alphaWeaken a2, alphaWeaken a3])
           ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
       let funcType = T.TdFunc
-            (T.PolyFuncData vars a2 a3 constraints)
+            (T.PolyFuncData (T.ForallVars vars) a2 a3 constraints)
       tellInferred $ funcType <: a1
       return a1
     A.Appl e1 e2 -> do
@@ -251,7 +251,8 @@ extractConstraintTypeVars c =
               TdPrim _ -> set
               TdLabel _ a -> insertWeak set a
               TdOnion a1 a2 -> insert2Weak set a1 a2
-              TdFunc (T.PolyFuncData as ca ia cs) -> Set.union set $
+              TdFunc (T.PolyFuncData (T.ForallVars as) ca ia cs) ->
+                Set.union set $
                 Set.difference
                   (insert2Weak (extractConstraintTypeVars cs) ca ia)
                   as
