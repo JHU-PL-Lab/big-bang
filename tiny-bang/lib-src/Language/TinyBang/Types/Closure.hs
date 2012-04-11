@@ -503,8 +503,6 @@ closeSingleContradictions cs =
         , findIllegalImmutableAssignments
         ]
 
---TODO: modify closure functions to take into account equivalence
---constraints.
 closeAll :: Constraints -> Constraints
 closeAll cs =
   Set.unions $ map ($ cs)
@@ -588,13 +586,13 @@ class AlphaSubstitutable a where
   --  The set in the reader environment contains alphas to ignore.
   substituteAlpha :: a -> TSubstM a
 
-tContour :: FunctionLowerBound -> CellAlpha -> (Contour, Constraints)
+tContour :: FunctionLowerBound -> CellAlpha -> Contour
 tContour l1 a =
   case Map.lookup l1 aContour of
     Just l3 ->
-      (invocationMap, Set.singleton $ Equivalent l1 l2 l3 histFIXME)
+      invocationMap
     Nothing ->
-      (contour $ Map.insert l1 l2 aContour, Set.empty)
+      contour $ Map.insert l1 l2 aContour
   where invocationMap = alphaContour a
         aContour = unContour invocationMap
         l2 = alphaId a
@@ -607,7 +605,7 @@ substituteAlphaHelper a = do
       lb = alphaId a1'
   let cs :: CallSite
       cs = alphaId a2'
-  let (newContour, newConstraints) = tContour lb a2'
+  let newContour= tContour lb a2'
   if not $ Set.member (alphaWeaken a) forallVars
     then return a
     -- The variable we are substituting should never have marked
@@ -617,7 +615,7 @@ substituteAlphaHelper a = do
     -- sites) and the type replacement function (which does not
     -- replace forall-ed elements within a forall constraint).
     else assertEmptyContour a1' $ assertEmptyContour a $
-       tell newConstraints >> return (setAlphaContour a newContour)
+       return (setAlphaContour a newContour)
   where assertEmptyContour :: (Alpha a) => a -> b -> b
         assertEmptyContour alpha f =
           assert ((Map.size . unContour . alphaContour) alpha == 0) f
@@ -646,7 +644,6 @@ instance AlphaSubstitutable Constraint where
         csaHelper2 CellAlphaSubtype a1 a2 hist
       LazyOpSubtype op a1 a2 a3 hist ->
         csaHelper3 (LazyOpSubtype op) a1 a2 a3 hist
-      Equivalent {} -> return c
       Comparable a1 a2 hist ->
         csaHelper2 Comparable a1 a2 hist
       Final a hist ->
