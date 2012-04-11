@@ -31,7 +31,7 @@ tests =
   , Misc.tests
   , OnionSubtraction.tests
   , Parser.tests
-  , Peano.tests
+  --, Peano.tests
   --, Primitive.Char.tests
   , Primitive.Int.tests
   , Primitive.Unit.tests

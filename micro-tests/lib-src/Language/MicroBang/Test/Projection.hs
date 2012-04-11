@@ -26,7 +26,7 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
           zero
   , xEval "case (fun x -> x) of {fun -> 0}"
           zero
-  , xEval "case (\\x -> x) of {fun -> 0}"
+  , xEval "case (fun x -> x) of {fun -> 0}"
           zero
   , xEval "case () of {unit -> 0}"
           zero
@@ -45,17 +45,17 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
           one
 
   -- Test that implicit projection of lazy ops succeeds
-  --, xEval "[+] (2 & 'b') 2" $
-  --        four
+  , xEval "[+] (2 & ()) 2" $
+          four
   --, xCont "[+] (`True () & 'z') 2"
-  --, xEval "[+] (2 & 'x') ('y' & 2)" $
-  --        four
-  --, xEval "[+] (2 & ('a' & ())) ((2 & 'b') & ())" $
-  --        four
-  --, xEval "[+] (1 & ('a' & ())) ('a' & (1 & ()))" $
-  --        two
-  --, xEval "[+] (1 & 'a') ('a' & 1 & ())" $
-  --        two
-  --, xEval "[+] 1 (1 & 2 & 3 & ())" $
-  --        four
+  , xEval "[+] (2 & `X ()) (`Y 5 & 2)" $
+          four
+  , xEval "[+] (2 & (`A 6 & ())) ((2 & `B 7) & ())" $
+          four
+  , xEval "[+] (1 & (`A 19 & ())) (`A 67 & (1 & ()))" $
+          two
+  , xEval "[+] (1 & `A 42) (`B 57 & 1 & ())" $
+          two
+  , xEval "[+] 1 (1 & 2 & 3 & ())" $
+          four
   ]
