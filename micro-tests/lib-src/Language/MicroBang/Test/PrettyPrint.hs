@@ -15,7 +15,7 @@ tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTes
 
 -- Test cases that ensure that primitive literals are printed correctly
 printPrimCases :: (?debug :: Bool) => Test
-printPrimCases = TestList [testPrintPositiveInt, testPrintNegativeInt, testPrintChar, testPrintVar, testPrintUnit, testPrintBoolean]
+printPrimCases = TestList [testPrintPositiveInt, testPrintNegativeInt, testPrintVar, testPrintUnit, testPrintBoolean]
 
 testPrintPositiveInt :: (?debug :: Bool) => Test
 testPrintPositiveInt = TestCase $ assertEqual
@@ -29,11 +29,12 @@ testPrintNegativeInt = TestCase $ assertEqual
   "-1234567890"
   (display (PrimInt (-1234567890)))
 
-testPrintChar :: (?debug :: Bool) => Test
-testPrintChar = TestCase $ assertEqual
-  "Test if input \'a\' prints correctly"
-  "'a'"
-  (display (PrimChar 'a'))
+-- MicroBang does not have chars
+--testPrintChar :: (?debug :: Bool) => Test
+--testPrintChar = TestCase $ assertEqual
+--  "Test if input \'a\' prints correctly"
+--  "'a'"
+--  (display (PrimChar 'a'))
 
 testPrintVar :: (?debug :: Bool) => Test
 testPrintVar = TestCase $ assertEqual
@@ -82,9 +83,9 @@ testPrintFuncAppl1 = TestCase $ assertEqual
 
 testPrintFuncAppl2 :: (?debug :: Bool) => Test
 testPrintFuncAppl2 = TestCase $ assertEqual
-  "Test if printing function with variables and characters displays correctly"
+  "Test if printing function with variables and ints displays correctly"
   "((plus x) \'x\')"
-  (display (Appl (Appl (Var (ident "plus")) (Var (ident "x"))) (PrimChar 'x')))
+  (display (Appl (Appl (Var (ident "plus")) (Var (ident "x"))) (PrimInt 5)))
 
 
 testPrintPerverse :: (?debug :: Bool) => Test

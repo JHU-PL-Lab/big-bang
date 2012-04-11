@@ -10,7 +10,6 @@ import qualified Language.MicroBang.Ast as A
 
 testInteger :: (?debug :: Bool) => Integer -> Test
 testInteger i = lexParseEval (show i)
-                             [TokIntegerLiteral i]
                              (A.PrimInt i)
                              (A.VPrimInt i)
 

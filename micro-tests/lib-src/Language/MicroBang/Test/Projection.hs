@@ -15,9 +15,11 @@ four = A.VPrimInt 4
 
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
-  [ xEval "case `A 5 & `A 'a' of {`A x -> x}"
-          (A.VPrimChar 'a')
-  , xEval "case `A 'a' & `A 1 of {`A x -> x}"
+  [
+  --xEval "case `A 5 & `A 'a' of {`A x -> x}"
+  --        (A.VPrimChar 'a')
+  --,
+  xEval "case `A 'a' & `A 1 of {`A x -> x}"
           one
   , xEval "case 'a' of {char -> 0}"
           zero
@@ -37,7 +39,7 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
           zero
   , xEval "case `A 1 of {`A a -> 1; `A n -> 0}"
           one
-  , xType "case `A 5 of { `A x -> x }"
+  --, xType "case `A 5 of { `A x -> x }"
 
   -- Test that implicit projection of functions succeeds
   , xEval "(1 & (fun x -> x)) 1"
@@ -46,7 +48,7 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
   -- Test that implicit projection of lazy ops succeeds
   , xEval "[+] (2 & 'b') 2" $
           four
-  , xCont "[+] (`True () & 'z') 2"
+  --, xCont "[+] (`True () & 'z') 2"
   , xEval "[+] (2 & 'x') ('y' & 2)" $
           four
   , xEval "[+] (2 & ('a' & ())) ((2 & 'b') & ())" $

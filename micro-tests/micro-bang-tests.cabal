@@ -50,7 +50,6 @@ Library
     Language.MicroBang.Test.ExpressionUtils
     Language.MicroBang.Test.Functions
     Language.MicroBang.Test.LazyOps
-    Language.MicroBang.Test.Lexer
     Language.MicroBang.Test.ListEncoding
     Language.MicroBang.Test.Misc
     Language.MicroBang.Test.NameUtils
@@ -59,12 +58,10 @@ Library
     Language.MicroBang.Test.Parser
     Language.MicroBang.Test.Peano
     Language.MicroBang.Test.PrettyPrint
-    Language.MicroBang.Test.Primitive.Char
     Language.MicroBang.Test.Primitive.Int
     Language.MicroBang.Test.Primitive.Unit
     Language.MicroBang.Test.Projection
     Language.MicroBang.Test.SourceUtils
-    Language.MicroBang.Test.State
     Language.MicroBang.Test.UtilFunctions
     Language.MicroBang.Test.ValueUtils
 

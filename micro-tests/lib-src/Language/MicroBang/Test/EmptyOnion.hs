@@ -12,7 +12,6 @@ import qualified Language.MicroBang.Ast as A
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "Tests about the empty onion" $ TestList
   [ lexParseEval "(&)"
-                 [TokOpenParen, TokOnionCons, TokCloseParen]
                  (A.EmptyOnion)
                  (A.VEmptyOnion)
   ]
