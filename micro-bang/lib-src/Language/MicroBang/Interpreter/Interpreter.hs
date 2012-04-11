@@ -605,14 +605,26 @@ retrieve p cs =
     SDInt i -> VPrimInt i
     SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
     SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
-    SDOnionSub p1 s1 -> error $ "Subtration Onion: " ++ (show p1) ++ show s1
-      --TODO
+    SDOnionSub p1 s1 -> retrieve' p1 cs (Set.singleton s1)
     SDEmptyOnion -> VEmptyOnion
-    SDFunction _ (ProgramPoint p1l _) _ _ -> --VFunc (ident "x") e
-        --error $ "Fun" ++ show ps ++ show p1 ++ show p2 ++ show cs' --TODO
-        --let i = retrieve p1 (cs) in --get the Ident...
-        --let bodies = Set.toList $ concretization cs p in
-        --VFunc (ident $ 'x':(show p1l)) (Var (ident "I don't do functions"))
-        VFunc
+    SDFunction _ _ _ _ -> VFunc
     SDBadness -> error "Lightening"
+
+retrieve' :: ProgramPoint -> Constraints -> Set FOnionSub -> Value
+retrieve' p cs ss = let sdss = concretization cs p in
+  let sds = Set.toList sdss in
+  if sds == [] then error $ "retrieve: no concretization" ++ (show p) else
+  case head sds of
+    SDUnit -> if Set.member FSubUnit ss then VEmptyOnion else VPrimUnit
+    SDInt i -> if Set.member FSubInt ss then VEmptyOnion else VPrimInt i
+    SDLabel ln p1 -> if Set.member (FSubLabel ln) ss then VEmptyOnion else VLabel ln (retrieve' p1 cs ss)
+    SDOnion p1 p2 -> let v1 = (retrieve' p1 cs ss) in let v2 = (retrieve' p2 cs ss) in
+      if v1 == VEmptyOnion then v2 else
+        if v2 == VEmptyOnion then v1 else
+          VOnion v1 v2
+    SDOnionSub p1 s1 -> retrieve' p1 cs (Set.insert s1 ss)
+    SDEmptyOnion -> VEmptyOnion
+    SDFunction _ _ _ _ -> if Set.member FSubFun ss then VEmptyOnion else VFunc
+    SDBadness -> error "Lightening"
+
 
