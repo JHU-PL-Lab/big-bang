@@ -39,8 +39,6 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , unContour
                                      , FunctionLowerBound
                                      , CallSite
-                                     , ConstraintOrdinal (..)
-                                     , constraintOrdinal
                                      , histFIXME
                                      )
 
@@ -64,7 +62,6 @@ import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
 import Control.Exception (assert)
-import Data.Function (on)
 
 type CReader = Reader Constraints
 
@@ -595,14 +592,12 @@ tContour :: FunctionLowerBound -> CellAlpha -> (Contour, Constraints)
 tContour l1 a =
   case Map.lookup l1 aContour of
     Just l3 ->
-      (invocationMap, Set.singleton $ Equivalent l1 l2 histFIXME)
+      (invocationMap, Set.singleton $ Equivalent l1 l2 l3 histFIXME)
     Nothing ->
       (contour $ Map.insert l1 l2 aContour, Set.empty)
   where invocationMap = alphaContour a
         aContour = unContour invocationMap
         l2 = alphaId a
-
-emptyContour alpha = (Map.size . unContour . alphaContour) alpha == 0
 
 substituteAlphaHelper :: (Alpha a)
                       => a -> TSubstM a
@@ -621,8 +616,11 @@ substituteAlphaHelper a = do
     -- inference rules themselves (which have no notion of call
     -- sites) and the type replacement function (which does not
     -- replace forall-ed elements within a forall constraint).
-    else assert (emptyContour a1') $ assert (emptyContour a) $
+    else assertEmptyContour a1' $ assertEmptyContour a $
        tell newConstraints >> return (setAlphaContour a newContour)
+  where assertEmptyContour :: (Alpha a) => a -> b -> b
+        assertEmptyContour alpha f =
+          assert ((Map.size . unContour . alphaContour) alpha == 0) f
 
 instance (AlphaType a) => AlphaSubstitutable (SomeAlpha a) where
   substituteAlpha = substituteAlphaHelper
@@ -689,168 +687,3 @@ instance AlphaSubstitutable (TauChi a) where
 
 instance (Ord a, AlphaSubstitutable a) => AlphaSubstitutable (Set a) where
   substituteAlpha = fmap Set.fromList . mapM substituteAlpha . Set.toList
-
-class Equivalent a where
-  (~~) :: a -> a -> Reader Constraints Bool
-
-instance Equivalent (FunctionLowerBound, CallSite) where
-  a ~~ b
-    | a == b = return True
-    | fst a /= fst b = return False
-    | otherwise = do
-      cs <- ask
-      let eqs = Set.fromList $ do -- List
-            Equivalent p1 p2 _ <- Set.toList cs
-            guard $ p1 == fst a
-            return p2
-      return $ Set.member (snd a) eqs && Set.member (snd b) eqs
-
-instance Equivalent Contour where
-  a ~~ b
-    | Map.size a' /= Map.size b' = return False
-    | Map.size a' /= Map.size (Map.union a' b') = return False
-    | otherwise = do
-        li <- sequence $ map (uncurry (~~)) c'
-        return $ and li
-    where c = Map.intersectionWith (,) a' b'
-          c' = map (\(i,(j,k)) -> ((i,j),(i,k))) $ Map.toList c
-          a' = unContour a
-          b' = unContour b
-
-instance Equivalent AnyAlpha where
-  a ~~ b = do
-    t <- ((~~) `on` alphaContour) a b
-    return $ t && ((==) `on` alphaId) a b
-
-instance (AlphaType a) => Equivalent (SomeAlpha a) where
-  (~~) = (~~) `on` alphaWeaken
-
-instance Equivalent ForallVars where
-  (ForallVars a) ~~ (ForallVars b) = doAssert $! return $ a == b
-    where doAssert = assert $ all emptyContour (Set.toList a)
-                           && all emptyContour (Set.toList b)
-
-{-
-returnEq a b = return $ a == b
-
-instance Equivalent PrimitiveType where
-  (~~) = returnEq
-
-instance Equivalent SubTerm where
-  (~~) = returnEq
--}
-
--- TODO: consider importing these from monad-loops package
--- TODO: consider using reader specific functions
-andM = fmap and . sequence
-anyM f = fmap or . sequence . map f
-
--- In order to avoid making Constraints an instance of Equivalent,
--- this function is used. FIXME: For FSM's sake, change this!
-constraintSetEquivalence ::
-  Constraints -> Constraints -> Reader Constraints Bool
-constraintSetEquivalence a b = andM [sub a b, sub b a]
-  where sub :: Constraints -> Constraints -> Reader Constraints Bool
-        sub as bs = andM $ do -- List
-          a' <- Set.toList as
-          return $ anyM (a' ~~) $ Set.toList bs
-
-instance Equivalent PolyFuncData where
-  a ~~ b =
-    case (a,b) of
-      (PolyFuncData fa1 ca1 ia1 cs1, PolyFuncData fa2 ca2 ia2 cs2) -> andM
-        [ fa1 ~~ fa2
-        , ca1 ~~ ca2
-        , ia1 ~~ ia2
-        , constraintSetEquivalence cs1 cs2
-        ]
-
-instance Equivalent TauDown where
-  a ~~ b =
-    case (a,b) of
-      (TdPrim x, TdPrim y) ->
-        return $ x == y
-      (TdLabel l1 a1, TdLabel l2 a2) ->
-        andM [return $ l1 == l2, a1 ~~ a2]
-      (TdOnion l1 r1, TdOnion l2 r2) ->
-        andM [l1 ~~ l2, r1 ~~ r2]
-      (TdFunc pfd1, TdFunc pfd2) ->
-        pfd1 ~~ pfd2
-      (TdOnionSub a1 s1, TdOnionSub a2 s2) ->
-        andM [a1 ~~ a2, return $ s1 == s2]
-      (TdEmptyOnion, TdEmptyOnion) ->
-        return True
-      _ -> return False
-
-instance Equivalent (TauChi a) where
-  a ~~ b =
-    case (a,b) of
-      (TauChiTopVar a1, TauChiTopVar a2) ->
-        a1 ~~ a2
-      (TauChiTopOnion p1 s1, TauChiTopOnion p2 s2) ->
-        andM [p1 ~~ p2, s1 ~~ s2]
-      (TauChiTopBind b1, TauChiTopBind b2) ->
-        b1 ~~ b2
-      (TauChiOnionMany p1 s1, TauChiOnionMany p2 s2) ->
-        andM [p1 ~~ p2, s1 ~~ s2]
-      (TauChiOnionOne p1, TauChiOnionOne p2) ->
-        p1 ~~ p2
-      (TauChiBound a1 b1, TauChiBound a2 b2) ->
-        andM [a1 ~~ a2, b1 ~~ b2]
-      (TauChiUnbound p1, TauChiUnbound p2) ->
-        p1 ~~ p2
-      (TauChiPrim p1, TauChiPrim p2) ->
-        return $ p1 == p2
-      (TauChiLabelShallow l1 a1, TauChiLabelShallow l2 a2) ->
-        andM [return $ l1 == l2, a1 ~~ a2]
-      (TauChiLabelDeep l1 b1, TauChiLabelDeep l2 b2) ->
-        andM [return $ l1 == l2, b1 ~~ b2]
-      (TauChiFun, TauChiFun) ->
-        return True
-      (TauChiInnerStruct s1, TauChiInnerStruct s2) ->
-        s1 ~~ s2
-      _ -> return False
-
-instance Equivalent Guard where
-  (Guard p1 c1) ~~ (Guard p2 c2) =
-    andM [p1 ~~ p2, constraintSetEquivalence c1 c2]
-
-instance Equivalent Constraint where
-  a ~~ b =
-    case (constraintOrdinal a, constraintOrdinal b) of
-      (OrdLS t1 a1, OrdLS t2 a2 ) ->
-        andM [return $ t1 == t2, a1 ~~ a2]
-      (OrdUS l1 i1 o1, OrdUS l2 i2 o2 ) -> andM
-        [ l1 ~~ l2
-        , i1 ~~ i2
-        , o1 ~~ o2
-        ]
-      (OrdAS l1 u1, OrdAS l2 u2 ) ->
-        andM [l1 ~~ l2, u1 ~~ u2]
-      (OrdCLS i1 c1, OrdCLS i2 c2 ) ->
-        andM [i1 ~~ i2, c1 ~~ c2]
-      (OrdCGS c1 i1, OrdCGS c2 i2 ) ->
-        andM [i1 ~~ i2, c1 ~~ c2]
-      (OrdCSS c1 i1, OrdCSS c2 i2) ->
-        andM [i1 ~~ i2, c1 ~~ c2]
-      (OrdCAS l1 u1, OrdCAS l2 u2) ->
-        andM [l1 ~~ l2, u1 ~~ u2]
-      (OrdLOS op1 l1 r1 o1, OrdLOS op2 l2 r2 o2) ->
-        andM [ return $ op1 == op2
-             , l1 ~~ l2
-             , r1 ~~ r2
-             , o1 ~~ o2
-             ]
-      (OrdEqv f1 l1, OrdEqv f2 l2) ->
-        return $ f1 == f2 && l1 == l2
-      (OrdCmp a1 b1, OrdCmp a2 b2) ->
-        andM [a1 ~~ a2, b1 ~~ b2]
-      (OrdFin a1, OrdFin a2) ->
-        a1 ~~ a2
-      (OrdImmutable a1, OrdImmutable a2) ->
-        a1 ~~ a2
-      (OrdCase a1 gs1, OrdCase a2 gs2) ->
-        andM [a1 ~~ a2, andM $ zipWith (~~) gs1 gs2]
-      (OrdBottom _, OrdBottom _) ->
-        error "Tried to compare two bottoms for equivalence."
-      _ -> return False
