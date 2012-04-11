@@ -26,7 +26,7 @@ tests :: (?debug :: Bool) => Test
 tests = TestLabel "Tests of basic onion properties" $ TestList
   [ lexParseEval "`A 1 & `B 2"
                  ( A.Onion (A.Label lblA $ E.pi 1) (A.Label lblB $ E.pi 2) )
-                 ( A.VOnion (A.VLabel lblA $ A.VPrimInt 0) (A.VLabel lblB $ A.VPrimInt 1))
+                 ( A.VOnion (A.VLabel lblA $ A.VPrimInt 1) (A.VLabel lblB $ A.VPrimInt 2))
   -- Test that right wins
   , xEval "`A 1 & `A 2"
           (A.VOnion (A.VLabel lblA $ A.VPrimInt 1) (A.VLabel lblA $ A.VPrimInt 2))
