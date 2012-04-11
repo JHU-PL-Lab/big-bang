@@ -604,7 +604,11 @@ retrieve p cs =
     SDUnit -> VPrimUnit
     SDInt i -> VPrimInt i
     SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
-    SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
+    SDOnion p1 p2 -> --VOnion (retrieve p1 cs) (retrieve p2 cs)
+      let v1 = (retrieve p1 cs) in let v2 = (retrieve p2 cs) in
+        if v1 == VEmptyOnion then v2 else
+          if v2 == VEmptyOnion then v1 else
+            VOnion v1 v2
     SDOnionSub p1 s1 -> retrieve' p1 cs (Set.singleton s1)
     SDEmptyOnion -> VEmptyOnion
     SDFunction _ _ _ _ -> VFunc
