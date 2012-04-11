@@ -43,7 +43,7 @@ import Language.TinyBang.Ast
   , Assignable(..)
   , LazyOperator(..)
   , EagerOperator(..)
-  , SubTerm(..)
+  , ProjTerm(..)
   , CellId
   , ePatVars
   )
@@ -191,12 +191,24 @@ eval e = do
         where onionSub v =
                 case (v, s) of
                   (VOnion v1 v2, _) -> onion (onionSub v1) (onionSub v2)
-                  (VPrimInt _, SubPrim T.PrimInt) -> VEmptyOnion
-                  (VPrimChar _, SubPrim T.PrimChar) -> VEmptyOnion
-                  (VPrimUnit, SubPrim T.PrimUnit) -> VEmptyOnion
-                  (VFunc _ _, SubFunc) -> VEmptyOnion
-                  (VLabel n _, SubLabel n') | n == n' -> VEmptyOnion
+                  (VPrimInt _, ProjPrim T.PrimInt) -> VEmptyOnion
+                  (VPrimChar _, ProjPrim T.PrimChar) -> VEmptyOnion
+                  (VPrimUnit, ProjPrim T.PrimUnit) -> VEmptyOnion
+                  (VFunc _ _, ProjFunc) -> VEmptyOnion
+                  (VLabel n _, ProjLabel n') | n == n' -> VEmptyOnion
                   _ -> v
+      OnionProj e' s -> do
+        v <- eval e'
+        return $ onionProj v
+        where onionProj v =
+                case (v, s) of
+                  (VOnion v1 v2, _) -> onion (onionProj v1) (onionProj v2)
+                  (VPrimInt _, ProjPrim T.PrimInt) -> v
+                  (VPrimChar _, ProjPrim T.PrimChar) -> v
+                  (VPrimUnit, ProjPrim T.PrimUnit) -> v
+                  (VFunc _ _, ProjFunc) -> v
+                  (VLabel n _, ProjLabel n') | n == n' -> v
+                  _ -> VEmptyOnion
       EmptyOnion -> return $ VEmptyOnion
       Appl e1 e2 -> do
         v1 <- eval e1
@@ -515,6 +527,7 @@ subst c x e =
                   then branch
                   else Branch chi $ subst c x branchExpr
     OnionSub e' s -> OnionSub (subst c x e') s
+    OnionProj e' s -> OnionProj (subst c x e') s
     EmptyOnion -> EmptyOnion
     LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
     EagerOp op e1 e2 -> EagerOp op (subst c x e1) (subst c x e2)
@@ -582,4 +595,3 @@ eProj tproj v =
     (_, VOnion v1 v2) ->
       maybe (eProj tproj v1) Just (eProj tproj v2)
     _ -> Nothing
-

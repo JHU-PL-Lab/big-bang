@@ -174,6 +174,11 @@ inferType expr = do
       a2 <- inferType e
       tellInferred $ TdOnionSub a2 s <: a1
       return a1
+    A.OnionProj e s -> do
+      a1 <- freshVar
+      a2 <- inferType e
+      tellInferred $ TdOnionProj a2 s <: a1
+      return a1
     A.EmptyOnion -> do
       a <- freshVar
       tellInferred $ TdEmptyOnion <: a
@@ -256,6 +261,7 @@ extractConstraintTypeVars c =
                   (insert2Weak (extractConstraintTypeVars cs) ca ia)
                   as
               TdOnionSub a _ -> insertWeak set a
+              TdOnionProj a _ -> insertWeak set a
               TdEmptyOnion -> set
           foldGuards set (T.Guard tauChi constraints) =
             Set.unions [set, chiAlphas tauChi,

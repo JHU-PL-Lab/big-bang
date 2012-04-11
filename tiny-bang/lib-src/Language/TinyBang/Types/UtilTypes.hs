@@ -10,7 +10,7 @@ module Language.TinyBang.Types.UtilTypes
 , unIdent
 , LazyOperator(..)
 , EagerOperator(..)
-, SubTerm(..)
+, ProjTerm(..)
 , PrimitiveType(..)
 ) where
 
@@ -50,15 +50,15 @@ data EagerOperator
   deriving (Eq, Ord, Show)
 
 instance Display LazyOperator where
-  makeDoc o = brackets . text $
+  makeDoc o = text $
     case o of
       Plus -> "+"
       Minus -> "-"
 
 instance Display EagerOperator where
-  makeDoc o = brackets $ text $
+  makeDoc o = text $
     case o of
-      Equal -> "="
+      Equal -> "=="
       LessEqual -> "<="
       GreaterEqual -> ">="
 
@@ -77,14 +77,14 @@ instance Display PrimitiveType where
       PrimUnit -> text "unit"
 
 -- |Data type describing type patterns for removing values from onions.
-data SubTerm
-  = SubPrim PrimitiveType
-  | SubLabel LabelName
-  | SubFunc
+data ProjTerm
+  = ProjPrim PrimitiveType
+  | ProjLabel LabelName
+  | ProjFunc
   deriving (Eq, Ord, Show)
 
-instance Display SubTerm where
-  makeDoc a = text "-" <> case a of
-    SubPrim p -> makeDoc p
-    SubLabel n -> makeDoc n
-    SubFunc -> text "fun"
+instance Display ProjTerm where
+  makeDoc a = case a of
+    ProjPrim p -> makeDoc p
+    ProjLabel n -> makeDoc n
+    ProjFunc -> text "fun"

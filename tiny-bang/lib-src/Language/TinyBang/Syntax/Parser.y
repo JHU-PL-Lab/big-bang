@@ -23,7 +23,7 @@ import Language.TinyBang.Types.UtilTypes
     , labelName
     , unLabelName
     , PrimitiveType(..)
-    , SubTerm(..)
+    , ProjTerm(..)
     )
 import Utils.Render.Display
 
@@ -40,6 +40,8 @@ import System.IO
 %token
         '`'             { L.TokLabelPrefix }
         '&'             { L.TokOnionCons }
+        '&-'            { L.TokOnionSub }
+        '&.'            { L.TokOnionProj }
         '\\'            { L.TokLambda }
         fun             { L.TokFun }
         '->'            { L.TokArrow }
@@ -65,15 +67,10 @@ import System.IO
         '=='            { L.TokOpEquals }
         '<='            { L.TokOpLessEquals }
         '>='            { L.TokOpGreaterEquals }
-        '-int'          { L.TokSubInteger }
-        '-char'         { L.TokSubChar }
-        '-unit'         { L.TokSubUnit }
-        '-`'            { L.TokSubLabelPrefix }
-        '-fun'          { L.TokSubFun }
 
 %left       in
 %right      '->'
-%left       '&'
+%left       '&' '&-' '&.'
 %nonassoc   '==' '<=' '>='
 %left       '+' '-'
 
@@ -91,8 +88,10 @@ Exp     :   '\\' ident '->' Exp
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
                                     { A.Onion $1 $3 }
-        |   Exp '&' SubTerm
+        |   Exp '&-' ProjTerm
                                     { A.OnionSub $1 $3 }
+        |   Exp '&.' ProjTerm
+                                    { A.OnionProj $1 $3 }
         |   OpExp
                                     { $1 }
         |   ApplExp
@@ -157,11 +156,12 @@ PrimitiveType
         |   char                    { T.PrimChar }
         |   unit                    { T.PrimUnit }
 
-SubTerm :   '-int'                  { SubPrim PrimInt }
-        |   '-char'                 { SubPrim PrimChar }
-        |   '-unit'                 { SubPrim PrimUnit }
-        |   '-`' ident              { SubLabel (labelName $2) }
-        |   '-fun'                  { SubFunc }
+ProjTerm
+        :   int                     { ProjPrim PrimInt }
+        |   char                    { ProjPrim PrimChar }
+        |   unit                    { ProjPrim PrimUnit }
+        |   '`' ident               { ProjLabel (labelName $2) }
+        |   fun                     { ProjFunc }
 
 OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
