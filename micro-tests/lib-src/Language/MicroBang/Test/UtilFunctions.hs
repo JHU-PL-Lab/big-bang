@@ -75,6 +75,12 @@ xCont :: (?debug :: Bool) => MicroBangCode -> Test
 xCont code =
   label ~: case result of
     Contradiction _ _ -> TestCase $ assertSuccess
+    EvalResult _ sOrF  -> case sOrF of
+      EvalSuccess _ -> TestCase $ assertFailure $
+         "Expression evaluated to " ++
+         display result ++
+         ", which did not produce a contradiction"
+      EvalFailure _ -> TestCase $ assertSuccess
     _ -> TestCase $ assertFailure $
          "Expression evaluated to " ++
          display result ++
