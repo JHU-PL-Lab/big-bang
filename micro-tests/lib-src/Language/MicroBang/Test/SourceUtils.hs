@@ -1,7 +1,7 @@
 module Language.MicroBang.Test.SourceUtils
 ( srcY
 , srcMultiAppl
---, srcSummate
+, srcSummate
 --, srcGreaterOrLess
 , lblEq
 , lblLt
@@ -21,8 +21,8 @@ srcMultiAppl :: [MicroBangCode] -> MicroBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"
 srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
 
---srcSummate :: MicroBangCode
---srcSummate = "fun this -> fun x -> case ([=] x 0) of { `True z -> 0 ; `False z -> [+] x (this ([-] x 1))}"
+srcSummate :: MicroBangCode
+srcSummate = "fun this -> fun x -> case ([=] x 0) of { `True z -> 0 ; `False z -> [+] x (this ([+] x -1))}"
 -- REMOVED BECAUSE THEY USE MINUS
 --srcGreaterOrLessUtil :: MicroBangCode
 --srcGreaterOrLessUtil =

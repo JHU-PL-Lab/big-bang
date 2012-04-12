@@ -28,7 +28,7 @@ xEvalComp ord srcA srcB =
 
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "Eager operations tests" $ TestList $ concat
-  [ --[
+  [ [
   --xType (srcMultiAppl [srcY, srcSummate, "5"])
   --  , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])
   --  , xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
@@ -36,17 +36,17 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   --  , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
 
   -- Test evaluation of some recursive arithmetic evaluations
-    --xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
-    --         A.VPrimInt 15
+    xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+             A.VPrimInt 15
     --, xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
     --        lblEq
     --, xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
     --        lblLt
     --, xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
     --        lblGt
-    --]
+    ]
 -- Test simple comparisons
-  xEvalComp EQ "1" "1"
+  , xEvalComp EQ "1" "1"
   , xEvalComp LT "0" "1"
   --, xEvalComp EQ
   --    "0"
