@@ -33,7 +33,8 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                  , TokIdentifier "B"
                  , TokIntegerLiteral 2
                  ]
-                 ( A.Onion (A.Label lblA $ E.pi 1) (A.Label lblB $ E.pi 2) )
+                 ( A.Onion (A.Label lblA Nothing $ E.pi 1)
+                           (A.Label lblB Nothing $ E.pi 2) )
                  ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
                  , mkState [(0, V.pi 1), (1, V.pi 2)]
                  )
@@ -49,14 +50,17 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
 
   -- Test that onions associate right
   , xPars "`A 1 & `B 2 & `C 3"
-          (A.Onion (A.Onion (A.Label lblA $ E.pi 1) (A.Label lblB $ E.pi 2))
-                   (A.Label lblC $ E.pi 3))
+          (A.Onion (A.Onion (A.Label lblA Nothing $ E.pi 1)
+                            (A.Label lblB Nothing $ E.pi 2))
+                   (A.Label lblC Nothing $ E.pi 3))
   , xPars "(`A 1 & `B 2) & `C 3"
-          (A.Onion (A.Onion (A.Label lblA $ E.pi 1) (A.Label lblB $ E.pi 2))
-                   (A.Label lblC $ E.pi 3))
+          (A.Onion (A.Onion (A.Label lblA Nothing $ E.pi 1)
+                            (A.Label lblB Nothing $ E.pi 2))
+                   (A.Label lblC Nothing $ E.pi 3))
   , xPars "`A 1 & (`B 2 & `C 3)"
-          (A.Onion (A.Label lblA $ E.pi 1)
-                   (A.Onion (A.Label lblB $ E.pi 2) (A.Label lblC $ E.pi 3)))
+          (A.Onion (A.Label lblA Nothing $ E.pi 1)
+                   (A.Onion (A.Label lblB Nothing $ E.pi 2)
+                            (A.Label lblC Nothing $ E.pi 3)))
   -- Test that onions evaluate left to right
   -- Uses state
   , xEval " def x = 0 in \

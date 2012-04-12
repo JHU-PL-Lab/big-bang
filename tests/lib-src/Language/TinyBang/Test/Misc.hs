@@ -30,7 +30,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (A.Label lblTrue A.PrimUnit)
+                 (A.Label lblTrue Nothing A.PrimUnit)
                  ( A.VLabel lblTrue 0
                  , makeState [(0, A.VPrimUnit)]
                  )
@@ -40,7 +40,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (A.Label lblFalse A.PrimUnit)
+                 (A.Label lblFalse Nothing A.PrimUnit)
                  ( A.VLabel lblFalse 0
                  , makeState [(0, A.VPrimUnit)]
                  )

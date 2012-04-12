@@ -55,6 +55,8 @@ tokens :-
     \>\=                                { constTok TokOpGreaterEquals }
     \=                                  { constTok TokEquals }
     in                                  { constTok TokIn }
+    final                               { constTok TokFinal }
+    immut                               { constTok TokImmut }
     [ $alpha _ ] [$alpha $digit _ ']*   { strTok $ TokIdentifier }
 
 {
@@ -109,6 +111,8 @@ data Token =
     | TokOpEquals
     | TokOpLessEquals
     | TokOpGreaterEquals
+    | TokFinal
+    | TokImmut
     deriving (Eq, Show)
 
 instance Display Token where
@@ -142,4 +146,6 @@ instance Display Token where
         TokOpEquals -> "op equals"
         TokOpLessEquals -> "op less than or equal"
         TokOpGreaterEquals -> "op greater than or equal"
+        TokFinal -> "final"
+        TokImmut -> "immut"
 }

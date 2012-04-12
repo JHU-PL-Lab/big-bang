@@ -52,11 +52,11 @@ testPrintBoolean = TestCase $ do
   assertEqual
     "Test is boolean True prints correctly"
     "`True ()"
-    (display (Label (labelName "True") PrimUnit))
+    (display (Label (labelName "True") Nothing PrimUnit))
   assertEqual
     "Test is boolean False prints correctly"
     "`False ()"
-    (display (Label (labelName "False") PrimUnit))
+    (display (Label (labelName "False") Nothing PrimUnit))
 
 -- Test cases that check pretty printing of function definitions and applications
 printFuncTests :: (?debug :: Bool) => Test

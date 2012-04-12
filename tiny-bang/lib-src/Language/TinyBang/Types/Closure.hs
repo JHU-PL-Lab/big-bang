@@ -520,6 +520,7 @@ closeAll cs =
     , closeLops
     , propagateCellsForward
     , propagateCellsBackward
+    , propagateImmutable
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.

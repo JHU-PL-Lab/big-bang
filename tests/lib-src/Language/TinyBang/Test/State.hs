@@ -16,15 +16,15 @@ two = A.VPrimInt 2
 tests :: (?debug :: Bool) => Test
 tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
-          A.Def idX efour varX
+          A.Def Nothing idX efour varX
   , xPars "x = 4 in x" $
           A.Assign (A.AIdent idX) efour varX
   , xPars "def x = 4 in x & 'a'" $
-          A.Def idX efour $ A.Onion varX (A.PrimChar 'a')
+          A.Def Nothing idX efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
           A.Assign (A.AIdent idX) efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "def x = 3 in x = 4 in x" $
-          A.Def idX (A.PrimInt 3) $ A.Assign (A.AIdent idX) efour varX
+          A.Def Nothing idX (A.PrimInt 3) $ A.Assign (A.AIdent idX) efour varX
 
   -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" four
@@ -40,4 +40,6 @@ tests = TestLabel "State tests" $ TestList
   , xCont "def x = () in x = 2 in case x of { unit -> 4 }"
   , xCont "def x = () in x = 2 in case x of { int -> 4 }"
   , xEval "def x = () in x = 2 in case x of { unit -> 2 ; int -> 4 }" four
+
+  -- TODO: add unit tests for finality and immutability
   ]

@@ -315,7 +315,8 @@ instance Display TauDown where
       TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
       TdFunc polyFuncData -> makeDoc polyFuncData
       TdEmptyOnion -> text "(&)"
-      TdOnionSub a s -> makeDoc a <+> char '&' <> makeDoc s
+      TdOnionSub a s -> makeDoc a <+> text "&-" <+> makeDoc s
+      TdOnionProj a s -> makeDoc a <+> text "&." <+> makeDoc s
 
 instance Display PolyFuncData where
   makeDoc (PolyFuncData (ForallVars alphas) alpha1 alpha2 constraints) =

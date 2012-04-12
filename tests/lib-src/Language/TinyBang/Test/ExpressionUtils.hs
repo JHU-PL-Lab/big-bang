@@ -25,7 +25,7 @@ identFuncX = A.Func idX varX
 
 pi = A.PrimInt
 
-false = A.Label lblFalse A.PrimUnit
-true = A.Label lblTrue A.PrimUnit
+false = A.Label lblFalse Nothing A.PrimUnit
+true = A.Label lblTrue Nothing A.PrimUnit
 
 multiAppl = foldl1 A.Appl

@@ -177,7 +177,7 @@ eval e = do
       PrimUnit -> return $ VPrimUnit
       Var i -> throwError $ NotClosed i
       ExprCell c -> readCell c
-      Label n e' -> do
+      Label n _ e' -> do
         v <- eval e'
         c <- newCell v
         return $ VLabel n c
@@ -321,7 +321,7 @@ eval e = do
                               idMapLeft <- mLeft
                               idMapRest <- mRest
                               return $ Map.union idMapRest idMapLeft
-      Def i e1 e2 -> do
+      Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
         eval $ subst cellId i e2
@@ -510,7 +510,7 @@ subst c x e =
     Var i ->
       if i == x then ExprCell c
                 else e
-    Label n e' -> Label n $ subst c x e'
+    Label n m e' -> Label n m $ subst c x e'
     Onion e1 e2 -> Onion (subst c x e1) (subst c x e2)
     Func i e' ->
       if i == x then e
@@ -531,9 +531,9 @@ subst c x e =
     EmptyOnion -> EmptyOnion
     LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
     EagerOp op e1 e2 -> EagerOp op (subst c x e1) (subst c x e2)
-    Def i e1 e2 ->
-      if i == x then Def i (subst c x e1) e2
-                else Def i (subst c x e1) (subst c x e2)
+    Def m i e1 e2 ->
+      if i == x then Def m i (subst c x e1) e2
+                else Def m i (subst c x e1) (subst c x e2)
     Assign a e1 e2 ->
       case a of
         ACell _ -> Assign a (subst c x e1) (subst c x e2)

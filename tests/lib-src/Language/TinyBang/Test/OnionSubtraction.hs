@@ -36,9 +36,10 @@ tests = TestLabel "Onion subtraction tests" $ TestList
             (A.OnionSub (
               (A.Onion (
                 (A.Onion (
-                  A.Label (labelName "A") $ A.PrimInt 0
-                ) (A.Label (labelName "A") A.PrimUnit))
-              ) (A.Label (labelName "A") (A.Label (labelName "B") A.PrimUnit)))
+                  A.Label (labelName "A") Nothing $ A.PrimInt 0
+                ) (A.Label (labelName "A") Nothing A.PrimUnit))
+              ) (A.Label (labelName "A") Nothing
+                 (A.Label (labelName "B") Nothing A.PrimUnit)))
             ) (A.ProjLabel $ labelName "A"))
           ) (A.PrimInt 0))
 
@@ -47,9 +48,10 @@ tests = TestLabel "Onion subtraction tests" $ TestList
             (A.OnionSub (
               (A.Onion (
                 (A.Onion (
-                  A.Label (labelName "A") $ A.PrimInt 0
-                ) (A.Label (labelName "A") A.PrimUnit))
-              ) (A.Label (labelName "A") (A.Label (labelName "B") A.PrimUnit)))
+                  A.Label (labelName "A") Nothing $ A.PrimInt 0
+                ) (A.Label (labelName "A") Nothing A.PrimUnit))
+              ) (A.Label (labelName "A") Nothing
+                 (A.Label (labelName "B") Nothing A.PrimUnit)))
             ) (A.ProjLabel $ labelName "A"))
           ) (A.PrimInt 0))
   ]

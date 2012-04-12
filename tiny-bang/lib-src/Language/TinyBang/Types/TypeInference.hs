@@ -98,12 +98,13 @@ inferType expr = do
       a1 <- freshVar
       tellInferred $ a2 <: CellGet a1
       return a1
-    A.Label n e -> do
+    A.Label n m e -> do
       a1 <- freshVar
       a2 <- inferType e
       a3 <- freshVar
       tellInferred $ Cell a2 <: a3
       tellInferred $ TdLabel n a3 <: a1
+      handleMod tellInferred m a2
       return a1
     A.Onion e1 e2 -> do
       a0 <- freshVar
@@ -204,12 +205,13 @@ inferType expr = do
         , T.TdLabel (labelName "False") acu <: a0
         ]
       return a0
-    A.Def x e1 e2 -> do
+    A.Def m x e1 e2 -> do
       --TODO: Something about shadowing
       a1 <- inferType e1
       a3 <- freshVar
       a2 <- local (Map.insert x a3) $ inferType e2
       tellInferred $ Cell a1 <: a3
+      handleMod tellInferred m a1
       return a2
     A.Assign a e1 e2 -> do
       x <- return $! case a of
@@ -228,6 +230,10 @@ inferType expr = do
           --  up.
           capture :: (Gamma -> Gamma) -> A.Expr -> TIM (InterAlpha, Constraints)
           capture f e = censor (const mempty) $ listen $ local f $ inferType e
+          handleMod f m a = case m of
+            Just A.Final -> f $ Final a
+            Just A.Immutable -> f $ Immutable a
+            Nothing -> return ()
 
 -- |Extracts all type variables from the provided constraints.
 extractConstraintTypeVars :: T.Constraints -> Set AnyAlpha
