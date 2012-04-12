@@ -38,12 +38,12 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   -- Test evaluation of some recursive arithmetic evaluations
     xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
              A.VPrimInt 15
-    --, xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
-    --        lblEq
-    --, xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
-    --        lblLt
-    --, xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
-    --        lblGt
+    , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
+            lblEq
+    , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
+            lblLt
+    , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
+            lblGt
     ]
 -- Test simple comparisons
   , xEvalComp EQ "1" "1"
