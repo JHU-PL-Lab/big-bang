@@ -1,11 +1,6 @@
 module Language.MicroBang.Test.UtilFunctions
 ( xEval
-, xType
 , xCont
---, xNotC
---, xDLbl
---, xDBnd
---, xErrT
 , xLexs
 , xPars
 , fPars
@@ -30,8 +25,6 @@ import Language.MicroBang.Interpreter.SourceInterpreter
 import Language.MicroBang.Ast (vmPair, Evaluated)
 import Language.MicroBang.Syntax.Lexer (Token)
 import qualified Language.MicroBang.Ast as A (Expr, Value)
---import qualified Language.MicroBang.Types.TypeInference as TI
---  (TypeInferenceError (..))
 import qualified Language.MicroBang.Syntax.Lexer as L
   (lexMicroBang)
 import Language.MicroBang.Syntax.Lexer (Token(..))
@@ -58,16 +51,6 @@ xEval code expectedResult =
         label = show code ++
                 " was expected to produce " ++ display expectedResult
 
-xType :: (?debug :: Bool) => MicroBangCode -> Test
-xType code =
-  label ~: TestCase $ case evalStringTop code of
-    EvalResult _ _ -> assertSuccess
-    result@_ -> assertFailure $
-         "Expected closure to succeed but instead got " ++
-         display result
-  where label = show code ++
-                " was expected to typecheck with no contradictions."
-
 assertSuccess :: Assertion
 assertSuccess = return ()
 
@@ -88,40 +71,6 @@ xCont code =
   where label = show code ++
                 " was expected to produce a contradiction"
         result = evalStringTop code
-
---xNotC :: (?debug :: Bool) => MicroBangCode -> Test
---xNotC code =
---  label ~: case result of
---    TypecheckFailure _ (TI.NotClosed _) _ -> TestCase $ assertSuccess
---    _ -> TestCase $ assertFailure $
---         "Expected NotClosed but instead got " ++
---         display result
---  where label = show code ++
---                " was expected to produce a contradiction"
---        result = evalStringTop code
-
---xErrT :: (?debug :: Bool)
---      => String -> (TI.TypeInferenceError -> Bool) -> MicroBangCode -> Test
---xErrT msg pred code =
---  label ~: case result of
---    TypecheckFailure _ tie _ | pred tie -> TestCase $ assertSuccess
---    _ -> TestCase $ assertFailure $
---         "Expected " ++ msg ++ " but instead got " ++ display result
---  where label = show code ++
---                " was expected to produce " ++ msg
---        result = evalStringTop code
-
---xDBnd :: (?debug :: Bool) => MicroBangCode -> Test
---xDBnd = xErrT "DoubleBound" $ \x ->
---          case x of
---            TI.DoubleBound{} -> True
---            _ -> False
-
---xDLbl :: (?debug :: Bool) => MicroBangCode -> Test
---xDLbl = xErrT "DoubleLabel" $ \x ->
---          case x of
---            TI.DoubleLabel{} -> True
---            _ -> False
 
 xLexs :: MicroBangCode -> [Token] -> Test
 xLexs code expected =
@@ -165,12 +114,3 @@ lexParseEval code expr val =
 
 makeState :: [(Int, A.Value)] -> IntMap.IntMap A.Value
 makeState = IntMap.fromList
-
--- label :: (Evaluated a) => String -> a -> Result
--- label name contents =
---   (A.VLabel lbl nextCell, IntMap.insert nextCell (value contents) state)
---   where lbl = labelName name
---         nextCell =
---           maybe 0 (inc . fst . fst) $ IntMap.maxViewWithKey state
---         inc = (+ 1)
---         state = mapping contents
