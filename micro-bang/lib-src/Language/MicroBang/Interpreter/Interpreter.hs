@@ -100,6 +100,7 @@ data EvalError =
     | CaseContradiction
     | IntegerOperationFailure
     | ConstraintFailure ConstraintEvaluatorError
+    | Badness
     deriving (Eq, Show)
 instance Error EvalError where
   strMsg = error
@@ -111,6 +112,7 @@ instance Display EvalError where
       CaseContradiction -> text "Case Contradiction"
       IntegerOperationFailure -> text "Integer Operation Failure"
       ConstraintFailure cee -> text $ "Constraint Failure" ++ show cee
+      Badness -> text $ "Lightning!"
 -- use makeDoc to call recursively to print subtypes
 -- use <+> to concatenate with recursive makeDoc calls
 
@@ -138,7 +140,9 @@ data EvalStringResult
 instance Display EvalStringResult where
   makeDoc esr =
     case esr of
-      EvalResult e esof -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
+      EvalResult e esof -> case esof of
+        EvalFailure ee -> makeDoc ee
+        _ -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
       Contradiction e cs-> text $ "Contradiction" ++ show e ++ " " ++ show cs
       DerivationFailure e cs -> text $ "DerivationFailure" ++ show e ++ " " ++ show cs
       ParseFailure pe -> text $ "ParseFailure" ++ show pe
@@ -180,8 +184,7 @@ evalTop e =
     case progPt of
       Left f -> Left (ConstraintFailure f)
       Right p ->
-        let cs' = close cs p in
-          Right (retrieve p cs')
+        let cs' = close cs p in retrieve p cs'
 
 capture :: (M -> M) -> Expr -> CEM (ProgramPoint, Constraints)
 capture f e = censor (const mempty) $ listen $ local f $ derive e
@@ -596,35 +599,48 @@ concretization cs0 p0 =
         guard (p1 == p)
         return p2
 
-retrieve :: ProgramPoint -> Constraints -> Value
+retrieve :: ProgramPoint -> Constraints -> Either EvalError Value
 retrieve p cs =
   let sds = (Set.toList $ concretization cs p) in
   if sds == [] then error $ "retrieve: no concretization" ++ (show p)
   else case head sds of
-    SDUnit -> VPrimUnit
-    SDInt i -> VPrimInt i
-    SDLabel ln p1 -> VLabel ln (retrieve p1 cs)
-    SDOnion p1 p2 -> VOnion (retrieve p1 cs) (retrieve p2 cs)
+    SDUnit -> Right VPrimUnit
+    SDInt i -> Right (VPrimInt i)
+    SDLabel ln p1 -> case retrieve p1 cs of
+                        l@(Left _) -> l
+                        Right v -> Right (VLabel ln v)
+    SDOnion p1 p2 ->
+      case (retrieve p1 cs,retrieve p2 cs) of
+        (Left _, _) -> Left Badness
+        (_, Left _) -> Left Badness
+        (Right VEmptyOnion, r2) -> r2
+        (r1, Right VEmptyOnion) -> r1
+        (Right v1, Right v2) -> Right (VOnion v1 v2)
     SDOnionSub p1 s1 -> retrieve' p1 cs (Set.singleton s1)
-    SDEmptyOnion -> VEmptyOnion
-    SDFunction _ _ _ _ -> VFunc
-    SDBadness -> error "Lightening"
+    SDEmptyOnion -> Right VEmptyOnion
+    SDFunction _ _ _ _ -> Right VFunc
+    SDBadness -> Left Badness
 
-retrieve' :: ProgramPoint -> Constraints -> Set FOnionSub -> Value
+retrieve' :: ProgramPoint -> Constraints -> Set FOnionSub -> Either EvalError Value
 retrieve' p cs ss = let sdss = concretization cs p in
   let sds = Set.toList sdss in
   if sds == [] then error $ "retrieve: no concretization" ++ (show p) else
   case head sds of
-    SDUnit -> if Set.member FSubUnit ss then VEmptyOnion else VPrimUnit
-    SDInt i -> if Set.member FSubInt ss then VEmptyOnion else VPrimInt i
-    SDLabel ln p1 -> if Set.member (FSubLabel ln) ss then VEmptyOnion else VLabel ln (retrieve' p1 cs ss)
-    SDOnion p1 p2 -> let v1 = (retrieve' p1 cs ss) in let v2 = (retrieve' p2 cs ss) in
-      if v1 == VEmptyOnion then v2 else
-        if v2 == VEmptyOnion then v1 else
-          VOnion v1 v2
+    SDUnit -> Right (if Set.member FSubUnit ss then VEmptyOnion else VPrimUnit)
+    SDInt i -> Right (if Set.member FSubInt ss then VEmptyOnion else VPrimInt i)
+    SDLabel ln p1 ->  if Set.member (FSubLabel ln) ss then Right VEmptyOnion
+      else case (retrieve' p1 cs ss) of
+        l@(Left _) -> l
+        Right v -> Right (VLabel ln v)
+    SDOnion p1 p2 -> case (retrieve' p1 cs ss,retrieve' p2 cs ss) of
+        (Left _, _) -> Left Badness
+        (_, Left _) -> Left Badness
+        (Right VEmptyOnion, r2) -> r2
+        (r1, Right VEmptyOnion) -> r1
+        (Right v1, Right v2) -> Right (VOnion v1 v2)
     SDOnionSub p1 s1 -> retrieve' p1 cs (Set.insert s1 ss)
-    SDEmptyOnion -> VEmptyOnion
-    SDFunction _ _ _ _ -> if Set.member FSubFun ss then VEmptyOnion else VFunc
-    SDBadness -> error "Lightening"
+    SDEmptyOnion -> Right VEmptyOnion
+    SDFunction _ _ _ _ -> Right (if Set.member FSubFun ss then VEmptyOnion else VFunc)
+    SDBadness -> Left Badness
 
 

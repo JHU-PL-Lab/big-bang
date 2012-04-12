@@ -13,7 +13,7 @@ import qualified Language.MicroBang.Test.LazyOps as LazyOps
 import qualified Language.MicroBang.Test.Misc as Misc
 import qualified Language.MicroBang.Test.OnionSubtraction as OnionSubtraction
 import qualified Language.MicroBang.Test.Parser as Parser
-import qualified Language.MicroBang.Test.Peano as Peano
+--import qualified Language.MicroBang.Test.Peano as Peano
 import qualified Language.MicroBang.Test.Primitive.Int as Primitive.Int
 import qualified Language.MicroBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.MicroBang.Test.Projection as Projection
@@ -27,16 +27,13 @@ tests =
   , EagerOps.tests
   , EmptyOnion.tests
   , LazyOps.tests
-  --, Lexer.tests
   , Misc.tests
   , OnionSubtraction.tests
   , Parser.tests
-  , Peano.tests
-  --, Primitive.Char.tests
+  --, Peano.tests
   , Primitive.Int.tests
   , Primitive.Unit.tests
   , Projection.tests
-  --, State.tests
   , ListEncoding.tests
   ]
 

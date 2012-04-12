@@ -11,7 +11,7 @@ import Utils.Render.Display
 -- TODO: Use quickcheck to write a test that pretty print + parse is idempotent.
 
 tests :: (?debug :: Bool) => Test
-tests = TestList [printPrimCases, printFuncTests, printOnionTests{-, printOpsTests-}]
+tests = TestList [printPrimCases, printFuncTests, printOnionTests, printOpsTests]
 
 -- Test cases that ensure that primitive literals are printed correctly
 printPrimCases :: (?debug :: Bool) => Test
@@ -119,23 +119,17 @@ testPrintTernaryOnion = TestCase $ assertEqual
 
 
 -- Test cases that check pretty printing of basic builtin operators
--- printOpsTests :: (?debug :: Bool) => Test
--- printOpsTests = TestList [testPrintPlus, testPrintMinus, testPrintEqual]
+printOpsTests :: (?debug :: Bool) => Test
+printOpsTests = TestList [testPrintPlus,testPrintEqual]
 
--- testPrintPlus :: (?debug :: Bool) => Test
--- testPrintPlus = TestCase $ assertEqual
---   "Test that primitive add prints correctly"
---   "1 [+] 1"
---   (display (Plus (PrimInt 1) (PrimInt 1)))
+testPrintPlus :: (?debug :: Bool) => Test
+testPrintPlus = TestCase $ assertEqual
+  "Test that primitive add prints correctly"
+  "1 [+] 1"
+  (display (BinOp Plus (PrimInt 1) (PrimInt 1)))
 
--- testPrintMinus :: (?debug :: Bool) => Test
--- testPrintMinus = TestCase $ assertEqual
---   "Test that primitive subtract prints correctly"
---   "1 [-] 1"
---   (display (Minus (PrimInt 1) (PrimInt 1)))
-
--- testPrintEqual :: (?debug :: Bool) => Test
--- testPrintEqual = TestCase $ assertEqual
---   "Test that primitive equals prints correctly"
---   "1 [=] 1"
---   (display (Equal (PrimInt 1) (PrimInt 1)))
+testPrintEqual :: (?debug :: Bool) => Test
+testPrintEqual = TestCase $ assertEqual
+  "Test that primitive equals prints correctly"
+  "1 [=] 1"
+  (display (BinOp Equal (PrimInt 1) (PrimInt 1)))
