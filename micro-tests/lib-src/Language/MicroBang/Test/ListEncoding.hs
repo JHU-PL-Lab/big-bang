@@ -41,13 +41,13 @@ srcSum3 = "fun this -> fun xs ->                                    \
           \        `nil underscore -> accum}                                 \
           \ }}                                                      "
 
-srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
-          \ case xs of                                              \
-          \ { `nil junk -> accum;                                   \
-          \   `hd a -> case xs of                                   \
-          \       {`tl b -> accum = [+] accum a in this b ;         \
-          \        `nil underscore -> accum}                                 \
-          \ }                                                       "
+--srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
+--          \ case xs of                                              \
+--          \ { `nil junk -> accum;                                   \
+--          \   `hd a -> case xs of                                   \
+--          \       {`tl b -> accum = [+] accum a in this b ;         \
+--          \        `nil underscore -> accum}                                 \
+--          \ }                                                       "
 
 srcFoldl = "fun this -> fun f -> fun z -> fun xs ->                 \
            \ case xs of                                             \
@@ -113,8 +113,8 @@ testSum xs = map ($ V.pi $ sum xs)
       [srcY, srcSum2, "0", srcMakeList xs]
   , xEval $ srcMultiAppl
       [srcY, srcSum3, "`acc 0 & " ++ srcMakeList xs]
-  , xEval $ srcMultiAppl
-      [srcY, srcSum4, srcMakeList xs]
+  --, xEval $ srcMultiAppl
+  --    [srcY, srcSum4, srcMakeList xs]
   , xEval $ srcMultiAppl
       [srcY, srcFoldl, srcPlus, "0", srcMakeList xs]
   , xEval $ srcMultiAppl
