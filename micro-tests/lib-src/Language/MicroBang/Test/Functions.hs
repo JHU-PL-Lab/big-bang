@@ -28,53 +28,16 @@ tests = TestLabel "Test functions" $ TestList
           identFuncX
   , xEval "(fun y -> y) (fun x -> x)"
           identFuncX
-  --, xEval "def x = fun x -> x in x x"
-  --        identFuncX
-  --, xType srcY
   , xEval "fun x -> x x"
-          (A.VFunc) -- idX $ A.Appl varX varX)
-  --, xType "(fun x -> x x) (fun x -> x x)"
-  --, xType "def omega = fun x -> x x in omega omega"
-
-  ---- Ensure that functions are correctly polymorphic when stored in cells
-  --, xType "def f = (fun x -> x) in (f 1) & (f ())"
+          (A.VFunc)
 
   -- Ensure that constraints propogate into functions properly
-  --, xCont "(fun f -> f ()) (fun x -> [+] 1 x)"
-  --, xCont "(fun x -> [+] x 1) 'a'"
+  , xCont "(fun f -> f ()) (fun x -> [+] 1 x)"
+  , xCont "(fun x -> [+] x 1) ()"
 
   -- Test that application requires that the first argument be a function
-  --, xCont "1 'x'"
-
-  -- Ensure that constraints from functions propagate correctly from cells
-  --, xCont "def f = (fun x -> case x of { int -> x }) in (f 1) & (f ())"
-
-  -- Test typechecking of some pathological functions
-  --, xType $ srcMultiAppl
-  --    [srcY, "fun this -> fun x -> this (`A x & `B x)"]
-  --, xType $ srcMultiAppl
-  --    [srcY, "fun this -> fun x -> this (`A x & `B x)", "0"]
-  --, xType $ srcMultiAppl
-  --    [srcY, "fun this -> fun x -> this (`A x & `B x)", "()"]
-  --, xType $ srcMultiAppl
-  --    [srcY, "fun this -> fun x -> this (`A x & `B x)", "`A () & `B ()"]
-  --, xType $ srcMultiAppl
-  --    [srcY, "fun this -> fun x -> this (`A x & `B x)", srcY]
+  , xCont "1 ()"
 
   -- Check that variable closed-ness works in functions
-  --, xNotC "(fun x -> [+] n 2)"
-  --, xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
-  --        (A.Func idX
-  --           (A.Case varX
-  --                   [ A.Branch
-  --                      (A.ChiTopBind $ A.ChiUnbound $
-  --                            (A.ChiLabelShallow (labelName "True")
-  --                                        (ident "a")))
-  --                            (A.PrimInt 1)
-  --                   , A.Branch
-  --                      (A.ChiTopBind $ A.ChiUnbound $
-  --                            (A.ChiLabelShallow (labelName "False")
-  --                                        (ident "a")))
-  --                            (A.PrimInt 0)
-  --                   ]))
+  , xCont "(fun x -> [+] n 2)"
   ]
