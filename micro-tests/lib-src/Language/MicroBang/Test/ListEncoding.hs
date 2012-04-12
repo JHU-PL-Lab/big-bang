@@ -13,23 +13,18 @@ srcMakeList = foldr addNode "`nil ()"
   where addNode int tbCode =
           printf "`hd %d & (`tl (%s))" int tbCode
 
--- Observe that, in the following, the inner `nil branch is never possible
--- and is never taken; it's just here for the (path-insensitive) typechecker.
-
 srcSum1 = "fun this -> fun xs ->                                    \
           \ case xs of                                              \
           \ { `nil junk -> 0 ;                                      \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> [+] a (this b);                         \
-          \        `nil underscore -> 0}                                     \
+          \       {`tl b -> [+] a (this b)}                         \
           \ }                                                       "
 
 srcSum2 = "fun this -> fun accum -> fun xs ->                       \
           \ case xs of                                              \
           \ { `nil junk -> accum ;                                  \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> this ([+] a accum) b;                   \
-          \        `nil underscore -> accum}                                 \
+          \       {`tl b -> this ([+] a accum) b}                   \
           \ }                                                       "
 
 srcSum3 = "fun this -> fun xs ->                                    \
@@ -37,8 +32,7 @@ srcSum3 = "fun this -> fun xs ->                                    \
           \ case xs of                                              \
           \ { `nil junk -> accum;                                   \
           \   `hd a -> case xs of                                   \
-          \       {`tl b -> this (b & `acc ([+] a accum));          \
-          \        `nil underscore -> accum}                                 \
+          \       {`tl b -> this (b & `acc ([+] a accum))}          \
           \ }}                                                      "
 
 --srcSum4 = "def accum = 0 in fun this -> fun xs ->                   \
@@ -46,23 +40,21 @@ srcSum3 = "fun this -> fun xs ->                                    \
 --          \ { `nil junk -> accum;                                   \
 --          \   `hd a -> case xs of                                   \
 --          \       {`tl b -> accum = [+] accum a in this b ;         \
---          \        `nil underscore -> accum}                                 \
+--          \        `nil underscore -> accum}                        \
 --          \ }                                                       "
 
 srcFoldl = "fun this -> fun f -> fun z -> fun xs ->                 \
            \ case xs of                                             \
            \ { `nil junk -> z;                                      \
            \   `hd a -> case xs of                                  \
-           \       {`tl b -> this f (f z a) b;                      \
-           \        `nil underscore -> z}                                    \
+           \       {`tl b -> this f (f z a) b}                      \
            \ }                                                      "
 
 srcFoldr = "fun this -> fun f -> fun z -> fun xs ->                 \
            \ case xs of                                             \
            \ { `nil junk -> z;                                      \
            \   `hd a -> case xs of                                  \
-           \       {`tl b -> f a (this f z b);                      \
-           \        `nil underscore -> z}                                    \
+           \       {`tl b -> f a (this f z b)}                      \
            \ }                                                      "
 
 testSum xs = map ($ V.pi $ sum xs)
