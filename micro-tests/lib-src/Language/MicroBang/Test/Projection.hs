@@ -47,7 +47,7 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
   -- Test that implicit projection of lazy ops succeeds
   , xEval "[+] (2 & ()) 2" $
           four
-  --, xCont "[+] (`True () & 'z') 2"
+  , xCont "[+] (`True () & ()) 2"
   , xEval "[+] (2 & `X ()) (`Y 5 & 2)" $
           four
   , xEval "[+] (2 & (`A 6 & ())) ((2 & `B 7) & ())" $
