@@ -36,7 +36,7 @@ tests = TestLabel "General case tests" $ TestList
   , xCont "case 4 of {int -> () ; unit -> x}"
   ---- Check to make sure that path sensitivity does not exist, as we don't
   ---- expect it to.
-  , xCont (srcY ++ "(fun this -> fun v ->                       \
+  , xEval (srcY ++ "(fun this -> fun v ->                       \
                    \    case v of {                             \
                    \      unit -> 0;                            \
                    \      `A underscore ->                      \
@@ -45,6 +45,7 @@ tests = TestLabel "General case tests" $ TestList
                    \        }                                   \
                    \    }                                       \
                    \) (`A 0 & `B (`A 0 & `B ()))                ")
+        $ V.pi 2
   , xEval "case `A 3 & `B () of {                               \
           \  `A i -> i                                          \
           \}                                                    "
