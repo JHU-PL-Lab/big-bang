@@ -140,7 +140,9 @@ data EvalStringResult
 instance Display EvalStringResult where
   makeDoc esr =
     case esr of
-      EvalResult e esof -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
+      EvalResult e esof -> case esof of
+        EvalFailure ee -> makeDoc ee
+        _ -> text "Result:" <+> (makeDoc e) <+> (makeDoc esof)
       Contradiction e cs-> text $ "Contradiction" ++ show e ++ " " ++ show cs
       DerivationFailure e cs -> text $ "DerivationFailure" ++ show e ++ " " ++ show cs
       ParseFailure pe -> text $ "ParseFailure" ++ show pe
