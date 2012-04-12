@@ -65,47 +65,6 @@ srcFoldr = "fun this -> fun f -> fun z -> fun xs ->                 \
            \        `nil underscore -> z}                                    \
            \ }                                                      "
 
--- These forms use multipatterns to simplify their cases.
-
---srcSum1Pats = "fun this -> fun xs ->                                \
---              \ case xs of {                                        \
---              \   `nil _ -> 0 ;                                     \
---              \   `hd h & `tl t -> [+] h (this t)                   \
---              \ }                                                   "
-
---srcSum2Pats = "fun this -> fun accum -> fun xs ->                   \
---              \ case xs of {                                        \
---              \   `nil _ -> accum ;                                 \
---              \   `hd h & `tl t -> this ([+] h accum) t             \
---              \ }                                                   "
-
---srcSum3Pats = "fun this -> fun xs ->                                \
---              \ case xs of {                                        \
---              \   `nil _ & `acc accum -> accum ;                    \
---              \   `hd h & `tl t & `acc accum ->                     \
---              \     this (t & `acc ([+] h accum))                   \
---              \ }                                                   "
-
---srcSum4Pats = "def accum = 0 in                                     \
---              \ fun this -> fun xs ->                               \
---              \   case xs of {                                      \
---              \     `nil _ -> accum ;                               \
---              \     `hd h & `tl t -> accum = [+] accum h in this t  \
---              \   }                                                 "
-
---srcFoldlPats = "fun this -> fun f -> fun z -> fun xs ->             \
---               \ case xs of {                                       \
---               \   `nil _ -> z ;                                    \
---               \   `hd h & `tl t -> this f (f z h) t                \
---               \ }                                                  "
-
---srcFoldrPats = "fun this -> fun f -> fun z -> fun xs ->             \
---               \ case xs of {                                       \
---               \   `nil _ -> z ;                                    \
---               \   `hd h & `tl t -> f h (this f z t)                \
---               \ }                                                  "
-
-
 testSum xs = map ($ V.pi $ sum xs)
   [ xEval $ srcMultiAppl
       [srcY, srcSum1, srcMakeList xs]
@@ -119,18 +78,6 @@ testSum xs = map ($ V.pi $ sum xs)
       [srcY, srcFoldl, srcPlus, "0", srcMakeList xs]
   , xEval $ srcMultiAppl
       [srcY, srcFoldr, srcPlus, "0", srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcSum1Pats, srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcSum2Pats, "0", srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcSum3Pats, "`acc 0 & " ++ srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcSum4Pats, srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcFoldlPats, srcPlus, "0", srcMakeList xs]
-  --, xEval $ srcMultiAppl
-  --    [srcY, srcFoldrPats, srcPlus, "0", srcMakeList xs]
   ]
   where srcPlus = "fun x -> fun y -> [+] x y"
 
