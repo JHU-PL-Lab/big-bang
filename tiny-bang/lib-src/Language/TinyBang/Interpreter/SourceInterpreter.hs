@@ -11,6 +11,7 @@ import Control.Monad (when)
 import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
 import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
@@ -50,7 +51,10 @@ evalStringTop s =
     let result = eAll s in
     case result of
         Left (FailureWrapper err) -> err
-        Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
+        Right ast -> EvalResult ast $
+                       if Cfg.evaluating then eEval ast
+                                         else EvalSuccess (A.VEmptyOnion
+                                                          ,IntMap.empty)
 
 eAll :: (?conf :: Cfg.Config) => String -> EvalStringM A.Expr
 eAll s = do
