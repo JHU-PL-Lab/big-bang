@@ -4,8 +4,9 @@ module Language.TinyBang.Test.Parser
 where
 
 import Language.TinyBang.Test.UtilFunctions
+import qualified Language.TinyBang.Config as Cfg
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Miscellaneous parser tests" $ TestList
   [ fPars ""
   , fPars "(expr"
@@ -17,5 +18,3 @@ tests = TestLabel "Miscellaneous parser tests" $ TestList
   , fPars "x = y"
   , fPars "{ 1 }"
   ]
-
-

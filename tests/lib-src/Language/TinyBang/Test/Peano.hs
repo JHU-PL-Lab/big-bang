@@ -12,6 +12,7 @@ import Language.TinyBang.Test.NameUtils
   , lblS
   )
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 
 peanoSrcZero =
   "def zero = `Z () in                                                         "
@@ -47,7 +48,7 @@ peanoPrelude =
 
 peanoPreludeMult = peanoPrelude ++ peanoSrcMult
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Peano tests" $ TestList
   [ xEval ( peanoPrelude ++ "plus two two" ) $ peanoVal 4
   , xEval ( peanoPreludeMult ++ "mult two two" ) $ peanoVal 4

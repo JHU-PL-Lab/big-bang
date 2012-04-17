@@ -5,6 +5,7 @@ where
 
 import Language.TinyBang.Test.UtilFunctions
 import Language.TinyBang.Test.SourceUtils
+import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Test.ValueUtils as V
 import Text.Printf (printf)
 
@@ -136,7 +137,7 @@ testSum xs = map ($ V.pi $ sum xs)
 
 -- TODO: quickcheck that testsum works for all lists.
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "List encoding tests" $ TestList $ concat
   [ testSum []
   , testSum [1]

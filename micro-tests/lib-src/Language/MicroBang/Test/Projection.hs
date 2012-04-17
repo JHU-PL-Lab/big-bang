@@ -13,7 +13,7 @@ one = A.VPrimInt 1
 two = A.VPrimInt 2
 four = A.VPrimInt 4
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
   [
   xEval "case `A 5 & `A () of {`A x -> x}"

@@ -4,6 +4,7 @@ module Main where
 import Test.HUnit
 import System.Console.CmdArgs
 
+import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Test.Onions as Onions
 import qualified Language.TinyBang.Test.Functions as Functions
 import qualified Language.TinyBang.Test.Case as Case
@@ -22,7 +23,7 @@ import qualified Language.TinyBang.Test.Projection as Projection
 import qualified Language.TinyBang.Test.State as State
 import qualified Language.TinyBang.Test.ListEncoding as ListEncoding
 
-tests :: (?debug :: Bool) => [Test]
+tests :: (?conf :: Cfg.Config) => [Test]
 tests =
   [ Onions.tests
   , Functions.tests
@@ -52,5 +53,8 @@ defOpts = Options {debug = def &= name "d"}
 main :: IO Counts
 main = do
   opts <- cmdArgs defOpts
-  let ?debug = debug opts
+  let ?conf = Cfg.Config { Cfg.debug = debug opts
+                         , Cfg.typecheck = True
+                         , Cfg.evaluate = True
+                         }
   runTestTT $ TestList tests

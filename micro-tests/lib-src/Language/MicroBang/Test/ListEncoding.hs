@@ -75,7 +75,7 @@ testSum xs = map ($ V.pi $ sum xs)
 
 -- TODO: quickcheck that testsum works for all lists.
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "List encoding tests" $ TestList $ concat
   [ testSum []
   , testSum [1]

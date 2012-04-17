@@ -19,8 +19,9 @@ import Language.TinyBang.Test.SourceUtils
   )
 
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
   [ xEval "fun x -> x"
           identFuncX

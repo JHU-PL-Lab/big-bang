@@ -7,8 +7,9 @@ import Language.TinyBang.Test.SourceUtils
 import Language.TinyBang.Test.UtilFunctions
 import Language.TinyBang.Test.ValueUtils (true,false)
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 
-xEvalComp :: (?debug :: Bool) => Ordering -> String -> String -> [Test]
+xEvalComp :: (?conf :: Cfg.Config) => Ordering -> String -> String -> [Test]
 xEvalComp ord srcA srcB =
   [ xEval ("(" ++ srcA ++ ") == (" ++ srcB ++ ")") $
           if ord == EQ then true else false
@@ -24,7 +25,7 @@ xEvalComp ord srcA srcB =
           if ord == GT then false else true
   ]
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Eager operations tests" $ TestList $ concat
   [ [ xType (srcMultiAppl [srcY, srcSummate, "5"])
     , xType (srcMultiAppl [srcGreaterOrLess, "4", "4"])

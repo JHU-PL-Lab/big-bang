@@ -15,6 +15,8 @@ module Utils.Render.Display
 , makeListDoc
 , indentSize
 , module Text.PrettyPrint
+, ConfigDisplayDebug
+, isDisplayDebug
 ) where
 
 import Control.Monad (liftM)
@@ -31,13 +33,13 @@ import Text.PrettyPrint
 indentSize :: Int
 indentSize = 4
 
-makeDocForList :: (?debug :: Bool, Display a)
+makeDocForList :: (ConfigDisplayDebug b, ?conf :: b, Display a)
                => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
 makeDocForList = makeDocForListBy makeDoc
 
 -- |A function for displaying a list of elements.  This function will
 --  adjust the appearance of the list based on its parameters.
-makeDocForListBy :: (?debug :: Bool)
+makeDocForListBy :: (ConfigDisplayDebug b, ?conf :: b)
                  => (a -> Doc)
                  -> (String -> [Doc] -> Doc)
                  -> String
@@ -45,7 +47,7 @@ makeDocForListBy :: (?debug :: Bool)
                  -> Doc
 makeDocForListBy toDoc f s lst = makeDocForDocList f s $ map toDoc lst
 
-makeDocForDocList :: (?debug :: Bool)
+makeDocForDocList :: (ConfigDisplayDebug b, ?conf :: b)
                   => (String -> [Doc] -> Doc)
                   -> String -> [Doc] -> Doc
 makeDocForDocList
@@ -55,27 +57,35 @@ makeDocForDocList
   = let dcat = catF $ render $ hcat docs in
     dcat $ punctuate (text punc) docs
 
-makeCommaSeparatedDocForList :: (?debug :: Bool, Display a) => [a] -> Doc
+makeCommaSeparatedDocForList :: (ConfigDisplayDebug b, ?conf :: b, Display a)
+                             => [a] -> Doc
 makeCommaSeparatedDocForList lst =
     makeDocForList catByComma ", " lst
 
 catByComma :: String -> [Doc] -> Doc
 catByComma x = if elem ',' x then vcat else hcat
 
+-- |A typeclass for implicit configuration of display contexts.
+class ConfigDisplayDebug a where
+    isDisplayDebug :: a -> Bool
+
+instance ConfigDisplayDebug Bool where
+    isDisplayDebug = id
+
+-- |A typeclass for displayable types.
 class Display a where
-    display :: (?debug :: Bool) => a -> String
-    displayList :: (?debug :: Bool) => [a] -> String
-    makeDoc :: (?debug :: Bool) => a -> Doc
-    makeListDoc :: (?debug :: Bool) => [a] -> Doc
+    display :: (ConfigDisplayDebug b, ?conf :: b) => a -> String
+    displayList :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> String
+    makeDoc :: (ConfigDisplayDebug b, ?conf :: b) => a -> Doc
+    makeListDoc :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> Doc
     display = render . makeDoc
     displayList = render . makeListDoc
     makeListDoc = brackets . makeCommaSeparatedDocForList
-
-displayMap :: (?debug :: Bool, Display k, Display v) =>
-              (a -> [(k, v)]) -> a -> Doc
-displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
-             . toList
-  where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
+    displayMap :: (ConfigDisplayDebug b, ?conf :: b, Display k, Display v) =>
+                  (a -> [(k, v)]) -> a -> Doc
+    displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
+                               . toList
+      where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
 
 instance Display Doc where
     makeDoc = id

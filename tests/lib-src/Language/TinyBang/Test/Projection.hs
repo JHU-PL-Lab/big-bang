@@ -5,6 +5,7 @@ where
 
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 
 -- TODO: write a quickcheck that "case `lbl e of { `lbl x -> x }" == e
 
@@ -13,7 +14,7 @@ one = A.VPrimInt 1
 two = A.VPrimInt 2
 four = A.VPrimInt 4
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
   [ xEval "case `A 5 & `A 'a' of {`A x -> x}"
           (A.VPrimChar 'a')

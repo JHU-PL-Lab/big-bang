@@ -49,6 +49,7 @@ Library
 
   Exposed-Modules:
         Language.TinyBang.Ast
+        Language.TinyBang.Config
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
         Language.TinyBang.Syntax.Lexer

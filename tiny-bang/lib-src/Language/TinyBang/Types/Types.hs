@@ -36,6 +36,7 @@ import qualified Data.Set as Set
 import Data.Map (Map)
 import Data.Function (on)
 
+import Language.TinyBang.Config as Cfg
 import Language.TinyBang.Types.UtilTypes
   (LabelName, Ident, LazyOperator, ProjTerm(..), PrimitiveType(..))
 import Language.TinyBang.Types.Alphas
@@ -359,7 +360,7 @@ instance Display Constraint where
     let (base,hist) =
           case c of
             LowerSubtype a b h -> (subtype a b, h)
-            UpperSubtype a b c h -> (subtype a $ dispFun b c, h)
+            UpperSubtype a b d h -> (subtype a $ dispFun b d, h)
             AlphaSubtype a b h -> (subtype a b, h)
             CellSubtype ia ca h ->
               (subtype (text "Cell" <> parens (makeDoc ia)) ca, h)
@@ -382,8 +383,9 @@ instance Display Constraint where
             Immutable a h -> (text "immutable" <> parens (makeDoc a), h)
             Bottom h -> (text "_|_", h)
     in
-    if ?debug then base $+$ (nest indentSize $ makeDoc hist)
-              else base
+    if Cfg.displayDebugging
+        then base $+$ (nest indentSize $ makeDoc hist)
+        else base
     where gDoc (Guard tauChi constraints) =
             makeDoc tauChi <+> text "->" <+> makeDoc constraints
           subtype :: (Display a, Display b) => a -> b -> Doc

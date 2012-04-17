@@ -20,9 +20,10 @@ import Language.TinyBang.Test.NameUtils
   )
 
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "General case tests" $ TestList
   [ xEval "case 1 of {int -> 0}"
           (V.pi 0)

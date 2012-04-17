@@ -36,11 +36,12 @@ import qualified Language.TinyBang.Syntax.Lexer as L
 import Language.TinyBang.Syntax.Lexer (Token(..))
 import Language.TinyBang.Types.UtilTypes (labelName, ident)
 import Utils.Render.Display (display, Display)
+import qualified Language.TinyBang.Config as Cfg
 
 type TinyBangCode = String
 type Result = (A.Value, IntMap.IntMap A.Value)
 
-xEval :: (Display v, Evaluated v, ?debug :: Bool) => TinyBangCode -> v -> Test
+xEval :: (Display v, Evaluated v, ?conf :: Cfg.Config) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -57,7 +58,7 @@ xEval code expectedResult =
         label = show code ++
                 " was expected to produce " ++ display expectedResult
 
-xType :: (?debug :: Bool) => TinyBangCode -> Test
+xType :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xType code =
   label ~: TestCase $ case evalStringTop code of
     EvalResult _ _ -> assertSuccess
@@ -70,7 +71,7 @@ xType code =
 assertSuccess :: Assertion
 assertSuccess = return ()
 
-xCont :: (?debug :: Bool) => TinyBangCode -> Test
+xCont :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xCont code =
   label ~: case result of
     Contradiction _ _ -> TestCase $ assertSuccess
@@ -82,7 +83,7 @@ xCont code =
                 " was expected to produce a contradiction"
         result = evalStringTop code
 
-xNotC :: (?debug :: Bool) => TinyBangCode -> Test
+xNotC :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xNotC code =
   label ~: case result of
     TypecheckFailure _ (TI.NotClosed _) _ -> TestCase $ assertSuccess
@@ -93,7 +94,7 @@ xNotC code =
                 " was expected to produce a contradiction"
         result = evalStringTop code
 
-xErrT :: (?debug :: Bool)
+xErrT :: (?conf :: Cfg.Config)
       => String -> (TI.TypeInferenceError -> Bool) -> TinyBangCode -> Test
 xErrT msg pred code =
   label ~: case result of
@@ -104,13 +105,13 @@ xErrT msg pred code =
                 " was expected to produce " ++ msg
         result = evalStringTop code
 
-xDBnd :: (?debug :: Bool) => TinyBangCode -> Test
+xDBnd :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xDBnd = xErrT "DoubleBound" $ \x ->
           case x of
             TI.DoubleBound{} -> True
             _ -> False
 
-xDLbl :: (?debug :: Bool) => TinyBangCode -> Test
+xDLbl :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xDLbl = xErrT "DoubleLabel" $ \x ->
           case x of
             TI.DoubleLabel{} -> True
@@ -123,7 +124,7 @@ xLexs code expected =
     Right tokens -> assertEqual "" expected tokens
   where label = "Lexing " ++ show code
 
-xPars :: (?debug :: Bool) => TinyBangCode -> A.Expr -> Test
+xPars :: (?conf :: Cfg.Config) => TinyBangCode -> A.Expr -> Test
 xPars code expected =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -134,7 +135,7 @@ xPars code expected =
   where label = "Parsing " ++ show code
         eq = assertEqual "" expected
 
-fPars :: (?debug :: Bool) => TinyBangCode -> Test
+fPars :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 fPars code =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -145,7 +146,7 @@ fPars code =
   where label = "Parsing " ++ show code
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
-lexParseEval :: (Display a, Evaluated a, ?debug :: Bool)
+lexParseEval :: (Display a, Evaluated a, ?conf :: Cfg.Config)
              => TinyBangCode -> [Token] -> A.Expr -> a -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex

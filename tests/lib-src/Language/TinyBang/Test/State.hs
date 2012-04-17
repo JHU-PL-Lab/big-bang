@@ -5,6 +5,7 @@ where
 
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 
 idX = ident "x"
 varX = A.Var idX
@@ -13,7 +14,7 @@ efour = A.PrimInt 4
 four = A.VPrimInt 4
 two = A.VPrimInt 2
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
           A.Def Nothing idX efour varX

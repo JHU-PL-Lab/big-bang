@@ -34,7 +34,7 @@ import Utils.Render.Display (display, Display)
 type MicroBangCode = String
 type Result = A.Value
 
-xEval :: (Display v, Evaluated v, ?debug :: Bool) => MicroBangCode -> v -> Test
+xEval :: (Display v, Evaluated v, ?conf :: Bool) => MicroBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -54,7 +54,7 @@ xEval code expectedResult =
 assertSuccess :: Assertion
 assertSuccess = return ()
 
-xCont :: (?debug :: Bool) => MicroBangCode -> Test
+xCont :: (?conf :: Bool) => MicroBangCode -> Test
 xCont code =
   label ~: case result of
     Contradiction _ _ -> TestCase $ assertSuccess
@@ -79,7 +79,7 @@ xLexs code expected =
     Right tokens -> assertEqual "" expected tokens
   where label = "Lexing " ++ show code
 
-xPars :: (?debug :: Bool) => MicroBangCode -> A.Expr -> Test
+xPars :: (?conf :: Bool) => MicroBangCode -> A.Expr -> Test
 xPars code expected =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -91,7 +91,7 @@ xPars code expected =
   where label = "Parsing " ++ show code
         eq = assertEqual "" expected
 
-fPars :: (?debug :: Bool) => MicroBangCode -> Test
+fPars :: (?conf :: Bool) => MicroBangCode -> Test
 fPars code =
   label ~: TestCase $ case evalStringTop code of
     LexFailure err -> assertFailure $ "Lex failed: " ++ err
@@ -103,7 +103,7 @@ fPars code =
   where label = "Parsing " ++ show code
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
-lexParseEval :: (?debug :: Bool)
+lexParseEval :: (?conf :: Bool)
              => MicroBangCode -> A.Expr -> A.Value -> Test
 lexParseEval code expr val =
   TestList [
