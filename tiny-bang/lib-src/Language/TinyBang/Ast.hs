@@ -22,6 +22,7 @@ module Language.TinyBang.Ast
 , Evaluated(..)
 , CellId
 , ePatVars
+, exprVars
 , exprFreeVars
 ) where
 
@@ -174,6 +175,33 @@ exprFreeVars e =
             AIdent i -> (Set.delete i)
             ACell _ -> id) $ exprFreeVars e2)
           `Set.union` exprFreeVars e1
+    ExprCell _ -> Set.empty
+
+-- |Obtains the set of all variables in a given expression.  This includes the
+--  variables found in patterns and other constructs.
+exprVars :: Expr -> Set Ident
+exprVars e =
+  case e of
+    Var i -> Set.singleton i
+    Label _ _ e' -> exprVars e'
+    Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    OnionProj e' _ -> exprVars e'
+    OnionSub e' _ -> exprVars e'
+    Func i e' -> i `Set.insert` exprVars e'
+    Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    PrimInt _ -> Set.empty
+    PrimChar _ -> Set.empty
+    PrimUnit -> Set.empty
+    Case e' brs -> Set.union (exprVars e') $ Set.unions $
+      map (\(Branch chi e'') ->
+              exprVars e'' `Set.difference` ePatVars chi) brs
+    EmptyOnion -> Set.empty
+    LazyOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    EagerOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
+    Assign a e1 e2 -> (case a of
+                        AIdent i -> Set.insert i
+                        ACell _ -> id) $ exprVars e1 `Set.union` exprVars e2
     ExprCell _ -> Set.empty
 
 instance Display Expr where
