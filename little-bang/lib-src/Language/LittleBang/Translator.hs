@@ -86,12 +86,7 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.OnionProj e' p -> TA.OnionProj (convTiny e') (convTiny p)
       LA.EmptyOnion -> TA.EmptyOnion
       LA.Func i e' -> TA.Func self $ TA.Func (convTiny i) (convTiny e')
-      LA.Appl e1 e2 ->
-        let (e1',e2') = convTiny (e1,e2) in
-        let free = head $ freshVars [e1',e2'] in
-        TA.Case e1'
-          [ TA.Branch (TA.ChiTopVar free) $
-              TA.Appl (TA.Appl (TA.Var free) (TA.Var free)) e2' ]
+      LA.Appl e1 e2 -> TA.Appl (convTiny e1) TA.EmptyOnion (convTiny e2)
       LA.PrimInt i -> TA.PrimInt i
       LA.PrimChar c -> TA.PrimChar c
       LA.PrimUnit -> TA.PrimUnit
