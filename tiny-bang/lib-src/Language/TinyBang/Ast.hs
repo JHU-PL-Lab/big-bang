@@ -18,7 +18,6 @@ module Language.TinyBang.Ast
 , LazyOperator(..)
 , EagerOperator(..)
 , ProjTerm(..)
-, exprFromValue
 , Assignable(..)
 , Evaluated(..)
 , CellId
@@ -128,18 +127,6 @@ type Branches = [Branch]
 data Branch = Branch ChiMain Expr
   deriving (Eq, Ord, Show)
 
--- |Trivial conversion from values to exprs
--- TODO: deprecate the hell outta this thing
-exprFromValue :: (Evaluated v) => v -> Expr
-exprFromValue v = case value v of
-  VLabel l c   -> Label l Nothing $ ExprCell c
-  VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
-  VFunc i e    -> Func i e
-  VPrimInt i   -> PrimInt i
-  VPrimChar c  -> PrimChar c
-  VPrimUnit    -> PrimUnit
-  VEmptyOnion  -> EmptyOnion
-
 -- TODO: refactor the pattern stuff into its own module?
 -- |Obtains the set of bound variables in a pattern.
 ePatVars :: Chi a -> Set Ident
@@ -219,11 +206,17 @@ instance Display Expr where
             Just Immutable -> text "immut"
             Nothing -> empty
 
+-- TODO: fix parens
 instance Display Value where
   makeDoc x =
     case x of
+      VLabel n v -> text "`" <> makeDoc n <+> parens (makeDoc v)
+      VOnion v1 v2 -> parens (makeDoc v1) <+> text "&" <+> parens (makeDoc v2)
+      VFunc i e -> text "fun" <+> text (unIdent i) <+> text "->" <+> makeDoc e
+      VPrimInt i -> text $ show i
+      VPrimChar c -> char c
+      VPrimUnit -> text "()"
       VEmptyOnion -> text "(&)"
-      _ -> makeDoc $ exprFromValue x
 
 instance Display Branch where
   makeDoc (Branch chi e) =
