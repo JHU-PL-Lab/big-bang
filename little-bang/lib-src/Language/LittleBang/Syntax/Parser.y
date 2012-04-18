@@ -22,7 +22,7 @@ import Language.LittleBang.Types.UtilTypes
     , labelName
     , unLabelName
     , PrimitiveType(..)
-    , SubTerm(..)
+    , ProjTerm(..)
     )
 import Utils.Render.Display
 
@@ -39,6 +39,8 @@ import System.IO
 %token
         '`'             { L.TokLabelPrefix }
         '&'             { L.TokOnionCons }
+        '&-'            { L.TokOnionSub }
+        '&.'            { L.TokOnionProj }
         '\\'            { L.TokLambda }
         fun             { L.TokFun }
         '->'            { L.TokArrow }
@@ -59,21 +61,23 @@ import System.IO
         def             { L.TokDef }
         '='             { L.TokEquals }
         in              { L.TokIn }
-        '[+]'           { L.TokOpPlus }
-        '[-]'           { L.TokOpMinus }
-        '[=]'           { L.TokOpEquals }
-        '[<=]'          { L.TokOpLessEquals }
-        '[>=]'          { L.TokOpGreaterEquals }
-        '-int'          { L.TokSubInteger }
-        '-char'         { L.TokSubChar }
-        '-unit'         { L.TokSubUnit }
-        '-`'            { L.TokSubLabelPrefix }
-        '-fun'          { L.TokSubFun }
+        '+'             { L.TokOpPlus }
+        '-'             { L.TokOpMinus }
+        '=='            { L.TokOpEquals }
+        '<='            { L.TokOpLessEquals }
+        '>='            { L.TokOpGreaterEquals }
+        final           { L.TokFinal }
+        immut           { L.TokImmut }
+        '.'             { L.TokProj }
         self            { L.TokSelf }
+        prior           { L.TokPrior }
 
 %left       in
 %right      '->'
-%left       '&'
+%left       '&' '&-' '&.'
+%nonassoc   '==' '<=' '>='
+%left       '+' '-'
+%left       '.'
 
 %%
 
@@ -82,15 +86,23 @@ Exp     :   '\\' ident '->' Exp
         |   fun ident '->' Exp
                                     { A.Func (ident $2) $4 }
         |   def ident '=' Exp in Exp
-                                    { A.Def (ident $2) $4 $6 }
+                                    { A.Def Nothing (ident $2) $4 $6 }
+        |   def Modifier ident '=' Exp in Exp
+                                    { A.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
                                     { A.Assign (ident $1) $3 $5 }
         |   case Exp of '{' Branches '}'
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
                                     { A.Onion $1 $3 }
-        |   Exp '&' SubTerm
+        |   Exp '&-' ProjTerm
                                     { A.OnionSub $1 $3 }
+        |   Exp '&.' ProjTerm
+                                    { A.OnionProj $1 $3 }
+        |   Exp '.' ident
+                                    { A.Proj $1 (ident $3) }
+        |   Exp '.' ident '=' Exp in Exp
+                                    { A.ProjAssign $1 (ident $3) $5 $7 }
         |   OpExp
                                     { $1 }
         |   ApplExp
@@ -114,11 +126,15 @@ Primary :   ident
         |   '(' '&' ')'
                                     { A.EmptyOnion }
         |   '`' ident Primary
-                                    { A.Label (labelName $2) $3 }
+                                    { A.Label (labelName $2) Nothing $3 }
+        |   '`' Modifier ident Primary
+                                    { A.Label (labelName $3) (Just $2) $4 }
         |   '(' Exp ')'
                                     { $2 }
         |   self
                                     { A.Self }
+        |   prior
+                                    { A.Prior }
 
 
 Branches:   Branch ';' Branches     { $1:$3 }
@@ -157,19 +173,24 @@ PrimitiveType
         |   char                    { PrimChar }
         |   unit                    { PrimUnit }
 
-SubTerm :   '-int'                  { SubPrim PrimInt }
-        |   '-char'                 { SubPrim PrimChar }
-        |   '-unit'                 { SubPrim PrimUnit }
-        |   '-`' ident              { SubLabel (labelName $2) }
-        |   '-fun'                  { SubFunc }
+Modifier
+        :   final                   { A.Final }
+        |   immut                   { A.Immutable }
+
+ProjTerm
+        :   int                     { ProjPrim PrimInt }
+        |   char                    { ProjPrim PrimChar }
+        |   unit                    { ProjPrim PrimUnit }
+        |   '`' ident               { ProjLabel (labelName $2) }
+        |   fun                     { ProjFunc }
 
 OpExp   :   Op Primary Primary      { $1 $2 $3 }
 
-Op      :   '[+]'                   { \x y -> A.BinOp A.Plus x y }
-        |   '[-]'                   { \x y -> A.BinOp A.Minus x y }
-        |   '[=]'                   { \x y -> A.BinOp A.Equal x y }
-        |   '[<=]'                  { \x y -> A.BinOp A.LessEqual x y }
-        |   '[>=]'                  { \x y -> A.BinOp A.GreaterEqual x y }
+Op      :   '+'                     { \x y -> A.BinOp A.Plus x y }
+        |   '-'                     { \x y -> A.BinOp A.Minus x y }
+        |   '=='                    { \x y -> A.BinOp A.Equal x y }
+        |   '<='                    { \x y -> A.BinOp A.LessEqual x y }
+        |   '>='                    { \x y -> A.BinOp A.GreaterEqual x y }
 
 {
 data ParseError

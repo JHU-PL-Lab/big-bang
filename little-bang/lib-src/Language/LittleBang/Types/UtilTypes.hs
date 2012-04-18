@@ -9,7 +9,7 @@ module Language.LittleBang.Types.UtilTypes
 , ident
 , unIdent
 , BinaryOperator(..)
-, SubTerm(..)
+, ProjTerm(..)
 , PrimitiveType(..)
 ) where
 
@@ -49,7 +49,7 @@ instance Display BinaryOperator where
     case o of
       Plus -> "+"
       Minus -> "-"
-      Equal -> "="
+      Equal -> "=="
       LessEqual -> "<="
       GreaterEqual -> ">="
 
@@ -68,14 +68,14 @@ instance Display PrimitiveType where
       PrimUnit -> text "unit"
 
 -- |Data type describing type patterns for removing values from onions.
-data SubTerm
-  = SubPrim PrimitiveType
-  | SubLabel LabelName
-  | SubFunc
+data ProjTerm
+  = ProjPrim PrimitiveType
+  | ProjLabel LabelName
+  | ProjFunc
   deriving (Eq, Ord, Show)
 
-instance Display SubTerm where
-  makeDoc a = text "-" <> case a of
-    SubPrim p -> makeDoc p
-    SubLabel n -> makeDoc n
-    SubFunc -> text "fun"
+instance Display ProjTerm where
+  makeDoc a = case a of
+    ProjPrim p -> makeDoc p
+    ProjLabel n -> text "`" <+> makeDoc n
+    ProjFunc -> text "fun"

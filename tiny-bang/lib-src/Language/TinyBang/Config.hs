@@ -2,8 +2,11 @@
 module Language.TinyBang.Config
 ( Config(..)
 , ConfigDebug
+, isDebug
 , ConfigTypecheck
+, isTypecheck
 , ConfigEvaluate
+, isEvaluate
 , debugging
 , typechecking
 , evaluating

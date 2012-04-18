@@ -8,9 +8,10 @@ module Language.LittleBang.Ast
 , ChiPrimary
 , Branches
 , Branch(..)
+, Modifier(..)
 -- Re-exported for convenience
 , BinaryOperator(..)
-, SubTerm(..)
+, ProjTerm(..)
 ) where
 
 import Language.LittleBang.Types.UtilTypes
@@ -19,7 +20,7 @@ import Language.LittleBang.Types.UtilTypes
   , unIdent
   , unLabelName
   , BinaryOperator(..)
-  , SubTerm(..)
+  , ProjTerm(..)
   )
 import qualified Language.LittleBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
@@ -30,9 +31,10 @@ import Utils.Render.Display
 -- |Data type for representing Big Bang ASTs.
 data Expr
   = Var Ident
-  | Label LabelName Expr
+  | Label LabelName (Maybe Modifier) Expr
   | Onion Expr Expr
-  | OnionSub Expr SubTerm
+  | OnionSub Expr ProjTerm
+  | OnionProj Expr ProjTerm
   | EmptyOnion
   | Func Ident Expr
   | Appl Expr Expr
@@ -40,11 +42,19 @@ data Expr
   | PrimChar Char
   | PrimUnit
   | Case Expr Branches
-  | Def Ident Expr Expr
+  | Def (Maybe Modifier) Ident Expr Expr
   | Assign Ident Expr Expr
   | BinOp BinaryOperator Expr Expr
   | Self
+  | Prior
+  | Proj Expr Ident
+  | ProjAssign Expr Ident Expr Expr
   deriving (Eq, Ord, Show)
+
+data Modifier
+  = Final
+  | Immutable
+  deriving (Eq, Ord, Show, Enum)
 
 -- TODO: fix this boilerplate using -XDataKinds in ghc 7.4
 data ChiMainType
@@ -88,7 +98,7 @@ data Branch = Branch ChiMain Expr
 instance Display Expr where
   makeDoc a = case a of
     Var i -> text $ unIdent i
-    Label n e -> char '`' <> (text $ unLabelName n) <+> makeDoc e
+    Label n m e -> char '`' <> (text $ unLabelName n) <+> dispMod m <+> makeDoc e
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Func i e -> parens $
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
@@ -99,12 +109,22 @@ instance Display Expr where
     Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
-    OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
+    OnionSub e p -> makeDoc e <+> text "&-" <+> makeDoc p
+    OnionProj e p -> makeDoc e <+> text "&." <+> makeDoc p
     EmptyOnion -> text "(&)"
     BinOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2
-    Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Def m i v e -> hsep [text "def", dispMod m, makeDoc i,
+                         text "=", makeDoc v, text "in", makeDoc e]
     Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     Self -> text "self"
+    Prior -> text "prior"
+    Proj e i -> makeDoc e <> text "." <> makeDoc i
+    ProjAssign e i e' e'' -> makeDoc e <> text "." <> makeDoc i <+> text "="
+                                       <+> makeDoc e' <+> text "in" <+> makeDoc e''
+    where dispMod m = case m of
+            Just Final -> text "final"
+            Just Immutable -> text "immut"
+            Nothing -> empty
 
 instance Display Branch where
   makeDoc (Branch chi e) =

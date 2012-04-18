@@ -37,6 +37,20 @@ instance (ConvertibleToTinyBang a b) =>
          ConvertibleToTinyBang (Maybe a) (Maybe b) where
   convTiny = maybe Nothing $ Just . convTiny
 
+instance (ConvertibleToTinyBang a1 b1, ConvertibleToTinyBang a2 b2) =>
+         ConvertibleToTinyBang (a1,a2) (b1,b2) where
+  convTiny (x,y) = (convTiny x, convTiny y)
+
+instance (ConvertibleToTinyBang a1 b1, ConvertibleToTinyBang a2 b2,
+          ConvertibleToTinyBang a3 b3) =>
+         ConvertibleToTinyBang (a1,a2,a3) (b1,b2,b3) where
+  convTiny (x,y,z) = (convTiny x, convTiny y, convTiny z)
+
+instance (ConvertibleToTinyBang a1 b1, ConvertibleToTinyBang a2 b2,
+          ConvertibleToTinyBang a3 b3, ConvertibleToTinyBang a4 b4) =>
+         ConvertibleToTinyBang (a1,a2,a3,a4) (b1,b2,b3,b4) where
+  convTiny (w,x,y,z) = (convTiny w, convTiny x, convTiny y, convTiny z)
+
 instance ConvertibleToTinyBang LUT.LabelName TUT.LabelName where
   convTiny = TUT.labelName . LUT.unLabelName
 
@@ -50,29 +64,30 @@ instance ConvertibleToTinyBang LUT.PrimitiveType TUT.PrimitiveType where
       LUT.PrimChar -> TUT.PrimChar
       LUT.PrimUnit -> TUT.PrimUnit
 
-instance ConvertibleToTinyBang LUT.SubTerm TUT.SubTerm where
+instance ConvertibleToTinyBang LUT.ProjTerm TUT.ProjTerm where
   convTiny s =
     case s of
-      LUT.SubPrim p -> TUT.SubPrim $ convTiny p
-      LUT.SubLabel n -> TUT.SubLabel $ convTiny n
-      LUT.SubFunc -> TUT.SubFunc
+      LUT.ProjPrim p -> TUT.ProjPrim $ convTiny p
+      LUT.ProjLabel n -> TUT.ProjLabel $ convTiny n
+      LUT.ProjFunc -> TUT.ProjFunc
 
 instance ConvertibleToTinyBang LA.Expr TA.Expr where
   convTiny e =
     case e of
       LA.Var i -> TA.Var $ convTiny i
-      LA.Label n e' -> TA.Label (convTiny n) (convTiny e')
+      LA.Label n m e' -> TA.Label (convTiny n) (convTiny m) (convTiny e')
       LA.Onion e1 e2 ->
         TA.Case TA.EmptyOnion
-          [ TA.Branch (TA.ChiTopVar self) $
+          [ TA.Branch (TA.ChiTopVar prior) $
               TA.Case (convTiny e1)
-                [ TA.Branch (TA.ChiTopVar self) $
-                    TA.Onion (TA.Var self) $ convTiny e2 ] ]
-      LA.OnionSub e' s -> TA.OnionSub (convTiny e') (convTiny s)
+                [ TA.Branch (TA.ChiTopVar prior) $
+                    TA.Onion (TA.Var prior) $ convTiny e2 ] ]
+      LA.OnionSub e' p -> TA.OnionSub (convTiny e') (convTiny p)
+      LA.OnionProj e' p -> TA.OnionProj (convTiny e') (convTiny p)
       LA.EmptyOnion -> TA.EmptyOnion
       LA.Func i e' -> TA.Func self $ TA.Func (convTiny i) (convTiny e')
       LA.Appl e1 e2 ->
-        let (e1',e2') = (convTiny e1, convTiny e2) in
+        let (e1',e2') = convTiny (e1,e2) in
         let free = head $ freshVars [e1',e2'] in
         TA.Case e1'
           [ TA.Branch (TA.ChiTopVar free) $
@@ -82,8 +97,8 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.PrimUnit -> TA.PrimUnit
       -- TODO: Encoding for cases (to correctly pass self)
       LA.Case e' brs -> TA.Case (convTiny e') (convTiny brs)
-      LA.Def i e1 e2 ->
-        TA.Case (TA.Label ref $ convTiny e1)
+      LA.Def m i e1 e2 ->
+        TA.Case (TA.Label ref (convTiny m) $ convTiny e1)
           [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
                          TA.ChiLabelShallow ref $ convTiny i) $
               convTiny e2 ]
@@ -98,8 +113,31 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
             LA.GreaterEqual -> TA.EagerOp TA.GreaterEqual)
           (convTiny e1) (convTiny e2)
       LA.Self -> TA.Var self
+      LA.Prior -> TA.Var prior
+      LA.Proj e1 i ->
+        let e1' = convTiny e1 in
+        let free = head $ freshVars [e1'] in
+        TA.Case e1'
+          [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
+                         TA.ChiLabelShallow (itl $ convTiny i) $ free) $
+                           TA.Var free ]
+      LA.ProjAssign e1 i e2 e3 ->
+        let (e1',e2',e3',i') = convTiny (e1,e2,e3,i) in
+        let free = head $ freshVars [e1',e2',e3'] in
+        TA.Case e1'
+          [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
+                         TA.ChiLabelShallow (itl $ convTiny i) $ free) $
+                           TA.Assign (TA.AIdent free) e2' e3' ]
     where self = TUT.ident "self"
+          prior = TUT.ident "prior"
           ref = TUT.labelName "Ref"
+          itl = TUT.labelName . TUT.unIdent
+
+instance ConvertibleToTinyBang LA.Modifier TA.Modifier where
+  convTiny m =
+    case m of
+      LA.Final -> TA.Final
+      LA.Immutable -> TA.Immutable
 
 instance ConvertibleToTinyBang LA.Branch TA.Branch where
   convTiny (LA.Branch chi e) =
