@@ -263,7 +263,7 @@ eval e = do
                   ChiLabelDeep lbl chiBind ->
                     recurseSearch v chi $ matchLabelComplex lbl chiBind
                   ChiFun ->
-                    recurseSearch v chi $ const $ return $ Just Map.empty
+                    recurseSearch v chi $ matchFuncs
                   ChiInnerStruct chiStruct -> eSearch v chiStruct
                 where -- | Takes a (possibly onion) value, a primary pattern,
                       --   and a function to evaluate non-onion values to a
@@ -306,6 +306,11 @@ eval e = do
                         case v' of
                           VLabel lbl' c0 | lbl == lbl' ->
                             flip eSearch chiBind =<< readCell c0
+                          _ -> return Nothing
+                      matchFuncs :: Value -> EvalM (Maybe IdMap)
+                      matchFuncs v' =
+                        case v' of 
+                          VFunc _ _ -> return $ Just Map.empty
                           _ -> return Nothing
                       searchAll :: (ChiPrimary, Maybe ChiStruct)
                                 -> EvalM (Maybe IdMap)

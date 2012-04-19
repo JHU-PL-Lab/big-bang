@@ -54,6 +54,12 @@ tests = TestLabel "General case tests" $ TestList
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             A.ChiFun) $ A.Func idX varX
             ]
+
+  -- verify the behavior of the fun pattern
+  , xEval "case 1 of { fun -> 0; z -> z }" (V.pi 1)
+  , xEval "case (fun x -> x) of { int -> 0; fun -> 1 }" (V.pi 1)
+  , xCont "case `A 0 of { fun -> 0 }"
+
   -- Check to make sure that path sensitivity does not exist, as we don't
   -- expect it to.
   , xCont (srcY ++ "(fun this -> fun v ->                       \
