@@ -8,6 +8,8 @@
 
 module Control.Monad.Trans.Consumer.Lazy
 ( Consumer
+, runConsumer
+, evalConsumer
 , ConsumerT
 , runConsumerT
 , evalConsumerT
@@ -15,6 +17,7 @@ module Control.Monad.Trans.Consumer.Lazy
 , safeNext
 ) where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Trans
@@ -23,12 +26,26 @@ import Data.List.Utils (safeUnconcat)
 
 type Consumer d = ConsumerT d Identity
 
+runConsumer :: Consumer d a -> [d] -> (a, [d])
+runConsumer c ds = runIdentity $ runConsumerT c ds
+
+evalConsumer :: Consumer d a -> [d] -> a
+evalConsumer c ds = runIdentity $ evalConsumerT c ds
+
 newtype ConsumerT d m a = ConsumerT { runConsumerT :: [d] -> m (a, [d]) }
 
 evalConsumerT :: (Monad m) => ConsumerT d m a -> [d] -> m a
 evalConsumerT x ds = do
     ~(a, _) <- runConsumerT x $ ds
     return a
+
+instance (Functor m) => Functor (ConsumerT s m) where
+    fmap f m = ConsumerT $ \ds ->
+        fmap (\ ~(a, ds') -> (f a, ds')) $ runConsumerT m ds
+
+instance (Functor m, Monad m) => Applicative (ConsumerT s m) where
+    pure = return
+    (<*>) = ap
 
 instance (Monad m) => Monad (ConsumerT d m) where
     return x = ConsumerT $ \ds -> return (x, ds)
