@@ -9,9 +9,11 @@ module Language.LittleBang.Translator
 , convertLittleToTiny
 ) where
 
-import Control.Applicative ((<$>),(<*>))
+import Control.Applicative ((<$>),(<*>),pure)
 import Control.Monad ((>=>))
+import Data.Foldable (foldlM)
 import Data.Map (Map)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Control.Monad.Consumer (Consumer, evalConsumer, next)
@@ -80,8 +82,8 @@ instance ConvertibleToTinyBang LUT.ProjTerm TUT.ProjTerm where
       LUT.ProjFunc -> return TUT.ProjFunc
 
 instance ConvertibleToTinyBang LA.Expr TA.Expr where
-  convTiny e =
-    case e of
+  convTiny expr =
+    case expr of
       LA.Var i -> TA.Var <$> convTiny i
       LA.Label n m e' -> TA.Label <$> convTiny n <*> convTiny m <*> convTiny e'
       LA.Onion e1 e2 -> do
@@ -100,8 +102,7 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.PrimInt i -> return $ TA.PrimInt i
       LA.PrimChar c -> return $ TA.PrimChar c
       LA.PrimUnit -> return TA.PrimUnit
-      -- TODO: Encoding for cases (to correctly pass self)
-      LA.Case e' brs -> TA.Case <$> convTiny e' <*> convTiny brs
+      LA.Case e' brs -> TA.Case <$> convTiny e' <*> mapM selfEncodeBranch brs
       LA.Def m i e1 e2 -> do
         (m',i',e1',e2') <- convTiny (m,i,e1,e2)
         return $ TA.Case (TA.Label ref m' e1')
@@ -121,31 +122,139 @@ instance ConvertibleToTinyBang LA.Expr TA.Expr where
       LA.Self -> return $ TA.Var self
       LA.Prior -> return $ TA.Var prior
       LA.Proj e1 i -> do
-        -- TODO: this is incorrect; it doesn't do self-binding
-        (e1',i') <- convTiny (e1,i)
-        free <- next
-        return $ TA.Case e1'
-          [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
-                         TA.ChiLabelShallow (itl i') free) $
-                           TA.Var free ]
+        -- We're going to convert to a LittleBang case and then recurse
+        free' <- next
+        let free = LUT.ident $ TUT.unIdent free'
+        let caseExpr = LA.Case e1
+              [ LA.Branch (LA.ChiTopBind $ LA.ChiUnbound $
+                    LA.ChiLabelShallow (litl i) free) $ LA.Var free ]
+        convTiny caseExpr
       LA.ProjAssign e1 i e2 e3 -> do
+        -- This one can be converted directly to TinyBang because the self
+        -- encoding doesn't affect assignment expressions.
         (e1',e2',e3',i') <- convTiny (e1,e2,e3,i)
         free <- next
         return $ TA.Case e1'
           [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
-                         TA.ChiLabelShallow (itl i') $ free) $
+                         TA.ChiLabelShallow (titl i') $ free) $
                            TA.Assign (TA.AIdent free) e2' e3' ]
     where self = TUT.ident "self"
           prior = TUT.ident "prior"
           ref = TUT.labelName "Ref"
-          itl = TUT.labelName . TUT.unIdent
-          selfEncodeBranch :: TA.Branch -> TA.Branch
-          selfEncodeBranch = error "TODO: selfEncodeBranch"
-          -- |Given a pattern, this function produces a new pattern with binders
-          --  at each level.  It then returns a mapping from each pre-existing
-          --  binder to the binder representing the prior binder's self.
-          selfEncodePattern :: TA.Chi a -> (TA.Chi a, Map TUT.Ident TUT.Ident)
-          selfEncodePattern p = error "TODO: selfEncodePattern"
+          litl = LUT.labelName . LUT.unIdent
+          titl = TUT.labelName . TUT.unIdent
+          -- |Given a branch, performs self encoding on that branch.
+          selfEncodeBranch :: LA.Branch -> FreshVars TA.Branch
+          selfEncodeBranch (LA.Branch pat lbexpr) = do
+            (tinypat,bexpr) <- convTiny (pat,lbexpr)
+            npat <- fullyNamePattern tinypat
+            bexpr' <- foldlM exprFuncSubst bexpr $ Map.toList $
+                assignPatternSelfNames npat
+            return $ TA.Branch npat bexpr'
+            where -- |Substitutes variable uses in an expression with the
+                  --  appropriate case expression.  This substitution is
+                  --  capture-avoiding.
+                  {- TODO: consider moving this to a more general location -}
+                  exprFuncSubst :: TA.Expr -> (TUT.Ident,TUT.Ident)
+                                -> FreshVars TA.Expr
+                  exprFuncSubst se (k,v) = case se of
+                    TA.Var i | i == k -> do
+                      junk <- next
+                      junk2 <- next
+                      return $ TA.Case se
+                        [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
+                          TA.ChiFun) $ TA.Func junk $ TA.Appl se $ TA.Var v
+                        , TA.Branch (TA.ChiTopVar junk2) se ]
+                    TA.Var _ -> return se
+                    TA.Label n m e -> TA.Label n m <$> rec e
+                    TA.Onion e1 e2 -> TA.Onion <$> rec e1 <*> rec e2
+                    TA.OnionSub e p -> TA.OnionSub <$> rec e <*> pure p
+                    TA.OnionProj e p -> TA.OnionProj <$> rec e <*> pure p
+                    TA.EmptyOnion -> return se
+                    TA.Func i _ | i == k -> return se
+                    TA.Func i e -> TA.Func i <$> rec e
+                    TA.Appl e1 e2 -> TA.Appl <$> rec e1 <*> rec e2
+                    TA.PrimInt _ -> return se
+                    TA.PrimChar _ -> return se
+                    TA.PrimUnit -> return se
+                    TA.Case e brs -> TA.Case <$> rec e <*> mapM substBr brs
+                    TA.Def m i e1 e2 | i == k ->
+                      TA.Def m i <$> rec e1 <*> pure e2
+                    TA.Def m i e1 e2 -> TA.Def m i <$> rec e1 <*> rec e2
+                    TA.Assign a e1 e2 -> TA.Assign a <$> rec e1 <*> rec e2
+                    TA.LazyOp op e1 e2 -> TA.LazyOp op <$> rec e1 <*> rec e2
+                    TA.EagerOp op e1 e2 -> TA.EagerOp op <$> rec e1 <*> rec e2
+                    TA.ExprCell _ -> return se
+                    where rec x = exprFuncSubst x (k,v)
+                          substBr :: TA.Branch -> FreshVars TA.Branch
+                          substBr branch@(TA.Branch bipat biexpr) =
+                            if Set.member k $ TA.ePatVars bipat
+                              then return branch
+                              else TA.Branch bipat <$> rec biexpr
+
+          -- |Given a pattern, this function creates a new pattern of the same
+          --  structure but with additional binders.  These binders ensure that
+          --  every nameable point in the structure is named.
+          fullyNamePattern :: TA.Chi a -> FreshVars (TA.Chi a)
+          fullyNamePattern pat = case pat of
+            TA.ChiTopVar _ -> return pat
+            TA.ChiTopOnion p s -> do
+              fresh <- next
+              return $ TA.ChiTopBind $ TA.ChiBound fresh $ TA.ChiUnbound $
+                TA.ChiInnerStruct $ TA.ChiOnionMany p s
+            TA.ChiTopBind b -> do
+              b' <- fullyNamePattern b
+              return $ TA.ChiTopBind b'
+            TA.ChiOnionMany p s -> do
+              p' <- fullyNamePattern p
+              s' <- fullyNamePattern s
+              return $ TA.ChiOnionMany p' s'
+            TA.ChiOnionOne p -> do
+              p' <- fullyNamePattern p
+              return $ TA.ChiOnionOne p'
+            TA.ChiBound i ib@(TA.ChiBound _ _) -> do
+              ib' <- fullyNamePattern ib
+              return $ TA.ChiBound i ib'
+            TA.ChiBound i (TA.ChiUnbound p) -> do
+              p' <- fullyNamePattern p
+              return $ TA.ChiBound i $ TA.ChiUnbound p'
+            TA.ChiUnbound p -> do
+              fresh <- next
+              p' <- fullyNamePattern p
+              return $ TA.ChiBound fresh $ TA.ChiUnbound p'
+            TA.ChiPrim _ -> return pat
+            TA.ChiLabelShallow _ _ -> return pat
+            TA.ChiLabelDeep n b -> do
+              b' <- fullyNamePattern b
+              return $ TA.ChiLabelDeep n b'
+            TA.ChiFun -> return pat
+            TA.ChiInnerStruct s -> do
+              s' <- fullyNamePattern s
+              return $ TA.ChiInnerStruct s'
+          -- |Given a fully-named pattern, this function creates a mapping from
+          --  each of the variables in the pattern to that variable's
+          --  self-variable; for example, in "z:`A x", z is the self-variable
+          --  for x.
+          assignPatternSelfNames :: TA.Chi a -> Map TUT.Ident TUT.Ident
+          assignPatternSelfNames = rec Nothing
+            where rec :: Maybe (TUT.Ident) -> TA.Chi a
+                      -> Map TUT.Ident TUT.Ident
+                  rec mi pat = case pat of
+                    TA.ChiTopVar _ -> Map.empty
+                    TA.ChiTopOnion p s -> rec mi p `Map.union` rec mi s
+                    TA.ChiTopBind b -> rec mi b
+                    TA.ChiOnionMany p s -> rec mi p `Map.union` rec mi s
+                    TA.ChiOnionOne p -> rec mi p
+                    TA.ChiBound i b -> mapFor i mi `Map.union` rec (Just i) b
+                    TA.ChiUnbound p -> rec mi p
+                    TA.ChiPrim _ -> Map.empty
+                    TA.ChiLabelShallow _ i -> mapFor i mi
+                    TA.ChiLabelDeep _ b -> rec mi b
+                    TA.ChiFun -> Map.empty
+                    TA.ChiInnerStruct s -> rec mi s
+                    where mapFor :: TUT.Ident -> Maybe (TUT.Ident)
+                                 -> Map TUT.Ident TUT.Ident
+                          mapFor i = maybe Map.empty (i `Map.singleton`)
 
 instance ConvertibleToTinyBang LA.Modifier TA.Modifier where
   convTiny m =
