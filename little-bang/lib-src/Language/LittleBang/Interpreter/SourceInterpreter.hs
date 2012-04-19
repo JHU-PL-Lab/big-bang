@@ -21,7 +21,7 @@ import qualified Data.IntMap as IntMap
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.LittleBang.Syntax.Lexer as L
 import qualified Language.LittleBang.Syntax.Parser as P
-import Language.LittleBang.Translator (convTiny)
+import Language.LittleBang.Translator (convertLittleToTiny)
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cnf
@@ -68,7 +68,7 @@ eAll :: (?conf :: Cnf.Config) => String -> EvalStringM A.Expr
 eAll s = do
     tokens <- eLex s
     lAst <- eParse tokens
-    let ast = convTiny lAst
+    let ast = convertLittleToTiny lAst
     when Cnf.typechecking
         ( do
             (_,cs) <- eTypeInfer ast

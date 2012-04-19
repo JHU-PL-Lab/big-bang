@@ -9,10 +9,14 @@ module Language.LittleBang.Ast
 , Branches
 , Branch(..)
 , Modifier(..)
+, exprVars
 -- Re-exported for convenience
 , BinaryOperator(..)
 , ProjTerm(..)
 ) where
+
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 import Language.LittleBang.Types.UtilTypes
   ( LabelName
@@ -94,6 +98,47 @@ deriving instance Ord (Chi a)
 type Branches = [Branch]
 data Branch = Branch ChiMain Expr
   deriving (Eq, Ord, Show)
+
+exprVars :: Expr -> Set Ident
+exprVars e =
+  case e of
+    Var i -> Set.singleton i
+    Label _ _ e' -> exprVars e'
+    Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    Func i e' -> Set.insert i $ exprVars e'
+    Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    PrimInt _ -> Set.empty
+    PrimChar _ -> Set.empty
+    PrimUnit -> Set.empty
+    Case e' brs -> Set.union (exprVars e') $ Set.unions $ map branchVars brs
+    OnionSub e' _ -> exprVars e'
+    OnionProj e' _ -> exprVars e'
+    EmptyOnion -> Set.empty
+    BinOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    Def _ i e1 e2 -> Set.insert i $ exprVars e1 `Set.union` exprVars e2
+    Assign i e1 e2 -> Set.insert i $ exprVars e1 `Set.union` exprVars e2
+    Self -> Set.empty
+    Prior -> Set.empty
+    Proj e' i -> Set.insert i $ exprVars e'
+    ProjAssign e1 i e2 e3 ->
+      Set.insert i $ Set.unions $ map exprVars [e1,e2,e3]
+  where branchVars (Branch chi e') = patVars chi `Set.union` exprVars e'
+
+patVars :: Chi a -> Set Ident
+patVars chi =
+  case chi of
+    ChiTopVar i -> Set.singleton i
+    ChiTopOnion p s -> patVars p `Set.union` patVars s
+    ChiTopBind b -> patVars b
+    ChiOnionMany p s -> patVars p `Set.union` patVars s
+    ChiOnionOne p -> patVars p
+    ChiBound i b -> Set.insert i $ patVars b
+    ChiUnbound p -> patVars p
+    ChiPrim _ -> Set.empty
+    ChiLabelShallow _ i -> Set.singleton i
+    ChiLabelDeep _ b -> patVars b
+    ChiFun -> Set.empty
+    ChiInnerStruct s -> patVars s
 
 instance Display Expr where
   makeDoc a = case a of
