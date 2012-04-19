@@ -143,7 +143,8 @@ patVars chi =
 instance Display Expr where
   makeDoc a = case a of
     Var i -> text $ unIdent i
-    Label n m e -> char '`' <> (text $ unLabelName n) <+> dispMod m <+> makeDoc e
+    Label n m e -> char '`' <> (text $ unLabelName n) <+> dispMod m
+        <+> (parens $ makeDoc e)
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Func i e -> parens $
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e

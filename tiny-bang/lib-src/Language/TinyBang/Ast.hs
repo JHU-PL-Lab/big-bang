@@ -208,7 +208,7 @@ instance Display Expr where
   makeDoc a = case a of
     Var i -> text $ unIdent i
     Label n m e ->
-      char '`' <> (text $ unLabelName n) <+> dispMod m <+> makeDoc e
+      char '`' <> (text $ unLabelName n) <+> dispMod m <+> (parens $ makeDoc e)
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Func i e -> parens $
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
@@ -216,7 +216,8 @@ instance Display Expr where
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
-    Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
+    Case e brs -> text "case" <+> (parens $ makeDoc e) <+> text "of" <+>
+            text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
