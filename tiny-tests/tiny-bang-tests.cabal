@@ -1,4 +1,4 @@
-    Name:                big-bang-tests
+Name:                tiny-bang-tests
 
 -- The package version. See the Haskell package versioning policy
 -- (http://www.haskell.org/haskellwiki/Package_versioning_policy) for
@@ -80,7 +80,7 @@ Executable test-suite
   Main-is:             Test.hs
 
   -- Packages needed in order to build this package.
-  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang-utils, tiny-bang, big-bang-tests, HUnit, cmdargs
+  Build-depends:       base, array, containers == 0.4.0.0 , mtl, big-bang-utils, tiny-bang, tiny-bang-tests, HUnit, cmdargs
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Note: happy 1.18.8 fixes a bug which causes expressions with an unexpected
