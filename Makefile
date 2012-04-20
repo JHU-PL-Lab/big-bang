@@ -1,4 +1,4 @@
-PROJECTS=utils micro-bang tiny-bang little-bang micro-tests tiny-tests
+PROJECTS=utils micro-bang tiny-bang little-bang micro-tests tiny-tests little-tests
 
 .PHONY : all
 all : $(PROJECTS)
