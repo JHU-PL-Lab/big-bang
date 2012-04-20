@@ -91,6 +91,8 @@ Exp     :   '\\' ident '->' Exp
                                     { A.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
                                     { A.Assign (ident $1) $3 $5 }
+        |   Primary '.' ident '=' Exp in Exp
+                                    { A.ProjAssign $1 (ident $3) $5 $7 }
         |   case Exp of '{' Branches '}'
                                     { A.Case $2 $5 }
         |   Exp '&' Exp
@@ -99,18 +101,22 @@ Exp     :   '\\' ident '->' Exp
                                     { A.OnionSub $1 $3 }
         |   Exp '&.' ProjTerm
                                     { A.OnionProj $1 $3 }
-        |   Exp '.' ident
-                                    { A.Proj $1 (ident $3) }
-        |   Exp '.' ident '=' Exp in Exp
-                                    { A.ProjAssign $1 (ident $3) $5 $7 }
         |   OpExp
                                     { $1 }
         |   ApplExp
                                     { $1 }
 
 
-ApplExp :   ApplExp Primary
+ApplExp :   ApplExp LabelExp
                                     { A.Appl $1 $2 }
+        |   LabelExp
+                                    { $1 }
+
+
+LabelExp:   '`' ident LabelExp
+                                    { A.Label (labelName $2) Nothing $3 }
+        |   '`' ident Modifier LabelExp
+                                    { A.Label (labelName $2) (Just $3) $4 }
         |   Primary
                                     { $1 }
 
@@ -125,12 +131,10 @@ Primary :   ident
                                     { A.PrimUnit }
         |   '(' '&' ')'
                                     { A.EmptyOnion }
-        |   '`' ident Primary
-                                    { A.Label (labelName $2) Nothing $3 }
-        |   '`' Modifier ident Primary
-                                    { A.Label (labelName $3) (Just $2) $4 }
         |   '(' Exp ')'
                                     { $2 }
+        |   Primary '.' ident
+                                    { A.Proj $1 (ident $3) }
         |   self
                                     { A.Self }
         |   prior
@@ -184,7 +188,7 @@ ProjTerm
         |   '`' ident               { ProjLabel (labelName $2) }
         |   fun                     { ProjFunc }
 
-OpExp   :   Op Primary Primary      { $1 $2 $3 }
+OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
 Op      :   '+'                     { \x y -> A.BinOp A.Plus x y }
         |   '-'                     { \x y -> A.BinOp A.Minus x y }
