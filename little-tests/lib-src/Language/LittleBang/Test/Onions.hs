@@ -8,7 +8,6 @@ import Language.LittleBang.Test.ValueUtils as V
 import Language.LittleBang.Test.NameUtils
   ( tlblA
   , tlblB
-  , tlblC
   , llblA
   , llblB
   , llblC
@@ -91,4 +90,11 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                     , (1, V.pi 2)
                     ]
           )
+  -- Verify that prior is correctly bound
+  , xEval "5 & `A prior"
+          ( TA.VOnion (V.pi 5) $ TA.VLabel tlblA 0
+          , mkState [ (0, V.pi 5) ]
+          )
+  , xEval "prior & prior"
+          ( TA.VEmptyOnion )
   ]

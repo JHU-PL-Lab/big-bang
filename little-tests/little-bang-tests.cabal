@@ -63,6 +63,7 @@ Library
     Language.LittleBang.Test.Primitive.Int
     Language.LittleBang.Test.Primitive.Unit
     Language.LittleBang.Test.Projection
+    Language.LittleBang.Test.Self
     Language.LittleBang.Test.SourceUtils
     Language.LittleBang.Test.State
     Language.LittleBang.Test.UtilFunctions
