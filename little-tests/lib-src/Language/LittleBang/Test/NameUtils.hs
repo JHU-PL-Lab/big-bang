@@ -13,6 +13,7 @@ module Language.LittleBang.Test.NameUtils
 , tidX
 , tidY
 , tidZ
+, tidSelf
 , tlblA
 , tlblB
 , tlblC
@@ -44,6 +45,7 @@ llblFalse = LUT.labelName "False"
 tidX = TUT.ident "x"
 tidY = TUT.ident "y"
 tidZ = TUT.ident "z"
+tidSelf = TUT.ident "self"
 
 tlblA = TUT.labelName "A"
 tlblB = TUT.labelName "B"

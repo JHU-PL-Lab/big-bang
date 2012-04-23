@@ -5,8 +5,6 @@ where
 
 import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.NameUtils
-import Language.LittleBang.Test.ExpressionUtils hiding (identFuncX)
-import Language.LittleBang.Test.ValueUtils
 import Language.LittleBang.Test.SourceUtils
 
 import qualified Language.LittleBang.Ast as LA
@@ -16,19 +14,22 @@ import qualified Language.TinyBang.Config as Cfg
 lvarX = LA.Var lidX
 tvarX = TA.Var tidX
 
+selfIdentFuncX = TA.VFunc tidSelf $ TA.Func tidX $ tvarX
+
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
   [ xEval "fun x -> x"
-          identFuncX
+          selfIdentFuncX
   , xEval "(fun x -> x) (fun x -> x)"
-          identFuncX
+          selfIdentFuncX
   , xEval "(fun y -> y) (fun x -> x)"
-          identFuncX
+          selfIdentFuncX
   , xEval "def x = fun x -> x in x x"
-          identFuncX
+          selfIdentFuncX
   , xType srcY
   , xEval "fun x -> x x"
-          (TA.VFunc tidX $ TA.Appl tvarX tvarX)
+          (TA.VFunc tidSelf $ TA.Func tidX $
+                TA.Appl (TA.Appl tvarX TA.EmptyOnion) tvarX)
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 
