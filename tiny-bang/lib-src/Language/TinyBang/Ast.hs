@@ -216,8 +216,8 @@ instance Display Expr where
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
-    Case e brs -> text "case" <+> (parens $ makeDoc e) <+> text "of" <+>
-            text "{" $+$
+    Case e brs -> parens $ text "case" <+> (parens $ makeDoc e) <+> text "of"
+            <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
