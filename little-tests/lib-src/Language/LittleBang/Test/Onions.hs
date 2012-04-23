@@ -44,7 +44,13 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
   -- Test that right wins
   , xEval "`A 1 & `A 2"
           (TA.VLabel tlblA 0, mkState [(0, V.pi 2)])
-
+  -- Test onion shallow immutability
+  , xEval "def x = `A 0 & `B 1 in                                       \
+          \def y = x in                                                 \
+          \x = x & `C 2 in y                                            "
+          $ ( TA.VOnion (TA.VLabel tlblA 0) (TA.VLabel tlblB 1)
+            , mkState [ (0, V.pi 0), (1, V.pi 1) ]
+            )
   -- Test some parsing
   , xPars "(1 & ('x' & (fun x -> x)))"
           (LA.Onion (LA.PrimInt 1)
