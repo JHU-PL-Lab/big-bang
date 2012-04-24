@@ -39,7 +39,7 @@ hungry = [identP, intLiteralP, charLiteralP]
             return $ TokIntegerLiteral (read (prefix:(first:digits)))
         charLiteralP = do
             _ <- char '\''
-            l <- letter
+            l <- anyChar
             _ <- char '\''
             return $ TokCharLiteral l
 
