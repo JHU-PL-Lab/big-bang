@@ -2,6 +2,9 @@ module Language.TinyBang.Syntax.Lexer
 ( Token(..)
 , lexTinyBang
 , LexerResult
+, getPos
+, weakEq
+, SourceLocation
 ) where
 
 import Text.ParserCombinators.Parsec
@@ -208,7 +211,78 @@ data Token =
     | TokOpGreaterEquals SourceLocation
     | TokFinal SourceLocation
     | TokImmut SourceLocation
-    deriving (Eq, Show)
+    deriving (Show)
+
+instance Eq Token where
+    (==) t1 t2 = case (t1,t2) of
+        (TokLabelPrefix _,TokLabelPrefix _) -> True
+        (TokOnionCons _,TokOnionCons _) -> True
+        (TokOnionSub _,TokOnionSub _) -> True
+        (TokOnionProj _,TokOnionProj _) -> True
+        (TokLambda _,TokLambda _) -> True
+        (TokFun _,TokFun _) -> True
+        (TokArrow _,TokArrow _) -> True
+        (TokCase _,TokCase _) -> True
+        (TokOf _,TokOf _) -> True
+        (TokInteger _,TokInteger _) -> True
+        (TokChar _,TokChar _) -> True
+        (TokUnit _,TokUnit _) -> True
+        (TokOpenParen _,TokOpenParen _) -> True
+        (TokCloseParen _,TokCloseParen _) -> True
+        (TokIntegerLiteral _ i1,TokIntegerLiteral _ i2) | i1 == i2 -> True
+        (TokCharLiteral _ c1,TokCharLiteral _ c2) | c1 == c2 -> True
+        (TokIdentifier _ i1,TokIdentifier _ i2) | i1 == i2 -> True
+        (TokOpenBlock _,TokOpenBlock _) -> True
+        (TokCloseBlock _,TokCloseBlock _) -> True
+        (TokSeparator _,TokSeparator _) -> True
+        (TokColon _,TokColon _) -> True
+        (TokDef _,TokDef _) -> True
+        (TokEquals _,TokEquals _) -> True
+        (TokIn _,TokIn _) -> True
+        (TokOpPlus _,TokOpPlus _) -> True
+        (TokOpMinus _,TokOpMinus _) -> True
+        (TokOpEquals _,TokOpEquals _) -> True
+        (TokOpLessEquals _,TokOpLessEquals _) -> True
+        (TokOpGreaterEquals _,TokOpGreaterEquals _) -> True
+        (TokFinal _,TokFinal _) -> True
+        (TokImmut _,TokImmut _) -> True
+        (_,_) -> False -- they didn't match
+
+weakEq :: Token -> Token -> Bool
+weakEq t1 t2 = case (t1,t2) of
+    (TokLabelPrefix _,TokLabelPrefix _) -> True
+    (TokOnionCons _,TokOnionCons _) -> True
+    (TokOnionSub _,TokOnionSub _) -> True
+    (TokOnionProj _,TokOnionProj _) -> True
+    (TokLambda _,TokLambda _) -> True
+    (TokFun _,TokFun _) -> True
+    (TokArrow _,TokArrow _) -> True
+    (TokCase _,TokCase _) -> True
+    (TokOf _,TokOf _) -> True
+    (TokInteger _,TokInteger _) -> True
+    (TokChar _,TokChar _) -> True
+    (TokUnit _,TokUnit _) -> True
+    (TokOpenParen _,TokOpenParen _) -> True
+    (TokCloseParen _,TokCloseParen _) -> True
+    (TokIntegerLiteral _ _,TokIntegerLiteral _ _) -> True
+    (TokCharLiteral _ _,TokCharLiteral _ _) -> True
+    (TokIdentifier _ _,TokIdentifier _ _) -> True
+    (TokOpenBlock _,TokOpenBlock _) -> True
+    (TokCloseBlock _,TokCloseBlock _) -> True
+    (TokSeparator _,TokSeparator _) -> True
+    (TokColon _,TokColon _) -> True
+    (TokDef _,TokDef _) -> True
+    (TokEquals _,TokEquals _) -> True
+    (TokIn _,TokIn _) -> True
+    (TokOpPlus _,TokOpPlus _) -> True
+    (TokOpMinus _,TokOpMinus _) -> True
+    (TokOpEquals _,TokOpEquals _) -> True
+    (TokOpLessEquals _,TokOpLessEquals _) -> True
+    (TokOpGreaterEquals _,TokOpGreaterEquals _) -> True
+    (TokFinal _,TokFinal _) -> True
+    (TokImmut _,TokImmut _) -> True
+    (_,_) -> False -- they didn't match
+
 
 instance Display Token where
     makeDoc tok = text $ case tok of
@@ -243,3 +317,37 @@ instance Display Token where
         TokOpGreaterEquals _ -> "op greater than or equal"
         TokFinal _ -> "final"
         TokImmut _ -> "immut"
+
+getPos :: Token -> SourceLocation
+getPos t = case t of
+    TokLabelPrefix p -> p
+    TokOnionCons p -> p
+    TokOnionSub p -> p
+    TokOnionProj p -> p
+    TokLambda p -> p
+    TokFun p -> p
+    TokArrow p -> p
+    TokCase p -> p
+    TokOf p -> p
+    TokInteger p -> p
+    TokChar p -> p
+    TokUnit p -> p
+    TokOpenParen p -> p
+    TokCloseParen p -> p
+    TokIntegerLiteral p _ -> p
+    TokCharLiteral p _ -> p
+    TokIdentifier p _ -> p
+    TokOpenBlock p -> p
+    TokCloseBlock p -> p
+    TokSeparator p -> p
+    TokColon p -> p
+    TokDef p -> p
+    TokEquals p -> p
+    TokIn p -> p
+    TokOpPlus p -> p
+    TokOpMinus p -> p
+    TokOpEquals p -> p
+    TokOpLessEquals p -> p
+    TokOpGreaterEquals p -> p
+    TokFinal p -> p
+    TokImmut p -> p

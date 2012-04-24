@@ -29,6 +29,8 @@ import Utils.Render.Display
 
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
+import Text.Parsec.Prim (token)
+import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
 
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
@@ -38,9 +40,41 @@ parseTinyBang ts = case parse parser "" ts of
 parser :: GenParser L.Token () A.Expr
 parser = undefined
 
-
 expr :: GenParser L.Token () A.Expr
-expr = undefined
+expr = do
+    _ <- isToken L.TokLambda
+    _ <- isToken (flip L.TokIdentifier "")
+    return A.EmptyOnion
+
+
+isToken :: (L.SourceLocation -> L.Token) -> GenParser L.Token () L.Token
+isToken t = token (show) (fst . L.getPos) isT
+    where
+        isT t' = if t' `L.weakEq` (t ((initialPos ""),(initialPos ""))) then Just t' else Nothing
+
+--Exp     :   L.TokLambda (L.TokIdentifier i) L.TokArrow (Exp e)
+--                                    { A.Func (ident i) e }
+--        |   fun ident '->' Exp
+--                                    { A.Func (ident $2) $4 }
+--        |   def ident '=' Exp in Exp
+--                                    { A.Def Nothing (ident $2) $4 $6 }
+--        |   def Modifier ident '=' Exp in Exp
+--                                    { A.Def (Just $2) (ident $3) $5 $7 }
+--        |   ident '=' Exp in Exp
+--                                    { A.Assign (A.AIdent $ ident $1) $3 $5 }
+--        |   case Exp of '{' Branches '}'
+--                                    { A.Case $2 $5 }
+--        |   Exp '&' Exp
+--                                    { A.Onion $1 $3 }
+--        |   Exp '&-' ProjTerm
+--                                    { A.OnionSub $1 $3 }
+--        |   Exp '&.' ProjTerm
+--                                    { A.OnionProj $1 $3 }
+--        |   OpExp
+--                                    { $1 }
+--        |   ApplExp
+--                                    { $1 }
+
 
 applExp :: GenParser L.Token () A.Expr
 applExp = undefined
@@ -62,18 +96,21 @@ patternBind :: GenParser L.Token () A.Expr
 patternBind = undefined
 patternPrimary :: GenParser L.Token () A.Expr
 patternPrimary = undefined
+
 primitiveType :: GenParser L.Token () A.Expr
 primitiveType = undefined
+
 modifier :: GenParser L.Token () A.Expr
 modifier = undefined
+
 projTerm :: GenParser L.Token () A.Expr
 projTerm = undefined
+
 opExp :: GenParser L.Token () A.Expr
 opExp = undefined
+
 op :: GenParser L.Token () A.Expr
 op = undefined
-
-
 
 
 data ParseError = ParseError [L.Token]
