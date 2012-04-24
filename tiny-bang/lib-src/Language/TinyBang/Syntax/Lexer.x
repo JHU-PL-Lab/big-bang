@@ -12,6 +12,7 @@ module Language.TinyBang.Syntax.Lexer
 , LexerResult
 ) where
 
+import Language.TinyBang.Syntax.NewLexer(Token(..))
 import Control.Monad (liftM)
 
 import Utils.Render.Display
@@ -81,71 +82,4 @@ constTok t = const $ const $ return [t]
 strTok :: (String -> a) -> (b,c,String) -> Int -> Alex [a]
 strTok f (_,_,s) len = return [f $ take len s]
 
-data Token =
-      TokLabelPrefix
-    | TokOnionCons
-    | TokOnionSub
-    | TokOnionProj
-    | TokLambda
-    | TokFun
-    | TokArrow
-    | TokCase
-    | TokOf
-    | TokInteger
-    | TokChar
-    | TokUnit
-    | TokOpenParen
-    | TokCloseParen
-    | TokIntegerLiteral Integer
-    | TokCharLiteral Char
-    | TokIdentifier String
-    | TokOpenBlock
-    | TokCloseBlock
-    | TokSeparator
-    | TokColon
-    | TokDef
-    | TokEquals
-    | TokIn
-    | TokOpPlus
-    | TokOpMinus
-    | TokOpEquals
-    | TokOpLessEquals
-    | TokOpGreaterEquals
-    | TokFinal
-    | TokImmut
-    deriving (Eq, Show)
-
-instance Display Token where
-    makeDoc tok = text $ case tok of
-        TokLabelPrefix -> "label prefix"
-        TokOnionCons -> "onion constructor"
-        TokOnionSub -> "onion subtractor"
-        TokOnionProj -> "onion projector"
-        TokLambda -> "lambda"
-        TokFun -> "fun"
-        TokArrow -> "arrow"
-        TokCase -> "case"
-        TokOf -> "of"
-        TokInteger -> "int"
-        TokChar -> "char"
-        TokUnit -> "unit"
-        TokOpenParen -> "open parenthesis"
-        TokCloseParen -> "close parenthesis"
-        TokIntegerLiteral _ -> "int literal"
-        TokCharLiteral _ -> "char literal"
-        TokIdentifier _ -> "identifier"
-        TokOpenBlock -> "open block"
-        TokCloseBlock -> "close block"
-        TokSeparator -> "separator"
-        TokColon -> "colon"
-        TokDef -> "def"
-        TokEquals -> "equals"
-        TokIn -> "in"
-        TokOpPlus -> "op plus"
-        TokOpMinus -> "op minus"
-        TokOpEquals -> "op equals"
-        TokOpLessEquals -> "op less than or equal"
-        TokOpGreaterEquals -> "op greater than or equal"
-        TokFinal -> "final"
-        TokImmut -> "immut"
 }
