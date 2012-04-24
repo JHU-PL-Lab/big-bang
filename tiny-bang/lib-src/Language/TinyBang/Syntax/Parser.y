@@ -67,6 +67,8 @@ import System.IO
         '=='            { L.TokOpEquals }
         '<='            { L.TokOpLessEquals }
         '>='            { L.TokOpGreaterEquals }
+        final           { L.TokFinal }
+        immut           { L.TokImmut }
 
 %left       in
 %right      '->'
@@ -81,7 +83,9 @@ Exp     :   '\\' ident '->' Exp
         |   fun ident '->' Exp
                                     { A.Func (ident $2) $4 }
         |   def ident '=' Exp in Exp
-                                    { A.Def (ident $2) $4 $6 }
+                                    { A.Def Nothing (ident $2) $4 $6 }
+        |   def Modifier ident '=' Exp in Exp
+                                    { A.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
                                     { A.Assign (A.AIdent $ ident $1) $3 $5 }
         |   case Exp of '{' Branches '}'
@@ -115,7 +119,9 @@ Primary :   ident
         |   '(' '&' ')'
                                     { A.EmptyOnion }
         |   '`' ident Primary
-                                    { A.Label (labelName $2) $3 }
+                                    { A.Label (labelName $2) Nothing $3 }
+        |   '`' Modifier ident Primary
+                                    { A.Label (labelName $3) (Just $2) $4 }
         |   '(' Exp ')'
                                     { $2 }
 
@@ -156,6 +162,10 @@ PrimitiveType
         |   char                    { T.PrimChar }
         |   unit                    { T.PrimUnit }
 
+Modifier
+        :   final                   { A.Final }
+        |   immut                   { A.Immutable }
+
 ProjTerm
         :   int                     { ProjPrim PrimInt }
         |   char                    { ProjPrim PrimChar }
@@ -183,7 +193,7 @@ instance Display ParseError where
                             maybe "<EOS>" display $ listToMaybe tokens
             in text "unexpected" <+> text desc <+> text "token"
 instance Show ParseError where
-    show err = let ?debug = False in display err
+    show err = let ?conf = False in display err
 
 type ParseM a = ErrorT ParseError Identity a
 

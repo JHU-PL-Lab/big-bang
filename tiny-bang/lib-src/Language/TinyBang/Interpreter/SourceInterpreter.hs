@@ -1,18 +1,20 @@
 {-# LANGUAGE ImplicitParams #-}
 module Language.TinyBang.Interpreter.SourceInterpreter
 ( evalStringTop
-, evalStringTopNoTypecheck
 , EvalStringResult(..)
 , EvalSuccessOrFailure(..)
 , I.canonicalize
 , I.onion
 ) where
 
+import Control.Monad (when)
 import Control.Monad.Error (Error, strMsg, throwError)
 import qualified Data.Set as Set
 import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 
 import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Interpreter.Interpreter as I
 import qualified Language.TinyBang.Syntax.Lexer as L
 import qualified Language.TinyBang.Syntax.Parser as P
@@ -41,35 +43,29 @@ instance Error EvalStringResultErrorWrapper where
 
 type EvalStringM a = Either EvalStringResultErrorWrapper a
 
-evalStringTopNoTypecheck :: (?debug :: Bool) => String -> EvalStringResult
-evalStringTopNoTypecheck s =
-    let result = eNoTypecheck s in
-    case result of
-      Left (FailureWrapper err) -> err
-      Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
-
-eNoTypecheck :: (?debug :: Bool) => String -> EvalStringM A.Expr
-eNoTypecheck s = do
-    tokens <- eLex s
-    ast <- eParse tokens
-    return ast
-
 -- |Performs top-level evaluation of a Big Bang source string.  This routine is
 --  provided for convenience and testing.  It attempts to lex, parse, typecheck
 --  and evaluate the code, producing an appropriate result.
-evalStringTop :: (?debug :: Bool) => String -> EvalStringResult
+evalStringTop :: (?conf :: Cfg.Config) => String -> EvalStringResult
 evalStringTop s =
     let result = eAll s in
     case result of
         Left (FailureWrapper err) -> err
-        Right runnableAst -> EvalResult runnableAst $ eEval runnableAst
+        Right ast -> EvalResult ast $
+                       if Cfg.evaluating then eEval ast
+                                         else EvalSuccess (A.VEmptyOnion
+                                                          ,IntMap.empty)
 
-eAll :: (?debug :: Bool) => String -> EvalStringM A.Expr
+eAll :: (?conf :: Cfg.Config) => String -> EvalStringM A.Expr
 eAll s = do
     tokens <- eLex s
     ast <- eParse tokens
-    (_,cs) <- eTypeInfer ast
-    _ <- eClose ast cs
+    when Cfg.typechecking
+        ( do
+            (_,cs) <- eTypeInfer ast
+            _ <- eClose ast cs
+            return ()
+        )
     return ast
 
 eLex :: String -> EvalStringM [L.Token]
@@ -92,7 +88,7 @@ eTypeInfer e =
                 TypecheckFailure e err cs
         Right a -> return (a,cs)
 
-eClose :: (?debug :: Bool) => A.Expr -> T.Constraints -> EvalStringM T.Constraints
+eClose :: (?conf :: Cfg.Config) => A.Expr -> T.Constraints -> EvalStringM T.Constraints
 eClose e cs =
     let closed = C.calculateClosure cs in
     if Set.null $ Set.filter isBottom closed
@@ -104,7 +100,7 @@ isBottom c = case c of
     T.Bottom _ -> True
     _ -> False
 
-eEval :: (?debug :: Bool) => A.Expr -> EvalSuccessOrFailure
+eEval :: (?conf :: Cfg.Config) => A.Expr -> EvalSuccessOrFailure
 eEval e =
     case I.evalTop e of
         Left err -> EvalFailure err

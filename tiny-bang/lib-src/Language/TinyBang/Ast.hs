@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances, EmptyDataDecls, GADTs, StandaloneDeriving #-}
 module Language.TinyBang.Ast
 ( Expr(..)
+, Modifier(..)
 , Chi(..)
 , ChiMain
 , ChiStruct
@@ -17,11 +18,11 @@ module Language.TinyBang.Ast
 , LazyOperator(..)
 , EagerOperator(..)
 , ProjTerm(..)
-, exprFromValue
 , Assignable(..)
 , Evaluated(..)
 , CellId
 , ePatVars
+, exprVars
 , exprFreeVars
 ) where
 
@@ -50,7 +51,7 @@ type CellId = Int
 -- |Data type for representing Big Bang ASTs.
 data Expr
   = Var Ident
-  | Label LabelName Expr
+  | Label LabelName (Maybe Modifier) Expr
   | Onion Expr Expr
   | OnionSub Expr ProjTerm
   | OnionProj Expr ProjTerm
@@ -61,12 +62,17 @@ data Expr
   | PrimChar Char
   | PrimUnit
   | Case Expr Branches
-  | Def Ident Expr Expr
+  | Def (Maybe Modifier) Ident Expr Expr
   | Assign Assignable Expr Expr
   | LazyOp LazyOperator Expr Expr
   | EagerOp EagerOperator Expr Expr
   | ExprCell CellId
   deriving (Eq, Ord, Show)
+
+data Modifier
+  = Final
+  | Immutable
+  deriving (Eq, Ord, Show, Enum)
 
 -- |Data type for representing Big Bang values
 data Value
@@ -122,18 +128,6 @@ type Branches = [Branch]
 data Branch = Branch ChiMain Expr
   deriving (Eq, Ord, Show)
 
--- |Trivial conversion from values to exprs
--- TODO: deprecate the hell outta this thing
-exprFromValue :: (Evaluated v) => v -> Expr
-exprFromValue v = case value v of
-  VLabel l c   -> Label l $ ExprCell c
-  VOnion v1 v2 -> Onion (exprFromValue v1) (exprFromValue v2)
-  VFunc i e    -> Func i e
-  VPrimInt i   -> PrimInt i
-  VPrimChar c  -> PrimChar c
-  VPrimUnit    -> PrimUnit
-  VEmptyOnion  -> EmptyOnion
-
 -- TODO: refactor the pattern stuff into its own module?
 -- |Obtains the set of bound variables in a pattern.
 ePatVars :: Chi a -> Set Ident
@@ -159,7 +153,7 @@ exprFreeVars :: Expr -> Set Ident
 exprFreeVars e =
   case e of
     Var i -> Set.singleton i
-    Label _ e' -> exprFreeVars e'
+    Label _ _ e' -> exprFreeVars e'
     Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     OnionProj e' _ -> exprFreeVars e'
     OnionSub e' _ -> exprFreeVars e'
@@ -174,7 +168,8 @@ exprFreeVars e =
     EmptyOnion -> Set.empty
     LazyOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     EagerOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
-    Def i e1 e2 -> (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
+    Def _ i e1 e2 ->
+      (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign a e1 e2 ->
         ((case a of
             AIdent i -> (Set.delete i)
@@ -182,10 +177,38 @@ exprFreeVars e =
           `Set.union` exprFreeVars e1
     ExprCell _ -> Set.empty
 
+-- |Obtains the set of all variables in a given expression.  This includes the
+--  variables found in patterns and other constructs.
+exprVars :: Expr -> Set Ident
+exprVars e =
+  case e of
+    Var i -> Set.singleton i
+    Label _ _ e' -> exprVars e'
+    Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    OnionProj e' _ -> exprVars e'
+    OnionSub e' _ -> exprVars e'
+    Func i e' -> i `Set.insert` exprVars e'
+    Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    PrimInt _ -> Set.empty
+    PrimChar _ -> Set.empty
+    PrimUnit -> Set.empty
+    Case e' brs -> Set.union (exprVars e') $ Set.unions $
+      map (\(Branch chi e'') ->
+              exprVars e'' `Set.difference` ePatVars chi) brs
+    EmptyOnion -> Set.empty
+    LazyOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    EagerOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
+    Assign a e1 e2 -> (case a of
+                        AIdent i -> Set.insert i
+                        ACell _ -> id) $ exprVars e1 `Set.union` exprVars e2
+    ExprCell _ -> Set.empty
+
 instance Display Expr where
   makeDoc a = case a of
     Var i -> text $ unIdent i
-    Label n e -> char '`' <> (text $ unLabelName n) <+> makeDoc e
+    Label n m e ->
+      char '`' <> (text $ unLabelName n) <+> dispMod m <+> (parens $ makeDoc e)
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Func i e -> parens $
             text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
@@ -193,7 +216,8 @@ instance Display Expr where
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
-    Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
+    Case e brs -> parens $ text "case" <+> (parens $ makeDoc e) <+> text "of"
+            <+> text "{" $+$
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
             $+$ text "}"
     OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
@@ -201,15 +225,27 @@ instance Display Expr where
     EmptyOnion -> text "(&)"
     LazyOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
     EagerOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    Def i v e -> hsep [text "def", makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
+    Def m i v e ->
+      hsep [text "def", dispMod m, makeDoc i,
+            text "=", makeDoc v, text "in", makeDoc e]
     Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
     ExprCell c -> text "Cell #" <> int c
+    where dispMod m = case m of
+            Just Final -> text "final"
+            Just Immutable -> text "immut"
+            Nothing -> empty
 
+-- TODO: fix parens
 instance Display Value where
   makeDoc x =
     case x of
+      VLabel n v -> text "`" <> makeDoc n <+> parens (makeDoc v)
+      VOnion v1 v2 -> parens (makeDoc v1) <+> text "&" <+> parens (makeDoc v2)
+      VFunc i e -> text "fun" <+> text (unIdent i) <+> text "->" <+> makeDoc e
+      VPrimInt i -> text $ show i
+      VPrimChar c -> char c
+      VPrimUnit -> text "()"
       VEmptyOnion -> text "(&)"
-      _ -> makeDoc $ exprFromValue x
 
 instance Display Branch where
   makeDoc (Branch chi e) =

@@ -8,12 +8,12 @@ import qualified Language.MicroBang.Ast as A
 
 -- TODO: write prop_testInteger using quickcheck
 
-testInteger :: (?debug :: Bool) => Integer -> Test
+testInteger :: (?conf :: Bool) => Integer -> Test
 testInteger i = lexParseEval (show i)
                              (A.PrimInt i)
                              (A.VPrimInt i)
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Integer tests" $ TestList $
   [ testInteger 1234567890
   , testInteger (-1234567890)

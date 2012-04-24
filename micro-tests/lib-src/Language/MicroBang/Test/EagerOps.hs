@@ -10,7 +10,7 @@ import qualified Language.MicroBang.Ast as A
 
 
 
-xEvalComp :: (?debug :: Bool) => Ordering -> String -> String -> [Test]
+xEvalComp :: (?conf :: Bool) => Ordering -> String -> String -> [Test]
 xEvalComp ord srcA srcB =
   [ xEval ("[=] (" ++ srcA ++ ") (" ++ srcB ++ ")") $
           if ord == EQ then true else false
@@ -18,7 +18,7 @@ xEvalComp ord srcA srcB =
           if ord == EQ then true else false
   ]
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Eager operations tests" $ TestList $ concat
   [ [ xCont (srcMultiAppl [srcGreaterOrLess, "`A 4", "4"])
     , xCont (srcMultiAppl [srcGreaterOrLess, "()", "4"])

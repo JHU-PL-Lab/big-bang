@@ -44,7 +44,7 @@ peanoVal x = case x of
 
 --peanoPreludeMult = peanoPrelude ++ peanoSrcMult
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = undefined
 --tests = TestLabel "Peano tests" $ TestList
 --  [ xEval ( peanoPrelude ++ "plus two two" ) $ peanoVal 4

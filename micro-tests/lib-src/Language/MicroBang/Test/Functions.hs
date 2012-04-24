@@ -20,7 +20,7 @@ import Language.MicroBang.Test.SourceUtils
 
 import qualified Language.MicroBang.Ast as A
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Test functions" $ TestList
   [ xEval "fun x -> x"
           identFuncX

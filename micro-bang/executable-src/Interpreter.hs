@@ -26,7 +26,7 @@ import Data.List.Split
 
 main :: IO ()
 main = do
-    let ?debug = False
+    let ?conf = False
     inp <- getContents
     let xs = filter (not . null) $ splitOn "\n\n" inp
     mapM_ (putStrLn . display . SI.evalStringTop) xs

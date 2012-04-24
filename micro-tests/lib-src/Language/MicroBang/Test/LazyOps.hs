@@ -14,7 +14,7 @@ import qualified Language.MicroBang.Ast as A
 
 -- TODO: write a quickcheck test that any valid +/- tree is correctly computed.
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Tests on integer operations" $ TestList
   [
   lexParseEval "[+] ([+] 3 1) 2"

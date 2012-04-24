@@ -13,7 +13,7 @@ import Language.MicroBang.Test.ExpressionUtils
   )
 import qualified Language.MicroBang.Ast as A
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Miscellaneous tests" $ TestList
   [ lexParseEval "`True ()"
                  (A.Label lblTrue A.PrimUnit)

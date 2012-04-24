@@ -48,7 +48,12 @@ Library
   hs-source-dirs:      src
 
   Exposed-Modules:
+        Control.Monad.Consumer
+        Control.Monad.Consumer.Lazy
+        Control.Monad.Trans.Consumer
+        Control.Monad.Trans.Consumer.Lazy
         Data.Function.Utils
+        Data.List.Utils
         Data.Maybe.Utils
         Data.Set.Utils
         Utils.Render.Display

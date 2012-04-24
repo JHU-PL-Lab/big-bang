@@ -19,7 +19,7 @@ import qualified Language.MicroBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.MicroBang.Test.Projection as Projection
 import qualified Language.MicroBang.Test.ListEncoding as ListEncoding
 
-tests :: (?debug :: Bool) => [Test]
+tests :: (?conf :: Bool) => [Test]
 tests =
   [ Onions.tests
   , Functions.tests
@@ -37,7 +37,7 @@ tests =
   , ListEncoding.tests
   ]
 
-data Options = Options { debug :: Bool }
+data Options = Options {debug :: Bool }
   deriving (Data, Typeable, Eq, Show)
 
 defOpts :: Options
@@ -46,5 +46,5 @@ defOpts = Options {debug = def &= name "d"}
 main :: IO Counts
 main = do
   opts <- cmdArgs defOpts
-  let ?debug = debug opts
+  let ?conf = debug opts
   runTestTT $ TestList tests

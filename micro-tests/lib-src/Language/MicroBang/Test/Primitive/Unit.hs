@@ -6,7 +6,7 @@ where
 import Language.MicroBang.Test.UtilFunctions
 import qualified Language.MicroBang.Ast as A
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Tests for unit" $ TestList
   [ lexParseEval "()"
                  A.PrimUnit

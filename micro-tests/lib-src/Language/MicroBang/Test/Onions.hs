@@ -22,7 +22,7 @@ mkState = IntMap.fromList
 -- TODO: write quickcheck test to generate a permutable onion and verify that
 -- its permutations are equivalent.
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Tests of basic onion properties" $ TestList
   [ lexParseEval "`A 1 & `B 2"
                  ( A.Onion (A.Label lblA $ E.pi 1) (A.Label lblB $ E.pi 2) )

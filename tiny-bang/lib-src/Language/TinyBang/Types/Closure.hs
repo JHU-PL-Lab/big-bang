@@ -10,6 +10,7 @@ module Language.TinyBang.Types.Closure
 ( calculateClosure
 ) where
 
+import qualified Language.TinyBang.Config as Cfg
 import Language.TinyBang.Types.Types ( (<:)
                                      , (.:)
                                      , Constraints
@@ -520,13 +521,14 @@ closeAll cs =
     , closeLops
     , propagateCellsForward
     , propagateCellsBackward
+    , propagateImmutable
     ]
 
 -- |Calculates the transitive closure of a set of type constraints.
-calculateClosure :: (?debug :: Bool) => Constraints -> Constraints
+calculateClosure :: (?conf :: Cfg.Config) => Constraints -> Constraints
 calculateClosure c = ddisp $ closeSingleContradictions $ leastFixedPoint closeAll $ ddisp $ c
   where ddisp x =
-          if ?debug
+          if Cfg.debugging
             then trace ("{-----\n" ++ display x ++ "\n-----}") x
             else x
 

@@ -5,7 +5,7 @@ where
 
 import Language.MicroBang.Test.UtilFunctions
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "Miscellaneous parser tests" $ TestList
   [ fPars ""
   , fPars "(expr"

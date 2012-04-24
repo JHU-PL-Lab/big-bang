@@ -47,6 +47,7 @@ import Language.TinyBang.Ast
   , CellId
   , ePatVars
   )
+import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( Ident
@@ -133,7 +134,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
-evalTop :: (?debug :: Bool) => Expr -> Either EvalError Result
+evalTop :: (?conf :: Cfg.Config) => Expr -> Either EvalError Result
 evalTop e =
     fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
 
@@ -166,7 +167,7 @@ onion v1 v2 = VOnion v1 v2
 type IdMap = Map Ident CellId
 
 -- |Evaluates a Big Bang expression.
-eval :: (?debug :: Bool) => Expr -> EvalM Value
+eval :: (?conf :: Cfg.Config) => Expr -> EvalM Value
 
 -- The next four cases are covered by the value rule
 eval e = do
@@ -177,7 +178,7 @@ eval e = do
       PrimUnit -> return $ VPrimUnit
       Var i -> throwError $ NotClosed i
       ExprCell c -> readCell c
-      Label n e' -> do
+      Label n _ e' -> do
         v <- eval e'
         c <- newCell v
         return $ VLabel n c
@@ -262,7 +263,7 @@ eval e = do
                   ChiLabelDeep lbl chiBind ->
                     recurseSearch v chi $ matchLabelComplex lbl chiBind
                   ChiFun ->
-                    recurseSearch v chi $ const $ return $ Just Map.empty
+                    recurseSearch v chi $ matchFuncs
                   ChiInnerStruct chiStruct -> eSearch v chiStruct
                 where -- | Takes a (possibly onion) value, a primary pattern,
                       --   and a function to evaluate non-onion values to a
@@ -306,6 +307,11 @@ eval e = do
                           VLabel lbl' c0 | lbl == lbl' ->
                             flip eSearch chiBind =<< readCell c0
                           _ -> return Nothing
+                      matchFuncs :: Value -> EvalM (Maybe IdMap)
+                      matchFuncs v' =
+                        case v' of 
+                          VFunc _ _ -> return $ Just Map.empty
+                          _ -> return Nothing
                       searchAll :: (ChiPrimary, Maybe ChiStruct)
                                 -> EvalM (Maybe IdMap)
                       searchAll (p,ms) =
@@ -321,7 +327,7 @@ eval e = do
                               idMapLeft <- mLeft
                               idMapRest <- mRest
                               return $ Map.union idMapRest idMapLeft
-      Def i e1 e2 -> do
+      Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
         eval $ subst cellId i e2
@@ -349,7 +355,7 @@ eval e = do
           Equal -> eEqual v1 v2
           LessEqual -> eLessEq v1 v2
           GreaterEqual -> eGreaterEq v1 v2
-        where eEqual :: (?debug :: Bool)
+        where eEqual :: (?conf :: Cfg.Config)
                      => Value -> Value -> EvalM Value
               eEqual v1 v2 = do
                 c <- newCell VPrimUnit
@@ -365,7 +371,7 @@ eval e = do
                 return $ VLabel (labelName n) c
               eGreaterEq :: Value -> Value -> EvalM Value
               eGreaterEq v1 v2 = eLessEq v2 v1
-              eCompare :: (?debug :: Bool)
+              eCompare :: (?conf :: Cfg.Config)
                        => Value -> Value -> EnvReader Bool
               eCompare v1 v2 = do
                 env <- ask
@@ -373,7 +379,7 @@ eval e = do
                 eListLessEq
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v1)
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v2)
-              eAtomOrder :: (?debug :: Bool)
+              eAtomOrder :: (?conf :: Cfg.Config)
                          => Value -> Value -> EnvReader Ordering
               eAtomOrder v1 v2 = do
                 b1 <- eAtomCompare v1 v2
@@ -510,7 +516,7 @@ subst c x e =
     Var i ->
       if i == x then ExprCell c
                 else e
-    Label n e' -> Label n $ subst c x e'
+    Label n m e' -> Label n m $ subst c x e'
     Onion e1 e2 -> Onion (subst c x e1) (subst c x e2)
     Func i e' ->
       if i == x then e
@@ -531,9 +537,9 @@ subst c x e =
     EmptyOnion -> EmptyOnion
     LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
     EagerOp op e1 e2 -> EagerOp op (subst c x e1) (subst c x e2)
-    Def i e1 e2 ->
-      if i == x then Def i (subst c x e1) e2
-                else Def i (subst c x e1) (subst c x e2)
+    Def m i e1 e2 ->
+      if i == x then Def m i (subst c x e1) e2
+                else Def m i (subst c x e1) (subst c x e2)
     Assign a e1 e2 ->
       case a of
         ACell _ -> Assign a (subst c x e1) (subst c x e2)

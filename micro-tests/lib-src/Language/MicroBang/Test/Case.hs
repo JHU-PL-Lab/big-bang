@@ -21,7 +21,7 @@ import Language.MicroBang.Test.NameUtils
 
 import qualified Language.MicroBang.Ast as A
 
-tests :: (?debug :: Bool) => Test
+tests :: (?conf :: Bool) => Test
 tests = TestLabel "General case tests" $ TestList
   [ xEval "case 1 of {int -> 0}"
           (V.pi 0)
