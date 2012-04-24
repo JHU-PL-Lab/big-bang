@@ -18,11 +18,12 @@ lexer = do
             return [tok]
         tryThemAll = let tries = map (try) $ concat [reservedWords, longOperators, hungry, shortOperators] in
             foldl (<|>) (head tries) (tail tries)
-        whitespaceP :: Parser [Token]
-        whitespaceP = do
-            _ <- oneOf " \n\t"
-            skipMany (oneOf " \n\t")
-            return []
+
+whitespaceP :: Parser [Token]
+whitespaceP = do
+    _ <- oneOf " \n\t"
+    skipMany (oneOf " \n\t")
+    return []
 
 hungry :: [Parser Token]
 hungry = [identP, intLiteralP, charLiteralP]
@@ -115,39 +116,49 @@ longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGrea
             _ <- string ">="
             return TokOpGreaterEquals
 
-
 reservedWords :: [Parser Token]
-reservedWords = [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
+reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
     where
+        validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
         funP = do
             _ <- string "fun"
+            validIdentP
             return TokFun
         caseP = do
             _ <- string "case"
+            validIdentP
             return TokCase
         ofP = do
             _ <- string "of"
+            validIdentP
             return TokOf
         intP = do
             _ <- string "int"
+            validIdentP
             return TokInteger
         charP = do
             _ <- string "char"
+            validIdentP
             return TokChar
         unitP = do
             _ <- string "unit"
+            validIdentP
             return TokUnit
         defP = do
             _ <- string "def"
+            validIdentP
             return TokDef
         inP = do
             _ <- string "in"
+            validIdentP
             return TokIn
         finalP = do
             _ <- string "final"
+            validIdentP
             return TokFinal
         immutP = do
             _ <- string "immut"
+            validIdentP
             return TokImmut
 
 
