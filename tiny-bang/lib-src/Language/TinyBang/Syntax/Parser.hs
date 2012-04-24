@@ -30,7 +30,7 @@ import Utils.Render.Display
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
 import Text.Parsec.Combinator (optionMaybe)
-import Text.Parsec.Prim (token)
+import Text.Parsec.Prim (token, many)
 import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
 
@@ -53,6 +53,10 @@ isToken t = token (show) (fst . L.getPos) isT
 grabIdent = do
     L.TokIdentifier _ i <- isToken tokIdent
     return i
+
+grabInt = do
+    L.TokIntegerLiteral _ v <- isToken tokIntLit
+    return v
 
 expr :: GenParser L.Token () A.Expr
 expr = undefined
@@ -112,10 +116,38 @@ expr = undefined
 
 
 applExp :: GenParser L.Token () A.Expr
-applExp = undefined
+applExp = do
+    p <- primary
+    ps <- many primary
+    return (foldl (A.Appl) p ps)
 
 primary :: GenParser L.Token () A.Expr
 primary = undefined
+    where
+        iden = do
+            i <- grabIdent
+            return (A.Var (ident i))
+        intLit = do
+            i <- grabInt
+            return (A.PrimInt i)
+
+--Primary :   ident
+--                                    { A.Var (ident $1) }
+--        |   intLit
+--                                    { A.PrimInt $1 }
+--        |   charLit
+--                                    { A.PrimChar $1 }
+--        |   '(' ')'
+--                                    { A.PrimUnit }
+--        |   '(' '&' ')'
+--                                    { A.EmptyOnion }
+--        |   '`' ident Primary
+--                                    { A.Label (labelName $2) Nothing $3 }
+--        |   '`' Modifier ident Primary
+--                                    { A.Label (labelName $3) (Just $2) $4 }
+--        |   '(' Exp ')'
+--                                    { $2 }
+
 
 branch :: GenParser L.Token () A.Expr
 branch = undefined
