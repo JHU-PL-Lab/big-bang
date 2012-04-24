@@ -52,7 +52,6 @@ Library
         Language.TinyBang.Config
         Language.TinyBang.Interpreter.Interpreter
         Language.TinyBang.Interpreter.SourceInterpreter
-        Language.TinyBang.Syntax.Lexer
         Language.TinyBang.Syntax.Parser
         Language.TinyBang.Types.Closure
         Language.TinyBang.Types.Alphas

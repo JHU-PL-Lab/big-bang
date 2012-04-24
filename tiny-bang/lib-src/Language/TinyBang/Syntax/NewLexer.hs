@@ -7,19 +7,26 @@ module Language.TinyBang.Syntax.NewLexer
 import Text.ParserCombinators.Parsec
 import Utils.Render.Display (Display, makeDoc, text)
 
+lexTinyBang :: String -> LexerResult
+lexTinyBang s = case parse lexer "" s of
+    Left x -> Left (show x)
+    Right x -> Right $ map (\(s,t,e) -> t (s,e)) x
 
-lexer :: Parser [Token]
+
+lexer :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
 lexer = do
     toks <- many (whitespaceP <|> thing)
     return (concat toks)
     where
         thing = do
+            start <- getPosition
             tok <- tryThemAll
-            return [tok]
+            end <- getPosition
+            return [(start,tok,end)]
         tryThemAll = let tries = map (try) $ concat [reservedWords, longOperators, hungry, shortOperators] in
             foldl (<|>) (head tries) (tail tries)
 
-whitespaceP :: Parser [Token]
+whitespaceP :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
 whitespaceP = do
     _ <- oneOf " \n\t"
     skipMany (oneOf " \n\t")
@@ -27,26 +34,26 @@ whitespaceP = do
 
 validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
 
-hungry :: [Parser Token]
+hungry :: [Parser (SourceLocation -> Token)]
 hungry = [identP, intLiteralP, charLiteralP]
     where
         identP = do
             first <- letter <|> char '_'
             rest <- many (letter <|> digit <|> oneOf "_'")
-            return $ TokIdentifier (first:rest)
+            return $ (flip TokIdentifier) (first:rest)
         intLiteralP = do
             prefix <- option ' ' (char '-')
             first <- digit
             digits <- many digit
             validIdentP
-            return $ TokIntegerLiteral (read (prefix:(first:digits)))
+            return $ (flip TokIntegerLiteral) (read (prefix:(first:digits)))
         charLiteralP = do
             _ <- char '\''
             l <- anyChar
             _ <- char '\''
-            return $ TokCharLiteral l
+            return $ (flip TokCharLiteral) l
 
-shortOperators :: [Parser Token]
+shortOperators :: [Parser (SourceLocation -> Token)]
 shortOperators =
     [ lblPrefixP
     , lambdaP
@@ -98,7 +105,7 @@ shortOperators =
             _ <- char '&'
             return TokOnionCons
 
-longOperators :: [Parser Token]
+longOperators :: [Parser (SourceLocation -> Token)]
 longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGreaterEqualsP]
     where
         onionSubP = do
@@ -120,7 +127,7 @@ longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGrea
             _ <- string ">="
             return TokOpGreaterEquals
 
-reservedWords :: [Parser Token]
+reservedWords :: [Parser (SourceLocation -> Token)]
 reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
     where
         funP = do
@@ -164,78 +171,74 @@ reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
             validIdentP
             return TokImmut
 
-
-lexTinyBang :: String -> LexerResult
-lexTinyBang s = case parse lexer "" s of
-    Left x -> Left (show x)
-    Right x -> Right x
-
 type LexerResult = Either String [Token]
 
+type SourceLocation = (SourcePos, SourcePos)
+
 data Token =
-      TokLabelPrefix
-    | TokOnionCons
-    | TokOnionSub
-    | TokOnionProj
-    | TokLambda
-    | TokFun
-    | TokArrow
-    | TokCase
-    | TokOf
-    | TokInteger
-    | TokChar
-    | TokUnit
-    | TokOpenParen
-    | TokCloseParen
-    | TokIntegerLiteral Integer
-    | TokCharLiteral Char
-    | TokIdentifier String
-    | TokOpenBlock
-    | TokCloseBlock
-    | TokSeparator
-    | TokColon
-    | TokDef
-    | TokEquals
-    | TokIn
-    | TokOpPlus
-    | TokOpMinus
-    | TokOpEquals
-    | TokOpLessEquals
-    | TokOpGreaterEquals
-    | TokFinal
-    | TokImmut
+      TokLabelPrefix SourceLocation
+    | TokOnionCons SourceLocation
+    | TokOnionSub SourceLocation
+    | TokOnionProj SourceLocation
+    | TokLambda SourceLocation
+    | TokFun SourceLocation
+    | TokArrow SourceLocation
+    | TokCase SourceLocation
+    | TokOf SourceLocation
+    | TokInteger SourceLocation
+    | TokChar SourceLocation
+    | TokUnit SourceLocation
+    | TokOpenParen SourceLocation
+    | TokCloseParen SourceLocation
+    | TokIntegerLiteral SourceLocation Integer
+    | TokCharLiteral SourceLocation Char
+    | TokIdentifier SourceLocation String
+    | TokOpenBlock SourceLocation
+    | TokCloseBlock SourceLocation
+    | TokSeparator SourceLocation
+    | TokColon SourceLocation
+    | TokDef SourceLocation
+    | TokEquals SourceLocation
+    | TokIn SourceLocation
+    | TokOpPlus SourceLocation
+    | TokOpMinus SourceLocation
+    | TokOpEquals SourceLocation
+    | TokOpLessEquals SourceLocation
+    | TokOpGreaterEquals SourceLocation
+    | TokFinal SourceLocation
+    | TokImmut SourceLocation
     deriving (Eq, Show)
 
 instance Display Token where
     makeDoc tok = text $ case tok of
-        TokLabelPrefix -> "label prefix"
-        TokOnionCons -> "onion constructor"
-        TokOnionSub -> "onion subtractor"
-        TokOnionProj -> "onion projector"
-        TokLambda -> "lambda"
-        TokFun -> "fun"
-        TokArrow -> "arrow"
-        TokCase -> "case"
-        TokOf -> "of"
-        TokInteger -> "int"
-        TokChar -> "char"
-        TokUnit -> "unit"
-        TokOpenParen -> "open parenthesis"
-        TokCloseParen -> "close parenthesis"
-        TokIntegerLiteral _ -> "int literal"
-        TokCharLiteral _ -> "char literal"
-        TokIdentifier _ -> "identifier"
-        TokOpenBlock -> "open block"
-        TokCloseBlock -> "close block"
-        TokSeparator -> "separator"
-        TokColon -> "colon"
-        TokDef -> "def"
-        TokEquals -> "equals"
-        TokIn -> "in"
-        TokOpPlus -> "op plus"
-        TokOpMinus -> "op minus"
-        TokOpEquals -> "op equals"
-        TokOpLessEquals -> "op less than or equal"
-        TokOpGreaterEquals -> "op greater than or equal"
-        TokFinal -> "final"
-        TokImmut -> "immut"
+        TokLabelPrefix _ -> "label prefix"
+        TokOnionCons _ -> "onion constructor"
+        TokOnionSub _ -> "onion subtractor"
+        TokOnionProj _ -> "onion projector"
+        TokLambda _ -> "lambda"
+        TokFun _ -> "fun"
+        TokArrow _ -> "arrow"
+        TokCase _ -> "case"
+        TokOf _ -> "of"
+        TokInteger _ -> "int"
+        TokChar _ -> "char"
+        TokUnit _ -> "unit"
+        TokOpenParen _ -> "open parenthesis"
+        TokCloseParen _ -> "close parenthesis"
+        TokIntegerLiteral _ _ -> "int literal"
+        TokCharLiteral _ _ -> "char literal"
+        TokIdentifier _ _ -> "identifier"
+        TokOpenBlock _ -> "open block"
+        TokCloseBlock _ -> "close block"
+        TokSeparator _ -> "separator"
+        TokColon _ -> "colon"
+        TokDef _ -> "def"
+        TokEquals _ -> "equals"
+        TokIn _ -> "in"
+        TokOpPlus _ -> "op plus"
+        TokOpMinus _ -> "op minus"
+        TokOpEquals _ -> "op equals"
+        TokOpLessEquals _ -> "op less than or equal"
+        TokOpGreaterEquals _ -> "op greater than or equal"
+        TokFinal _ -> "final"
+        TokImmut _ -> "immut"

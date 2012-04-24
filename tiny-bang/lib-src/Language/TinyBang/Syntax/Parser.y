@@ -13,7 +13,7 @@ import Control.Monad.Identity (Identity, runIdentity)
 import Data.Maybe (listToMaybe)
 
 import qualified Language.TinyBang.Ast as A
-import qualified Language.TinyBang.Syntax.Lexer as L
+import qualified Language.TinyBang.Syntax.NewLexer as L
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( Ident
