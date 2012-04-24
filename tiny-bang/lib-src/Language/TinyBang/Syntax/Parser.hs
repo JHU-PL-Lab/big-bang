@@ -58,6 +58,10 @@ grabInt = do
     L.TokIntegerLiteral _ v <- isToken tokIntLit
     return v
 
+grabChar = do
+    L.TokCharLiteral _ v <- isToken tokCharLit
+    return v
+
 expr :: GenParser L.Token () A.Expr
 expr = undefined
     where
@@ -128,26 +132,31 @@ primary = undefined
             i <- grabIdent
             return (A.Var (ident i))
         intLit = do
-            i <- grabInt
-            return (A.PrimInt i)
-
---Primary :   ident
---                                    { A.Var (ident $1) }
---        |   intLit
---                                    { A.PrimInt $1 }
---        |   charLit
---                                    { A.PrimChar $1 }
---        |   '(' ')'
---                                    { A.PrimUnit }
---        |   '(' '&' ')'
---                                    { A.EmptyOnion }
---        |   '`' ident Primary
---                                    { A.Label (labelName $2) Nothing $3 }
---        |   '`' Modifier ident Primary
---                                    { A.Label (labelName $3) (Just $2) $4 }
---        |   '(' Exp ')'
---                                    { $2 }
-
+            v <- grabInt
+            return (A.PrimInt v)
+        charLit = do
+            v <- grabChar
+            return (A.PrimChar v)
+        unit = do
+            _ <- isToken L.TokOpenParen
+            _ <- isToken L.TokCloseParen
+            return (A.PrimUnit)
+        emptyOnion = do
+            _ <- isToken L.TokOpenParen
+            _ <- isToken L.TokOnionCons
+            _ <- isToken L.TokCloseParen
+            return (A.EmptyOnion)
+        lbl = do
+            _ <- isToken L.TokLabelPrefix
+            m <- optionMaybe modifier
+            i <- grabIdent
+            p <- primary
+            return (A.Label (labelName i) m p)
+        expre = do
+            _ <- isToken L.TokOpenParen
+            e <- expr
+            _ <- isToken L.TokCloseParen
+            return e
 
 branch :: GenParser L.Token () A.Expr
 branch = undefined
