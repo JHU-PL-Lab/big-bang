@@ -117,7 +117,7 @@ xDLbl = xErrT "DoubleLabel" $ \x ->
             TI.DoubleLabel{} -> True
             _ -> False
 
-xLexs :: TinyBangCode -> [Token] -> Test
+xLexs :: TinyBangCode -> [SourcePos -> Token] -> Test
 xLexs code expected =
   label ~: TestCase $ case L.lexTinyBang code of
     Left err -> assertFailure $ "Lexing failed with: " ++ err

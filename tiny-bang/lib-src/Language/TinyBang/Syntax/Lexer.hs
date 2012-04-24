@@ -1,4 +1,4 @@
-module Language.TinyBang.Syntax.NewLexer
+module Language.TinyBang.Syntax.Lexer
 ( Token(..)
 , lexTinyBang
 , LexerResult
@@ -16,6 +16,7 @@ lexTinyBang s = case parse lexer "" s of
 lexer :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
 lexer = do
     toks <- many (whitespaceP <|> thing)
+    eof
     return (concat toks)
     where
         thing = do

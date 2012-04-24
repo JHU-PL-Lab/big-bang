@@ -58,7 +58,7 @@ Library
         Language.TinyBang.Types.Types
         Language.TinyBang.Types.TypeInference
         Language.TinyBang.Types.UtilTypes
-        Language.TinyBang.Syntax.NewLexer
+        Language.TinyBang.Syntax.Lexer
 
   Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell, big-bang-utils, parsec
 
