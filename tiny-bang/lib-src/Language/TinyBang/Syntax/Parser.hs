@@ -29,6 +29,7 @@ import Utils.Render.Display
 
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
+import Text.Parsec.Combinator (optionMaybe)
 import Text.Parsec.Prim (token)
 import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
@@ -49,45 +50,65 @@ isToken t = token (show) (fst . L.getPos) isT
     where
         isT t' = if t' `L.weakEq` (t ((initialPos ""),(initialPos ""))) then Just t' else Nothing
 
+grabIdent = do
+    L.TokIdentifier _ i <- isToken tokIdent
+    return i
+
 expr :: GenParser L.Token () A.Expr
 expr = undefined
     where
         lambda = do
             _ <- isToken L.TokLambda
-            L.TokIdentifier _ i <- isToken tokIdent
+            i <- grabIdent
             e <- expr
             return (A.Func (ident i) e)
         fun = do
             _ <- isToken L.TokFun
-            L.TokIdentifier _ i <- isToken tokIdent
+            i <- grabIdent
             _ <- isToken L.TokArrow
             e <- expr
             return (A.Func (ident i) e)
-
-
-
---Exp     :   L.TokLambda (L.TokIdentifier i) L.TokArrow (Exp e)
---                                    { A.Func (ident i) e }
---        |   fun ident '->' Exp
---                                    { A.Func (ident $2) $4 }
---        |   def ident '=' Exp in Exp
---                                    { A.Def Nothing (ident $2) $4 $6 }
---        |   def Modifier ident '=' Exp in Exp
---                                    { A.Def (Just $2) (ident $3) $5 $7 }
---        |   ident '=' Exp in Exp
---                                    { A.Assign (A.AIdent $ ident $1) $3 $5 }
---        |   case Exp of '{' Branches '}'
---                                    { A.Case $2 $5 }
---        |   Exp '&' Exp
---                                    { A.Onion $1 $3 }
---        |   Exp '&-' ProjTerm
---                                    { A.OnionSub $1 $3 }
---        |   Exp '&.' ProjTerm
---                                    { A.OnionProj $1 $3 }
---        |   OpExp
---                                    { $1 }
---        |   ApplExp
---                                    { $1 }
+        defin = do
+            _ <- isToken L.TokDef
+            m <- optionMaybe modifier
+            i <- grabIdent
+            _ <- isToken L.TokOpEquals
+            e1 <- expr
+            _ <- isToken L.TokIn
+            e2 <- expr
+            return (A.Def m (ident i) e1 e2)
+        assign = do
+            i <- grabIdent
+            _ <- isToken L.TokOpEquals
+            e1 <- expr
+            _ <- isToken L.TokIn
+            e2 <- expr
+            return (A.Assign (A.AIdent $ ident i) e1 e2)
+        caseS = do
+            _ <- isToken L.TokCase
+            e <- expr
+            _ <- isToken L.TokOf
+            _ <- isToken L.TokOpenBlock
+            bs <- branches
+            _ <- isToken L.TokCloseBlock
+            return (A.Case e bs)
+        onion = do
+            e1 <- expr
+            _ <- isToken L.TokOnionCons
+            e2 <- expr
+            return (A.Onion e1 e2)
+        onionsub = do
+            e <- expr
+            _ <- isToken L.TokOnionSub
+            p <- projTerm
+            return (A.OnionSub e p)
+        onionproj = do
+            e <- expr
+            _ <- isToken L.TokOnionProj
+            p <- projTerm
+            return (A.OnionProj e p)
+        opexp = opExp
+        applexp = applExp
 
 
 applExp :: GenParser L.Token () A.Expr
@@ -99,7 +120,7 @@ primary = undefined
 branch :: GenParser L.Token () A.Expr
 branch = undefined
 
-branches :: GenParser L.Token () A.Expr
+branches :: GenParser L.Token () A.Branches
 branches = undefined
 
 pattern :: GenParser L.Token () A.Expr
@@ -114,10 +135,10 @@ patternPrimary = undefined
 primitiveType :: GenParser L.Token () A.Expr
 primitiveType = undefined
 
-modifier :: GenParser L.Token () A.Expr
+modifier :: GenParser L.Token () A.Modifier
 modifier = undefined
 
-projTerm :: GenParser L.Token () A.Expr
+projTerm :: GenParser L.Token () A.ProjTerm
 projTerm = undefined
 
 opExp :: GenParser L.Token () A.Expr
