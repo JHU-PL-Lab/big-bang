@@ -33,9 +33,10 @@ hungry = [identP, intLiteralP, charLiteralP]
             rest <- many (letter <|> digit <|> oneOf "_'")
             return $ TokIdentifier (first:rest)
         intLiteralP = do
-            first <- digit <|> char '-'
+            prefix <- option ' ' (char '-')
+            first <- digit
             digits <- many digit
-            return $ TokIntegerLiteral (read (first:digits))
+            return $ TokIntegerLiteral (read (prefix:(first:digits)))
         charLiteralP = do
             _ <- char '\''
             l <- letter
