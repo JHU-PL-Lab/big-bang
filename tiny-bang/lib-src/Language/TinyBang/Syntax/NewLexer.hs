@@ -9,10 +9,20 @@ import Utils.Render.Display (Display, makeDoc, text)
 
 
 lexer :: Parser [Token]
-lexer = undefined --hungry, reservedWords, shortOperators, longOperators, whitespaceP
+lexer = do
+    toks <- many (whitespaceP <|> thing)
+    return (concat toks)
     where
-        whitespaceP :: Parser ()
-        whitespaceP = skipMany (oneOf " \n\t")
+        thing = do
+            tok <- tryThemAll
+            return [tok]
+        tryThemAll = let tries = map (try) $ concat [reservedWords, longOperators, hungry, shortOperators] in
+            foldr (<|>) (head tries) (tail tries)
+        whitespaceP :: Parser [Token]
+        whitespaceP = do
+            _ <- oneOf " \n\t"
+            skipMany (oneOf " \n\t")
+            return []
 
 hungry :: [Parser Token]
 hungry = [identP, intLiteralP, charLiteralP]
@@ -22,8 +32,9 @@ hungry = [identP, intLiteralP, charLiteralP]
             rest <- many (letter <|> digit <|> oneOf "_'")
             return $ TokIdentifier (first:rest)
         intLiteralP = do
+            first <- digit <|> char '-'
             digits <- many digit
-            return $ TokIntegerLiteral (read digits)
+            return $ TokIntegerLiteral (read (first:digits))
         charLiteralP = do
             _ <- char '\''
             l <- letter
