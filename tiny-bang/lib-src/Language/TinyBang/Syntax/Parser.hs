@@ -33,6 +33,10 @@ import Text.Parsec.Prim (token)
 import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
 
+tokIdent = (flip L.TokIdentifier "")
+tokCharLit = (flip L.TokCharLiteral 'x')
+tokIntLit = (flip L.TokIntegerLiteral 0)
+
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
 parseTinyBang ts = case parse parser "" ts of
     Left x -> Left (ParseError ts)
@@ -40,17 +44,27 @@ parseTinyBang ts = case parse parser "" ts of
 parser :: GenParser L.Token () A.Expr
 parser = undefined
 
-expr :: GenParser L.Token () A.Expr
-expr = do
-    _ <- isToken L.TokLambda
-    _ <- isToken (flip L.TokIdentifier "")
-    return A.EmptyOnion
-
-
 isToken :: (L.SourceLocation -> L.Token) -> GenParser L.Token () L.Token
 isToken t = token (show) (fst . L.getPos) isT
     where
         isT t' = if t' `L.weakEq` (t ((initialPos ""),(initialPos ""))) then Just t' else Nothing
+
+expr :: GenParser L.Token () A.Expr
+expr = undefined
+    where
+        lambda = do
+            _ <- isToken L.TokLambda
+            L.TokIdentifier _ i <- isToken tokIdent
+            e <- expr
+            return (A.Func (ident i) e)
+        fun = do
+            _ <- isToken L.TokFun
+            L.TokIdentifier _ i <- isToken tokIdent
+            _ <- isToken L.TokArrow
+            e <- expr
+            return (A.Func (ident i) e)
+
+
 
 --Exp     :   L.TokLambda (L.TokIdentifier i) L.TokArrow (Exp e)
 --                                    { A.Func (ident i) e }
