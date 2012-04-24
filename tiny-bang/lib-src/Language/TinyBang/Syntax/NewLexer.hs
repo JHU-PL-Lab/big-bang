@@ -9,10 +9,26 @@ import Utils.Render.Display (Display, makeDoc, text)
 
 
 lexer :: Parser [Token]
-lexer = undefined
+lexer = undefined --hungry, reservedWords, shortOperators, longOperators, whitespaceP
     where
         whitespaceP :: Parser ()
         whitespaceP = skipMany (oneOf " \n\t")
+
+hungry :: [Parser Token]
+hungry = [identP, intLiteralP, charLiteralP]
+    where
+        identP = do
+            first <- letter <|> char '_'
+            rest <- many (letter <|> digit <|> oneOf "_'")
+            return $ TokIdentifier (first:rest)
+        intLiteralP = do
+            digits <- many digit
+            return $ TokIntegerLiteral (read digits)
+        charLiteralP = do
+            _ <- char '\''
+            l <- letter
+            _ <- char '\''
+            return $ TokCharLiteral l
 
 shortOperators :: [Parser Token]
 shortOperators =
@@ -122,15 +138,6 @@ reservedWords = [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
         immutP = do
             _ <- string "immut"
             return TokImmut
-
-
-{--
-
-    --[ $alpha _ ] [$alpha $digit _ ']*   { strTok $ TokIdentifier }
-    --\-?$digit+                          { strTok $ TokIntegerLiteral . read }
-    --\' ( \\. | ~\' ) \'                 { strTok $ TokCharLiteral . head . tail }
-
---}
 
 
 lexTinyBang :: String -> LexerResult
