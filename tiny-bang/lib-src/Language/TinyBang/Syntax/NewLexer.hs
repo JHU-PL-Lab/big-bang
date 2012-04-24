@@ -17,7 +17,7 @@ lexer = do
             tok <- tryThemAll
             return [tok]
         tryThemAll = let tries = map (try) $ concat [reservedWords, longOperators, hungry, shortOperators] in
-            foldr (<|>) (head tries) (tail tries)
+            foldl (<|>) (head tries) (tail tries)
         whitespaceP :: Parser [Token]
         whitespaceP = do
             _ <- oneOf " \n\t"
