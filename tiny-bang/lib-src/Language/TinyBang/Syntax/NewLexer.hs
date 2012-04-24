@@ -25,6 +25,8 @@ whitespaceP = do
     skipMany (oneOf " \n\t")
     return []
 
+validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
+
 hungry :: [Parser Token]
 hungry = [identP, intLiteralP, charLiteralP]
     where
@@ -36,6 +38,7 @@ hungry = [identP, intLiteralP, charLiteralP]
             prefix <- option ' ' (char '-')
             first <- digit
             digits <- many digit
+            validIdentP
             return $ TokIntegerLiteral (read (prefix:(first:digits)))
         charLiteralP = do
             _ <- char '\''
@@ -120,7 +123,6 @@ longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGrea
 reservedWords :: [Parser Token]
 reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
     where
-        validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
         funP = do
             _ <- string "fun"
             validIdentP
