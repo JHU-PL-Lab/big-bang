@@ -5,11 +5,133 @@ module Language.TinyBang.Syntax.NewLexer
 ) where
 
 import Text.ParserCombinators.Parsec
-import Utils.Render.Display --(Display, makeDoc)
+import Utils.Render.Display (Display, makeDoc, text)
 
 
 lexer :: Parser [Token]
 lexer = undefined
+    where
+        whitespaceP :: Parser ()
+        whitespaceP = skipMany (oneOf " \n\t")
+
+shortOperators :: [Parser Token]
+shortOperators =
+    [ lblPrefixP
+    , lambdaP
+    , openParenP
+    , closeParenP
+    , openBlockP
+    , closeBlockP
+    , separatorP
+    , colonP
+    , opPlusP
+    , opMinusP
+    , equalsP
+    , onionConsP]
+    where
+        lblPrefixP = do
+            _ <- char '`'
+            return TokLabelPrefix
+        lambdaP = do
+            _ <- char '\\'
+            return TokLambda
+        openParenP = do
+            _ <- char '('
+            return TokOpenParen
+        closeParenP = do
+            _ <- char ')'
+            return TokCloseParen
+        openBlockP = do
+            _ <- char '{'
+            return TokOpenBlock
+        closeBlockP = do
+            _ <- char '}'
+            return TokCloseBlock
+        separatorP = do
+            _ <- char ';'
+            return TokSeparator
+        colonP = do
+            _ <- char ':'
+            return TokColon
+        opPlusP = do
+            _ <- char '+'
+            return TokOpPlus
+        opMinusP = do
+            _ <- char '-'
+            return TokOpMinus
+        equalsP = do
+            _ <- char '='
+            return TokEquals
+        onionConsP = do
+            _ <- char '&'
+            return TokOnionCons
+
+longOperators :: [Parser Token]
+longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGreaterEqualsP]
+    where
+        onionSubP = do
+            _ <- string "&-"
+            return TokOnionSub
+        onionProjP = do
+            _ <- string "&."
+            return TokOnionProj
+        arrowP = do
+            _ <- string "->"
+            return TokArrow
+        opEqualsP = do
+            _ <- string "=="
+            return TokOpEquals
+        opLessEqualsP = do
+            _ <- string "<="
+            return TokOpLessEquals
+        opGreaterEqualsP = do
+            _ <- string ">="
+            return TokOpGreaterEquals
+
+
+reservedWords :: [Parser Token]
+reservedWords = [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
+    where
+        funP = do
+            _ <- string "fun"
+            return TokFun
+        caseP = do
+            _ <- string "case"
+            return TokCase
+        ofP = do
+            _ <- string "of"
+            return TokOf
+        intP = do
+            _ <- string "int"
+            return TokInteger
+        charP = do
+            _ <- string "char"
+            return TokChar
+        unitP = do
+            _ <- string "unit"
+            return TokUnit
+        defP = do
+            _ <- string "def"
+            return TokDef
+        inP = do
+            _ <- string "in"
+            return TokIn
+        finalP = do
+            _ <- string "final"
+            return TokFinal
+        immutP = do
+            _ <- string "immut"
+            return TokImmut
+
+
+{--
+
+    --[ $alpha _ ] [$alpha $digit _ ']*   { strTok $ TokIdentifier }
+    --\-?$digit+                          { strTok $ TokIntegerLiteral . read }
+    --\' ( \\. | ~\' ) \'                 { strTok $ TokCharLiteral . head . tail }
+
+--}
+
 
 lexTinyBang :: String -> LexerResult
 lexTinyBang s = case parse lexer "" s of
@@ -48,6 +170,8 @@ data Token =
     | TokOpEquals
     | TokOpLessEquals
     | TokOpGreaterEquals
+    | TokFinal
+    | TokImmut
     deriving (Eq, Show)
 
 instance Display Token where
@@ -81,3 +205,5 @@ instance Display Token where
         TokOpEquals -> "op equals"
         TokOpLessEquals -> "op less than or equal"
         TokOpGreaterEquals -> "op greater than or equal"
+        TokFinal -> "final"
+        TokImmut -> "immut"
