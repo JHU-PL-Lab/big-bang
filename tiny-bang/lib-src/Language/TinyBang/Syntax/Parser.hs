@@ -179,11 +179,24 @@ branches = do
 
 pattern :: GenParser L.Token () A.ChiMain
 pattern = undefined
-patternStruct :: GenParser L.Token () A.Expr
+    where
+        var = do
+            i <- grabIdent
+            return (A.ChiTopVar $ ident i)
+        onion = do
+            p1 <- patternPrimary
+            _ <- isToken L.TokOnionCons
+            p2 <- patternStruct
+            return (A.ChiTopOnion p1 p2)
+        bind = do
+            p <- patternBind
+            return (A.ChiTopBind p)
+
+patternStruct :: GenParser L.Token () A.ChiStruct
 patternStruct = undefined
-patternBind :: GenParser L.Token () A.Expr
+patternBind :: GenParser L.Token () A.ChiBind
 patternBind = undefined
-patternPrimary :: GenParser L.Token () A.Expr
+patternPrimary :: GenParser L.Token () A.ChiPrimary
 patternPrimary = undefined
 
 primitiveType :: GenParser L.Token () A.Expr
