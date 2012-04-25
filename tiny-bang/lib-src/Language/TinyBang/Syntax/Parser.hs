@@ -158,13 +158,26 @@ primary = undefined
             _ <- isToken L.TokCloseParen
             return e
 
-branch :: GenParser L.Token () A.Expr
-branch = undefined
+branch :: GenParser L.Token () A.Branch
+branch = do
+    p <- pattern
+    _ <- isToken L.TokArrow
+    e <- expr
+    return (A.Branch p e)
 
 branches :: GenParser L.Token () A.Branches
-branches = undefined
+branches = do
+    b <- branch
+    bs <- many branchs
+    return (b:bs)
+    where
+        branchs :: GenParser L.Token () A.Branch
+        branchs = do
+            _ <- isToken L.TokSeparator
+            branch
 
-pattern :: GenParser L.Token () A.Expr
+
+pattern :: GenParser L.Token () A.ChiMain
 pattern = undefined
 patternStruct :: GenParser L.Token () A.Expr
 patternStruct = undefined
