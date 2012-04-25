@@ -263,16 +263,52 @@ modifier = undefined
             _ <- L.TokImmut
             return A.Immutable
 
-
 projTerm :: GenParser L.Token () A.ProjTerm
 projTerm = undefined
+    where
+        int = do
+            _ <- isToken L.TokInteger
+            return (ProjPrim PrimInt)
+        char = do
+            _ <- isToken L.TokChar
+            return (ProjPrim PrimChar)
+        unit = do
+            _ <- isToken L.TokUnit
+            return (ProjPrim PrimUnit)
+        lbl = do
+            _ <- isToken L.TokLabelPrefix
+            i <- grabIdent
+            return (ProjLabel (labelName i))
+        fun = do
+            _ <- isToken L.TokFun
+            return ProjFunc
 
 opExp :: GenParser L.Token () A.Expr
-opExp = undefined
+opExp = do
+    p1 <- primary
+    o <- op
+    p2 <- primary
+    return (o p1 p2)
+--OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
-op :: GenParser L.Token () A.Expr
+op :: GenParser L.Token () (A.Expr -> A.Expr -> A.Expr)
 op = undefined
-
+    where
+        plus = do
+            _ <- isToken L.TokOpPlus
+            return (A.LazyOp A.Plus)
+        minus = do
+            _ <- isToken L.TokOpMinus
+            return (A.LazyOp A.Minus)
+        equal = do
+            _ <- isToken L.TokOpEquals
+            return (A.EagerOp A.Equal)
+        lessEqual = do
+            _ <- isToken L.TokOpLessEquals
+            return (A.EagerOp A.LessEqual)
+        greaterEqual = do
+            _ <- isToken L.TokOpGreaterEquals
+            return (A.EagerOp A.GreaterEqual)
 
 data ParseError = ParseError [L.Token]
 instance Error ParseError where
