@@ -29,8 +29,8 @@ import Utils.Render.Display
 
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
-import Text.Parsec.Combinator (optionMaybe)
-import Text.Parsec.Prim (token, many)
+import Text.Parsec.Combinator (optionMaybe, eof)
+import Text.Parsec.Prim (token, many,(<|>),try)
 import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
 
@@ -43,7 +43,10 @@ parseTinyBang ts = case parse parser "" ts of
     Left x -> Left (ParseError ts)
     Right x -> Right x
 parser :: GenParser L.Token () A.Expr
-parser = undefined
+parser = do
+    e <- expr
+    eof --must use all the tokens in the stream
+    return e
 
 isToken :: (L.SourceLocation -> L.Token) -> GenParser L.Token () L.Token
 isToken t = token (show) (fst . L.getPos) isT
@@ -63,8 +66,19 @@ grabChar = do
     return v
 
 expr :: GenParser L.Token () A.Expr
-expr = undefined
+expr = foldl (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [ lambda
+            , fun
+            , defin
+            , assign
+            , caseS
+            , onion
+            , onionsub
+            , onionproj
+            , opexp
+            , applexp]
         lambda = do
             _ <- isToken L.TokLambda
             i <- grabIdent
