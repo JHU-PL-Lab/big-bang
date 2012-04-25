@@ -242,6 +242,17 @@ patternPrimary = undefined
 
 primitiveType :: GenParser L.Token () T.PrimitiveType
 primitiveType = undefined
+    where
+        int = do
+            _ <- isToken L.TokInteger
+            return T.PrimInt
+        char = do
+            _ <- isToken L.TokChar
+            return T.PrimChar
+        unit = do
+            _ <- isToken L.TokUnit
+            return T.PrimUnit
+
 
 modifier :: GenParser L.Token () A.Modifier
 modifier = undefined
