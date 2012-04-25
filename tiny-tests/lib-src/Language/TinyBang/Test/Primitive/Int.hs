@@ -11,7 +11,7 @@ import qualified Language.TinyBang.Config as Cfg
 
 testInteger :: (?conf :: Cfg.Config) => Integer -> Test
 testInteger i = lexParseEval (show i)
-                             [TokIntegerLiteral i]
+                             [flip TokIntegerLiteral i]
                              (A.PrimInt i)
                              (A.VPrimInt i)
 
@@ -24,7 +24,7 @@ tests = TestLabel "Integer tests" $ TestList $
   , xPars "_1" (A.Var $ ident "_1")
   , fPars "1_"
   , xLexs "0x1"
-      [TokIntegerLiteral 0, TokIdentifier "x1"]
+      [flip TokIntegerLiteral 0, flip TokIdentifier "x1"]
   , xLexs "-0"
-      [TokIntegerLiteral 0]
+      [flip TokIntegerLiteral 0]
   ]

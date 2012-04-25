@@ -27,12 +27,12 @@ tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Tests of basic onion properties" $ TestList
   [ lexParseEval "`A 1 & `B 2"
                  [ TokLabelPrefix
-                 , TokIdentifier "A"
-                 , TokIntegerLiteral 1
+                 , flip TokIdentifier "A"
+                 , flip TokIntegerLiteral 1
                  , TokOnionCons
                  , TokLabelPrefix
-                 , TokIdentifier "B"
-                 , TokIntegerLiteral 2
+                 , flip TokIdentifier "B"
+                 , flip TokIntegerLiteral 2
                  ]
                  ( A.Onion (A.Label lblA Nothing $ E.pi 1)
                            (A.Label lblB Nothing $ E.pi 2) )

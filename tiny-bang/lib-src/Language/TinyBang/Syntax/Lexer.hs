@@ -5,9 +5,11 @@ module Language.TinyBang.Syntax.Lexer
 , getPos
 , weakEq
 , SourceLocation
+, defaultSourceLocation
 ) where
 
 import Text.ParserCombinators.Parsec
+import Text.Parsec.Pos (initialPos)
 import Utils.Render.Display (Display, makeDoc, text)
 
 lexTinyBang :: String -> LexerResult
@@ -178,6 +180,8 @@ reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
 type LexerResult = Either String [Token]
 
 type SourceLocation = (SourcePos, SourcePos)
+defaultSourceLocation = ((initialPos ""),(initialPos ""))
+
 
 data Token =
       TokLabelPrefix SourceLocation

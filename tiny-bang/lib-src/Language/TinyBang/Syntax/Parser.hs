@@ -140,7 +140,7 @@ applExp = do
     return (foldl (A.Appl) p ps)
 
 primary :: GenParser L.Token () A.Expr
-primary = foldr (<|>) (head options) (tail options)
+primary = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
             [ iden
@@ -242,7 +242,7 @@ patternBind = (try bound) <|> (try unbound)
             return (A.ChiUnbound p)
 
 patternPrimary :: GenParser L.Token () A.ChiPrimary
-patternPrimary = foldr (<|>) (head options) (tail options)
+patternPrimary = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
             [ prim
@@ -296,7 +296,7 @@ modifier = (try final) <|> (try immut)
             return A.Immutable
 
 projTerm :: GenParser L.Token () A.ProjTerm
-projTerm = foldr (<|>) (head options) (tail options)
+projTerm = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
             [ int
@@ -330,7 +330,7 @@ opExp = do
 --OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
 op :: GenParser L.Token () (A.Expr -> A.Expr -> A.Expr)
-op = foldr (<|>) (head options) (tail options)
+op = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
             [ plus

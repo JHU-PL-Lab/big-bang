@@ -11,7 +11,7 @@ import qualified Language.TinyBang.Config as Cfg
 
 testChar :: (?conf :: Cfg.Config) => Char -> Test
 testChar c = lexParseEval ('\'':c:'\'':[])
-                          [TokCharLiteral c]
+                          [flip TokCharLiteral c]
                           (A.PrimChar c)
                           (A.VPrimChar c)
 

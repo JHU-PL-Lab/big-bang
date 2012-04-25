@@ -27,7 +27,7 @@ import qualified Data.IntMap as IntMap
 
 import Language.TinyBang.Interpreter.SourceInterpreter
 import Language.TinyBang.Ast (vmPair, Evaluated)
-import Language.TinyBang.Syntax.Lexer (Token)
+import Language.TinyBang.Syntax.Lexer (Token, SourceLocation, defaultSourceLocation)
 import qualified Language.TinyBang.Ast as A (Expr, Value)
 import qualified Language.TinyBang.Types.TypeInference as TI
   (TypeInferenceError (..))
@@ -117,11 +117,11 @@ xDLbl = xErrT "DoubleLabel" $ \x ->
             TI.DoubleLabel{} -> True
             _ -> False
 
-xLexs :: TinyBangCode -> [SourcePos -> Token] -> Test
+xLexs :: TinyBangCode -> [SourceLocation -> Token] -> Test
 xLexs code expected =
   label ~: TestCase $ case L.lexTinyBang code of
     Left err -> assertFailure $ "Lexing failed with: " ++ err
-    Right tokens -> assertEqual "" expected tokens
+    Right tokens -> assertEqual "" (map ($defaultSourceLocation) expected) tokens
   where label = "Lexing " ++ show code
 
 xPars :: (?conf :: Cfg.Config) => TinyBangCode -> A.Expr -> Test
@@ -147,7 +147,7 @@ fPars code =
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
 lexParseEval :: (Display a, Evaluated a, ?conf :: Cfg.Config)
-             => TinyBangCode -> [Token] -> A.Expr -> a -> Test
+             => TinyBangCode -> [SourceLocation -> Token] -> A.Expr -> a -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex
            , xPars code expr
