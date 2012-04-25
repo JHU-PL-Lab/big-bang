@@ -194,6 +194,17 @@ pattern = undefined
 
 patternStruct :: GenParser L.Token () A.ChiStruct
 patternStruct = undefined
+    where
+        onionMany = do
+            p1 <- patternPrimary
+            _ <- isToken L.TokOnionCons
+            p2 <- patternStruct
+            return (A.ChiOnionMany p1 p2)
+        onionOne = do
+            p <- patternPrimary
+            return (A.ChiOnionOne p)
+
+
 patternBind :: GenParser L.Token () A.ChiBind
 patternBind = undefined
 patternPrimary :: GenParser L.Token () A.ChiPrimary
