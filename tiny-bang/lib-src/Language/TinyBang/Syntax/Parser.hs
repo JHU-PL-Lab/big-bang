@@ -176,7 +176,6 @@ branches = do
             _ <- isToken L.TokSeparator
             branch
 
-
 pattern :: GenParser L.Token () A.ChiMain
 pattern = undefined
     where
@@ -204,13 +203,44 @@ patternStruct = undefined
             p <- patternPrimary
             return (A.ChiOnionOne p)
 
-
 patternBind :: GenParser L.Token () A.ChiBind
 patternBind = undefined
+    where
+        bound = do
+            i <- grabIdent
+            _ <- isToken L.TokSeparator
+            p <- patternBind
+            return (A.ChiBound (ident i) p)
+        unbound = do
+            p <- patternPrimary
+            return (A.ChiUnbound p)
+
 patternPrimary :: GenParser L.Token () A.ChiPrimary
 patternPrimary = undefined
+    where
+        prim = do
+            p <- primitiveType
+            return (A.ChiPrim p)
+        shallow = do
+            _ <- isToken L.TokLabelPrefix
+            i1 <- grabIdent
+            i2 <- grabIdent
+            return (A.ChiLabelShallow (labelName i1) (ident i2))
+        deep = do
+            _ <- isToken L.TokLabelPrefix
+            i <- grabIdent
+            p <- patternBind
+            return (A.ChiLabelDeep (labelName i) p)
+        fun = do
+            _ <- isToken L.TokFun
+            return A.ChiFun
+        inner = do
+            _ <- isToken L.TokOpenParen
+            p <- patternStruct
+            _ <- isToken L.TokCloseParen
+            return (A.ChiInnerStruct p)
 
-primitiveType :: GenParser L.Token () A.Expr
+primitiveType :: GenParser L.Token () T.PrimitiveType
 primitiveType = undefined
 
 modifier :: GenParser L.Token () A.Modifier
