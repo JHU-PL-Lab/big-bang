@@ -253,9 +253,16 @@ primitiveType = undefined
             _ <- isToken L.TokUnit
             return T.PrimUnit
 
-
 modifier :: GenParser L.Token () A.Modifier
 modifier = undefined
+    where
+        final = do
+            _ <- L.TokFinal
+            return A.Final
+        immut = do
+            _ <- L.TokImmut
+            return A.Immutable
+
 
 projTerm :: GenParser L.Token () A.ProjTerm
 projTerm = undefined
