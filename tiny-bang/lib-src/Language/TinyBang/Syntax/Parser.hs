@@ -140,8 +140,16 @@ applExp = do
     return (foldl (A.Appl) p ps)
 
 primary :: GenParser L.Token () A.Expr
-primary = undefined
+primary = foldr (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [ iden
+            , intLit
+            , charLit
+            , unit
+            , emptyOnion
+            , lbl
+            , expre]
         iden = do
             i <- grabIdent
             return (A.Var (ident i))
@@ -191,8 +199,12 @@ branches = do
             branch
 
 pattern :: GenParser L.Token () A.ChiMain
-pattern = undefined
+pattern = foldr (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [var
+            , onion
+            , bind]
         var = do
             i <- grabIdent
             return (A.ChiTopVar $ ident i)
@@ -206,7 +218,7 @@ pattern = undefined
             return (A.ChiTopBind p)
 
 patternStruct :: GenParser L.Token () A.ChiStruct
-patternStruct = undefined
+patternStruct = (try onionMany) <|> (try onionOne)
     where
         onionMany = do
             p1 <- patternPrimary
@@ -218,7 +230,7 @@ patternStruct = undefined
             return (A.ChiOnionOne p)
 
 patternBind :: GenParser L.Token () A.ChiBind
-patternBind = undefined
+patternBind = (try bound) <|> (try unbound)
     where
         bound = do
             i <- grabIdent
@@ -230,8 +242,14 @@ patternBind = undefined
             return (A.ChiUnbound p)
 
 patternPrimary :: GenParser L.Token () A.ChiPrimary
-patternPrimary = undefined
+patternPrimary = foldr (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [ prim
+            , shallow
+            , deep
+            , fun
+            , inner]
         prim = do
             p <- primitiveType
             return (A.ChiPrim p)
@@ -255,7 +273,7 @@ patternPrimary = undefined
             return (A.ChiInnerStruct p)
 
 primitiveType :: GenParser L.Token () T.PrimitiveType
-primitiveType = undefined
+primitiveType = (try int) <|> (try char) <|> (try unit)
     where
         int = do
             _ <- isToken L.TokInteger
@@ -268,18 +286,24 @@ primitiveType = undefined
             return T.PrimUnit
 
 modifier :: GenParser L.Token () A.Modifier
-modifier = undefined
+modifier = (try final) <|> (try immut)
     where
         final = do
-            _ <- L.TokFinal
+            _ <- isToken L.TokFinal
             return A.Final
         immut = do
-            _ <- L.TokImmut
+            _ <- isToken L.TokImmut
             return A.Immutable
 
 projTerm :: GenParser L.Token () A.ProjTerm
-projTerm = undefined
+projTerm = foldr (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [ int
+            , char
+            , unit
+            , lbl
+            , fun]
         int = do
             _ <- isToken L.TokInteger
             return (ProjPrim PrimInt)
@@ -306,8 +330,14 @@ opExp = do
 --OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
 op :: GenParser L.Token () (A.Expr -> A.Expr -> A.Expr)
-op = undefined
+op = foldr (<|>) (head options) (tail options)
     where
+        options = map (try)
+            [ plus
+            , minus
+            , equal
+            , lessEqual
+            , greaterEqual]
         plus = do
             _ <- isToken L.TokOpPlus
             return (A.LazyOp A.Plus)
