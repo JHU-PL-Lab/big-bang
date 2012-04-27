@@ -56,6 +56,8 @@ Library
         Data.List.Utils
         Data.Maybe.Utils
         Data.Set.Utils
+        Utils.Language.Ast
+        Utils.Language.AstMeta
         Utils.Render.Display
 
   Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell
