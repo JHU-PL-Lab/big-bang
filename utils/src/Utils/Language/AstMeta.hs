@@ -126,19 +126,23 @@ declAstOp n =
         tvnames = astTvnames n
         preds = map makePred [1..n]
         result = mkName "result"
+        op = mkName "op"
         makePred i = ClassP (mkName "AstStep") $
-            [ VarT $ tvnames !! (i-1)
+            [ VarT $ op
+            , VarT $ tvnames !! (i-1)
             , foldl AppT (ConT name) $ map VarT tvnames
             , VarT result ]
-        typ = AppT (AppT (ConT $ mkName "AstOp") $
-                foldl AppT (ConT name) $ map VarT tvnames) $ VarT result
+        typ = AppT (AppT (AppT (ConT $ mkName "AstOp") $ VarT op) $
+                foldl AppT (ConT name) $
+                    map VarT tvnames) $ VarT result
         ast = mkName "ast"
         impl = FunD (mkName "astop") $
-            [Clause [VarP ast] (NormalB $ CaseE (VarE ast) matches) []]
+            [Clause [VarP op, VarP ast] (NormalB $ CaseE (VarE ast) matches) []]
         matches = map makeMatch [1..n]
         p = mkName "p"
         makeMatch i = Match (ConP (astConstrName n i) [VarP p])
-                        (NormalB $ AppE (VarE $ mkName "astpart") $ VarE p) []
+                        (NormalB $ AppE (AppE (VarE $ mkName "aststep") $
+                            VarE op) $ VarE p) []
 
 -- |Creates the name for the k-ary AST type.
 astName :: Int -> Name
