@@ -8,6 +8,7 @@ module Utils.Language.AstMeta
 ( astArities
 , astDecls
 , opDecls
+, wrapDecls
 ) where
 
 import Language.Haskell.TH.Syntax
@@ -24,6 +25,11 @@ astDecls n = [declAstType n, declAstEq n, declAstOrd n, declAstShow n
 -- |A function to produce the @AstOp@ declarations for the k-ary AST type.
 opDecls :: Int -> [Dec]
 opDecls n = [declAstOp n]
+
+-- |A function to produce the @AstWrap@ declarations for the ith position of
+--  the j-ary AST type.
+wrapDecls :: Int -> Int -> [Dec]
+wrapDecls i j = [declAstWrap i j]
 
 -- |Creates the declaration for the k-ary AST type itself.
 declAstType :: Int -> Dec
@@ -54,7 +60,7 @@ declAstTypeclassInstance scname sfname clauses n =
         typ = AppT (ConT cname) $ foldl AppT (ConT name) $ map VarT tvnames
         impl = FunD fname clauses
  
--- |Creates the Eq typeclass instance declaration for the k-ary AST type.
+-- |Creates the @Eq@ typeclass instance declaration for the k-ary AST type.
 declAstEq :: Int -> Dec
 declAstEq n = declAstTypeclassInstance "Eq" "==" clauses n
   where clauses = (map makeClause [1..n]) ++
@@ -69,7 +75,7 @@ declAstEq n = declAstTypeclassInstance "Eq" "==" clauses n
         defaultClause =
             Clause [WildP,WildP] (NormalB $ ConE $ mkName "False") []
 
--- |Creates the Ord typeclass instance declaration for the k-ary AST type.
+-- |Creates the @Ord@ typeclass instance declaration for the k-ary AST type.
 declAstOrd :: Int -> Dec
 declAstOrd n = declAstTypeclassInstance "Ord" "compare" clauses n
   where clauses = map makeClause [(a,b) | a <- [1..n], b <- [1..n]]
@@ -92,7 +98,7 @@ declAstOrd n = declAstTypeclassInstance "Ord" "compare" clauses n
                          ,ConP constrNameJ $ [WildP]]
                     (NormalB $ ConE $ mkName nm) []
 
--- |Creates the Show typeclass instance declaration for the k-ary AST type.
+-- |Creates the @Show@ typeclass instance declaration for the k-ary AST type.
 declAstShow :: Int -> Dec
 declAstShow n = declAstTypeclassInstance "Show" "show" clauses n
   where clauses = map makeClause [1..n]
@@ -108,7 +114,8 @@ declAstShow n = declAstTypeclassInstance "Show" "show" clauses n
           where x = mkName "x"
                 constrName = astConstrName n i
 
--- |Creates the Display typeclass instance declaration for the k-ary AST type.
+-- |Creates the @Display@ typeclass instance declaration for the k-ary AST
+--  type.
 declAstDisplay :: Int -> Dec
 declAstDisplay n = declAstTypeclassInstance "Display" "makeDoc" clauses n
   where clauses = map makeClause [1..n]
@@ -118,7 +125,7 @@ declAstDisplay n = declAstTypeclassInstance "Display" "makeDoc" clauses n
           where x = mkName "x"
                 constrName = astConstrName n i
 
--- |Creates the AstOp typeclass instance declaration for the k-ary AST type.
+-- |Creates the @AstOp@ typeclass instance declaration for the k-ary AST type.
 declAstOp :: Int -> Dec
 declAstOp n =
   InstanceD preds typ [impl]
@@ -143,6 +150,18 @@ declAstOp n =
         makeMatch i = Match (ConP (astConstrName n i) [VarP p])
                         (NormalB $ AppE (AppE (VarE $ mkName "aststep") $
                             VarE op) $ VarE p) []
+
+-- |Creates the @AstWrap@ typeclass instance declarations for the k-ary AST
+--  type.
+declAstWrap :: Int -> Int -> Dec
+declAstWrap i j =
+  InstanceD [] typ [impl]
+  where name = astName j
+        tvnames = astTvnames j
+        typ = AppT (AppT (ConT $ mkName "AstWrap") $ VarT $ tvnames !! (i-1)) $
+                foldl AppT (ConT name) $ map VarT tvnames
+        impl = FunD (mkName "astwrap") $
+            [Clause [] (NormalB $ ConE $ astConstrName j i) []]
 
 -- |Creates the name for the k-ary AST type.
 astName :: Int -> Name

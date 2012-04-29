@@ -36,3 +36,11 @@ class AstStep op part ast result where
 
 $( return $ concat $ map Meta.opDecls Meta.astArities )
 
+-- |Wraps a node in an AST wrapper.  This module provides implementations of
+--  this typeclass for each AST wrapper type.
+class AstWrap part ast where
+  astwrap :: part ast -> ast
+
+$( return $ concat $ map (\(i,j) -> Meta.wrapDecls i j)
+    [(i,j) | j <- Meta.astArities, i <- [1..j] ] )
+
