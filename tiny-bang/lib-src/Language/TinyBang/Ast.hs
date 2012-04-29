@@ -1,6 +1,14 @@
-{-# LANGUAGE FlexibleInstances, EmptyDataDecls, GADTs, StandaloneDeriving #-}
+{-# LANGUAGE      FlexibleInstances
+                , FlexibleContexts
+                , EmptyDataDecls
+                , GADTs
+                , StandaloneDeriving
+                , MultiParamTypeClasses
+                , TypeSynonymInstances
+                #-}
 module Language.TinyBang.Ast
-( Expr(..)
+( Expr
+, ExprPart(..)
 , Modifier(..)
 , Chi(..)
 , ChiMain
@@ -14,16 +22,20 @@ module Language.TinyBang.Ast
 , Branches
 , Branch(..)
 , Value(..)
+, Evaluated(..)
+, CellId
+, ePatVars
+, exprVars
+, VarsOp(..)
+, exprFreeVars
+, FreeVarsOp(..)
+, subst
+, SubstOp(..)
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
 , ProjTerm(..)
 , Assignable(..)
-, Evaluated(..)
-, CellId
-, ePatVars
-, exprVars
-, exprFreeVars
 ) where
 
 import Data.IntMap (IntMap)
@@ -42,30 +54,35 @@ import Language.TinyBang.Types.UtilTypes
   )
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
+import Utils.Language.Ast
 import Utils.Render.Display
 
 -------------------------------------------------------------------------------
 
 type CellId = Int
 
--- |Data type for representing Big Bang ASTs.
-data Expr
+-- TODO: separate cell AST nodes into a different structure
+-- |Data type for representing TinyBang ASTs.
+type Expr = Ast1 ExprPart
+
+-- |Data type for representing TinyBang AST nodes.
+data ExprPart t
   = Var Ident
-  | Label LabelName (Maybe Modifier) Expr
-  | Onion Expr Expr
-  | OnionSub Expr ProjTerm
-  | OnionProj Expr ProjTerm
+  | Label LabelName (Maybe Modifier) t
+  | Onion t t
+  | OnionSub t ProjTerm
+  | OnionProj t ProjTerm
   | EmptyOnion
-  | Func Ident Expr
-  | Appl Expr Expr
+  | Func Ident t
+  | Appl t t
   | PrimInt Integer
   | PrimChar Char
   | PrimUnit
-  | Case Expr Branches
-  | Def (Maybe Modifier) Ident Expr Expr
-  | Assign Assignable Expr Expr
-  | LazyOp LazyOperator Expr Expr
-  | EagerOp EagerOperator Expr Expr
+  | Case t (Branches t)
+  | Def (Maybe Modifier) Ident t t
+  | Assign Assignable t t
+  | LazyOp LazyOperator t t
+  | EagerOp EagerOperator t t
   | ExprCell CellId
   deriving (Eq, Ord, Show)
 
@@ -74,11 +91,12 @@ data Modifier
   | Immutable
   deriving (Eq, Ord, Show, Enum)
 
--- |Data type for representing Big Bang values
-data Value
+-- |Data type for representing evaluated ASTs.  The type parameter indicates
+--  the original type of AST which was evaluated (for function bodies).
+data Value t
   = VLabel LabelName CellId
-  | VOnion Value Value
-  | VFunc Ident Expr
+  | VOnion (Value t) (Value t)
+  | VFunc Ident t
   | VPrimInt Integer
   | VPrimChar Char
   | VPrimUnit
@@ -124,8 +142,8 @@ deriving instance Eq (Chi a)
 deriving instance Ord (Chi a)
 
 -- |Alias for case branches
-type Branches = [Branch]
-data Branch = Branch ChiMain Expr
+type Branches t = [Branch t]
+data Branch t = Branch ChiMain t
   deriving (Eq, Ord, Show)
 
 -- TODO: refactor the pattern stuff into its own module?
@@ -148,10 +166,13 @@ ePatVars chi =
   where both :: Chi a -> Chi b -> Set Ident
         both x y = Set.union (ePatVars y) (ePatVars x)
 
--- |Obtains the set of free variables for a given expression.
-exprFreeVars :: Expr -> Set Ident
-exprFreeVars e =
-  case e of
+-- |Obtains the set of free variables for an AST containing TinyBang nodes.
+exprFreeVars :: (AstOp FreeVarsOp ast (Set Ident)) => ast -> Set Ident
+exprFreeVars = astop FreeVarsOp
+data FreeVarsOp = FreeVarsOp
+instance (AstOp FreeVarsOp ast (Set Ident))
+      => AstStep FreeVarsOp ExprPart ast (Set Ident) where
+  aststep FreeVarsOp ast = case ast of
     Var i -> Set.singleton i
     Label _ _ e' -> exprFreeVars e'
     Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
@@ -179,9 +200,12 @@ exprFreeVars e =
 
 -- |Obtains the set of all variables in a given expression.  This includes the
 --  variables found in patterns and other constructs.
-exprVars :: Expr -> Set Ident
-exprVars e =
-  case e of
+exprVars :: (AstOp VarsOp ast (Set Ident)) => ast -> Set Ident
+exprVars = astop VarsOp
+data VarsOp = VarsOp
+instance (AstOp VarsOp ast (Set Ident))
+      => AstStep VarsOp ExprPart ast (Set Ident) where
+  aststep VarsOp ast = case ast of
     Var i -> Set.singleton i
     Label _ _ e' -> exprVars e'
     Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
@@ -204,7 +228,45 @@ exprVars e =
                         ACell _ -> id) $ exprVars e1 `Set.union` exprVars e2
     ExprCell _ -> Set.empty
 
-instance Display Expr where
+-- |Performs a free variable substitution on the provided TinyBang AST.
+subst :: (AstWrap ExprPart ast
+        , AstOp SubstOp ast (ExprPart ast -> Ident -> ast))
+      => ast            -- ^The AST
+      -> ExprPart ast   -- ^The substituting expression
+      -> Ident          -- ^The identifier to substitute
+      -> ast            -- ^The resulting AST
+subst = astop SubstOp
+data SubstOp = SubstOp
+instance (AstWrap ExprPart ast
+        , AstOp SubstOp ast (ExprPart ast -> Ident -> ast))
+      => AstStep SubstOp ExprPart ast (ExprPart ast -> Ident -> ast) where
+  aststep SubstOp orig sub ident = astwrap $ case orig of
+    Var i | i == ident -> sub
+    Var _ -> orig
+    Label n m e -> Label n m $ rec e
+    Onion e1 e2 -> Onion (rec e1) (rec e2)
+    OnionSub e s -> OnionSub (rec e) s
+    OnionProj e s -> OnionProj (rec e) s
+    Func i _ | i == ident -> orig
+    Func i e -> Func i $ rec e
+    Appl e1 e2 -> Appl (rec e1) (rec e2)
+    PrimInt _ -> orig
+    PrimChar _ -> orig
+    PrimUnit -> orig
+    Case e branches -> Case (rec e) $
+        map (\(Branch pat bre) -> Branch pat $
+          (if ident `Set.member` ePatVars pat then id else rec) bre) branches
+    EmptyOnion -> orig
+    LazyOp op e1 e2 -> LazyOp op (rec e1) (rec e2)
+    EagerOp op e1 e2 -> EagerOp op (rec e1) (rec e2)
+    Def _ i _ _ | i == ident -> orig
+    Def m i e1 e2 -> Def m i (rec e1) (rec e2)
+    Assign (AIdent i) _ _ | i == ident -> orig
+    Assign a e1 e2 -> Assign a (rec e1) (rec e2)
+    ExprCell _ -> orig
+    where rec e = subst e sub ident
+
+instance (Display t) => Display (ExprPart t) where
   makeDoc a = case a of
     Var i -> text $ unIdent i
     Label n m e ->
@@ -236,7 +298,7 @@ instance Display Expr where
             Nothing -> empty
 
 -- TODO: fix parens
-instance Display Value where
+instance (Display t) => Display (Value t) where
   makeDoc x =
     case x of
       VLabel n v -> text "`" <> makeDoc n <+> parens (makeDoc v)
@@ -247,7 +309,7 @@ instance Display Value where
       VPrimUnit -> text "()"
       VEmptyOnion -> text "(&)"
 
-instance Display Branch where
+instance (Display t) => Display (Branch t) where
   makeDoc (Branch chi e) =
     makeDoc chi <+> text "->" <+> makeDoc e
 
@@ -272,18 +334,19 @@ instance Display Assignable where
   makeDoc (AIdent i) = makeDoc i
   makeDoc (ACell v) = makeDoc v
 
-class Evaluated a where
-  value :: a -> Value
+class Evaluated t a where
+  value :: a -> Value t
   value v = fst $ vmPair v
-  mapping :: a -> IntMap Value
+  mapping :: a -> IntMap (Value t)
   mapping v = snd $ vmPair v
 
-  vmPair :: a -> (Value, IntMap Value)
+  vmPair :: a -> (Value t, IntMap (Value t))
   vmPair v = (value v, mapping v)
 
-instance Evaluated (Value, IntMap Value) where
+instance Evaluated t (Value t, IntMap (Value t)) where
   vmPair = id
 
-instance Evaluated Value where
+instance Evaluated t (Value t) where
   value = id
   mapping = const IntMap.empty
+

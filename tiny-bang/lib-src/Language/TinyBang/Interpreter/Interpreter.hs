@@ -1,8 +1,12 @@
 {-# LANGUAGE FlexibleInstances,
+             FlexibleContexts,
              MultiParamTypeClasses,
              TupleSections,
              ImplicitParams,
-             GADTs
+             GADTs,
+             TypeSynonymInstances,
+             ScopedTypeVariables,
+             UndecidableInstances
              #-}
 
 {- |A module defining a Big Bang interpreter.
@@ -12,7 +16,6 @@ module Language.TinyBang.Interpreter.Interpreter
 , eval
 , EvalError(..)
 , EvalM
-, applyBuiltins
 , canonicalize
 , onion
 ) where
@@ -38,7 +41,8 @@ import Language.TinyBang.Ast
   , Chi(..)
   , ChiPrimary
   , ChiStruct
-  , Expr(..)
+  , Expr
+  , ExprPart(..)
   , Value(..)
   , Assignable(..)
   , LazyOperator(..)
@@ -46,6 +50,8 @@ import Language.TinyBang.Ast
   , ProjTerm(..)
   , CellId
   , ePatVars
+  , subst
+  , SubstOp(..)
   )
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
@@ -55,23 +61,24 @@ import Language.TinyBang.Types.UtilTypes
     , LabelName
     , labelName
     )
+import Utils.Language.Ast
 import Utils.Render.Display
 
 -- TODO: remove
 -- import Debug.Trace
 
 -- |An error type for evaluation failures.
-data EvalError =
-      ApplNotFunction Value Value
+data EvalError t =
+      ApplNotFunction (Value t) (Value t)
     | DynamicTypeError String -- TODO: figure out what goes here
     | NotClosed Ident
-    | UnmatchedCase Value Branches
-    | IllegalComparison EagerOperator Value Value
+    | UnmatchedCase (Value t) (Branches t)
+    | IllegalComparison EagerOperator (Value t) (Value t)
     | IllegalAssignment Assignable
     deriving (Eq, Show)
-instance Error EvalError where
+instance Error (EvalError t) where
   strMsg = error
-instance Display EvalError where
+instance (Display t) => Display (EvalError t) where
   makeDoc ee =
     case ee of
       ApplNotFunction e e' ->
@@ -94,26 +101,26 @@ instance Display EvalError where
 
 -- I'm not sure if this or the other order of the monad transformers is
 -- preferable to the alternative. TODO: figure it out.
-type EvalM a = StateT CellMap (Either EvalError) a
-type EnvReader a = Reader CellMap a
+type EvalM t a = StateT (CellMap t) (Either (EvalError t)) a
+type EnvReader t a = Reader (CellMap t) a
 type Cell = Int
 type NextCell = Int
-type CellMap = (NextCell, IntMap Value)
-type Result = (Value, IntMap Value)
+type CellMap t = (NextCell, IntMap (Value t))
+type Result t = (Value t, IntMap (Value t))
 
-class CellReadable m where
-  readCell :: Cell -> m Value
+class CellReadable t m where
+  readCell :: Cell -> m (Value t)
 
-instance CellReadable (StateT CellMap (Either EvalError)) where
+instance CellReadable t (StateT (CellMap t) (Either (EvalError t))) where
   readCell i = gets snd >>= return . (! i)
 
-instance CellReadable (ReaderT CellMap Identity) where
+instance CellReadable t (ReaderT (CellMap t) Identity) where
   readCell i = asks snd >>= return . (! i)
 
-runEvalMReader :: EnvReader a -> EvalM a
+runEvalMReader :: EnvReader t a -> EvalM t a
 runEvalMReader envReader = get >>= return . runReader envReader
 
-newCell :: Value -> EvalM Cell
+newCell :: Value t -> EvalM t Cell
 newCell v = do
   (i, m) <- get
   put (i + 1, IntMap.insert i v m)
@@ -122,7 +129,7 @@ newCell v = do
 --readCell :: Cell -> EvalM Value
 --readCell i = gets snd >>= return . (! i)
 
-writeCell :: Cell -> Value -> EvalM ()
+writeCell :: Cell -> Value t -> EvalM t ()
 writeCell i v = modify (second $ IntMap.adjust (const v) i)
 
 ------------------------------------------------------------------------------
@@ -134,60 +141,50 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- |Performs top-level evaluation of a Big Bang expression.  This evaluation
 --  routine binds built-in functions (like "plus") to the appropriate
 --  expressions.
-evalTop :: (?conf :: Cfg.Config) => Expr -> Either EvalError Result
+evalTop :: (?conf :: Cfg.Config, Eq ast
+          , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+          , AstWrap ExprPart ast)
+        => ast -> Either (EvalError ast) (Result ast)
 evalTop e =
-    fmap (second snd) $ runStateT (eval $ applyBuiltins e) (0, IntMap.empty)
+    fmap (second snd) $ runStateT (eval e) (0, IntMap.empty)
 
--- |Wraps an expression in a context where builtin names are bound
-applyBuiltins :: Expr -> Expr
-applyBuiltins e = e
-  -- wrapper e
-  -- where ix = ident "x"
-  --       iy = ident "y"
-  --       vx = Var ix
-  --       vy = Var iy
-  --       builtins = [
-  --             ("plus", Func ix $ Func iy $ Plus vx vy)
-  --           , ("minus", Func ix $ Func iy $ Minus vx vy)
-  --           , ("equal", Func ix $ Func iy $ Equal vx vy)
-  --           ]
-  --       -- Takes the builtins as defined above and returns a list of functions
-  --       -- which use let encoding to bind the name as given above to the
-  --       -- definition as given above.
-  --       wrappedBuiltins :: [Expr -> Expr]
-  --       wrappedBuiltins = map (\(x,y) z -> Appl (Func (ident x) z) y) builtins
-  --       wrapper :: Expr -> Expr
-  --       wrapper = foldl1 (.) wrappedBuiltins
-
-onion :: Value -> Value -> Value
+onion :: Value t -> Value t -> Value t
 onion VEmptyOnion v = v
 onion v VEmptyOnion = v
 onion v1 v2 = VOnion v1 v2
 
 type IdMap = Map Ident CellId
 
--- |Evaluates a Big Bang expression.
-eval :: (?conf :: Cfg.Config) => Expr -> EvalM Value
-
--- The next four cases are covered by the value rule
-eval e = do
-  case e of
-      Func i e' -> return $ VFunc i e'
+-- |Evaluates a TinyBang expression.
+eval :: (?conf :: Cfg.Config
+        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+        , AstWrap ExprPart ast)
+     => ast -> EvalM ast (Value ast)
+eval e = astop EvalOp e ?conf
+data EvalOp = EvalOp
+instance (Eq ast, Display ast
+        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+        , AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+        , AstWrap ExprPart ast)
+      => AstStep EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
+  aststep EvalOp ast = \config -> let ?conf = config in
+    case ast of
+      Func i e -> return $ VFunc i e
       PrimInt i -> return $ VPrimInt i
       PrimChar c -> return $ VPrimChar c
       PrimUnit -> return $ VPrimUnit
       Var i -> throwError $ NotClosed i
       ExprCell c -> readCell c
-      Label n _ e' -> do
-        v <- eval e'
+      Label n _ e -> do
+        v <- eval e
         c <- newCell v
         return $ VLabel n c
       Onion e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
         return $ onion v1 v2
-      OnionSub e' s -> do
-        v <- eval e'
+      OnionSub e s -> do
+        v <- eval e
         return $ onionSub v
         where onionSub v =
                 case (v, s) of
@@ -217,7 +214,7 @@ eval e = do
         cellId <- newCell v2
         let v1' = eProj T.TpFun v1
         case v1' of
-          Just (VFunc i body) -> eval $ subst cellId i body
+          Just (VFunc i body) -> eval $ subst body (ExprCell cellId) i
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
@@ -231,17 +228,21 @@ eval e = do
                     Nothing -> findAnswer bs'
                     Just expr -> return expr
         eval =<< findAnswer branches
-        where eMatch :: Value -> Branch -> EvalM (Maybe Expr)
+        where eMatch :: (AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+                        ,AstWrap ExprPart ast)
+                     => Value ast -> Branch ast -> EvalM ast (Maybe ast)
               eMatch v (Branch chi e1) = do -- EvalM
                 m <- eSearch v chi
                 return $ do -- Maybe
                   b <- m
                   return $ eSubstAll e1 b
-              eSubstAll :: Expr -> IdMap -> Expr
-              eSubstAll expr b = Map.foldrWithKey (flip subst) expr b
-              eSearch :: Value
-                      -> Chi a
-                      -> EvalM (Maybe IdMap)
+              eSubstAll :: (AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+                           ,AstWrap ExprPart ast)
+                        => ast -> IdMap -> ast
+              eSubstAll expr b = Map.foldrWithKey foldSubst expr b
+                where foldSubst ident cellid sexpr =
+                        subst sexpr (ExprCell cellid) ident
+              eSearch :: Value ast -> Chi a -> EvalM ast (Maybe IdMap)
               eSearch v chi =
                 case chi of
                   ChiTopVar x -> Just <$> (Map.singleton x <$> newCell v)
@@ -269,9 +270,9 @@ eval e = do
                       --   and a function to evaluate non-onion values to a
                       --   result.  Handles breaking onion values apart to find
                       --   the first matching result.
-                      recurseSearch :: Value -> ChiPrimary
-                                    -> (Value -> EvalM (Maybe IdMap))
-                                    -> EvalM (Maybe IdMap)
+                      recurseSearch :: Value ast -> ChiPrimary
+                                    -> (Value ast -> EvalM ast (Maybe IdMap))
+                                    -> EvalM ast (Maybe IdMap)
                       recurseSearch v' chiBound f =
                         case v' of
                           VOnion vLeft vRight -> do
@@ -284,7 +285,7 @@ eval e = do
                               Nothing -> eSearch vLeft chiBound
                           -- If the value is not an onion, it's a singleton.
                           _ -> f v'
-                      matchPrim :: T.PrimitiveType -> Value -> Maybe IdMap
+                      matchPrim :: T.PrimitiveType -> Value ast -> Maybe IdMap
                       matchPrim prim v' =
                         case (prim, v') of
                           (T.PrimInt, VPrimInt _) -> yes
@@ -293,27 +294,28 @@ eval e = do
                           _ -> no
                           where yes = Just Map.empty
                                 no = Nothing
-                      matchLabelSimple :: LabelName -> Ident -> Value
-                                       -> EvalM (Maybe IdMap)
+                      matchLabelSimple :: LabelName -> Ident -> Value ast
+                                       -> EvalM ast (Maybe IdMap)
                       matchLabelSimple lbl x v' =
                         return $ case v' of
                           VLabel lbl' c | lbl == lbl' ->
                             Just (Map.singleton x c)
                           _ -> Nothing
-                      matchLabelComplex :: LabelName -> Chi a -> Value
-                                        -> EvalM (Maybe IdMap)
+                      matchLabelComplex :: LabelName -> Chi a -> Value ast
+                                        -> EvalM ast (Maybe IdMap)
                       matchLabelComplex lbl chiBind v' =
                         case v' of
                           VLabel lbl' c0 | lbl == lbl' ->
                             flip eSearch chiBind =<< readCell c0
                           _ -> return Nothing
-                      matchFuncs :: Value -> EvalM (Maybe IdMap)
+                      matchFuncs :: Value ast -> EvalM ast (Maybe IdMap)
                       matchFuncs v' =
                         case v' of 
                           VFunc _ _ -> return $ Just Map.empty
                           _ -> return Nothing
-                      searchAll :: (ChiPrimary, Maybe ChiStruct)
-                                -> EvalM (Maybe IdMap)
+                      searchAll :: forall .
+                                   (ChiPrimary, Maybe ChiStruct)
+                                -> EvalM ast (Maybe IdMap)
                       searchAll (p,ms) =
                         case ms of
                           Nothing -> eSearch v p
@@ -330,7 +332,7 @@ eval e = do
       Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
-        eval $ subst cellId i e2
+        eval $ subst e2 (ExprCell cellId) i
       Assign a e1 e2 -> do
         case a of
           AIdent i -> throwError $ NotClosed i
@@ -355,32 +357,33 @@ eval e = do
           Equal -> eEqual v1 v2
           LessEqual -> eLessEq v1 v2
           GreaterEqual -> eGreaterEq v1 v2
-        where eEqual :: (?conf :: Cfg.Config)
-                     => Value -> Value -> EvalM Value
+        where eEqual :: (?conf :: Cfg.Config, Display ast)
+                     => Value ast -> Value ast -> EvalM ast (Value ast)
               eEqual v1 v2 = do
                 c <- newCell VPrimUnit
                 b1 <- runEvalMReader $ eCompare v1 v2
                 b2 <- runEvalMReader $ eCompare v2 v1
                 let n = if b1 && b2 then "True" else "False"
                 return $ VLabel (labelName n) c
-              eLessEq :: Value -> Value -> EvalM Value
+              eLessEq :: (Eq ast, Display ast)
+                      => Value ast -> Value ast -> EvalM ast (Value ast)
               eLessEq v1 v2 = do
                 c <- newCell VPrimUnit
                 b <- runEvalMReader $ eCompare v1 v2
                 let n = if b then "True" else "False"
                 return $ VLabel (labelName n) c
-              eGreaterEq :: Value -> Value -> EvalM Value
+              eGreaterEq :: Value ast -> Value ast -> EvalM ast (Value ast)
               eGreaterEq v1 v2 = eLessEq v2 v1
-              eCompare :: (?conf :: Cfg.Config)
-                       => Value -> Value -> EnvReader Bool
+              eCompare :: (?conf :: Cfg.Config, Eq ast, Display ast)
+                       => Value ast -> Value ast -> EnvReader ast Bool
               eCompare v1 v2 = do
                 env <- ask
                 let cmp x y = runReader (eAtomOrder x y) env
                 eListLessEq
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v1)
                   (reverse $ sortBy cmp $ eFilter $ eFlatten v2)
-              eAtomOrder :: (?conf :: Cfg.Config)
-                         => Value -> Value -> EnvReader Ordering
+              eAtomOrder :: (?conf :: Cfg.Config, Eq ast, Display ast)
+                         => Value ast -> Value ast -> EnvReader ast Ordering
               eAtomOrder v1 v2 = do
                 b1 <- eAtomCompare v1 v2
                 b2 <- eAtomCompare v2 v1
@@ -392,9 +395,9 @@ eval e = do
                     error $ "eAtomCompare returned false for <= and >= "++
                             "of arguments (" ++ display v1 ++ "), " ++
                             "(" ++ display v2 ++ ")"
-              eFilter :: [Value] -> [Value]
+              eFilter :: [Value ast] -> [Value ast]
               eFilter vs = reverse $ nubBy eTestMatch (reverse vs)
-              eTestMatch :: Value -> Value -> Bool
+              eTestMatch :: Value ast -> Value ast -> Bool
               eTestMatch v1 v2 =
                 case (v1,v2) of
                   (VPrimUnit,VPrimUnit) -> True
@@ -403,7 +406,8 @@ eval e = do
                   (VLabel n _, VLabel n' _) -> n == n'
                   (VFunc _ _, VFunc _ _) -> True
                   _ -> False
-              eListLessEq :: [Value] -> [Value] -> EnvReader Bool
+              eListLessEq :: (Eq ast, Display ast)
+                          => [Value ast] -> [Value ast] -> EnvReader ast Bool
               eListLessEq vs1 vs2 = do
                 case (vs1,vs2) of
                   ([],_) -> return True
@@ -414,7 +418,8 @@ eval e = do
                       LT -> return True
                       GT -> return False
                       EQ -> eListLessEq r1 r2
-              eAtomCompare :: Value -> Value -> EnvReader Bool
+              eAtomCompare :: (Eq ast, Display ast)
+                           => Value ast -> Value ast -> EnvReader ast Bool
               eAtomCompare v1 v2 =
                 case (v1,v2) of
                   (VPrimUnit, VPrimUnit) -> return True
@@ -428,10 +433,11 @@ eval e = do
                   _ | (valueToOrd v1) < (valueToOrd v2) -> return True
                   _ -> return False
 
+
 -- |Flattens onions to a list whose elements are guaranteed not to
 --  be onions themselves and which appear in the same order as they
 --  did in the original onion
-eFlatten :: Value -> [Value]
+eFlatten :: Value ast -> [Value ast]
 eFlatten e =
   case e of
     VEmptyOnion -> []
@@ -440,7 +446,7 @@ eFlatten e =
 
 -- |Transforms a list representing a flattened onion to one containing
 --  no type duplicates.
-canonicalizeList :: [Value] -> [Value]
+canonicalizeList :: [Value ast] -> [Value ast]
 canonicalizeList xs = map last ys
   where ys = groupBy eqValues $ sortBy compareValues xs
 
@@ -448,7 +454,7 @@ canonicalizeList xs = map last ys
 --  that there be no duplicate labels, that the onion be left leaning,
 --  and that the onion entries be sorted in accordance with the ordering
 --  defined over Values
-canonicalizeOnion :: Value -> Value
+canonicalizeOnion :: (Ord ast) => Value ast -> Value ast
 canonicalizeOnion = foldl1' onion . sort . canonicalizeList . eFlatten
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
@@ -471,13 +477,13 @@ data ValueOrdinal
 -- Still useful: commented out to silence "Defined but not used" warnings.
 -- leqValues = (<=) `on` valueToOrd
 
-compareValues :: Value -> Value -> Ordering
+compareValues :: Value ast -> Value ast -> Ordering
 compareValues = compare `on` valueToOrd
 
-eqValues :: Value -> Value -> Bool
+eqValues :: Value ast -> Value ast -> Bool
 eqValues = (==) `on` valueToOrd
 
-valueToOrd :: Value -> ValueOrdinal
+valueToOrd :: Value ast -> ValueOrdinal
 valueToOrd v =
   case v of
     VPrimUnit -> OrdPrimUnit
@@ -496,63 +502,11 @@ valueToOrd v =
 -- onionValueEq o v = c o == [v]
 --   where c = canonicalizeList . eFlatten
 
--------------------------------------------------------------------------------
--- *Substitution Functions
--- $SubstitutionFunctions
---
--- Defining functions related to variable substitution.
-
-
-
--- |Substitutes with a given cell all references to a specified
---  variable in the provided expression.
-subst :: CellId  -- ^ The cell
-      -> Ident   -- ^ The identifier to replace
-      -> Expr    -- ^ The expression in which to do the replacement
-      -> Expr    -- ^ The resulting expression
-
-subst c x e =
-  case e of
-    Var i ->
-      if i == x then ExprCell c
-                else e
-    Label n m e' -> Label n m $ subst c x e'
-    Onion e1 e2 -> Onion (subst c x e1) (subst c x e2)
-    Func i e' ->
-      if i == x then e
-                else Func i $ subst c x e'
-    Appl e1 e2 -> Appl (subst c x e1) (subst c x e2)
-    PrimInt _ -> e
-    PrimChar _ -> e
-    PrimUnit -> e
-    Case e' branches ->
-      let e'' = subst c x e' in
-      Case e'' $ map substBranch branches
-      where substBranch branch@(Branch chi branchExpr) =
-              if Set.member x $ ePatVars chi
-                  then branch
-                  else Branch chi $ subst c x branchExpr
-    OnionSub e' s -> OnionSub (subst c x e') s
-    OnionProj e' s -> OnionProj (subst c x e') s
-    EmptyOnion -> EmptyOnion
-    LazyOp op e1 e2 -> LazyOp op (subst c x e1) (subst c x e2)
-    EagerOp op e1 e2 -> EagerOp op (subst c x e1) (subst c x e2)
-    Def m i e1 e2 ->
-      if i == x then Def m i (subst c x e1) e2
-                else Def m i (subst c x e1) (subst c x e2)
-    Assign a e1 e2 ->
-      case a of
-        ACell _ -> Assign a (subst c x e1) (subst c x e2)
-        AIdent i ->
-          let a' = if i == x then (ACell c) else a in
-          Assign a' (subst c x e1) (subst c x e2)
-    ExprCell _ -> e
-
 -- |This function takes a value-mapping pair and returns a new one in
 --  canonical form.  Canonical form requires that there be no repeated
 --  labels, no unreachable cells, and that the cells' names are
 --  determined by position in the value.
-canonicalize :: Result -> Result
+canonicalize :: (Ord t) => Result t -> Result t
 canonicalize (v, imap) = canonicalize' (v', imap)
   where v' = case v of
                VOnion _ _ -> canonicalizeOnion v
@@ -560,17 +514,17 @@ canonicalize (v, imap) = canonicalize' (v', imap)
 
 -- |Helper function for 'canonicalize', which assumes that its input has
 --  been deduped if it's an onion.
-canonicalize' :: Result -> Result
+canonicalize' :: Result t -> Result t
 canonicalize' (v, imap) =
   (valueRemap v, imapRemap imap)
   where -- FIXME: Make more efficient later if neccessary
-        gatherCells :: Value -> Writer [CellId] ()
+        gatherCells :: Value ast -> Writer [CellId] ()
         gatherCells v' = do
           case v' of
             VLabel _ c -> tell [c]
             VOnion v1 v2 -> gatherCells v1 >> gatherCells v2
             _ -> return ()
-        followCellRefs :: Value -> Writer [CellId] ()
+        followCellRefs :: Value ast -> Writer [CellId] ()
         followCellRefs v' = do
           cs <- snd <$> listen (gatherCells v')
           mapM_ followCellRefs $ map (imap !) cs
@@ -590,7 +544,7 @@ canonicalize' (v, imap) =
           (remap ! cell, valueRemap contents)
 
 -- |Projects values by type.
-eProj :: T.TauProj -> Value -> Maybe Value
+eProj :: T.TauProj -> Value ast -> Maybe (Value ast)
 eProj tproj v =
   case (tproj, v) of
     (T.TpPrim T.PrimInt, VPrimInt _) -> Just v

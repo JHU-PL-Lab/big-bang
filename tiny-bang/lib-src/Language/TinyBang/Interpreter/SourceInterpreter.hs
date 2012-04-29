@@ -23,7 +23,9 @@ import qualified Language.TinyBang.Types.TypeInference as TI
 import qualified Language.TinyBang.Types.Types as T
 import Utils.Render.Display
 
-data EvalSuccessOrFailure = EvalSuccess (A.Value, IntMap A.Value) | EvalFailure I.EvalError
+data EvalSuccessOrFailure
+    = EvalSuccess (A.Value A.Expr, IntMap (A.Value A.Expr))
+    | EvalFailure (I.EvalError A.Expr)
 
 -- |A result type for evalStringTop
 data EvalStringResult

@@ -25,6 +25,7 @@ import Language.TinyBang.Types.UtilTypes
     , PrimitiveType(..)
     , ProjTerm(..)
     )
+import Utils.Language.Ast
 import Utils.Render.Display
 
 -- For debugging purposes only
@@ -79,23 +80,25 @@ import System.IO
 %%
 
 Exp     :   '\\' ident '->' Exp
-                                    { A.Func (ident $2) $4 }
+                                    { astwrap $ A.Func (ident $2) $4 }
         |   fun ident '->' Exp
-                                    { A.Func (ident $2) $4 }
+                                    { astwrap $ A.Func (ident $2) $4 }
         |   def ident '=' Exp in Exp
-                                    { A.Def Nothing (ident $2) $4 $6 }
+                                    { astwrap $ A.Def Nothing (ident $2) $4 $6 }
         |   def Modifier ident '=' Exp in Exp
-                                    { A.Def (Just $2) (ident $3) $5 $7 }
+                                    { astwrap $
+                                        A.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
-                                    { A.Assign (A.AIdent $ ident $1) $3 $5 }
+                                    { astwrap $
+                                        A.Assign (A.AIdent $ ident $1) $3 $5 }
         |   case Exp of '{' Branches '}'
-                                    { A.Case $2 $5 }
+                                    { astwrap $ A.Case $2 $5 }
         |   Exp '&' Exp
-                                    { A.Onion $1 $3 }
+                                    { astwrap $ A.Onion $1 $3 }
         |   Exp '&-' ProjTerm
-                                    { A.OnionSub $1 $3 }
+                                    { astwrap $ A.OnionSub $1 $3 }
         |   Exp '&.' ProjTerm
-                                    { A.OnionProj $1 $3 }
+                                    { astwrap $ A.OnionProj $1 $3 }
         |   OpExp
                                     { $1 }
         |   ApplExp
@@ -103,25 +106,27 @@ Exp     :   '\\' ident '->' Exp
 
 
 ApplExp :   ApplExp Primary
-                                    { A.Appl $1 $2 }
+                                    { astwrap $ A.Appl $1 $2 }
         |   Primary
                                     { $1 }
 
 
 Primary :   ident
-                                    { A.Var (ident $1) }
+                                    { astwrap $ A.Var (ident $1) }
         |   intLit
-                                    { A.PrimInt $1 }
+                                    { astwrap $ A.PrimInt $1 }
         |   charLit
-                                    { A.PrimChar $1 }
+                                    { astwrap $ A.PrimChar $1 }
         |   '(' ')'
-                                    { A.PrimUnit }
+                                    { astwrap $ A.PrimUnit }
         |   '(' '&' ')'
-                                    { A.EmptyOnion }
+                                    { astwrap $ A.EmptyOnion }
         |   '`' ident Primary
-                                    { A.Label (labelName $2) Nothing $3 }
+                                    { astwrap $
+                                        A.Label (labelName $2) Nothing $3 }
         |   '`' Modifier ident Primary
-                                    { A.Label (labelName $3) (Just $2) $4 }
+                                    { astwrap $
+                                        A.Label (labelName $3) (Just $2) $4 }
         |   '(' Exp ')'
                                     { $2 }
 
@@ -152,7 +157,8 @@ PatternBind
 
 PatternPrimary
         :   PrimitiveType           { A.ChiPrim $1 }
-        |   '`' ident ident         { A.ChiLabelShallow (labelName $2) $ ident $3 }
+        |   '`' ident ident         { A.ChiLabelShallow (labelName $2) $
+                                        ident $3 }
         |   '`' ident PatternBind   { A.ChiLabelDeep (labelName $2) $3 }
         |   fun                     { A.ChiFun }
         |   '(' PatternStruct ')'   { A.ChiInnerStruct $2 }
@@ -173,13 +179,13 @@ ProjTerm
         |   '`' ident               { ProjLabel (labelName $2) }
         |   fun                     { ProjFunc }
 
-OpExp   :   Primary Op Primary      { $2 $1 $3 }
+OpExp   :   Primary Op Primary      { astwrap $ $2 $1 $3 }
 
-Op      :   '+'                     { \x y -> A.LazyOp A.Plus x y }
-        |   '-'                     { \x y -> A.LazyOp A.Minus x y }
-        |   '=='                    { \x y -> A.EagerOp A.Equal x y }
-        |   '<='                    { \x y -> A.EagerOp A.LessEqual x y }
-        |   '>='                    { \x y -> A.EagerOp A.GreaterEqual x y }
+Op      :   '+'                     { A.LazyOp A.Plus }
+        |   '-'                     { A.LazyOp A.Minus }
+        |   '=='                    { A.EagerOp A.Equal }
+        |   '<='                    { A.EagerOp A.LessEqual }
+        |   '>='                    { A.EagerOp A.GreaterEqual }
 
 {
 data ParseError

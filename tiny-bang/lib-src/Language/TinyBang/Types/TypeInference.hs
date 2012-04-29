@@ -40,7 +40,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , Cell(..)
                                      )
 import Language.TinyBang.Types.UtilTypes
-import Language.TinyBang.Interpreter.Interpreter (applyBuiltins)
+import Utils.Language.Ast
 import Utils.Render.Display
 
 type Gamma = Map Ident CellAlpha
@@ -83,13 +83,13 @@ inferTypeTop :: A.Expr
                 , Constraints
                 )
 inferTypeTop expr =
-  runTIM (inferType $ applyBuiltins expr) Map.empty 0
+  runTIM (inferType expr) Map.empty 0
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM InterAlpha
-inferType expr = do
+inferType ast@(Ast1p1 expr) = do
   gamma <- ask
-  let inferred = T.Inferred expr gamma
+  let inferred = T.Inferred ast gamma
       tellInferred c = do
         tell1 $ c .: inferred
   case expr of
