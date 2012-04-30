@@ -166,7 +166,7 @@ ePatVars chi =
   where both :: Chi a -> Chi b -> Set Ident
         both x y = Set.union (ePatVars y) (ePatVars x)
 
--- |Obtains the set of free variables for an AST containing TinyBang nodes.
+-- |Obtains the set of free variables for an AST.
 exprFreeVars :: (AstOp FreeVarsOp ast (Set Ident)) => ast -> Set Ident
 exprFreeVars = astop FreeVarsOp
 data FreeVarsOp = FreeVarsOp
@@ -266,6 +266,30 @@ instance (AstWrap ExprPart ast
     ExprCell _ -> orig
     where rec e = subst e sub ident
 
+-- Specifies a homomorphic operation over TinyBang AST nodes.
+instance (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2), AstWrap ExprPart ast2)
+      => AstStep HomOp ExprPart ast1 ((ast1 -> ast2) -> ast2) where
+  aststep HomOp part = \f -> astwrap $ case part of
+    Var i -> Var i
+    Label n m e -> Label n m $ f e
+    Onion e1 e2 -> Onion (f e1) (f e2)
+    OnionSub e s -> OnionSub (f e) s
+    OnionProj e s -> OnionProj (f e) s
+    Func i e -> Func i $ f e
+    Appl e1 e2 -> Appl (f e1) (f e2)
+    PrimInt v -> PrimInt v
+    PrimChar v -> PrimChar v
+    PrimUnit -> PrimUnit
+    Case e branches -> Case (f e) $
+        map (\(Branch pat bre) -> Branch pat $ f bre) branches
+    EmptyOnion -> EmptyOnion
+    LazyOp op e1 e2 -> LazyOp op (f e1) (f e2)
+    EagerOp op e1 e2 -> EagerOp op (f e1) (f e2)
+    Def m i e1 e2 -> Def m i (f e1) (f e2)
+    Assign a e1 e2 -> Assign a (f e1) (f e2)
+    ExprCell c -> ExprCell c
+
+-- Specifies how to display TinyBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
   makeDoc a = case a of
     Var i -> text $ unIdent i
