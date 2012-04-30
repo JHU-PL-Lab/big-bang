@@ -44,3 +44,24 @@ class AstWrap part ast where
 $( return $ concat $ map (\(i,j) -> Meta.wrapDecls i j)
     [(i,j) | j <- Meta.astArities, i <- [1..j] ] )
 
+-- |Defines a homomorphic operation over partial AST types.  Users of this
+--  module should provide an instance of this typeclass when the partial AST
+--  type is to be used in transformations relying on homomorphisms (such as
+--  upcasting).  Homomorphism instances should be of the form
+--  @
+--      instance (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2), AstWrap part)
+--            => AstStep HomOp part ast1 ((ast1 -> ast2) -> ast2)
+--  @
+--  The function of type @ast1 -> ast2@ is to be used on each child node in the
+--  partial AST type.
+data HomOp = HomOp
+
+-- |Performs an upcasting operation on an AST over which homomorphisms are
+--  defined.
+--  NOTE: due to a bug present in at least GHC 7.4.1, attaching a type
+--        signature to this function causes a type error.  Leaving the
+--        signature inferred seems to work.  The ticket for this bug can be
+--        found at http://hackage.haskell.org/trac/ghc/ticket/6065
+--upcast :: (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2)) => ast1 -> ast2
+upcast ast = astop HomOp ast upcast
+
