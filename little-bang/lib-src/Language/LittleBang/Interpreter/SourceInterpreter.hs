@@ -23,7 +23,7 @@ import qualified Language.LittleBang.Syntax.Lexer as L
 import qualified Language.LittleBang.Syntax.Parser as P
 import Language.LittleBang.Translator (convertLittleToTiny)
 
-import qualified Language.TinyBang.Ast as A
+import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cnf
 import qualified Language.TinyBang.Interpreter.Interpreter as I
 import qualified Language.TinyBang.Types.Closure as C
@@ -32,15 +32,17 @@ import qualified Language.TinyBang.Types.Types as T
 
 import Utils.Render.Display
 
-data EvalSuccessOrFailure = EvalSuccess (A.Value, IntMap A.Value) | EvalFailure I.EvalError
+data EvalSuccessOrFailure
+    = EvalSuccess (TA.Value TA.Expr, IntMap (TA.Value TA.Expr))
+    | EvalFailure (I.EvalError TA.Expr)
 
 -- |A result type for evalStringTop
 data EvalStringResult
-    = EvalResult A.Expr EvalSuccessOrFailure
-    | Contradiction A.Expr T.Constraints
+    = EvalResult TA.Expr EvalSuccessOrFailure
+    | Contradiction TA.Expr T.Constraints
         -- ^Represents a contradiction appearing in a constraint set.  The
         --  indicated set should contain at least one contradiction.
-    | TypecheckFailure A.Expr TI.TypeInferenceError T.Constraints
+    | TypecheckFailure TA.Expr TI.TypeInferenceError T.Constraints
     | ParseFailure P.ParseError
     | LexFailure String
 
@@ -62,9 +64,9 @@ evalStringTop s =
         Left (FailureWrapper err) -> err
         Right ast -> EvalResult ast $
             if Cnf.evaluating then eEval ast
-                              else EvalSuccess (A.VEmptyOnion, IntMap.empty)
+                              else EvalSuccess (TA.VEmptyOnion, IntMap.empty)
 
-eAll :: (?conf :: Cnf.Config) => String -> EvalStringM A.Expr
+eAll :: (?conf :: Cnf.Config) => String -> EvalStringM TA.Expr
 eAll s = do
     tokens <- eLex s
     lAst <- eParse tokens
@@ -89,7 +91,7 @@ eParse tokens =
         Left err -> throwError $ FailureWrapper $ ParseFailure err
         Right ast -> return ast
 
-eTypeInfer :: A.Expr -> EvalStringM (T.InterAlpha, T.Constraints)
+eTypeInfer :: TA.Expr -> EvalStringM (T.InterAlpha, T.Constraints)
 eTypeInfer e =
     let (res,cs) = TI.inferTypeTop e in
     case res of
@@ -97,7 +99,7 @@ eTypeInfer e =
                 TypecheckFailure e err cs
         Right a -> return (a,cs)
 
-eClose :: (?conf :: Cnf.Config) => A.Expr -> T.Constraints -> EvalStringM T.Constraints
+eClose :: (?conf :: Cnf.Config) => TA.Expr -> T.Constraints -> EvalStringM T.Constraints
 eClose e cs =
     let closed = C.calculateClosure cs in
     if Set.null $ Set.filter isBottom closed
@@ -109,7 +111,7 @@ isBottom c = case c of
     T.Bottom _ -> True
     _ -> False
 
-eEval :: (?conf :: Cnf.Config) => A.Expr -> EvalSuccessOrFailure
+eEval :: (?conf :: Cnf.Config) => TA.Expr -> EvalSuccessOrFailure
 eEval e =
     case I.evalTop e of
         Left err -> EvalFailure err

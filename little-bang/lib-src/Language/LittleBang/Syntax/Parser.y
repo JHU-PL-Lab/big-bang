@@ -12,9 +12,9 @@ import Control.Monad.Error (ErrorT, runErrorT, Error, strMsg, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
 import Data.Maybe (listToMaybe)
 
-import qualified Language.LittleBang.Ast as A
+import qualified Language.LittleBang.Ast as LA
 import qualified Language.LittleBang.Syntax.Lexer as L
-import Language.LittleBang.Types.UtilTypes
+import Language.TinyBang.Types.UtilTypes
     ( Ident
     , ident
     , unIdent
@@ -24,6 +24,8 @@ import Language.LittleBang.Types.UtilTypes
     , PrimitiveType(..)
     , ProjTerm(..)
     )
+import qualified Language.TinyBang.Ast as TA
+import Utils.Language.Ast
 import Utils.Render.Display
 
 -- For debugging purposes only
@@ -82,25 +84,29 @@ import System.IO
 %%
 
 Exp     :   '\\' ident '->' Exp
-                                    { A.Func (ident $2) $4 }
+                                    { astwrap $ TA.Func (ident $2) $4 }
         |   fun ident '->' Exp
-                                    { A.Func (ident $2) $4 }
+                                    { astwrap $ TA.Func (ident $2) $4 }
         |   def ident '=' Exp in Exp
-                                    { A.Def Nothing (ident $2) $4 $6 }
+                                    { astwrap $
+                                        TA.Def Nothing (ident $2) $4 $6 }
         |   def Modifier ident '=' Exp in Exp
-                                    { A.Def (Just $2) (ident $3) $5 $7 }
+                                    { astwrap $
+                                        TA.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
-                                    { A.Assign (ident $1) $3 $5 }
+                                    { astwrap $
+                                        TA.Assign (TA.AIdent $ ident $1) $3 $5 }
         |   Primary '.' ident '=' Exp in Exp
-                                    { A.ProjAssign $1 (ident $3) $5 $7 }
+                                    { astwrap $
+                                        LA.ProjAssign $1 (ident $3) $5 $7 }
         |   case Exp of '{' Branches '}'
-                                    { A.Case $2 $5 }
+                                    { astwrap $ LA.Case $2 $5 }
         |   Exp '&' Exp
-                                    { A.Onion $1 $3 }
+                                    { astwrap $ LA.Onion $1 $3 }
         |   Exp '&-' ProjTerm
-                                    { A.OnionSub $1 $3 }
+                                    { astwrap $ TA.OnionSub $1 $3 }
         |   Exp '&.' ProjTerm
-                                    { A.OnionProj $1 $3 }
+                                    { astwrap $ TA.OnionProj $1 $3 }
         |   OpExp
                                     { $1 }
         |   ApplExp
@@ -108,69 +114,71 @@ Exp     :   '\\' ident '->' Exp
 
 
 ApplExp :   ApplExp LabelExp
-                                    { A.Appl $1 $2 }
+                                    { astwrap $ TA.Appl $1 $2 }
         |   LabelExp
                                     { $1 }
 
 
 LabelExp:   '`' ident LabelExp
-                                    { A.Label (labelName $2) Nothing $3 }
+                                    { astwrap $
+                                        TA.Label (labelName $2) Nothing $3 }
         |   '`' ident Modifier LabelExp
-                                    { A.Label (labelName $2) (Just $3) $4 }
+                                    { astwrap $
+                                        TA.Label (labelName $2) (Just $3) $4 }
         |   Primary
                                     { $1 }
 
 
 Primary :   ident
-                                    { A.Var (ident $1) }
+                                    { astwrap $ TA.Var (ident $1) }
         |   intLit
-                                    { A.PrimInt $1 }
+                                    { astwrap $ TA.PrimInt $1 }
         |   charLit
-                                    { A.PrimChar $1 }
+                                    { astwrap $ TA.PrimChar $1 }
         |   '(' ')'
-                                    { A.PrimUnit }
+                                    { astwrap $ TA.PrimUnit }
         |   '(' '&' ')'
-                                    { A.EmptyOnion }
+                                    { astwrap $ TA.EmptyOnion }
         |   '(' Exp ')'
                                     { $2 }
         |   Primary '.' ident
-                                    { A.Proj $1 (ident $3) }
+                                    { astwrap $ LA.Proj $1 (ident $3) }
         |   self
-                                    { A.Self }
+                                    { astwrap $ LA.Self }
         |   prior
-                                    { A.Prior }
+                                    { astwrap $ LA.Prior }
 
 
 Branches:   Branch ';' Branches     { $1:$3 }
         |   Branch                  { [$1] }
 
 
-Branch  :   Pattern '->' Exp        { A.Branch $1 $3 }
+Branch  :   Pattern '->' Exp        { TA.Branch $1 $3 }
 
 
 Pattern :   ident                  
-                                    { A.ChiTopVar $ ident $1 }
+                                    { TA.ChiTopVar $ ident $1 }
         |   PatternPrimary '&' PatternStruct
-                                    { A.ChiTopOnion $1 $3 }
+                                    { TA.ChiTopOnion $1 $3 }
         |   PatternBind
-                                    { A.ChiTopBind $1 }
+                                    { TA.ChiTopBind $1 }
 
 PatternStruct
         :   PatternPrimary '&' PatternStruct
-                                    { A.ChiOnionMany $1 $3 }
+                                    { TA.ChiOnionMany $1 $3 }
         |   PatternPrimary
-                                    { A.ChiOnionOne $1 }
+                                    { TA.ChiOnionOne $1 }
 
 PatternBind
-        :   ident ':' PatternBind   { A.ChiBound (ident $1) $3 }
-        |   PatternPrimary          { A.ChiUnbound $1 }
+        :   ident ':' PatternBind   { TA.ChiBound (ident $1) $3 }
+        |   PatternPrimary          { TA.ChiUnbound $1 }
 
 PatternPrimary
-        :   PrimitiveType           { A.ChiPrim $1 }
-        |   '`' ident ident         { A.ChiLabelShallow (labelName $2) $ ident $3 }
-        |   '`' ident PatternBind   { A.ChiLabelDeep (labelName $2) $3 }
-        |   fun                     { A.ChiFun }
-        |   '(' PatternStruct ')'   { A.ChiInnerStruct $2 }
+        :   PrimitiveType           { TA.ChiPrim $1 }
+        |   '`' ident ident         { TA.ChiLabelShallow (labelName $2) $ ident $3 }
+        |   '`' ident PatternBind   { TA.ChiLabelDeep (labelName $2) $3 }
+        |   fun                     { TA.ChiFun }
+        |   '(' PatternStruct ')'   { TA.ChiInnerStruct $2 }
 
 PrimitiveType
         :   int                     { PrimInt }
@@ -178,8 +186,8 @@ PrimitiveType
         |   unit                    { PrimUnit }
 
 Modifier
-        :   final                   { A.Final }
-        |   immut                   { A.Immutable }
+        :   final                   { TA.Final }
+        |   immut                   { TA.Immutable }
 
 ProjTerm
         :   int                     { ProjPrim PrimInt }
@@ -188,13 +196,13 @@ ProjTerm
         |   '`' ident               { ProjLabel (labelName $2) }
         |   fun                     { ProjFunc }
 
-OpExp   :   Primary Op Primary      { $2 $1 $3 }
+OpExp   :   Primary Op Primary      { astwrap $ $2 $1 $3 }
 
-Op      :   '+'                     { \x y -> A.BinOp A.Plus x y }
-        |   '-'                     { \x y -> A.BinOp A.Minus x y }
-        |   '=='                    { \x y -> A.BinOp A.Equal x y }
-        |   '<='                    { \x y -> A.BinOp A.LessEqual x y }
-        |   '>='                    { \x y -> A.BinOp A.GreaterEqual x y }
+Op      :   '+'                     { TA.LazyOp TA.Plus }
+        |   '-'                     { TA.LazyOp TA.Minus }
+        |   '=='                    { TA.EagerOp TA.Equal }
+        |   '<='                    { TA.EagerOp TA.LessEqual }
+        |   '>='                    { TA.EagerOp TA.GreaterEqual }
 
 {
 data ParseError
@@ -215,7 +223,7 @@ type ParseM a = ErrorT ParseError Identity a
 parseError :: [L.Token] -> ParseM a
 parseError = throwError . ParseError
 
-parseLittleBang :: [L.Token] -> Either ParseError A.Expr
+parseLittleBang :: [L.Token] -> Either ParseError LA.Expr
 parseLittleBang tokens =
     runIdentity $ runErrorT $ doParseLittleBang tokens
 }
