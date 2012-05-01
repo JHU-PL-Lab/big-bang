@@ -26,13 +26,9 @@ module Language.TinyBang.Types.Alphas
 import Utils.Render.Display
 
 import Data.Set (Set)
-import qualified Data.Set as Set
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-
-import Control.Monad.Reader (Reader, ask)
-import Control.Exception (assert)
 
 -- TODO: make ProgramLabel more precise
 type ProgramLabel = Integer

@@ -16,12 +16,11 @@ import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Syntax.Lexer as L
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
-    ( Ident
-    , ident
-    , unIdent
-    , LabelName
+    ( ident
+    --, unIdent
+    --, LabelName
     , labelName
-    , unLabelName
+    --, unLabelName
     , PrimitiveType(..)
     , ProjTerm(..)
     )
@@ -29,18 +28,23 @@ import Utils.Render.Display
 
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
-import Text.Parsec.Combinator (optionMaybe, eof)
+import Text.Parsec.Combinator (optionMaybe, eof, notFollowedBy)
 import Text.Parsec.Prim (token, many,(<|>),try)
 import Text.Parsec.Pos (initialPos)
 --import Text.ParserCombinators.Parsec as P
 
+--import Debug.Trace (trace)
+
+tokIdent :: L.SourceLocation -> L.Token
 tokIdent = (flip L.TokIdentifier "")
+tokCharLit :: L.SourceLocation -> L.Token
 tokCharLit = (flip L.TokCharLiteral 'x')
+tokIntLit :: L.SourceLocation -> L.Token
 tokIntLit = (flip L.TokIntegerLiteral 0)
 
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
-parseTinyBang ts = case parse parser "" ts of
-    Left x -> Left (ParseError ts)
+parseTinyBang ts =  case parse parser "" ts of
+    Left _ -> Left (ParseError ts)
     Right x -> Right x
 parser :: GenParser L.Token () A.Expr
 parser = do
@@ -53,20 +57,25 @@ isToken t = token (show) (fst . L.getPos) isT
     where
         isT t' = if t' `L.weakEq` (t ((initialPos ""),(initialPos ""))) then Just t' else Nothing
 
+grabIdent :: GenParser L.Token () String
 grabIdent = do
     L.TokIdentifier _ i <- isToken tokIdent
     return i
 
+grabInt :: GenParser L.Token () Integer
 grabInt = do
     L.TokIntegerLiteral _ v <- isToken tokIntLit
     return v
 
+grabChar :: GenParser L.Token () Char
 grabChar = do
     L.TokCharLiteral _ v <- isToken tokCharLit
     return v
 
 expr :: GenParser L.Token () A.Expr
-expr = foldl (<|>) (head options) (tail options)
+expr = do
+    e <- foldl (<|>) (head options) (tail options)
+    exprRest e
     where
         options = map (try)
             [ lambda
@@ -74,11 +83,9 @@ expr = foldl (<|>) (head options) (tail options)
             , defin
             , assign
             , caseS
-            , onion
-            , onionsub
-            , onionproj
             , opexp
-            , applexp]
+            , applexp
+            ]
         lambda = do
             _ <- isToken L.TokLambda
             i <- grabIdent
@@ -114,30 +121,44 @@ expr = foldl (<|>) (head options) (tail options)
             bs <- branches
             _ <- isToken L.TokCloseBlock
             return (A.Case e bs)
-        onion = do
-            e1 <- expr
-            _ <- isToken L.TokOnionCons
-            e2 <- expr
-            return (A.Onion e1 e2)
-        onionsub = do
-            e <- expr
-            _ <- isToken L.TokOnionSub
-            p <- projTerm
-            return (A.OnionSub e p)
-        onionproj = do
-            e <- expr
-            _ <- isToken L.TokOnionProj
-            p <- projTerm
-            return (A.OnionProj e p)
         opexp = opExp
         applexp = applExp
 
+exprRest :: A.Expr -> GenParser L.Token () A.Expr
+exprRest e1 = foldl (<|>) (head options) (tail options)
+    where
+        onionStart = (isToken L.TokOnionCons) <|> (isToken L.TokOnionSub) --L.TokOnionProj?
+        options = map (try)
+            [ emptyString
+            ,onion
+            , onionsub
+            , onionproj
+            --, emptyString
+            ]
+        onion = do
+            --e1 <- expr
+            _ <- isToken L.TokOnionCons
+            e2 <- expr
+            notFollowedBy onionStart
+            return (A.Onion e1 e2)
+        onionsub = do
+            --e1 <- expr
+            _ <- isToken L.TokOnionSub
+            p <- projTerm
+            return (A.OnionSub e1 p)
+        onionproj = do
+            --e1 <- expr
+            _ <- isToken L.TokOnionProj
+            p <- projTerm
+            return (A.OnionProj e1 p)
+        emptyString = do {return e1}
+
 
 applExp :: GenParser L.Token () A.Expr
-applExp = do
+applExp =  (do
     p <- primary
     ps <- many primary
-    return (foldl (A.Appl) p ps)
+    return (foldl (A.Appl) p ps))
 
 primary :: GenParser L.Token () A.Expr
 primary = foldl (<|>) (head options) (tail options)
@@ -273,15 +294,15 @@ patternPrimary = foldl (<|>) (head options) (tail options)
             return (A.ChiInnerStruct p)
 
 primitiveType :: GenParser L.Token () T.PrimitiveType
-primitiveType = (try int) <|> (try char) <|> (try unit)
+primitiveType = (try pint) <|> (try pchar) <|> (try punit)
     where
-        int = do
+        pint = do
             _ <- isToken L.TokInteger
             return T.PrimInt
-        char = do
+        pchar = do
             _ <- isToken L.TokChar
             return T.PrimChar
-        unit = do
+        punit = do
             _ <- isToken L.TokUnit
             return T.PrimUnit
 
@@ -299,25 +320,25 @@ projTerm :: GenParser L.Token () A.ProjTerm
 projTerm = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
-            [ int
-            , char
-            , unit
-            , lbl
-            , fun]
-        int = do
+            [ pint
+            , pchar
+            , punit
+            , plbl
+            , pfun]
+        pint = do
             _ <- isToken L.TokInteger
             return (ProjPrim PrimInt)
-        char = do
+        pchar = do
             _ <- isToken L.TokChar
             return (ProjPrim PrimChar)
-        unit = do
+        punit = do
             _ <- isToken L.TokUnit
             return (ProjPrim PrimUnit)
-        lbl = do
+        plbl = do
             _ <- isToken L.TokLabelPrefix
             i <- grabIdent
             return (ProjLabel (labelName i))
-        fun = do
+        pfun = do
             _ <- isToken L.TokFun
             return ProjFunc
 
