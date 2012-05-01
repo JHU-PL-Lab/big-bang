@@ -267,8 +267,7 @@ instance (AstWrap ExprPart ast
     where rec e = subst e sub ident
 
 -- Specifies a homomorphic operation over TinyBang AST nodes.
-instance (AstOp HomOpM ast1 ((ast1 -> m ast2) -> m ast2)
-         ,AstWrap ExprPart ast2
+instance (AstWrap ExprPart ast2
          ,Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
   aststep HomOpM part = \f -> case part of
