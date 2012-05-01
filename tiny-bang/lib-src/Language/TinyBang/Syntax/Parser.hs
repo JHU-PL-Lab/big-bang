@@ -129,11 +129,10 @@ exprRest e1 = foldl (<|>) (head options) (tail options)
     where
         onionStart = (isToken L.TokOnionCons) <|> (isToken L.TokOnionSub) --L.TokOnionProj?
         options = map (try)
-            [ emptyString
-            ,onion
+            [ onion
             , onionsub
             , onionproj
-            --, emptyString
+            , emptyString
             ]
         onion = do
             --e1 <- expr
