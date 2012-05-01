@@ -267,27 +267,60 @@ instance (AstWrap ExprPart ast
     where rec e = subst e sub ident
 
 -- Specifies a homomorphic operation over TinyBang AST nodes.
-instance (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2), AstWrap ExprPart ast2)
-      => AstStep HomOp ExprPart ast1 ((ast1 -> ast2) -> ast2) where
-  aststep HomOp part = \f -> astwrap $ case part of
-    Var i -> Var i
-    Label n m e -> Label n m $ f e
-    Onion e1 e2 -> Onion (f e1) (f e2)
-    OnionSub e s -> OnionSub (f e) s
-    OnionProj e s -> OnionProj (f e) s
-    Func i e -> Func i $ f e
-    Appl e1 e2 -> Appl (f e1) (f e2)
-    PrimInt v -> PrimInt v
-    PrimChar v -> PrimChar v
-    PrimUnit -> PrimUnit
-    Case e branches -> Case (f e) $
-        map (\(Branch pat bre) -> Branch pat $ f bre) branches
-    EmptyOnion -> EmptyOnion
-    LazyOp op e1 e2 -> LazyOp op (f e1) (f e2)
-    EagerOp op e1 e2 -> EagerOp op (f e1) (f e2)
-    Def m i e1 e2 -> Def m i (f e1) (f e2)
-    Assign a e1 e2 -> Assign a (f e1) (f e2)
-    ExprCell c -> ExprCell c
+instance (AstOp HomOpM ast1 ((ast1 -> m ast2) -> m ast2)
+         ,AstWrap ExprPart ast2
+         ,Monad m)
+      => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+  aststep HomOpM part = \f -> case part of
+    Var i -> return $ astwrap $ Var i
+    Label n m e -> do
+        e' <- f e
+        return $ astwrap $ Label n m e'
+    Onion e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ Onion e1' e2'
+    OnionSub e s -> do
+        e' <- f e
+        return $ astwrap $ OnionSub e' s
+    OnionProj e s -> do
+        e' <- f e
+        return $ astwrap $ OnionProj e' s
+    Func i e -> do
+        e' <- f e
+        return $ astwrap $ Func i e'
+    Appl e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ Appl e1' e2'
+    PrimInt v -> return $ astwrap $ PrimInt v
+    PrimChar v -> return $ astwrap $ PrimChar v
+    PrimUnit -> return $ astwrap $ PrimUnit
+    Case e brs -> do
+        e' <- f e
+        brs' <- mapM (appbr f) brs
+        return $ astwrap $ Case e' brs'
+    EmptyOnion -> return $ astwrap $ EmptyOnion
+    LazyOp op e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ LazyOp op e1' e2'
+    EagerOp op e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ EagerOp op e1' e2'
+    Def m i e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ Def m i e1' e2'
+    Assign a e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ Assign a e1' e2'
+    ExprCell c -> return $ astwrap $ ExprCell c
+    where appbr f (Branch pat bre) = do
+            bre' <- f bre
+            return $ Branch pat bre'
 
 -- Specifies how to display TinyBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
