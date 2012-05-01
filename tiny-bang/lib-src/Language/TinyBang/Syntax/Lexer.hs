@@ -15,7 +15,7 @@ import Utils.Render.Display (Display, makeDoc, text)
 lexTinyBang :: String -> LexerResult
 lexTinyBang s = case parse lexer "" s of
     Left x -> Left (show x)
-    Right x -> Right $ map (\(s,t,e) -> t (s,e)) x
+    Right x -> Right $ map (\(start,t,e) -> t (start,e)) x
 
 
 lexer :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
@@ -38,6 +38,7 @@ whitespaceP = do
     skipMany (oneOf " \n\t")
     return []
 
+validIdentP :: Parser ()
 validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
 
 hungry :: [Parser (SourceLocation -> Token)]
@@ -180,6 +181,7 @@ reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
 type LexerResult = Either String [Token]
 
 type SourceLocation = (SourcePos, SourcePos)
+defaultSourceLocation :: SourceLocation
 defaultSourceLocation = ((initialPos ""),(initialPos ""))
 
 
