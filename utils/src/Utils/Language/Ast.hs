@@ -51,9 +51,7 @@ $( return $ concat $ map (\(i,j) -> Meta.wrapDecls i j)
 --  AST type is to be used in transformations relying on homomorphisms (such as
 --  upcasting).  Homomorphism instances should be of the form
 --  @
---      instance (AstOp HomOp ast1 ((ast1 -> m ast2) -> m ast2)
---               ,AstWrap part
---               ,Monad m)
+--      instance (AstWrap part, Monad m)
 --            => AstStep HomOp part ast1 ((ast1 -> m ast2) -> m ast2)
 --  @
 --  The function of type @ast1 -> ast2@ is to be used on each child node in the
