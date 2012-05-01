@@ -3,6 +3,7 @@
                 , FlexibleInstances
                 , FlexibleContexts
                 , UndecidableInstances
+                , ScopedTypeVariables
                 #-}
 
 {-|
@@ -14,6 +15,7 @@
 
 module Utils.Language.Ast where
 
+import Control.Monad.Identity
 import qualified Utils.Language.AstMeta as Meta
 import Utils.Render.Display
 
@@ -44,17 +46,31 @@ class AstWrap part ast where
 $( return $ concat $ map (\(i,j) -> Meta.wrapDecls i j)
     [(i,j) | j <- Meta.astArities, i <- [1..j] ] )
 
--- |Defines a homomorphic operation over partial AST types.  Users of this
---  module should provide an instance of this typeclass when the partial AST
---  type is to be used in transformations relying on homomorphisms (such as
+-- |Defines a monadic homomorphic operation over partial AST types.  Users of
+--  this module should provide an instance of this typeclass when the partial
+--  AST type is to be used in transformations relying on homomorphisms (such as
 --  upcasting).  Homomorphism instances should be of the form
 --  @
---      instance (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2), AstWrap part)
---            => AstStep HomOp part ast1 ((ast1 -> ast2) -> ast2)
+--      instance (AstOp HomOp ast1 ((ast1 -> m ast2) -> m ast2)
+--               ,AstWrap part
+--               ,Monad m)
+--            => AstStep HomOp part ast1 ((ast1 -> m ast2) -> m ast2)
 --  @
 --  The function of type @ast1 -> ast2@ is to be used on each child node in the
 --  partial AST type.
+data HomOpM = HomOpM
+
+-- |Defines a non-monadic homomorphic operation over partial AST types.  This
+--  operation is provided for convenience; it uses the Identity monad.  This
+--  module provides the appropriate typeclass instance for any type for which
+--  @HomOpM@ has been defined.
 data HomOp = HomOp
+
+-- |A typeclass instance for @HomOp@ given @HomOpM@.
+instance (AstStep HomOpM part ast1 ((ast1 -> Identity ast2) -> Identity ast2))
+      => AstStep HomOp part ast1 ((ast1 -> ast2) -> ast2) where
+  aststep HomOp part = \f ->
+    runIdentity $ aststep HomOpM part ((return . f)::(ast1 -> Identity ast2))
 
 -- |Performs an upcasting operation on an AST over which homomorphisms are
 --  defined.
