@@ -39,7 +39,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , contour
                                      , unContour
                                      , FunctionLowerBound
-                                     , CallSite
+                                     --, CallSite
                                      , histFIXME
                                      )
 
@@ -51,14 +51,14 @@ import Utils.Render.Display (display, Display)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Data.Map (Map)
+--import Data.Map (Map)
 import qualified Data.Map as Map
 
-import Data.Tuple (swap)
-import Data.Maybe (listToMaybe, isNothing, mapMaybe)
+--import Data.Tuple (swap)
+import Data.Maybe (listToMaybe, isNothing)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad.RWS (runRWS, RWS)
-import Control.Monad.Writer (tell)
+--import Control.Monad.Writer (tell)
 import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (second)
@@ -329,69 +329,69 @@ substituteVars constraints forallVars replAlpha otherAlpha =
     ()
 
 -- |Performs cycle detection on a set of constraints.
-cycleDetectGeneric :: forall a. (AlphaType a)
-                   => (Constraint -> Maybe (SomeAlpha a, SomeAlpha a))
-                        -- ^A function used to extract appropriate subtyping
-                        --  information from a constraint.  If the constraint
-                        --  represents a subtype of the appropriate variables,
-                        --  it returns Just that pair of variables with the
-                        --  subtype first.  Otherwise, it returns Nothing.
-                   -> Constraints
-                        -- ^The set of constraints to check for cycles.
-                   -> Set (Set (SomeAlpha a))
-                        -- ^A set of resulting cycles; each cycle is a set of
-                        --  type variables which can be equivocated.
-cycleDetectGeneric f cs =
-  -- Start by finding all appropriate constraints and creating the
-  -- cycle detecting triple from them.  The triple elements are a set of
-  -- visited type variables, the lower bounding type variable, and the
-  -- upper bounding type variable.  The set always contains the current
-  -- lower bounding type variable.
-  let initial = Set.fromList $ map (tupleToTriple Set.empty) $ map swap pairs in
-  let result = leastFixedPoint step $ initial in
-  Set.map (\(s,_,_) -> s) $ Set.filter (\(_,a,b) -> a == b) result
-  where step :: (AlphaType a)
-             => Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
-             -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
-        step s = Set.unions $ map onestep $ Set.toList s
-        onestep :: (AlphaType a)
-                => (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
-                -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
-        onestep x@(s,a,b) =
-          if a == b
-            then Set.singleton x
-            else
-              Set.insert x $ Set.fromList $ map (tupleToTriple s) $
-                do -- List
-                  (a',b') <- pairs
-                  guard $ a == a'
-                  return (b',b)
-        tupleToTriple :: (AlphaType a)
-                      => Set (SomeAlpha a)
-                      -> (SomeAlpha a, SomeAlpha a)
-                      -> (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
-        tupleToTriple s (a,b) = (Set.insert a s, a, b)
-        pairs :: [(SomeAlpha a, SomeAlpha a)]
-        pairs = mapMaybe f $ Set.toList cs
+--cycleDetectGeneric :: forall a. (AlphaType a)
+--                   => (Constraint -> Maybe (SomeAlpha a, SomeAlpha a))
+--                        -- ^A function used to extract appropriate subtyping
+--                        --  information from a constraint.  If the constraint
+--                        --  represents a subtype of the appropriate variables,
+--                        --  it returns Just that pair of variables with the
+--                        --  subtype first.  Otherwise, it returns Nothing.
+--                   -> Constraints
+--                        -- ^The set of constraints to check for cycles.
+--                   -> Set (Set (SomeAlpha a))
+--                        -- ^A set of resulting cycles; each cycle is a set of
+--                        --  type variables which can be equivocated.
+--cycleDetectGeneric f cs =
+--  -- Start by finding all appropriate constraints and creating the
+--  -- cycle detecting triple from them.  The triple elements are a set of
+--  -- visited type variables, the lower bounding type variable, and the
+--  -- upper bounding type variable.  The set always contains the current
+--  -- lower bounding type variable.
+--  let initial = Set.fromList $ map (tupleToTriple Set.empty) $ map swap pairs in
+--  let result = leastFixedPoint step $ initial in
+--  Set.map (\(s,_,_) -> s) $ Set.filter (\(_,a,b) -> a == b) result
+--  where step :: (AlphaType a)
+--             => Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+--             -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+--        step s = Set.unions $ map onestep $ Set.toList s
+--        onestep :: (AlphaType a)
+--                => (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+--                -> Set (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+--        onestep x@(s,a,b) =
+--          if a == b
+--            then Set.singleton x
+--            else
+--              Set.insert x $ Set.fromList $ map (tupleToTriple s) $
+--                do -- List
+--                  (a',b') <- pairs
+--                  guard $ a == a'
+--                  return (b',b)
+--        tupleToTriple :: (AlphaType a)
+--                      => Set (SomeAlpha a)
+--                      -> (SomeAlpha a, SomeAlpha a)
+--                      -> (Set (SomeAlpha a), SomeAlpha a, SomeAlpha a)
+--        tupleToTriple s (a,b) = (Set.insert a s, a, b)
+--        pairs :: [(SomeAlpha a, SomeAlpha a)]
+--        pairs = mapMaybe f $ Set.toList cs
 
-cycleDetectInter :: Constraints -> Set (Set InterAlpha)
-cycleDetectInter = cycleDetectGeneric $ \c ->
-  case c of
-    AlphaSubtype a b _ -> Just (a,b)
-    _ -> Nothing
+--cycleDetectInter :: Constraints -> Set (Set InterAlpha)
+--cycleDetectInter = cycleDetectGeneric $ \c ->
+--  case c of
+--    AlphaSubtype a b _ -> Just (a,b)
+--    _ -> Nothing
 
-cycleDetectCell :: Constraints -> Set (Set CellAlpha)
-cycleDetectCell = cycleDetectGeneric $ \c ->
-  case c of
-    CellAlphaSubtype a b _ -> Just (a,b)
-    _ -> Nothing
+--cycleDetectCell :: Constraints -> Set (Set CellAlpha)
+--cycleDetectCell = cycleDetectGeneric $ \c ->
+--  case c of
+--    CellAlphaSubtype a b _ -> Just (a,b)
+--    _ -> Nothing
 
 ct :: (LowerBounded a) => Constraints -> a -> [(LowerBound a, Chain a)]
 ct cs a = Set.toList $ runReader (concretizeType a) cs
 
 closeCases :: Constraints -> Constraints
 closeCases cs = Set.unions $ do
-  c@(Case a guards _) <- Set.toList cs
+  (Case a guards _) <- Set.toList cs
   (tau, _) <- ct cs a
   -- Given a concretization, the first guard which matches is the one that
   -- applies.  We'll build a list of the matches and filter on it.
@@ -474,19 +474,19 @@ propagateCellsBackward cs = Set.fromList $ do
 
 propagateImmutable :: Constraints -> Constraints
 propagateImmutable cs = Set.fromList $ do
-  c@(Immutable a1 _) <- Set.toList cs
-  (a, aChain) <- ct cs a1
+  (Immutable a1 _) <- Set.toList cs
+  (a, _) <- ct cs a1
   case a of
     TdOnion a2 a3 -> [Immutable a2 histFIXME, Immutable a3 histFIXME]
     TdLabel _ a2 -> do
-      (a3, a3Chain) <- ct cs a2
+      (a3, _) <- ct cs a2
       [Immutable a3 histFIXME]
     _ -> []
 
 findIllegalFinalAssignments :: Constraints -> Constraints
 findIllegalFinalAssignments cs = Set.fromList $ do
   CellSetSubtype a _ _ <- Set.toList cs
-  (a2, a2chain) <- ct cs a
+  (a2, _) <- ct cs a
   Final a2' _ <- Set.toList cs
   guard $ a2 == a2'
   return $ Bottom histFIXME
@@ -599,7 +599,7 @@ class AlphaSubstitutable a where
 tContour :: FunctionLowerBound -> CellAlpha -> Contour
 tContour l1 a =
   case Map.lookup l1 aContour of
-    Just l3 ->
+    Just _ ->
       invocationMap
     Nothing ->
       contour $ Map.insert l1 l2 aContour
@@ -613,8 +613,8 @@ substituteAlphaHelper a = do
   (ForallVars forallVars, a1', a2') <- ask
   let lb :: FunctionLowerBound
       lb = alphaId a1'
-  let cs :: CallSite
-      cs = alphaId a2'
+  --let cs :: CallSite
+  --    cs = alphaId a2'
   let newContour= tContour lb a2'
   if not $ Set.member (alphaWeaken a) forallVars
     then return a
