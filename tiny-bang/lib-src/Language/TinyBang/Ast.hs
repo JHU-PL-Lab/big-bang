@@ -291,6 +291,9 @@ instance (AstWrap ExprPart ast
       case a of
         AIdent i | i == ident -> Assign (ACell cell) (rec e1) (rec e2)
         _ -> Assign a (rec e1) (rec e2)
+    Case e brs -> astwrap $ Case (rec e) $
+        map (\(Branch pat bre) -> Branch pat $
+          (if ident `Set.member` ePatVars pat then id else rec) bre) brs
     _ -> aststep HomOp orig rec
     where rec e = substCell e cell ident
 
