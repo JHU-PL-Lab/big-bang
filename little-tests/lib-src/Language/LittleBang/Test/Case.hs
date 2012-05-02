@@ -55,7 +55,7 @@ tests = TestLabel "General case tests" $ TestList
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
                             (TA.ChiLabelShallow lblTrue $ ident "a")) E.false
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
-                            TA.ChiFun) $ astwrap $ TA.Func idX varX
+                            TA.ChiFun) $ astwrap $ LA.Func idX varX
             ]
             :: LA.Expr)
 

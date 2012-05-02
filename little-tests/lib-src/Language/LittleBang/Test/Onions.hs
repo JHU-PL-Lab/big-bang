@@ -54,7 +54,7 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
             (astwrap $ TA.PrimInt 1)
             (astwrap $ LA.Onion
               (astwrap $ TA.PrimChar 'x')
-              (astwrap $ TA.Func idX varX)))
+              (astwrap $ LA.Func idX varX)))
 
   -- Test that onions associate right
   , xPars "`A 1 & `B 2 & `C 3"

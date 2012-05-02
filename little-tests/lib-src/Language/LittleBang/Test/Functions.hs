@@ -5,10 +5,10 @@ where
 
 import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.NameUtils
-  ( idX
+  ( idX, idSelf
   )
 import Language.LittleBang.Test.ExpressionUtils
-  ( varX
+  ( varX, varSelf
   )
 import Language.LittleBang.Test.ValueUtils
   ( identFuncX
@@ -23,19 +23,22 @@ import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
 import Utils.Language.Ast
 
+selfIdentFuncX = TA.VFunc idSelf $ astwrap $ TA.Func idX varX
+
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
   [ xvEval "fun x -> x"
-          identFuncX
+          selfIdentFuncX
   , xvEval "(fun x -> x) (fun x -> x)"
-          identFuncX
+          selfIdentFuncX
   , xvEval "(fun y -> y) (fun x -> x)"
-          identFuncX
+          selfIdentFuncX
   , xvEval "def x = fun x -> x in x x"
-          identFuncX
+          selfIdentFuncX
   , xType srcY
   , xvEval "fun x -> x x"
-          (TA.VFunc idX $ astwrap $ TA.Appl varX varX)
+          (TA.VFunc idSelf $ astwrap $ TA.Func idX $ astwrap $
+            TA.Appl (astwrap $ TA.Appl varX $ astwrap TA.EmptyOnion) varX)
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 
@@ -67,7 +70,7 @@ tests = TestLabel "Test functions" $ TestList
   -- Check that variable closed-ness works in functions
   , xNotC "(fun x -> n + 2)"
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
-          (astwrap $ TA.Func idX $ astwrap $
+          (astwrap $ LA.Func idX $ astwrap $
               LA.Case varX
                      [ TA.Branch
                         (TA.ChiTopBind $ TA.ChiUnbound $

@@ -2,6 +2,7 @@ module Language.LittleBang.Test.NameUtils
 ( idX
 , idY
 , idZ
+, idSelf
 , lblA
 , lblB
 , lblC
@@ -21,6 +22,7 @@ import Language.LittleBang.Test.UtilFunctions
 idX = ident "x"
 idY = ident "y"
 idZ = ident "z"
+idSelf = ident "self"
 
 lblA = labelName "A"
 lblB = labelName "B"

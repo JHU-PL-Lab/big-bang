@@ -83,28 +83,28 @@ testPrintFunction2 = TestCase $ assertEqual
 
 testPrintFuncAppl1 :: (?conf :: Cfg.Config) => Test
 testPrintFuncAppl1 = TestCase $ assertEqual
-  "Test if TA.Function TA.Application is printed correctly"
+  "Test if function application is printed correctly"
   "((plus 2) 2)"
-  (displayAst (astwrap $ TA.Appl (astwrap $ TA.Appl (astwrap $ TA.Var (ident "plus")) (astwrap $ TA.PrimInt 2)) (astwrap $ TA.PrimInt 2)))
+  (displayAst (astwrap $ LA.Appl (astwrap $ LA.Appl (astwrap $ TA.Var (ident "plus")) (astwrap $ TA.PrimInt 2)) (astwrap $ TA.PrimInt 2)))
 
 testPrintFuncAppl2 :: (?conf :: Cfg.Config) => Test
 testPrintFuncAppl2 = TestCase $ assertEqual
-  "Test if printing TA.Function with variables and characters displays correctly"
+  "Test if printing function with variables and characters displays correctly"
   "((plus x) \'x\')"
-  (displayAst (astwrap $ TA.Appl (astwrap $ TA.Appl (astwrap $ TA.Var (ident "plus")) (astwrap $ TA.Var (ident "x"))) (astwrap $ TA.PrimChar 'x')))
+  (displayAst (astwrap $ LA.Appl (astwrap $ LA.Appl (astwrap $ TA.Var (ident "plus")) (astwrap $ TA.Var (ident "x"))) (astwrap $ TA.PrimChar 'x')))
 
 
 testPrintPerverse :: (?conf :: Cfg.Config) => Test
 testPrintPerverse = TestCase $ assertEqual
-  "Test if perverse TA.Function TA.Application is printed correctly"
+  "Test if perverse function application is printed correctly"
   "((fun x -> (x x)) (fun x -> (x x)))"
-  (displayAst (astwrap $ TA.Appl (astwrap $ TA.Func (ident "x") (astwrap $ TA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "x")))) (astwrap $ TA.Func (ident "x") (astwrap $ TA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "x"))))))
+  (displayAst (astwrap $ LA.Appl (astwrap $ TA.Func (ident "x") (astwrap $ LA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "x")))) (astwrap $ TA.Func (ident "x") (astwrap $ LA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "x"))))))
 
 testPrintFunction3 :: (?conf :: Cfg.Config) => Test
 testPrintFunction3 = TestCase $ assertEqual
   "Test if S combinator is pretty printed correctly"
   "(fun x -> (fun y -> (fun z -> ((x z) (y z)))))"
-  (displayAst (astwrap $ TA.Func (ident "x") (astwrap $ TA.Func (ident "y") (astwrap $ TA.Func (ident "z") (astwrap $ TA.Appl (astwrap $ TA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "z"))) (astwrap $ TA.Appl (astwrap $ TA.Var (ident "y")) (astwrap $ TA.Var (ident "z"))))))))
+  (displayAst (astwrap $ TA.Func (ident "x") (astwrap $ TA.Func (ident "y") (astwrap $ TA.Func (ident "z") (astwrap $ LA.Appl (astwrap $ LA.Appl (astwrap $ TA.Var (ident "x")) (astwrap $ TA.Var (ident "z"))) (astwrap $ LA.Appl (astwrap $ TA.Var (ident "y")) (astwrap $ TA.Var (ident "z"))))))))
 
 
 -- Test cases that check pretty printing of onions
