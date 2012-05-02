@@ -12,7 +12,7 @@ import Utils.Language.Ast
 
 testChar :: (?conf :: Cfg.Config) => Char -> Test
 testChar c = lexParseEval ('\'':c:'\'':[])
-                          [TokCharLiteral c]
+                          [flip TokCharLiteral c]
                           (astwrap $ A.PrimChar c)
                           (A.VPrimChar c :: A.Value A.Expr)
 
