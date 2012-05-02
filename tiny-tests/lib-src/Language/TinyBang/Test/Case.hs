@@ -23,6 +23,8 @@ import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 
+import Utils.Language.Ast
+
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "General case tests" $ TestList
   [ xEval "case 1 of {int -> 0}"
@@ -42,18 +44,19 @@ tests = TestLabel "General case tests" $ TestList
                       \    unit -> ();           \
                       \    `True a -> `False (); \
                       \    fun -> (fun x -> x)}" $
-          A.Case varX
+          (astwrap $ A.Case varX
             [ A.Branch (A.ChiTopBind $ A.ChiUnbound
-                            (A.ChiPrim T.PrimInt)) $ A.PrimInt 5
+                            (A.ChiPrim T.PrimInt)) $ astwrap $ A.PrimInt 5
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
-                            (A.ChiPrim T.PrimChar)) $ A.PrimChar 'a'
+                            (A.ChiPrim T.PrimChar)) $ astwrap $ A.PrimChar 'a'
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
-                            (A.ChiPrim T.PrimUnit)) A.PrimUnit
+                            (A.ChiPrim T.PrimUnit)) $ astwrap $ A.PrimUnit
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
                             (A.ChiLabelShallow lblTrue $ ident "a")) E.false
             , A.Branch (A.ChiTopBind $ A.ChiUnbound
-                            A.ChiFun) $ A.Func idX varX
+                            A.ChiFun) $ astwrap $ A.Func idX varX
             ]
+            :: A.Expr)
 
   -- verify the behavior of the fun pattern
   , xEval "case 1 of { fun -> 0; z -> z }" (V.pi 1)

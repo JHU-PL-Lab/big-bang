@@ -50,8 +50,8 @@ import Language.TinyBang.Ast
   , ProjTerm(..)
   , CellId
   , ePatVars
-  , subst
-  , SubstOp(..)
+  , substCell
+  , SubstCellOp(..)
   )
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
@@ -164,7 +164,7 @@ eval e = astop EvalOp e ?conf
 data EvalOp = EvalOp
 instance (Eq ast, Display ast
         , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+        , AstOp SubstCellOp ast (CellId -> Ident -> ast)
         , AstWrap ExprPart ast)
       => AstStep EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
   aststep EvalOp ast = \config -> let ?conf = config in
@@ -214,7 +214,7 @@ instance (Eq ast, Display ast
         cellId <- newCell v2
         let v1' = eProj T.TpFun v1
         case v1' of
-          Just (VFunc i body) -> eval $ subst body (ExprCell cellId) i
+          Just (VFunc i body) -> eval $ substCell body cellId i
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
@@ -228,7 +228,7 @@ instance (Eq ast, Display ast
                     Nothing -> findAnswer bs'
                     Just expr -> return expr
         eval =<< findAnswer branches
-        where eMatch :: (AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+        where eMatch :: (AstOp SubstCellOp ast (CellId -> Ident -> ast)
                         ,AstWrap ExprPart ast)
                      => Value ast -> Branch ast -> EvalM ast (Maybe ast)
               eMatch v (Branch chi e1) = do -- EvalM
@@ -236,12 +236,12 @@ instance (Eq ast, Display ast
                 return $ do -- Maybe
                   b <- m
                   return $ eSubstAll e1 b
-              eSubstAll :: (AstOp SubstOp ast (ExprPart ast -> Ident -> ast)
+              eSubstAll :: (AstOp SubstCellOp ast (CellId -> Ident -> ast)
                            ,AstWrap ExprPart ast)
                         => ast -> IdMap -> ast
               eSubstAll expr b = Map.foldrWithKey foldSubst expr b
                 where foldSubst ident cellid sexpr =
-                        subst sexpr (ExprCell cellid) ident
+                        substCell sexpr cellid ident
               eSearch :: Value ast -> Chi a -> EvalM ast (Maybe IdMap)
               eSearch v chi =
                 case chi of
@@ -332,7 +332,7 @@ instance (Eq ast, Display ast
       Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
-        eval $ subst e2 (ExprCell cellId) i
+        eval $ substCell e2 cellId i
       Assign a e1 e2 -> do
         case a of
           AIdent i -> throwError $ NotClosed i

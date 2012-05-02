@@ -34,7 +34,7 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
     , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
 
   -- Test evaluation of some recursive arithmetic evaluations
-    , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+    , xvEval (srcMultiAppl [srcY, srcSummate, "5"]) $
              A.VPrimInt 15
     , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
             lblEq
