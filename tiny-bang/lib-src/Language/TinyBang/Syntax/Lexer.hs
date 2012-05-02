@@ -47,12 +47,12 @@ hungry = [identP, intLiteralP, charLiteralP]
         identP = do
             first <- letter <|> char '_'
             rest <- many (letter <|> digit <|> oneOf "_'")
+            validIdentP
             return $ (flip TokIdentifier) (first:rest)
         intLiteralP = do
             prefix <- option ' ' (char '-')
             first <- digit
             digits <- many digit
-            validIdentP
             return $ (flip TokIntegerLiteral) (read (prefix:(first:digits)))
         charLiteralP = do
             _ <- char '\''

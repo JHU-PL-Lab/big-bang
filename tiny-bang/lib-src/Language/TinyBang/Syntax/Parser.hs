@@ -94,6 +94,7 @@ exprBasic = foldl (<|>) (head options) (tail options)
         lambda = do
             _ <- isToken L.TokLambda
             i <- grabIdent
+            _ <- isToken L.TokArrow
             e <- expr
             return (A.Func (ident i) e)
         fun = do
@@ -133,14 +134,6 @@ exprRest :: A.Expr -> GenParser L.Token () A.Expr
 exprRest e1 = do
     os <- many onionPart
     return $ foldl (\e f -> f e) e1 os
-    --foldl (<|>) (head options) (tail options)
-    --where
-        --options = map (try)
-        --    [ onion
-        --    , onionsub
-        --    , onionproj
-        --    --, emptyString
-        --    ]
 
 onionPart :: GenParser L.Token () (A.Expr -> A.Expr)
 onionPart = foldl (<|>) (head options) (tail options)
