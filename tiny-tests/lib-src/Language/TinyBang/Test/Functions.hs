@@ -20,6 +20,7 @@ import Language.TinyBang.Test.SourceUtils
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import Utils.Language.Ast
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
@@ -33,7 +34,7 @@ tests = TestLabel "Test functions" $ TestList
           identFuncX
   , xType srcY
   , xEval "fun x -> x x"
-          (A.VFunc idX $ A.Appl varX varX)
+          (A.VFunc idX $ astwrap $ A.Appl varX varX)
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 
@@ -65,17 +66,17 @@ tests = TestLabel "Test functions" $ TestList
   -- Check that variable closed-ness works in functions
   , xNotC "(fun x -> n + 2)"
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
-          (A.Func idX
-             (A.Case varX
+          (astwrap $ A.Func idX $ astwrap $
+              A.Case varX
                      [ A.Branch
                         (A.ChiTopBind $ A.ChiUnbound $
                               (A.ChiLabelShallow (labelName "True")
                                           (ident "a")))
-                              (A.PrimInt 1)
+                              (astwrap $ A.PrimInt 1)
                      , A.Branch
                         (A.ChiTopBind $ A.ChiUnbound $
                               (A.ChiLabelShallow (labelName "False")
                                           (ident "a")))
-                              (A.PrimInt 0)
-                     ]))
+                              (astwrap $ A.PrimInt 0)
+                     ])
   ]

@@ -1,5 +1,13 @@
+{-# LANGUAGE  FlexibleContexts
+            , FlexibleInstances
+            , TypeSynonymInstances
+            , ScopedTypeVariables
+            #-}
+
 module Language.TinyBang.Test.UtilFunctions
 ( xEval
+, xvEval
+, xsEval
 , xType
 , xCont
 , xNotC
@@ -39,16 +47,16 @@ import Utils.Render.Display (display, Display)
 import qualified Language.TinyBang.Config as Cfg
 
 type TinyBangCode = String
-type Result = (A.Value, IntMap.IntMap A.Value)
+type Result = (A.Value A.Expr, IntMap.IntMap (A.Value A.Expr))
 
-xEval :: (Display v, Evaluated v, ?conf :: Cfg.Config) => TinyBangCode -> v -> Test
+xEval :: (Display v, Evaluated A.Expr v, ?conf :: Cfg.Config) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
                            EvalSuccess result ->
                              assertEqual ""
                                          (canonicalize $ vmPair expectedResult)
-                                         (canonicalize $ vmPair result)
+                                         (canonicalize $ (vmPair result :: Result))
                            EvalFailure err -> assertFailure $
                                                 "EvalFailure: " ++ display err
     _ -> assertFailure $
@@ -57,6 +65,12 @@ xEval code expectedResult =
   where wrappedResult = evalStringTop code
         label = show code ++
                 " was expected to produce " ++ display expectedResult
+
+xvEval :: (?conf :: Cfg.Config) => TinyBangCode -> A.Value A.Expr -> Test
+xvEval = xEval
+
+xsEval :: (?conf :: Cfg.Config) => TinyBangCode -> Result -> Test
+xsEval = xEval
 
 xType :: (?conf :: Cfg.Config) => TinyBangCode -> Test
 xType code =
@@ -146,7 +160,7 @@ fPars code =
   where label = "Parsing " ++ show code
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
-lexParseEval :: (Display a, Evaluated a, ?conf :: Cfg.Config)
+lexParseEval :: (Display a, Evaluated A.Expr a, ?conf :: Cfg.Config)
              => TinyBangCode -> [Token] -> A.Expr -> a -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex
@@ -154,7 +168,7 @@ lexParseEval code lex expr val =
            , xEval code val
            ]
 
-makeState :: [(Int, A.Value)] -> IntMap.IntMap A.Value
+makeState :: [(Int, A.Value A.Expr)] -> IntMap.IntMap (A.Value A.Expr)
 makeState = IntMap.fromList
 
 -- label :: (Evaluated a) => String -> a -> Result
