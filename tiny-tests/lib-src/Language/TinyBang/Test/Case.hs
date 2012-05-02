@@ -150,5 +150,9 @@ tests = TestLabel "General case tests" $ TestList
           \}                                                    "
         $ V.pi 4
 
+  -- Confirm that pattern binders are properly substituted.
+  , xEval "case 0 of { x -> case 1 of { x -> x + 1 } }"
+        $ V.pi 2
+
   -- TODO: we require more unit tests!  (verify inner binder mutation, etc.)
   ]
