@@ -9,7 +9,7 @@ Version:             0.1
 Synopsis:            Tests for Big Bang.
 
 -- A longer description of the package.
-Description:         This package contains tests for Big Bang.
+Description:         This package contains tests for TinyBang.
 
 -- The license under which the package is released.
 License:             AllRightsReserved
