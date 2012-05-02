@@ -74,11 +74,16 @@ grabChar = do
 
 expr :: GenParser L.Token () A.Expr
 expr = do
-    e <- foldl (<|>) (head options) (tail options)
-    exprRest e
+    e <- exprBasic
+    (exprRest e) <|> (emptyString e)
+    where
+        emptyString e1 = do {return e1}
+
+exprBasic :: GenParser L.Token () A.Expr
+exprBasic = foldl (<|>) (head options) (tail options)
     where
         options = map (try)
-            [ lambda
+           [ lambda
             , fun
             , defin
             , assign
@@ -101,14 +106,14 @@ expr = do
             _ <- isToken L.TokDef
             m <- optionMaybe modifier
             i <- grabIdent
-            _ <- isToken L.TokOpEquals
+            _ <- isToken L.TokEquals
             e1 <- expr
             _ <- isToken L.TokIn
             e2 <- expr
             return (A.Def m (ident i) e1 e2)
         assign = do
             i <- grabIdent
-            _ <- isToken L.TokOpEquals
+            _ <- isToken L.TokEquals
             e1 <- expr
             _ <- isToken L.TokIn
             e2 <- expr
@@ -125,39 +130,51 @@ expr = do
         applexp = applExp
 
 exprRest :: A.Expr -> GenParser L.Token () A.Expr
-exprRest e1 = foldl (<|>) (head options) (tail options)
+exprRest e1 = do
+    os <- many onionPart
+    return $ foldl (\e f -> f e) e1 os
+    --foldl (<|>) (head options) (tail options)
+    --where
+        --options = map (try)
+        --    [ onion
+        --    , onionsub
+        --    , onionproj
+        --    --, emptyString
+        --    ]
+
+onionPart :: GenParser L.Token () (A.Expr -> A.Expr)
+onionPart = foldl (<|>) (head options) (tail options)
     where
-        onionStart = (isToken L.TokOnionCons) <|> (isToken L.TokOnionSub) --L.TokOnionProj?
         options = map (try)
             [ onion
             , onionsub
             , onionproj
-            , emptyString
             ]
         onion = do
             --e1 <- expr
             _ <- isToken L.TokOnionCons
-            e2 <- expr
-            notFollowedBy onionStart
-            return (A.Onion e1 e2)
+            e2 <- exprBasic
+            return (flip A.Onion e2)
         onionsub = do
             --e1 <- expr
             _ <- isToken L.TokOnionSub
             p <- projTerm
-            return (A.OnionSub e1 p)
+            return (flip A.OnionSub p)
         onionproj = do
             --e1 <- expr
             _ <- isToken L.TokOnionProj
             p <- projTerm
-            return (A.OnionProj e1 p)
-        emptyString = do {return e1}
+            return (flip A.OnionProj p)
+
 
 
 applExp :: GenParser L.Token () A.Expr
-applExp =  (do
-    p <- primary
-    ps <- many primary
-    return (foldl (A.Appl) p ps))
+applExp = (try primaries) <|> (try primary)
+    where
+        primaries = do
+            p <- primary
+            ps <- many primary
+            return (foldl (A.Appl) p ps)
 
 primary :: GenParser L.Token () A.Expr
 primary = foldl (<|>) (head options) (tail options)
@@ -254,7 +271,7 @@ patternBind = (try bound) <|> (try unbound)
     where
         bound = do
             i <- grabIdent
-            _ <- isToken L.TokSeparator
+            _ <- isToken L.TokColon
             p <- patternBind
             return (A.ChiBound (ident i) p)
         unbound = do
