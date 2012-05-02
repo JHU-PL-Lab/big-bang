@@ -6,34 +6,26 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
 
 idX = ident "x"
-varX :: A.Expr
-varX = astwrap $ A.Var idX
+varX = A.Var idX
 
-efour :: A.Expr
-efour = astwrap $ A.PrimInt 4
-four :: A.Value A.Expr
+efour = A.PrimInt 4
 four = A.VPrimInt 4
-two :: A.Value A.Expr
 two = A.VPrimInt 2
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
-          astwrap $ A.Def Nothing idX efour varX
+          A.Def Nothing idX efour varX
   , xPars "x = 4 in x" $
-          astwrap $ A.Assign (A.AIdent idX) efour varX
+          A.Assign (A.AIdent idX) efour varX
   , xPars "def x = 4 in x & 'a'" $
-          astwrap $ A.Def Nothing idX efour $ astwrap $
-            A.Onion varX $ astwrap $ A.PrimChar 'a'
+          A.Def Nothing idX efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "x = 4 in x & 'a'" $
-          astwrap $ A.Assign (A.AIdent idX) efour $ astwrap $
-            A.Onion varX $ astwrap $ A.PrimChar 'a'
+          A.Assign (A.AIdent idX) efour $ A.Onion varX (A.PrimChar 'a')
   , xPars "def x = 3 in x = 4 in x" $
-          astwrap $ A.Def Nothing idX (astwrap $ A.PrimInt 3) $ astwrap $
-            A.Assign (A.AIdent idX) efour varX
+          A.Def Nothing idX (A.PrimInt 3) $ A.Assign (A.AIdent idX) efour varX
 
   -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" four

@@ -14,26 +14,18 @@ import Prelude hiding (pi)
 
 --import Language.TinyBang.Test.UtilFunctions
 import Language.TinyBang.Test.NameUtils
-import qualified Language.TinyBang.Ast as A (Expr, ExprPart(..))
-import Utils.Language.Ast
+import qualified Language.TinyBang.Ast as A
+  (Expr (Var, Func, PrimInt, PrimUnit, Label, Appl))
 
-varX :: A.Expr
-varX = astwrap $ A.Var idX
-varY :: A.Expr
-varY = astwrap $ A.Var idY
-varZ :: A.Expr
-varZ = astwrap $ A.Var idZ
+varX = A.Var idX
+varY = A.Var idY
+varZ = A.Var idZ
 
-identFuncX :: A.Expr
-identFuncX = astwrap $ A.Func idX varX
+identFuncX = A.Func idX varX
 
-pi :: Integer -> A.Expr
-pi = astwrap . A.PrimInt
+pi = A.PrimInt
 
-false :: A.Expr
-false = astwrap $ A.Label lblFalse Nothing $ astwrap $ A.PrimUnit
-true :: A.Expr
-true = astwrap $ A.Label lblTrue Nothing $ astwrap $ A.PrimUnit
+false = A.Label lblFalse Nothing A.PrimUnit
+true = A.Label lblTrue Nothing A.PrimUnit
 
-multiAppl :: [A.Expr] -> A.Expr
-multiAppl = foldl1 (\x y -> astwrap $ A.Appl x y)
+multiAppl = foldl1 A.Appl
