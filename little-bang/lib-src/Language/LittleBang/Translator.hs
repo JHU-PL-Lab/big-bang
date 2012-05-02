@@ -12,8 +12,6 @@ module Language.LittleBang.Translator
 ( convertLittleToTiny
 ) where
 
-import Control.Applicative ((<$>),(<*>),pure)
-import Control.Monad ((>=>))
 import Data.Foldable (foldlM)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -22,7 +20,6 @@ import qualified Data.Set as Set
 import Control.Monad.Consumer (Consumer, evalConsumer, next)
 
 import qualified Language.LittleBang.Ast as LA
-import qualified Language.LittleBang.Types.UtilTypes as LUT
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Types.UtilTypes as TUT
 
