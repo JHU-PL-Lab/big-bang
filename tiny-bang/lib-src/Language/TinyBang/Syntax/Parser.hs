@@ -7,7 +7,7 @@ module Language.TinyBang.Syntax.Parser
 ) where
 
 -- imports for ParseError
-import Control.Monad.Error (ErrorT, Error, strMsg, throwError)
+import Control.Monad.Error (ErrorT, Error, strMsg)
 import Control.Monad.Identity (Identity)
 import Data.Maybe (listToMaybe)
 
