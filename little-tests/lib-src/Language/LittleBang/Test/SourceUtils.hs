@@ -45,6 +45,6 @@ srcGreaterOrLess =
            ++ "}"
 
 lblEq, lblLt, lblGt :: Result
-lblEq = (TA.VLabel (tLabelName "EqualTo") 0, makeState [(0,TA.VPrimUnit)])
-lblLt = (TA.VLabel (tLabelName "LessThan") 0, makeState [(0,TA.VPrimUnit)])
-lblGt = (TA.VLabel (tLabelName "GreaterThan") 0, makeState [(0,TA.VPrimUnit)])
+lblEq = (TA.VLabel (labelName "EqualTo") 0, makeState [(0,TA.VPrimUnit)])
+lblLt = (TA.VLabel (labelName "LessThan") 0, makeState [(0,TA.VPrimUnit)])
+lblGt = (TA.VLabel (labelName "GreaterThan") 0, makeState [(0,TA.VPrimUnit)])

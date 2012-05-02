@@ -20,9 +20,9 @@ import qualified Language.LittleBang.Test.Primitive.Char as Primitive.Char
 import qualified Language.LittleBang.Test.Primitive.Int as Primitive.Int
 import qualified Language.LittleBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.LittleBang.Test.Projection as Projection
+import qualified Language.LittleBang.Test.Self as Self
 import qualified Language.LittleBang.Test.State as State
 import qualified Language.LittleBang.Test.ListEncoding as ListEncoding
-import qualified Language.LittleBang.Test.Self as Self
 
 tests :: (?conf :: Cfg.Config) => [Test]
 tests =

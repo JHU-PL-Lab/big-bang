@@ -22,7 +22,7 @@ tests = TestLabel "Tests of self" $ TestList
   [ 
     -- verify that self binds to the empty onion in absence of a wrapping label
     xEval "(fun x -> self) 0"
-          $ TA.VEmptyOnion
+          $ (TA.VEmptyOnion :: TA.Value TA.Expr)
     -- test recursion via self
   , xEval "def x = `Sum (fun n -> case n == 0 of {                      \
           \                         `True _ -> 0;                       \
@@ -38,8 +38,8 @@ tests = TestLabel "Tests of self" $ TestList
           \                                 `S y -> self.isEven y;      \
           \                                 `Z _ -> `False ()})         \
           \in evenOdd.isEven (`S `S `S `S `S `Z ())                     "
-          $ ( TA.VLabel tlblFalse 0
-            , mkState [ (0, TA.VPrimUnit) ]
+          $ ( TA.VLabel lblFalse 0 :: TA.Value TA.Expr
+            , mkState [ (0, TA.VPrimUnit :: TA.Value TA.Expr) ]
             )
     -- try mixins!
   , xEval "def obj = `x 3 & `y 4 in                                     \

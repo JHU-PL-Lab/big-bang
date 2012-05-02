@@ -1,3 +1,6 @@
+{-# LANGUAGE  NoMonomorphismRestriction
+            #-}
+
 module Language.LittleBang.Test.ExpressionUtils
 ( varX
 , varY
@@ -15,16 +18,18 @@ import Prelude hiding (pi)
 --import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.NameUtils
 import qualified Language.LittleBang.Ast as LA
+import qualified Language.TinyBang.Ast as TA
+import Utils.Language.Ast
 
-varX = LA.Var lidX
-varY = LA.Var lidY
-varZ = LA.Var lidZ
+varX = astwrap $ TA.Var idX
+varY = astwrap $ TA.Var idY
+varZ = astwrap $ TA.Var idZ
 
-identFuncX = LA.Func lidX varX
+identFuncX = astwrap $ TA.Func idX varX
 
-pi = LA.PrimInt
+pi = astwrap . TA.PrimInt
 
-false = LA.Label llblFalse Nothing LA.PrimUnit
-true = LA.Label llblTrue Nothing LA.PrimUnit
+false = astwrap $ TA.Label lblFalse Nothing $ astwrap $ TA.PrimUnit
+true = astwrap $ TA.Label lblTrue Nothing $ astwrap $ TA.PrimUnit
 
-multiAppl = foldl1 LA.Appl
+multiAppl = foldl1 (\x y -> astwrap $ TA.Appl x y)

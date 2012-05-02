@@ -11,17 +11,17 @@ import qualified Language.TinyBang.Config as Cfg
 
 xEvalComp :: (?conf :: Cfg.Config) => Ordering -> String -> String -> [Test]
 xEvalComp ord srcA srcB =
-  [ xEval ("(" ++ srcA ++ ") == (" ++ srcB ++ ")") $
+  [ xsEval ("(" ++ srcA ++ ") == (" ++ srcB ++ ")") $
           if ord == EQ then true else false
-  , xEval ("(" ++ srcB ++ ") == (" ++ srcA ++ ")") $
+  , xsEval ("(" ++ srcB ++ ") == (" ++ srcA ++ ")") $
           if ord == EQ then true else false
-  , xEval ("(" ++ srcA ++ ") <= (" ++ srcB ++ ")") $
+  , xsEval ("(" ++ srcA ++ ") <= (" ++ srcB ++ ")") $
           if ord == GT then false else true
-  , xEval ("(" ++ srcB ++ ") <= (" ++ srcA ++ ")") $
+  , xsEval ("(" ++ srcB ++ ") <= (" ++ srcA ++ ")") $
           if ord == LT then false else true
-  , xEval ("(" ++ srcA ++ ") >= (" ++ srcB ++ ")") $
+  , xsEval ("(" ++ srcA ++ ") >= (" ++ srcB ++ ")") $
           if ord == LT then false else true
-  , xEval ("(" ++ srcB ++ ") >= (" ++ srcA ++ ")") $
+  , xsEval ("(" ++ srcB ++ ") >= (" ++ srcA ++ ")") $
           if ord == GT then false else true
   ]
 
@@ -34,13 +34,13 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
     , xType (srcMultiAppl [srcGreaterOrLess, "'a'"])
 
   -- Test evaluation of some recursive arithmetic evaluations
-    , xEval (srcMultiAppl [srcY, srcSummate, "5"]) $
+    , xvEval (srcMultiAppl [srcY, srcSummate, "5"]) $
              TA.VPrimInt 15
-    , xEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
+    , xsEval (srcMultiAppl [srcGreaterOrLess, "4", "4"]) $
             lblEq
-    , xEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
+    , xsEval (srcMultiAppl [srcGreaterOrLess, "0", "4"]) $
             lblLt
-    , xEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
+    , xsEval (srcMultiAppl [srcGreaterOrLess, "4", "0"]) $
             lblGt
     ]
 -- Test simple comparisons
@@ -67,9 +67,9 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   , xEvalComp LT "'a'" "fun x -> x"
   , xEvalComp LT "`A 0" "fun x -> x"
 -- Test function equality by identity
-  , [ xEval "(fun f -> f == f) (fun x -> x)" true
-    , xEval "(fun f -> f <= f) (fun x -> x)" true
-    , xEval "(fun f -> f >= f) (fun x -> x)" true ]
+  , [ xsEval "(fun f -> f == f) (fun x -> x)" true
+    , xsEval "(fun f -> f <= f) (fun x -> x)" true
+    , xsEval "(fun f -> f >= f) (fun x -> x)" true ]
 -- Test deep label comparisons
   , xEvalComp LT "`A ()" "`A 1"
   , xEvalComp LT "`A 'a'" "`A `A ()"

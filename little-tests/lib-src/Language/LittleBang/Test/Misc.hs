@@ -5,10 +5,8 @@ where
 
 import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.NameUtils
-  ( llblTrue
-  , llblFalse
-  , tlblTrue
-  , tlblFalse
+  ( lblTrue
+  , lblFalse
   )
 import Language.LittleBang.Test.ExpressionUtils
   ( multiAppl
@@ -16,17 +14,19 @@ import Language.LittleBang.Test.ExpressionUtils
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import Utils.Language.Ast
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Miscellaneous tests" $ TestList
   [ xPars "'s''t''r''i''n''g'" $
-          multiAppl [ (LA.PrimChar 's')
-                    , (LA.PrimChar 't')
-                    , (LA.PrimChar 'r')
-                    , (LA.PrimChar 'i')
-                    , (LA.PrimChar 'n')
-                    , (LA.PrimChar 'g')
-                    ]
+          multiAppl $ (map astwrap $
+                    [ (TA.PrimChar 's')
+                    , (TA.PrimChar 't')
+                    , (TA.PrimChar 'r')
+                    , (TA.PrimChar 'i')
+                    , (TA.PrimChar 'n')
+                    , (TA.PrimChar 'g')
+                    ] :: [LA.Expr])
   , xNotC "x"
   , lexParseEval "`True ()"
                  [ TokLabelPrefix
@@ -34,8 +34,9 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (LA.Label llblTrue Nothing LA.PrimUnit)
-                 ( TA.VLabel tlblTrue 0
+                 (astwrap $ TA.Label lblTrue Nothing $ astwrap TA.PrimUnit
+                    :: LA.Expr)
+                 ( TA.VLabel lblTrue 0 :: TA.Value TA.Expr
                  , makeState [(0, TA.VPrimUnit)]
                  )
   , lexParseEval "`False ()"
@@ -44,8 +45,9 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (LA.Label llblFalse Nothing LA.PrimUnit)
-                 ( TA.VLabel tlblFalse 0
+                 (astwrap $ TA.Label lblFalse Nothing $ astwrap TA.PrimUnit
+                    :: LA.Expr)
+                 ( TA.VLabel lblFalse 0 :: TA.Value TA.Expr
                  , makeState [(0, TA.VPrimUnit)]
                  )
   ]

@@ -1,9 +1,13 @@
+{-# LANGUAGE  FlexibleContexts
+            , FlexibleInstances
+            , TypeSynonymInstances
+            , ScopedTypeVariables
+            #-}
+
 module Language.LittleBang.Test.UtilFunctions
-( tLabelName
-, lLabelName
-, tIdent
-, lIdent
-, xEval
+( xEval
+, xvEval
+, xsEval
 , xType
 , xCont
 , xNotC
@@ -16,6 +20,8 @@ module Language.LittleBang.Test.UtilFunctions
 , lexParseEval
 , LittleBangCode
 , Result
+, labelName
+, ident
 , module Test.HUnit
 , Token(..)
 , makeState
@@ -28,45 +34,32 @@ import Test.HUnit
 import qualified Data.IntMap as IntMap
 
 import Language.LittleBang.Interpreter.SourceInterpreter
+import Language.TinyBang.Ast (vmPair, Evaluated)
 import Language.LittleBang.Syntax.Lexer (Token)
+import qualified Language.TinyBang.Ast as TA
 import qualified Language.LittleBang.Ast as LA
+import qualified Language.TinyBang.Types.TypeInference as TI
+  (TypeInferenceError (..))
 import qualified Language.LittleBang.Syntax.Lexer as L
   (lexLittleBang)
 import qualified Language.LittleBang.Syntax.Parser as P
   (parseLittleBang)
-import Language.LittleBang.Types.UtilTypes as LUT
 import Language.LittleBang.Syntax.Lexer (Token(..))
-import Language.TinyBang.Ast (vmPair, Evaluated)
-import qualified Language.TinyBang.Ast as TA 
-import qualified Language.TinyBang.Config as Cfg
-import qualified Language.TinyBang.Types.TypeInference as TI
-  (TypeInferenceError (..))
-import qualified Language.TinyBang.Types.UtilTypes as TUT
+import Language.TinyBang.Types.UtilTypes (labelName, ident)
 import Utils.Render.Display (display, Display)
+import qualified Language.TinyBang.Config as Cfg
 
 type LittleBangCode = String
-type Result = (TA.Value, IntMap.IntMap TA.Value)
+type Result = (TA.Value TA.Expr, IntMap.IntMap (TA.Value TA.Expr))
 
-tLabelName :: String -> TUT.LabelName
-tLabelName = TUT.labelName
-
-lLabelName :: String -> LUT.LabelName
-lLabelName = LUT.labelName
-
-tIdent :: String -> TUT.Ident
-tIdent = TUT.ident
-
-lIdent :: String -> LUT.Ident
-lIdent = LUT.ident
-
-xEval :: (Display v, Evaluated v, ?conf :: Cfg.Config) => LittleBangCode -> v -> Test
+xEval :: (Display v, Evaluated TA.Expr v, ?conf :: Cfg.Config) => LittleBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
                            EvalSuccess result ->
                              assertEqual ""
                                          (canonicalize $ vmPair expectedResult)
-                                         (canonicalize $ vmPair result)
+                                         (canonicalize $ (vmPair result :: Result))
                            EvalFailure err -> assertFailure $
                                                 "EvalFailure: " ++ display err
     _ -> assertFailure $
@@ -75,6 +68,12 @@ xEval code expectedResult =
   where wrappedResult = evalStringTop code
         label = show code ++
                 " was expected to produce " ++ display expectedResult
+
+xvEval :: (?conf :: Cfg.Config) => LittleBangCode -> TA.Value TA.Expr -> Test
+xvEval = xEval
+
+xsEval :: (?conf :: Cfg.Config) => LittleBangCode -> Result -> Test
+xsEval = xEval
 
 xType :: (?conf :: Cfg.Config) => LittleBangCode -> Test
 xType code =
@@ -114,9 +113,9 @@ xNotC code =
 
 xErrT :: (?conf :: Cfg.Config)
       => String -> (TI.TypeInferenceError -> Bool) -> LittleBangCode -> Test
-xErrT msg predicate code =
+xErrT msg pred code =
   label ~: case result of
-    TypecheckFailure _ tie _ | predicate tie -> TestCase $ assertSuccess
+    TypecheckFailure _ tie _ | pred tie -> TestCase $ assertSuccess
     _ -> TestCase $ assertFailure $
          "Expected " ++ msg ++ " but instead got " ++ display result
   where label = show code ++
@@ -144,25 +143,27 @@ xLexs code expected =
 
 xPars :: (?conf :: Cfg.Config) => LittleBangCode -> LA.Expr -> Test
 xPars code expected =
-  label ~: TestCase $ case L.lexLittleBang code of
-    Left err -> assertFailure $ "Lexing failed with: " ++ err
-    Right tokens ->
-      case P.parseLittleBang tokens of
-        Left err -> assertFailure $ "Parsing failed with: " ++ show err
-        Right ast -> assertEqual "" expected ast
+  label ~: TestCase $
+    case L.lexLittleBang code of
+      Left err -> assertFailure $ "Lexing failed with: " ++ err
+      Right tokens ->
+        case P.parseLittleBang tokens of
+          Left err -> assertFailure $ "Parsing failed with: " ++ display err
+          Right ast -> assertEqual "" expected ast
   where label = "Parsing " ++ show code
 
 fPars :: (?conf :: Cfg.Config) => LittleBangCode -> Test
 fPars code =
-  label ~: TestCase $ case L.lexLittleBang code of
-    Left err -> assertFailure $ "Lexing failed with: " ++ err
-    Right tokens ->
-      case P.parseLittleBang tokens of
-        Left _ -> assertSuccess
-        Right ast ->  assertFailure $ "Parsing succeeded with: " ++ display ast
-  where label = "Parsing " ++ show code
+  label ~: TestCase $
+    case L.lexLittleBang code of
+      Left err -> assertFailure $ "Lexing failed with: " ++ err
+      Right tokens ->
+        case P.parseLittleBang tokens of
+          Left err -> assertSuccess
+          Right ast -> assertFailure $ "Parsing succeeded with: " ++ display ast
+  where label = "Parsing (expecting error) " ++ show code
 
-lexParseEval :: (Display a, Evaluated a, ?conf :: Cfg.Config)
+lexParseEval :: (Display a, Evaluated TA.Expr a, ?conf :: Cfg.Config)
              => LittleBangCode -> [Token] -> LA.Expr -> a -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex
@@ -170,12 +171,12 @@ lexParseEval code lex expr val =
            , xEval code val
            ]
 
-makeState :: [(Int, TA.Value)] -> IntMap.IntMap TA.Value
+makeState :: [(Int, TA.Value TA.Expr)] -> IntMap.IntMap (TA.Value TA.Expr)
 makeState = IntMap.fromList
 
 -- label :: (Evaluated a) => String -> a -> Result
 -- label name contents =
---   (LA.VLabel lbl nextCell, IntMap.insert nextCell (value contents) state)
+--   (A.VLabel lbl nextCell, IntMap.insert nextCell (value contents) state)
 --   where lbl = labelName name
 --         nextCell =
 --           maybe 0 (inc . fst . fst) $ IntMap.maxViewWithKey state

@@ -1,3 +1,5 @@
+{-# LANGUAGE  NoMonomorphismRestriction #-}
+
 module Language.LittleBang.Test.ValueUtils
 ( pi
 , identFuncX
@@ -6,17 +8,22 @@ module Language.LittleBang.Test.ValueUtils
 )
 where
 
-import Prelude hiding (pi)
+import Prelude (Integer)
 
+import qualified Data.IntMap as IntMap
+import Language.LittleBang.Test.ExpressionUtils
+  ( varX
+  )
 import Language.LittleBang.Test.NameUtils
 import Language.LittleBang.Test.UtilFunctions
+import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
-import qualified Language.TinyBang.Types.UtilTypes as TUT
 
+pi :: Integer -> TA.Value TA.Expr
 pi = TA.VPrimInt
 
-identFuncX = TA.VFunc tidX $ TA.Var $ TUT.ident "x"
+identFuncX = TA.VFunc idX varX
 
 -- The following should only be used when there is no other expected state.
-true = (TA.VLabel tlblTrue 0, makeState [(0, TA.VPrimUnit)])
-false = (TA.VLabel tlblFalse 0, makeState [(0, TA.VPrimUnit)])
+true = (TA.VLabel lblTrue 0, makeState [(0, TA.VPrimUnit)])
+false = (TA.VLabel lblFalse 0, makeState [(0, TA.VPrimUnit)])

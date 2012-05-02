@@ -7,14 +7,15 @@ import Language.LittleBang.Test.UtilFunctions
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import Utils.Language.Ast
 
 -- TODO: write prop_testChar using quickcheck
 
 testChar :: (?conf :: Cfg.Config) => Char -> Test
 testChar c = lexParseEval ('\'':c:'\'':[])
                           [TokCharLiteral c]
-                          (LA.PrimChar c)
-                          (TA.VPrimChar c)
+                          (astwrap $ TA.PrimChar c :: LA.Expr)
+                          (TA.VPrimChar c :: TA.Value TA.Expr)
 
 
 tests :: (?conf :: Cfg.Config) => Test

@@ -3,31 +3,35 @@ module Language.LittleBang.Test.State
 )
 where
 
-import Language.LittleBang.Test.NameUtils
 import Language.LittleBang.Test.UtilFunctions
+import Language.LittleBang.Test.NameUtils
+import Language.LittleBang.Test.ExpressionUtils
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import Utils.Language.Ast
 
-lvarX = LA.Var lidX
-tvarX = TA.Var tidX
-
-efour = LA.PrimInt 4
+efour = astwrap $ TA.PrimInt 4
+four :: TA.Value TA.Expr
 four = TA.VPrimInt 4
+two :: TA.Value TA.Expr
 two = TA.VPrimInt 2
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
-          LA.Def Nothing lidX efour lvarX
+          astwrap $ TA.Def Nothing idX efour varX
   , xPars "x = 4 in x" $
-          LA.Assign lidX efour lvarX
+          astwrap $ TA.Assign (TA.AIdent idX) efour varX
   , xPars "def x = 4 in x & 'a'" $
-          LA.Def Nothing lidX efour $ LA.Onion lvarX (LA.PrimChar 'a')
+          astwrap $ TA.Def Nothing idX efour $ astwrap $
+            LA.Onion varX $ astwrap $ TA.PrimChar 'a'
   , xPars "x = 4 in x & 'a'" $
-          LA.Assign lidX efour $ LA.Onion lvarX (LA.PrimChar 'a')
+          astwrap $ TA.Assign (TA.AIdent idX) efour $ astwrap $
+            LA.Onion varX $ astwrap $ TA.PrimChar 'a'
   , xPars "def x = 3 in x = 4 in x" $
-          LA.Def Nothing lidX (LA.PrimInt 3) $ LA.Assign lidX efour lvarX
+          astwrap $ TA.Def Nothing idX (astwrap $ TA.PrimInt 3) $ astwrap $
+            TA.Assign (TA.AIdent idX) efour varX
 
   -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" four

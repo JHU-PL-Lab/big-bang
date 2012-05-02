@@ -6,13 +6,25 @@ where
 import Language.LittleBang.Test.SourceUtils
 import Language.LittleBang.Test.UtilFunctions
 import qualified Language.LittleBang.Test.ExpressionUtils as E
+  ( false
+  )
 import Language.LittleBang.Test.ExpressionUtils
+  ( varX
+  )
 import qualified Language.LittleBang.Test.ValueUtils as V
+  ( pi
+  )
 import Language.LittleBang.Test.NameUtils
+  ( idX
+  , lblTrue
+  )
 
 import qualified Language.LittleBang.Ast as LA
+import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
-import qualified Language.LittleBang.Types.UtilTypes as LUT
+import qualified Language.TinyBang.Types.Types as T
+
+import Utils.Language.Ast
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "General case tests" $ TestList
@@ -33,18 +45,19 @@ tests = TestLabel "General case tests" $ TestList
                       \    unit -> ();           \
                       \    `True a -> `False (); \
                       \    fun -> (fun x -> x)}" $
-          LA.Case varX
-            [ LA.Branch (LA.ChiTopBind $ LA.ChiUnbound
-                            (LA.ChiPrim LUT.PrimInt)) $ LA.PrimInt 5
-            , LA.Branch (LA.ChiTopBind $ LA.ChiUnbound
-                            (LA.ChiPrim LUT.PrimChar)) $ LA.PrimChar 'a'
-            , LA.Branch (LA.ChiTopBind $ LA.ChiUnbound
-                            (LA.ChiPrim LUT.PrimUnit)) LA.PrimUnit
-            , LA.Branch (LA.ChiTopBind $ LA.ChiUnbound
-                            (LA.ChiLabelShallow llblTrue $ LUT.ident "a")) E.false
-            , LA.Branch (LA.ChiTopBind $ LA.ChiUnbound
-                            LA.ChiFun) $ LA.Func lidX $ LA.Var lidX
+          (astwrap $ LA.Case varX
+            [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
+                            (TA.ChiPrim T.PrimInt)) $ astwrap $ TA.PrimInt 5
+            , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
+                            (TA.ChiPrim T.PrimChar)) $ astwrap $ TA.PrimChar 'a'
+            , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
+                            (TA.ChiPrim T.PrimUnit)) $ astwrap $ TA.PrimUnit
+            , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
+                            (TA.ChiLabelShallow lblTrue $ ident "a")) E.false
+            , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
+                            TA.ChiFun) $ astwrap $ TA.Func idX varX
             ]
+            :: LA.Expr)
 
   -- verify the behavior of the fun pattern
   , xEval "case 1 of { fun -> 0; z -> z }" (V.pi 1)

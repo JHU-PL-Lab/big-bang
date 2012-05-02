@@ -5,31 +5,37 @@ where
 
 import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.NameUtils
+  ( idX
+  )
+import Language.LittleBang.Test.ExpressionUtils
+  ( varX
+  )
+import Language.LittleBang.Test.ValueUtils
+  ( identFuncX
+  )
 import Language.LittleBang.Test.SourceUtils
+  ( srcY
+  , srcMultiAppl
+  )
 
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
-
-lvarX = LA.Var lidX
-tvarX = TA.Var tidX
-
-selfIdentFuncX = TA.VFunc tidSelf $ TA.Func tidX $ tvarX
+import Utils.Language.Ast
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
-  [ xEval "fun x -> x"
-          selfIdentFuncX
-  , xEval "(fun x -> x) (fun x -> x)"
-          selfIdentFuncX
-  , xEval "(fun y -> y) (fun x -> x)"
-          selfIdentFuncX
-  , xEval "def x = fun x -> x in x x"
-          selfIdentFuncX
+  [ xvEval "fun x -> x"
+          identFuncX
+  , xvEval "(fun x -> x) (fun x -> x)"
+          identFuncX
+  , xvEval "(fun y -> y) (fun x -> x)"
+          identFuncX
+  , xvEval "def x = fun x -> x in x x"
+          identFuncX
   , xType srcY
-  , xEval "fun x -> x x"
-          (TA.VFunc tidSelf $ TA.Func tidX $
-                TA.Appl (TA.Appl tvarX TA.EmptyOnion) tvarX)
+  , xvEval "fun x -> x x"
+          (TA.VFunc idX $ astwrap $ TA.Appl varX varX)
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 
@@ -61,17 +67,17 @@ tests = TestLabel "Test functions" $ TestList
   -- Check that variable closed-ness works in functions
   , xNotC "(fun x -> n + 2)"
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
-          (LA.Func lidX
-             (LA.Case lvarX
-                     [ LA.Branch
-                        (LA.ChiTopBind $ LA.ChiUnbound $
-                              (LA.ChiLabelShallow (lLabelName "True")
-                                          (lIdent "a")))
-                              (LA.PrimInt 1)
-                     , LA.Branch
-                        (LA.ChiTopBind $ LA.ChiUnbound $
-                              (LA.ChiLabelShallow (lLabelName "False")
-                                          (lIdent "a")))
-                              (LA.PrimInt 0)
-                     ]))
+          (astwrap $ TA.Func idX $ astwrap $
+              LA.Case varX
+                     [ TA.Branch
+                        (TA.ChiTopBind $ TA.ChiUnbound $
+                              (TA.ChiLabelShallow (labelName "True")
+                                          (ident "a")))
+                              (astwrap $ TA.PrimInt 1)
+                     , TA.Branch
+                        (TA.ChiTopBind $ TA.ChiUnbound $
+                              (TA.ChiLabelShallow (labelName "False")
+                                          (ident "a")))
+                              (astwrap $ TA.PrimInt 0)
+                     ])
   ]

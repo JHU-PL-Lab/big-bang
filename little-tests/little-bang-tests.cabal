@@ -6,10 +6,10 @@ Name:                little-bang-tests
 Version:             0.1
 
 -- A short (one-line) description of the package.
-Synopsis:            Tests for Big Bang.
+Synopsis:            Tests for Little Bang.
 
 -- A longer description of the package.
-Description:         This package contains tests for Big Bang.
+Description:         This package contains tests for Little Bang.
 
 -- The license under which the package is released.
 License:             AllRightsReserved
@@ -63,8 +63,8 @@ Library
     Language.LittleBang.Test.Primitive.Int
     Language.LittleBang.Test.Primitive.Unit
     Language.LittleBang.Test.Projection
-    Language.LittleBang.Test.Self
     Language.LittleBang.Test.SourceUtils
+    Language.LittleBang.Test.Self
     Language.LittleBang.Test.State
     Language.LittleBang.Test.UtilFunctions
     Language.LittleBang.Test.ValueUtils

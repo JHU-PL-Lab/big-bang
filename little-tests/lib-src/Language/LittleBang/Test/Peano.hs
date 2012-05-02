@@ -5,9 +5,16 @@ where
 
 import Language.LittleBang.Test.UtilFunctions
 import Language.LittleBang.Test.SourceUtils
+  ( srcY
+  )
 import Language.LittleBang.Test.NameUtils
+  ( lblZ
+  , lblS
+  )
+import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import Data.IntMap (IntMap)
 
 peanoSrcZero =
   "def zero = `Z () in                                                         "
@@ -29,13 +36,14 @@ peanoSrcMult =
   \                            `S x' -> this (plus accum y) x' y }) in         \
   \def mult = multHelper zero in                                               "
 
+peanoVal :: Int -> (TA.Value TA.Expr, IntMap (TA.Value TA.Expr))
 peanoVal x = case x of
-  0 -> (TA.VLabel tlblZ 0, makeState [(0,TA.VPrimUnit)])
-  1 -> (TA.VLabel tlblS 0, makeState [(0,TA.VLabel tlblZ 1), (1,TA.VPrimUnit)])
+  0 -> (TA.VLabel lblZ 0, makeState [(0,TA.VPrimUnit)])
+  1 -> (TA.VLabel lblS 0, makeState [(0,TA.VLabel lblZ 1), (1,TA.VPrimUnit)])
   _ | x >= 0 ->
-       (TA.VLabel tlblS x,
-        makeState $ [(0, TA.VPrimUnit), (1, TA.VLabel tlblZ 0)] ++
-                    map (\n -> (n,TA.VLabel tlblS (n-1))) [2..x])
+       (TA.VLabel lblS x,
+        makeState $ [(0, TA.VPrimUnit), (1, TA.VLabel lblZ 0)] ++
+                    map (\n -> (n,TA.VLabel lblS (n-1))) [2..x])
   _ -> error $ "Peano value requested for negative value: " ++ show x
 
 peanoPrelude =
