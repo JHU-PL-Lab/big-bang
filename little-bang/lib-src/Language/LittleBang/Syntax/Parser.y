@@ -84,9 +84,9 @@ import System.IO
 %%
 
 Exp     :   '\\' ident '->' Exp
-                                    { astwrap $ TA.Func (ident $2) $4 }
+                                    { astwrap $ LA.Func (ident $2) $4 }
         |   fun ident '->' Exp
-                                    { astwrap $ TA.Func (ident $2) $4 }
+                                    { astwrap $ LA.Func (ident $2) $4 }
         |   def ident '=' Exp in Exp
                                     { astwrap $
                                         TA.Def Nothing (ident $2) $4 $6 }
@@ -114,7 +114,7 @@ Exp     :   '\\' ident '->' Exp
 
 
 ApplExp :   ApplExp LabelExp
-                                    { astwrap $ TA.Appl $1 $2 }
+                                    { astwrap $ LA.Appl $1 $2 }
         |   LabelExp
                                     { $1 }
 

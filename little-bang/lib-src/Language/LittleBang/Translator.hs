@@ -105,6 +105,14 @@ instance (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
             [ TA.Branch (TA.ChiTopVar prior) $ astwrap $
                 TA.Case e1' [ TA.Branch (TA.ChiTopVar prior) $ astwrap $ 
                                 TA.Onion (astwrap $ TA.Var prior) e2' ] ]
+      LA.Func i e -> do
+        e' <- f e
+        return $ astwrap $ TA.Func self $ astwrap $ TA.Func i $ e'
+      LA.Appl e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ TA.Appl
+            (astwrap $ TA.Appl e1' $ astwrap $ TA.EmptyOnion) e2'
     where prior = TUT.ident "prior"
           self = TUT.ident "self"
           itl = TUT.labelName . TUT.unIdent

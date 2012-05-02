@@ -41,6 +41,8 @@ data ExprPart t
   | ProjAssign t Ident t t
   | Case t (TA.Branches t) -- LittleBang cases include semantics for self
   | Onion t t              -- LittleBang onions include semantics for prior
+  | Func Ident t           -- LittleBang functions include a variable for self
+  | Appl t t               -- LittleBang function application applies (&)
   deriving (Eq, Ord, Show)
 
 -- |Data type for a LittleBang AST.
@@ -58,6 +60,8 @@ instance (AstOp TA.FreeVarsOp ast (Set Ident))
         map (\(TA.Branch pat patexp) ->
             exprFreeVars patexp `Set.difference` TA.ePatVars pat) branches
     Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
+    Func i e -> i `Set.delete` exprFreeVars e
+    Appl e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
 
 -- |Obtains the set of variables for LittleBang AST nodes.
 instance (AstOp TA.VarsOp ast (Set Ident))
@@ -71,6 +75,8 @@ instance (AstOp TA.VarsOp ast (Set Ident))
         map (\(TA.Branch pat patexp) ->
             exprVars patexp `Set.union` TA.ePatVars pat) branches
     Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
+    Func i e -> i `Set.insert` exprVars e
+    Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
 
 -- |Defines a homomorphism over a tree containing LittleBang AST nodes.
 instance (AstWrap ExprPart ast2
@@ -95,6 +101,13 @@ instance (AstWrap ExprPart ast2
         e1' <- f e1
         e2' <- f e2
         return $ astwrap $ Onion e1' e2'
+    Func i e -> do
+        e' <- f e
+        return $ astwrap $ Func i e'
+    Appl e1 e2 -> do
+        e1' <- f e1
+        e2' <- f e2
+        return $ astwrap $ Appl e1' e2'
     where appbrs f (TA.Branch pat expr) = do
             expr' <- f expr
             return $ TA.Branch pat expr'
@@ -113,4 +126,6 @@ instance (Display t) => Display (ExprPart t) where
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc branches)
         <+> text "}"
     Onion e1 e2 -> makeDoc e1 <+> text "&" <+> makeDoc e2
+    Func i e -> text "fun" <+> makeDoc i <+> text "->" <+> makeDoc e
+    Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
 
