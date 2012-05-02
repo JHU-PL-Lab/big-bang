@@ -17,10 +17,7 @@ import qualified Language.TinyBang.Syntax.Lexer as L
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
     ( ident
-    --, unIdent
-    --, LabelName
     , labelName
-    --, unLabelName
     , PrimitiveType(..)
     , ProjTerm(..)
     )
@@ -28,12 +25,9 @@ import Utils.Render.Display
 
 -- imports for Parsec
 import Text.ParserCombinators.Parsec (GenParser, parse)
-import Text.Parsec.Combinator (optionMaybe, eof, notFollowedBy)
+import Text.Parsec.Combinator (optionMaybe, eof)
 import Text.Parsec.Prim (token, many,(<|>),try)
 import Text.Parsec.Pos (initialPos)
---import Text.ParserCombinators.Parsec as P
-
---import Debug.Trace (trace)
 
 tokIdent :: L.SourceLocation -> L.Token
 tokIdent = (flip L.TokIdentifier "")
@@ -357,7 +351,6 @@ opExp = do
     o <- op
     p2 <- primary
     return (o p1 p2)
---OpExp   :   Primary Op Primary      { $2 $1 $3 }
 
 op :: GenParser L.Token () (A.Expr -> A.Expr -> A.Expr)
 op = foldl (<|>) (head options) (tail options)
@@ -398,5 +391,5 @@ instance Show ParseError where
 
 type ParseM a = ErrorT ParseError Identity a
 
-parseError :: [L.Token] -> ParseM a
-parseError = throwError . ParseError
+--parseError :: [L.Token] -> ParseM a
+--parseError = throwError . ParseError
