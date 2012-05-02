@@ -5,7 +5,6 @@
                 , StandaloneDeriving
                 , MultiParamTypeClasses
                 , TypeSynonymInstances
-                , UndecidableInstances
                 #-}
 module Language.TinyBang.Ast
 ( Expr
@@ -32,8 +31,6 @@ module Language.TinyBang.Ast
 , FreeVarsOp(..)
 , subst
 , SubstOp(..)
-, substCell
-, SubstCellOp(..)
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
@@ -169,9 +166,6 @@ ePatVars chi =
   where both :: Chi a -> Chi b -> Set Ident
         both x y = Set.union (ePatVars y) (ePatVars x)
 
--- TODO: a number of the following operations could be taking more advantage
--- of HomOp
-
 -- |Obtains the set of free variables for an AST.
 exprFreeVars :: (AstOp FreeVarsOp ast (Set Ident)) => ast -> Set Ident
 exprFreeVars = astop FreeVarsOp
@@ -265,36 +259,14 @@ instance (AstWrap ExprPart ast
     EmptyOnion -> orig
     LazyOp op e1 e2 -> LazyOp op (rec e1) (rec e2)
     EagerOp op e1 e2 -> EagerOp op (rec e1) (rec e2)
-    Def m i e1 e2 | i == ident -> Def m i (rec e1) e2
+    Def _ i _ _ | i == ident -> orig
     Def m i e1 e2 -> Def m i (rec e1) (rec e2)
-    Assign (AIdent i) e1 e2 | i == ident -> Assign (AIdent i) (rec e1) e2
+    Assign (AIdent i) _ _ | i == ident -> orig
     Assign a e1 e2 -> Assign a (rec e1) (rec e2)
     ExprCell _ -> orig
     where rec e = subst e sub ident
 
--- |Performs a free variable cell substitution on the provided TinyBang AST.
---  This routine will address both LHS and RHS variables.
-substCell :: (AstWrap ExprPart ast
-            , AstStep HomOp ExprPart ast ((ast -> ast) -> ast)
-            , AstOp SubstCellOp ast (CellId -> Ident -> ast))
-          => ast -> CellId -> Ident -> ast
-substCell = astop SubstCellOp
-data SubstCellOp = SubstCellOp
-instance (AstWrap ExprPart ast
-        , AstStep SubstOp ExprPart ast (ExprPart ast -> Ident -> ast)
-        , AstOp SubstCellOp ast (CellId -> Ident -> ast))
-      => AstStep SubstCellOp ExprPart ast (CellId -> Ident -> ast) where
-  aststep SubstCellOp orig cell ident = case orig of
-    Var i | i == ident -> astwrap $ ExprCell cell
-    Def m i e1 e2 | i == ident -> astwrap $ Def m i (rec e1) e2
-    Assign a e1 e2 -> astwrap $ 
-      case a of
-        AIdent i | i == ident -> Assign (ACell cell) (rec e1) (rec e2)
-        _ -> Assign a (rec e1) (rec e2)
-    _ -> aststep HomOp orig rec
-    where rec e = substCell e cell ident
-
--- |Specifies a homomorphic operation over TinyBang AST nodes.
+-- Specifies a homomorphic operation over TinyBang AST nodes.
 instance (AstWrap ExprPart ast2
          ,Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
