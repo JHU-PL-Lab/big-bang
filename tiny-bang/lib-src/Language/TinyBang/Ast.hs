@@ -6,6 +6,7 @@
                 , MultiParamTypeClasses
                 , TypeSynonymInstances
                 , UndecidableInstances
+                , ScopedTypeVariables
                 #-}
 module Language.TinyBang.Ast
 ( Expr
@@ -39,6 +40,7 @@ module Language.TinyBang.Ast
 , Assignable(..)
 ) where
 
+import Control.Monad (liftM,ap)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Set (Set)
@@ -265,53 +267,34 @@ instance (AstWrap ExprPart ast
 instance (AstWrap ExprPart ast2
          ,Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM part = \f -> case part of
-    Var i -> return $ astwrap $ Var i
-    Label n m e -> do
-        e' <- f e
-        return $ astwrap $ Label n m e'
-    Onion e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Onion e1' e2'
-    OnionSub e s -> do
-        e' <- f e
-        return $ astwrap $ OnionSub e' s
-    OnionProj e s -> do
-        e' <- f e
-        return $ astwrap $ OnionProj e' s
-    Func i e -> do
-        e' <- f e
-        return $ astwrap $ Func i e'
-    Appl e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Appl e1' e2'
-    PrimInt v -> return $ astwrap $ PrimInt v
-    PrimChar v -> return $ astwrap $ PrimChar v
-    PrimUnit -> return $ astwrap $ PrimUnit
+  aststep HomOpM part f = liftM astwrap $ case part of
+    Var i -> return $ Var i
+    Label n m e -> Label n m <&> e
+    Onion e1 e2 -> Onion <&> e1 <&*> e2
+    OnionSub e s -> OnionSub <&> e <&^> s
+    OnionProj e s -> OnionProj <&> e <&^> s
+    Func i e -> Func i <&> e
+    Appl e1 e2 -> Appl <&> e1 <&*> e2
+    PrimInt v -> return $ PrimInt v
+    PrimChar v -> return $ PrimChar v
+    PrimUnit -> return $ PrimUnit
     Case e brs -> do
         e' <- f e
-        brs' <- mapM (appbr f) brs
-        return $ astwrap $ Case e' brs'
-    EmptyOnion -> return $ astwrap $ EmptyOnion
-    LazyOp op e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ LazyOp op e1' e2'
-    EagerOp op e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ EagerOp op e1' e2'
-    Def m i e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Def m i e1' e2'
-    Assign i e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Assign i e1' e2'
-    where appbr f (Branch pat bre) = do
+        brs' <- mapM appbr brs
+        return $ Case e' brs'
+    EmptyOnion -> return $ EmptyOnion
+    LazyOp op e1 e2 -> LazyOp op <&> e1 <&*> e2
+    EagerOp op e1 e2 -> EagerOp op <&> e1 <&*> e2
+    Def m i e1 e2 -> Def m i <&> e1 <&*> e2
+    Assign i e1 e2 -> Assign i <&> e1 <&*> e2
+    where (<&>) :: (ast2 -> b) -> ast1 -> m b
+          c <&> e = liftM c $ f e
+          infixl 4 <&>
+          mc <&*> e = mc `ap` f e
+          infixl 4 <&*>
+          mc <&^> p = mc `ap` return p
+          infixl 4 <&^>
+          appbr (Branch pat bre) = do
             bre' <- f bre
             return $ Branch pat bre'
 
