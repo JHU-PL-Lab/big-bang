@@ -61,7 +61,7 @@ hungry = [identP, intLiteralP, charLiteralP]
             return $ (flip TokCharLiteral) l
 
 shortOperators :: [Parser (SourceLocation -> Token)]
-shortOperators =
+shortOperators = map proc
     [ lblPrefixP
     , lambdaP
     , openParenP
@@ -75,108 +75,52 @@ shortOperators =
     , equalsP
     , onionConsP]
     where
-        lblPrefixP = do
-            _ <- char '`'
-            return TokLabelPrefix
-        lambdaP = do
-            _ <- char '\\'
-            return TokLambda
-        openParenP = do
-            _ <- char '('
-            return TokOpenParen
-        closeParenP = do
-            _ <- char ')'
-            return TokCloseParen
-        openBlockP = do
-            _ <- char '{'
-            return TokOpenBlock
-        closeBlockP = do
-            _ <- char '}'
-            return TokCloseBlock
-        separatorP = do
-            _ <- char ';'
-            return TokSeparator
-        colonP = do
-            _ <- char ':'
-            return TokColon
-        opPlusP = do
-            _ <- char '+'
-            return TokOpPlus
-        opMinusP = do
-            _ <- char '-'
-            return TokOpMinus
-        equalsP = do
-            _ <- char '='
-            return TokEquals
-        onionConsP = do
-            _ <- char '&'
-            return TokOnionCons
+        proc (c, t) = do
+            _ <- char c
+            return t
+        lblPrefixP = ('`', TokLabelPrefix)
+        lambdaP = ('\\', TokLambda)
+        openParenP = ('(', TokOpenParen)
+        closeParenP = (')', TokCloseParen)
+        openBlockP = ('{', TokOpenBlock)
+        closeBlockP = ('}', TokCloseBlock)
+        separatorP = (';', TokSeparator)
+        colonP = (':', TokColon)
+        opPlusP = ('+', TokOpPlus)
+        opMinusP = ('-', TokOpMinus)
+        equalsP = ('=', TokEquals)
+        onionConsP = ('&', TokOnionCons)
 
 longOperators :: [Parser (SourceLocation -> Token)]
-longOperators = [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGreaterEqualsP]
+longOperators = map proc [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGreaterEqualsP]
     where
-        onionSubP = do
-            _ <- string "&-"
-            return TokOnionSub
-        onionProjP = do
-            _ <- string "&."
-            return TokOnionProj
-        arrowP = do
-            _ <- string "->"
-            return TokArrow
-        opEqualsP = do
-            _ <- string "=="
-            return TokOpEquals
-        opLessEqualsP = do
-            _ <- string "<="
-            return TokOpLessEquals
-        opGreaterEqualsP = do
-            _ <- string ">="
-            return TokOpGreaterEquals
+        proc (s, t) = do
+            _ <- string s
+            return t
+        onionSubP = ("&-", TokOnionSub)
+        onionProjP = ("&.", TokOnionProj)
+        arrowP = ("->", TokArrow)
+        opEqualsP = ("==", TokOpEquals)
+        opLessEqualsP = ("<=", TokOpLessEquals)
+        opGreaterEqualsP = (">=", TokOpGreaterEquals)
 
 reservedWords :: [Parser (SourceLocation -> Token)]
-reservedWords =  [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
+reservedWords = map proc [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
     where
-        funP = do
-            _ <- string "fun"
+        proc (s, t) = do
+            _ <- string s
             validIdentP
-            return TokFun
-        caseP = do
-            _ <- string "case"
-            validIdentP
-            return TokCase
-        ofP = do
-            _ <- string "of"
-            validIdentP
-            return TokOf
-        intP = do
-            _ <- string "int"
-            validIdentP
-            return TokInteger
-        charP = do
-            _ <- string "char"
-            validIdentP
-            return TokChar
-        unitP = do
-            _ <- string "unit"
-            validIdentP
-            return TokUnit
-        defP = do
-            _ <- string "def"
-            validIdentP
-            return TokDef
-        inP = do
-            _ <- string "in"
-            validIdentP
-            return TokIn
-        finalP = do
-            _ <- string "final"
-            validIdentP
-            return TokFinal
-        immutP = do
-            _ <- string "immut"
-            validIdentP
-            return TokImmut
+            return t
+        funP = ("fun", TokFun)
+        caseP = ("case", TokCase)
+        ofP = ("of", TokOf)
+        intP = ("int", TokInteger)
+        charP = ("char", TokChar)
+        unitP = ("unit", TokUnit)
+        defP = ("def", TokDef)
+        inP = ("in", TokIn)
+        finalP = ("final", TokFinal)
+        immutP = ("immut", TokImmut)
 
 type LexerResult = Either String [Token]
 
