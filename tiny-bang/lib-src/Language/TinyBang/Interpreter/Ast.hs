@@ -19,6 +19,8 @@ module Language.TinyBang.Interpreter.Ast
 , substCell
 ) where
 
+import Control.Monad (liftM, liftM2)
+import Data.Monoid (Monoid, mempty, mappend)
 import qualified Data.Set as Set
 import Data.Set (Set)
 
@@ -41,25 +43,21 @@ data ExprPart t
 -- |Provides behavior for free variable searches.
 instance (AstOp A.FreeVarsOp ast (Set U.Ident))
       => AstStep A.FreeVarsOp ExprPart ast (Set U.Ident) where
-  aststep A.FreeVarsOp ast = case ast of
-    ExprCell _ -> Set.empty
-    AssignCell _ e1 e2 -> A.exprFreeVars e1 `Set.union` A.exprFreeVars e2
+  aststep A.FreeVarsOp part =
+        aststep CatOp part (A.exprFreeVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for variable searches.
 instance (AstOp A.VarsOp ast (Set U.Ident))
       => AstStep A.VarsOp ExprPart ast (Set U.Ident) where
-  aststep A.VarsOp ast = case ast of
-    ExprCell _ -> Set.empty
-    AssignCell _ e1 e2 -> A.exprVars e1 `Set.union` A.exprVars e2
+  aststep A.VarsOp part =
+        aststep CatOp part (A.exprVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for free variable substitution.
 instance (AstWrap ExprPart ast
         , AstWrap A.ExprPart ast
         , AstOp A.SubstOp ast (A.ExprPart ast -> U.Ident -> ast))
       => AstStep A.SubstOp ExprPart ast (A.ExprPart ast -> U.Ident -> ast) where
-  aststep A.SubstOp orig sub ident = astwrap $ case orig of
-    ExprCell _ -> orig
-    AssignCell c e1 e2 -> AssignCell c (rec e1) (rec e2)
+  aststep A.SubstOp orig sub ident = aststep HomOp orig rec
     where rec e = A.subst e sub ident
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST.
@@ -100,16 +98,20 @@ instance (AstOp SubstCellOp ast (CellId -> U.Ident -> ast)
     AssignCell c e1 e2 -> astwrap $ AssignCell c (rec e1) (rec e2)
     where rec e = substCell e cell ident
 
--- |Specifies a homomorphic operation over TinyBang AST nodes.
+-- |Specifies a homomorphic operation over TinyBang intermediate AST nodes.
 instance (AstWrap ExprPart ast2
         , Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM part = \f -> case part of
-    ExprCell c -> return $ astwrap $ ExprCell c
-    AssignCell c e1 e2 -> do
-      e1' <- f e1
-      e2' <- f e2
-      return $ astwrap $ AssignCell c e1' e2'
+  aststep HomOpM part f = liftM astwrap $ case part of
+    ExprCell c -> return $ ExprCell c
+    AssignCell c e1 e2 -> liftM2 (AssignCell c) (f e1) (f e2)
+
+-- |Specifies a catamorphic operation over TinyBang intermediate AST nodes.
+instance (Monoid r, Monad m)
+      => AstStep CatOpM ExprPart ast ((ast -> m r) -> m r) where
+  aststep CatOpM part f = case part of
+    ExprCell _ -> return $ mempty
+    AssignCell _ e1 e2 -> liftM2 mappend (f e1) (f e2)
 
 -- |Specifies how to display TinyBang interpreter AST nodes.
 instance (Display t) => Display (ExprPart t) where
