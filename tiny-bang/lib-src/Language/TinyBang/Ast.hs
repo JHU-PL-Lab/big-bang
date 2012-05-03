@@ -40,7 +40,8 @@ module Language.TinyBang.Ast
 , Assignable(..)
 ) where
 
-import Control.Monad (liftM,ap)
+import Control.Monad (liftM,liftM2,ap)
+import Data.Monoid (Monoid, mempty, mappend)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Set (Set)
@@ -177,27 +178,17 @@ exprFreeVars = astop FreeVarsOp
 data FreeVarsOp = FreeVarsOp
 instance (AstOp FreeVarsOp ast (Set Ident))
       => AstStep FreeVarsOp ExprPart ast (Set Ident) where
-  aststep FreeVarsOp ast = case ast of
+  aststep FreeVarsOp part = case part of
     Var i -> Set.singleton i
-    Label _ _ e' -> exprFreeVars e'
-    Onion e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
-    OnionProj e' _ -> exprFreeVars e'
-    OnionSub e' _ -> exprFreeVars e'
     Func i e' -> i `Set.delete` exprFreeVars e'
-    Appl e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
-    PrimInt _ -> Set.empty
-    PrimChar _ -> Set.empty
-    PrimUnit -> Set.empty
     Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
       map (\(Branch chi e'') ->
               exprFreeVars e'' `Set.difference` ePatVars chi) brs
-    EmptyOnion -> Set.empty
-    LazyOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
-    EagerOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     Def _ i e1 e2 ->
       (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign i e1 e2 -> i `Set.delete`
         (exprFreeVars e1 `Set.union` exprFreeVars e2)
+    _ -> aststep CatOp part (exprFreeVars :: ast -> Set Ident)
 
 -- |Obtains the set of all variables in a given expression.  This includes the
 --  variables found in patterns and other constructs.
@@ -206,25 +197,15 @@ exprVars = astop VarsOp
 data VarsOp = VarsOp
 instance (AstOp VarsOp ast (Set Ident))
       => AstStep VarsOp ExprPart ast (Set Ident) where
-  aststep VarsOp ast = case ast of
+  aststep VarsOp part = case part of
     Var i -> Set.singleton i
-    Label _ _ e' -> exprVars e'
-    Onion e1 e2 -> exprVars e1 `Set.union` exprVars e2
-    OnionProj e' _ -> exprVars e'
-    OnionSub e' _ -> exprVars e'
     Func i e' -> i `Set.insert` exprVars e'
-    Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
-    PrimInt _ -> Set.empty
-    PrimChar _ -> Set.empty
-    PrimUnit -> Set.empty
     Case e' brs -> Set.union (exprVars e') $ Set.unions $
       map (\(Branch chi e'') ->
               exprVars e'' `Set.difference` ePatVars chi) brs
-    EmptyOnion -> Set.empty
-    LazyOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
-    EagerOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
     Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
     Assign i e1 e2 -> i `Set.insert` (exprVars e1 `Set.union` exprVars e2)
+    _ -> aststep CatOp part (exprVars :: ast -> Set Ident)
 
 -- |Performs a free variable substitution on the provided TinyBang AST.
 subst :: (AstWrap ExprPart ast
@@ -298,7 +279,31 @@ instance (AstWrap ExprPart ast2
             bre' <- f bre
             return $ Branch pat bre'
 
--- Specifies how to display TinyBang AST nodes.
+-- |Specifies a catamorphic operation over TinyBang AST nodes.
+instance (Monoid r, Monad m)
+      => AstStep CatOpM ExprPart ast ((ast -> m r) -> m r) where
+  aststep CatOpM part f = case part of
+    Var _ -> return $ mempty
+    Label _ _ e -> f e
+    Onion e1 e2 -> f e1 *+* f e2
+    OnionSub e _ -> f e
+    OnionProj e _ -> f e
+    Func _ e -> f e
+    Appl e1 e2 -> f e1 *+* f e2
+    PrimInt _ -> return $ mempty
+    PrimChar _ -> return $ mempty
+    PrimUnit -> return $ mempty
+    Case e brs -> foldl (*+*) (f e) $ map (\(Branch _ e') -> f e') brs
+    EmptyOnion -> return $ mempty
+    LazyOp _ e1 e2 -> f e1 *+* f e2
+    EagerOp _ e1 e2 -> f e1 *+* f e2
+    Def _ _ e1 e2 -> f e1 *+* f e2
+    Assign _ e1 e2 -> f e1 *+* f e2
+    where (*+*) :: m r -> m r -> m r
+          x *+* y = liftM2 mappend x y
+          infixl 4 *+*
+
+-- |Specifies how to display TinyBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
   makeDoc a = case a of
     Var i -> text $ unIdent i

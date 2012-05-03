@@ -52,7 +52,7 @@ $( return $ concat $ map (\(i,j) -> Meta.wrapDecls i j)
 --  upcasting).  Homomorphism instances should be of the form
 --  @
 --      instance (AstWrap part, Monad m)
---            => AstStep HomOp part ast1 ((ast1 -> m ast2) -> m ast2)
+--            => AstStep HomOpM part ast1 ((ast1 -> m ast2) -> m ast2)
 --  @
 --  The function of type @ast1 -> ast2@ is to be used on each child node in the
 --  partial AST type.
@@ -78,4 +78,31 @@ instance (AstStep HomOpM part ast1 ((ast1 -> Identity ast2) -> Identity ast2))
 --        found at http://hackage.haskell.org/trac/ghc/ticket/6065
 --upcast :: (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2)) => ast1 -> ast2
 upcast ast = astop HomOp ast upcast
+
+-- |Defines a monadic catamorphic operation over partial AST types which
+--  produces a monoidal result.  Users of this module may provide instances of
+--  this typeclass for generalization of catamorphic operations (such as free
+--  variable assessment) and then define specific catamorphisms by defining
+--  cases for exceptions and then invoking the catamorphism as necessary.
+--  Catamorphism instances should be of the form
+--  @
+--      instance (Monoid r, Monad m)
+--            => AstStep CatOpM part ast ((ast -> m r) -> m r)
+--  @
+--  The function of type @ast -> m r@ is to be used on each child node in the
+--  partial AST type; results are to be combined using @mappend@ and base
+--  cases should be defined using @mempty@.
+data CatOpM = CatOpM
+
+-- |Defines a non-monadic catamorphic operation returning a monoid.  This
+--  operation is provided for convenience; it uses the Identity monad.  This
+--  module provides the appropriate typeclass instance for any type for which
+--  @CatOpM@ has been defined.
+data CatOp = CatOp
+
+-- |A typeclass instance for @CatOp@ given @CatOpM@.
+instance (AstStep CatOpM part ast ((ast -> Identity r) -> Identity r))
+      => AstStep CatOp part ast ((ast -> r) -> r) where
+  aststep CatOp part f =
+    runIdentity $ aststep CatOpM part ((return . f)::(ast -> Identity r))
 
