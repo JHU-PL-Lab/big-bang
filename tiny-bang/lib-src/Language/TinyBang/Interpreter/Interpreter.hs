@@ -137,7 +137,6 @@ evalTop :: forall ast xast.
           , AstOp HomOp ast ((ast -> xast) -> xast)
           , AstOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
           , AstWrap IA.ExprPart xast
-          , AstWrap ExprPart xast
            )
         => ast -> Either (EvalError xast) (Result xast)
 evalTop e =
@@ -154,7 +153,6 @@ type IdMap = Map Ident CellId
 -- |Evaluates a TinyBang expression.
 eval :: (?conf :: Cfg.Config
         , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap ExprPart ast
         , AstWrap IA.ExprPart ast)
      => ast -> EvalM ast (Value ast)
 eval e = astop EvalOp e ?conf
@@ -162,7 +160,6 @@ data EvalOp = EvalOp
 
 -- Provides evaluation behavior for intermediate nodes.
 instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap ExprPart ast
         , AstWrap IA.ExprPart ast)
       => AstStep EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
     where
