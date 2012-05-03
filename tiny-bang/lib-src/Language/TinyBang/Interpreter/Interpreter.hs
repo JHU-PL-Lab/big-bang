@@ -136,7 +136,6 @@ evalTop :: forall ast xast.
            (?conf :: Cfg.Config
           , AstOp HomOp ast ((ast -> xast) -> xast)
           , AstOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
-          , AstWrap IA.ExprPart xast
            )
         => ast -> Either (EvalError xast) (Result xast)
 evalTop e =
@@ -152,8 +151,7 @@ type IdMap = Map Ident CellId
 
 -- |Evaluates a TinyBang expression.
 eval :: (?conf :: Cfg.Config
-        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap IA.ExprPart ast)
+        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast)))
      => ast -> EvalM ast (Value ast)
 eval e = astop EvalOp e ?conf
 data EvalOp = EvalOp
