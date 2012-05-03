@@ -8,8 +8,6 @@ module Language.TinyBang.Syntax.Parser
 , ParseM
 ) where
 
-import Control.Monad (liftM)
-
 -- imports for ParseError
 import Control.Monad.Error (ErrorT, Error, strMsg)
 import Control.Monad.Identity (Identity)
@@ -81,14 +79,14 @@ expr = do
 exprBasic :: GenParser L.Token () A.Expr
 exprBasic = foldl (<|>) (head options) (tail options)
     where
-        options = map (try)
+        options =
            [ lambda
             , fun
             , defin
-            , assign
+            , try assign
             , caseS
-            , opexp
-            , applexp
+            , try opexp
+            , try applexp
             ]
         lambda = do
             _ <- isToken L.TokLambda
@@ -137,7 +135,7 @@ exprRest e1 = do
 onionPart :: GenParser L.Token () (A.Expr -> A.Expr)
 onionPart = foldl (<|>) (head options) (tail options)
     where
-        options = map (try)
+        options =
             [ onion
             , onionsub
             , onionproj
@@ -161,7 +159,7 @@ onionPart = foldl (<|>) (head options) (tail options)
 
 
 applExp :: GenParser L.Token () A.Expr
-applExp = (try primaries) <|> (try primary)
+applExp = try primaries
     where
         primaries = do
             p <- primary
