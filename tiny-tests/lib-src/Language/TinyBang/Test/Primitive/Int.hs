@@ -22,9 +22,9 @@ tests = TestLabel "Integer tests" $ TestList $
   [ testInteger 1234567890
   , testInteger (-1234567890)
   ] ++ map testInteger [-50, 50] ++
-  [ fPars "1_1"
+  [ xPars "1_1" (astwrap $ A.Appl (astwrap $ A.PrimInt 1) (astwrap $ A.Var $ ident "_1"))
   , xPars "_1" (astwrap $ A.Var $ ident "_1")
-  , fPars "1_"
+  , xPars "1_" (astwrap $ A.Appl (astwrap $ A.PrimInt 1) (astwrap $ A.Var $ ident "_"))
   , xLexs "0x1"
       [flip TokIntegerLiteral 0, flip TokIdentifier "x1"]
   , xLexs "-0"
