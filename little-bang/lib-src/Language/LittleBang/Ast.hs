@@ -23,7 +23,8 @@ module Language.LittleBang.Ast
 , TA.exprVars
 ) where
 
-import Control.Monad (liftM, ap)
+import Control.Monad (liftM, liftM2, ap)
+import Data.Monoid (Monoid, mappend, mempty)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -84,7 +85,7 @@ instance (AstOp TA.VarsOp ast (Set Ident))
 instance (AstWrap ExprPart ast2
          ,Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM ast f = liftM astwrap $ case ast of
+  aststep HomOpM part f = liftM astwrap $ case part of
     Self -> return $ Self
     Prior -> return $ Prior
     Proj e i -> Proj <&> e <&^> i
@@ -108,6 +109,21 @@ instance (AstWrap ExprPart ast2
           appbr (TA.Branch pat expr) = do
             expr' <- f expr
             return $ TA.Branch pat expr'
+
+-- |Defines a catamorphism over a tree containing LittleBang AST nodes.
+instance (Monoid r, Monad m)
+      => AstStep CatOpM ExprPart ast1 ((ast1 -> m r) -> m r) where
+  aststep CatOpM part f = case part of
+    Self -> return $ mempty
+    Prior -> return $ mempty
+    Proj e _ -> f e
+    ProjAssign e1 _ e2 e3 -> f e1 *+* f e2 *+* f e3
+    Case e brs -> foldl (*+*) (f e) $ map (\(TA.Branch _ e') -> f e') brs
+    Onion e1 e2 -> f e1 *+* f e2
+    Func _ e -> f e
+    Appl e1 e2 -> f e1 *+* f e2
+    where x *+* y = (liftM2 mappend) x y
+          infixl 4 *+*
 
 -- |Displays LittleBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
