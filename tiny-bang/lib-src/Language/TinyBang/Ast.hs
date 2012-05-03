@@ -219,29 +219,15 @@ data SubstOp = SubstOp
 instance (AstWrap ExprPart ast
         , AstOp SubstOp ast (ExprPart ast -> Ident -> ast))
       => AstStep SubstOp ExprPart ast (ExprPart ast -> Ident -> ast) where
-  aststep SubstOp orig sub ident = astwrap $ case orig of
-    Var i | i == ident -> sub
-    Var _ -> orig
-    Label n m e -> Label n m $ rec e
-    Onion e1 e2 -> Onion (rec e1) (rec e2)
-    OnionSub e s -> OnionSub (rec e) s
-    OnionProj e s -> OnionProj (rec e) s
-    Func i _ | i == ident -> orig
-    Func i e -> Func i $ rec e
-    Appl e1 e2 -> Appl (rec e1) (rec e2)
-    PrimInt _ -> orig
-    PrimChar _ -> orig
-    PrimUnit -> orig
-    Case e branches -> Case (rec e) $
+  aststep SubstOp orig sub ident = case orig of
+    Var i | i == ident -> astwrap $ sub
+    Func i _ | i == ident -> astwrap $ orig
+    Case e branches -> astwrap $ Case (rec e) $
         map (\(Branch pat bre) -> Branch pat $
           (if ident `Set.member` ePatVars pat then id else rec) bre) branches
-    EmptyOnion -> orig
-    LazyOp op e1 e2 -> LazyOp op (rec e1) (rec e2)
-    EagerOp op e1 e2 -> EagerOp op (rec e1) (rec e2)
-    Def m i e1 e2 | i == ident -> Def m i (rec e1) e2
-    Def m i e1 e2 -> Def m i (rec e1) (rec e2)
-    Assign i e1 e2 | i == ident -> Assign i (rec e1) e2
-    Assign i e1 e2 -> Assign i (rec e1) (rec e2)
+    Def m i e1 e2 | i == ident -> astwrap $ Def m i (rec e1) e2
+    Assign i e1 e2 | i == ident -> astwrap $ Assign i (rec e1) e2
+    _ -> aststep HomOp orig rec
     where rec e = subst e sub ident
 
 -- |Specifies a homomorphic operation over TinyBang AST nodes.
