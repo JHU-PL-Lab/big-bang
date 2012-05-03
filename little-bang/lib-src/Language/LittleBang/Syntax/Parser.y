@@ -94,8 +94,7 @@ Exp     :   '\\' ident '->' Exp
                                     { astwrap $
                                         TA.Def (Just $2) (ident $3) $5 $7 }
         |   ident '=' Exp in Exp
-                                    { astwrap $
-                                        TA.Assign (TA.AIdent $ ident $1) $3 $5 }
+                                    { astwrap $ TA.Assign (ident $1) $3 $5 }
         |   Primary '.' ident '=' Exp in Exp
                                     { astwrap $
                                         LA.ProjAssign $1 (ident $3) $5 $7 }

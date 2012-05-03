@@ -20,6 +20,7 @@ import Language.TinyBang.Test.SourceUtils
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 tests :: (?conf :: Cfg.Config) => Test
@@ -34,7 +35,7 @@ tests = TestLabel "Test functions" $ TestList
           identFuncX
   , xType srcY
   , xEval "fun x -> x x"
-          (A.VFunc idX $ astwrap $ A.Appl varX varX)
+          (A.VFunc idX $ (astwrap $ A.Appl varX varX :: IA.Expr))
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 

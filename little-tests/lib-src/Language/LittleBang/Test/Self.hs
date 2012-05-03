@@ -9,6 +9,7 @@ import Language.LittleBang.Test.UtilFunctions
 
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
 
 import qualified Data.IntMap as IntMap
@@ -22,7 +23,7 @@ tests = TestLabel "Tests of self" $ TestList
   [ 
     -- verify that self binds to the empty onion in absence of a wrapping label
     xEval "(fun x -> self) 0"
-          $ (TA.VEmptyOnion :: TA.Value TA.Expr)
+          $ (TA.VEmptyOnion :: TA.Value IA.Expr)
     -- test recursion via self
   , xEval "def x = `Sum (fun n -> case n == 0 of {                      \
           \                         `True _ -> 0;                       \
@@ -38,8 +39,8 @@ tests = TestLabel "Tests of self" $ TestList
           \                                 `S y -> self.isEven y;      \
           \                                 `Z _ -> `False ()})         \
           \in evenOdd.isEven (`S `S `S `S `S `Z ())                     "
-          $ ( TA.VLabel lblFalse 0 :: TA.Value TA.Expr
-            , mkState [ (0, TA.VPrimUnit :: TA.Value TA.Expr) ]
+          $ ( TA.VLabel lblFalse 0 :: TA.Value IA.Expr
+            , mkState [ (0, TA.VPrimUnit :: TA.Value IA.Expr) ]
             )
     -- try mixins!
   , xEval "def obj = `x 3 & `y 4 in                                     \

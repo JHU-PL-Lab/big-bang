@@ -213,16 +213,12 @@ inferType ast@(Ast1p1 expr) = do
       tellInferred $ Cell a1 <: a3
       handleMod tellInferred m a1
       return a2
-    A.Assign a e1 e2 -> do
-      x <- return $! case a of
-        A.AIdent x -> x
-        A.ACell _ -> error "Internal Error; assignment to cell during type derivation!"
-      a3 <- maybe (throwError $ NotClosed x) return =<< (asks $ Map.lookup x)
+    A.Assign i e1 e2 -> do
+      a3 <- maybe (throwError $ NotClosed i) return =<< (asks $ Map.lookup i)
       a1 <- inferType e1
       a2 <- inferType e2
       tellInferred $ a3 <: CellSet a1
       return a2
-    A.ExprCell _ -> error "Implementation error; infer called on ExprCell"
     where tell1 :: T.Constraint -> TIM ()
           tell1 = tell . Set.singleton
           -- |Infers the type of the subexpression in an environment modified by

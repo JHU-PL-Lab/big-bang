@@ -6,6 +6,7 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 -- TODO: write prop_testInteger using quickcheck
@@ -14,7 +15,7 @@ testInteger :: (?conf :: Cfg.Config) => Integer -> Test
 testInteger i = lexParseEval (show i)
                              [flip TokIntegerLiteral i]
                              (astwrap $ A.PrimInt i)
-                             (A.VPrimInt i :: A.Value A.Expr)
+                             (A.VPrimInt i :: A.Value IA.Expr)
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Integer tests" $ TestList $

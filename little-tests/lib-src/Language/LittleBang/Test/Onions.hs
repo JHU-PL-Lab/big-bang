@@ -14,6 +14,7 @@ import Language.LittleBang.Test.NameUtils
 
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
 import Utils.Language.Ast
 
@@ -41,7 +42,7 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                     (astwrap $ TA.Label lblB Nothing $ E.pi 2)
                     :: LA.Expr )
                  ( TA.VOnion (TA.VLabel lblA 0) (TA.VLabel lblB 1)
-                    :: TA.Value TA.Expr
+                    :: TA.Value IA.Expr
                  , mkState [(0, V.pi 1), (1, V.pi 2)]
                  )
   -- Test that right wins

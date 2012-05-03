@@ -32,8 +32,6 @@ module Language.TinyBang.Ast
 , FreeVarsOp(..)
 , subst
 , SubstOp(..)
-, substCell
-, SubstCellOp(..)
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
@@ -83,10 +81,9 @@ data ExprPart t
   | PrimUnit
   | Case t (Branches t)
   | Def (Maybe Modifier) Ident t t
-  | Assign Assignable t t
+  | Assign Ident t t
   | LazyOp LazyOperator t t
   | EagerOp EagerOperator t t
-  | ExprCell CellId
   deriving (Eq, Ord, Show)
 
 data Modifier
@@ -197,12 +194,8 @@ instance (AstOp FreeVarsOp ast (Set Ident))
     EagerOp _ e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
     Def _ i e1 e2 ->
       (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
-    Assign a e1 e2 ->
-        ((case a of
-            AIdent i -> (Set.delete i)
-            ACell _ -> id) $ exprFreeVars e2)
-          `Set.union` exprFreeVars e1
-    ExprCell _ -> Set.empty
+    Assign i e1 e2 -> i `Set.delete`
+        (exprFreeVars e1 `Set.union` exprFreeVars e2)
 
 -- |Obtains the set of all variables in a given expression.  This includes the
 --  variables found in patterns and other constructs.
@@ -229,10 +222,7 @@ instance (AstOp VarsOp ast (Set Ident))
     LazyOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
     EagerOp _ e1 e2 -> exprVars e1 `Set.union` exprVars e2
     Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
-    Assign a e1 e2 -> (case a of
-                        AIdent i -> Set.insert i
-                        ACell _ -> id) $ exprVars e1 `Set.union` exprVars e2
-    ExprCell _ -> Set.empty
+    Assign i e1 e2 -> i `Set.insert` (exprVars e1 `Set.union` exprVars e2)
 
 -- |Performs a free variable substitution on the provided TinyBang AST.
 subst :: (AstWrap ExprPart ast
@@ -267,35 +257,9 @@ instance (AstWrap ExprPart ast
     EagerOp op e1 e2 -> EagerOp op (rec e1) (rec e2)
     Def m i e1 e2 | i == ident -> Def m i (rec e1) e2
     Def m i e1 e2 -> Def m i (rec e1) (rec e2)
-    Assign (AIdent i) e1 e2 | i == ident -> Assign (AIdent i) (rec e1) e2
-    Assign a e1 e2 -> Assign a (rec e1) (rec e2)
-    ExprCell _ -> orig
+    Assign i e1 e2 | i == ident -> Assign i (rec e1) e2
+    Assign i e1 e2 -> Assign i (rec e1) (rec e2)
     where rec e = subst e sub ident
-
--- |Performs a free variable cell substitution on the provided TinyBang AST.
---  This routine will address both LHS and RHS variables.
-substCell :: (AstWrap ExprPart ast
-            , AstStep HomOp ExprPart ast ((ast -> ast) -> ast)
-            , AstOp SubstCellOp ast (CellId -> Ident -> ast))
-          => ast -> CellId -> Ident -> ast
-substCell = astop SubstCellOp
-data SubstCellOp = SubstCellOp
-instance (AstWrap ExprPart ast
-        , AstStep SubstOp ExprPart ast (ExprPart ast -> Ident -> ast)
-        , AstOp SubstCellOp ast (CellId -> Ident -> ast))
-      => AstStep SubstCellOp ExprPart ast (CellId -> Ident -> ast) where
-  aststep SubstCellOp orig cell ident = case orig of
-    Var i | i == ident -> astwrap $ ExprCell cell
-    Def m i e1 e2 | i == ident -> astwrap $ Def m i (rec e1) e2
-    Assign a e1 e2 -> astwrap $ 
-      case a of
-        AIdent i | i == ident -> Assign (ACell cell) (rec e1) (rec e2)
-        _ -> Assign a (rec e1) (rec e2)
-    Case e brs -> astwrap $ Case (rec e) $
-        map (\(Branch pat bre) -> Branch pat $
-          (if ident `Set.member` ePatVars pat then id else rec) bre) brs
-    _ -> aststep HomOp orig rec
-    where rec e = substCell e cell ident
 
 -- |Specifies a homomorphic operation over TinyBang AST nodes.
 instance (AstWrap ExprPart ast2
@@ -343,11 +307,10 @@ instance (AstWrap ExprPart ast2
         e1' <- f e1
         e2' <- f e2
         return $ astwrap $ Def m i e1' e2'
-    Assign a e1 e2 -> do
+    Assign i e1 e2 -> do
         e1' <- f e1
         e2' <- f e2
-        return $ astwrap $ Assign a e1' e2'
-    ExprCell c -> return $ astwrap $ ExprCell c
+        return $ astwrap $ Assign i e1' e2'
     where appbr f (Branch pat bre) = do
             bre' <- f bre
             return $ Branch pat bre'
@@ -378,7 +341,6 @@ instance (Display t) => Display (ExprPart t) where
       hsep [text "def", dispMod m, makeDoc i,
             text "=", makeDoc v, text "in", makeDoc e]
     Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-    ExprCell c -> text "Cell #" <> int c
     where dispMod m = case m of
             Just Final -> text "final"
             Just Immutable -> text "immut"
@@ -416,10 +378,6 @@ instance Display (Chi a) where
       ChiFun -> text "fun"
       ChiInnerStruct s -> parens $ makeDoc s
     where iDoc = text . unIdent
-
-instance Display Assignable where
-  makeDoc (AIdent i) = makeDoc i
-  makeDoc (ACell v) = makeDoc v
 
 class Evaluated t a where
   value :: a -> Value t

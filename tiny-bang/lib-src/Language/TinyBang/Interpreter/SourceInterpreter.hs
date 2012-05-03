@@ -15,6 +15,7 @@ import qualified Data.IntMap as IntMap
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Interpreter.Interpreter as I
 import qualified Language.TinyBang.Syntax.Lexer as L
 import qualified Language.TinyBang.Syntax.Parser as P
@@ -24,8 +25,8 @@ import qualified Language.TinyBang.Types.Types as T
 import Utils.Render.Display
 
 data EvalSuccessOrFailure
-    = EvalSuccess (A.Value A.Expr, IntMap (A.Value A.Expr))
-    | EvalFailure (I.EvalError A.Expr)
+    = EvalSuccess (A.Value IA.Expr, IntMap (A.Value IA.Expr))
+    | EvalFailure (I.EvalError IA.Expr)
 
 -- |A result type for evalStringTop
 data EvalStringResult

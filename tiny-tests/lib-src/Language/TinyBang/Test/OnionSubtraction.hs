@@ -6,11 +6,12 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 import qualified Data.IntMap as IntMap
 
-zero :: A.Value A.Expr
+zero :: A.Value IA.Expr
 zero = A.VPrimInt 0
 
 tests :: (?conf :: Cfg.Config) => Test

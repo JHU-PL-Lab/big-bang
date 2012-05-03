@@ -10,6 +10,7 @@ import qualified Language.LittleBang.Test.ExpressionUtils as E
   ( pi
   )
 import qualified Language.TinyBang.Ast as TA
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Config as Cfg
 import Utils.Language.Ast
@@ -31,7 +32,7 @@ tests = TestLabel "Tests on integer operations" $ TestList
                  (astwrap $ TA.LazyOp TA.Plus
                     (astwrap $ TA.LazyOp TA.Minus (E.pi 3) (E.pi 1))
                     (E.pi 2))
-                 (V.pi 4 :: TA.Value TA.Expr)
+                 (V.pi 4 :: TA.Value IA.Expr)
 -- Test parse and evaluation of some simple arithmetic applications
   , xPars "2 + 2" $ astwrap $
           TA.LazyOp TA.Plus (E.pi 2) (E.pi 2)

@@ -44,15 +44,12 @@ import Language.TinyBang.Ast
   , Expr
   , ExprPart(..)
   , Value(..)
-  , Assignable(..)
   , LazyOperator(..)
   , EagerOperator(..)
   , ProjTerm(..)
   , CellId
-  , ePatVars
-  , substCell
-  , SubstCellOp(..)
   )
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 import Language.TinyBang.Types.UtilTypes
@@ -74,7 +71,6 @@ data EvalError t =
     | NotClosed Ident
     | UnmatchedCase (Value t) (Branches t)
     | IllegalComparison EagerOperator (Value t) (Value t)
-    | IllegalAssignment Assignable
     deriving (Eq, Show)
 instance Error (EvalError t) where
   strMsg = error
@@ -96,8 +92,6 @@ instance (Display t) => Display (EvalError t) where
       IllegalComparison op v1 v2 ->
         text "The comparison" <+> makeDoc op <+> makeDoc v1 <+> makeDoc v2 <+>
         text "cannot be is not well typed."
-      IllegalAssignment a ->
-        text "The value" <+> makeDoc a <+> text "can't be assigned to."
 
 -- I'm not sure if this or the other order of the monad transformers is
 -- preferable to the alternative. TODO: figure it out.
@@ -138,15 +132,13 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 --
 -- Definitions for functions related to expression evaluation.
 
--- |Performs top-level evaluation of a Big Bang expression.  This evaluation
---  routine binds built-in functions (like "plus") to the appropriate
---  expressions.
-evalTop :: (?conf :: Cfg.Config, Eq ast
-          , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-          , AstWrap ExprPart ast)
-        => ast -> Either (EvalError ast) (Result ast)
+-- |Performs an evaluation of a TinyBang expression.
+evalTop :: (?conf :: Cfg.Config)
+        => Expr -> Either (EvalError IA.Expr) (Result IA.Expr)
 evalTop e =
-    fmap (second snd) $ runStateT (eval e) (0, IntMap.empty)
+    let e' :: IA.Expr
+        e' = upcast e in
+    fmap (second snd) $ runStateT (eval e') (0, IntMap.empty)
 
 onion :: Value t -> Value t -> Value t
 onion VEmptyOnion v = v
@@ -158,14 +150,32 @@ type IdMap = Map Ident CellId
 -- |Evaluates a TinyBang expression.
 eval :: (?conf :: Cfg.Config
         , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap ExprPart ast)
+        , AstWrap ExprPart ast
+        , AstWrap IA.ExprPart ast)
      => ast -> EvalM ast (Value ast)
 eval e = astop EvalOp e ?conf
 data EvalOp = EvalOp
+
+-- Provides evaluation behavior for intermediate nodes.
+instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+        , AstWrap ExprPart ast
+        , AstWrap IA.ExprPart ast)
+      => AstStep EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
+    where
+  aststep EvalOp ast = \config -> let ?conf = config in
+    case ast of
+      IA.ExprCell c -> readCell c
+      IA.AssignCell c e1 e2 -> do
+        v1 <- eval e1
+        writeCell c v1
+        eval e2 
+
+-- Provides evaluation behavior for TinyBang nodes.
 instance (Eq ast, Display ast
         , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstOp SubstCellOp ast (CellId -> Ident -> ast)
-        , AstWrap ExprPart ast)
+        , AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+        , AstWrap ExprPart ast
+        , AstWrap IA.ExprPart ast)
       => AstStep EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
   aststep EvalOp ast = \config -> let ?conf = config in
     case ast of
@@ -174,7 +184,6 @@ instance (Eq ast, Display ast
       PrimChar c -> return $ VPrimChar c
       PrimUnit -> return $ VPrimUnit
       Var i -> throwError $ NotClosed i
-      ExprCell c -> readCell c
       Label n _ e -> do
         v <- eval e
         c <- newCell v
@@ -214,7 +223,7 @@ instance (Eq ast, Display ast
         cellId <- newCell v2
         let v1' = eProj T.TpFun v1
         case v1' of
-          Just (VFunc i body) -> eval $ substCell body cellId i
+          Just (VFunc i body) -> eval $ IA.substCell body cellId i
           _ -> throwError $ ApplNotFunction v1 v2
       Case e' branches -> do
         v <- eval e'
@@ -228,20 +237,22 @@ instance (Eq ast, Display ast
                     Nothing -> findAnswer bs'
                     Just expr -> return expr
         eval =<< findAnswer branches
-        where eMatch :: (AstOp SubstCellOp ast (CellId -> Ident -> ast)
-                        ,AstWrap ExprPart ast)
+        where eMatch :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                        ,AstWrap ExprPart ast
+                        ,AstWrap IA.ExprPart ast)
                      => Value ast -> Branch ast -> EvalM ast (Maybe ast)
               eMatch v (Branch chi e1) = do -- EvalM
                 m <- eSearch v chi
                 return $ do -- Maybe
                   b <- m
                   return $ eSubstAll e1 b
-              eSubstAll :: (AstOp SubstCellOp ast (CellId -> Ident -> ast)
-                           ,AstWrap ExprPart ast)
+              eSubstAll :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                           ,AstWrap ExprPart ast
+                           ,AstWrap IA.ExprPart ast)
                         => ast -> IdMap -> ast
               eSubstAll expr b = Map.foldrWithKey foldSubst expr b
                 where foldSubst ident cellid sexpr =
-                        substCell sexpr cellid ident
+                        IA.substCell sexpr cellid ident
               eSearch :: Value ast -> Chi a -> EvalM ast (Maybe IdMap)
               eSearch v chi =
                 case chi of
@@ -332,14 +343,8 @@ instance (Eq ast, Display ast
       Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
-        eval $ substCell e2 cellId i
-      Assign a e1 e2 -> do
-        case a of
-          AIdent i -> throwError $ NotClosed i
-          ACell c -> do
-            v1 <- eval e1
-            writeCell c v1
-            eval e2
+        eval $ IA.substCell e2 cellId i
+      Assign i _ _ -> throwError $ NotClosed i
       LazyOp op e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2

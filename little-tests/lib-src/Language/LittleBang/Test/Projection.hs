@@ -7,17 +7,18 @@ import Language.LittleBang.Test.UtilFunctions
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 -- TODO: write a quickcheck that "case `lbl e of { `lbl x -> x }" == e
 
-zero :: TA.Value TA.Expr
+zero :: TA.Value IA.Expr
 zero = TA.VPrimInt 0
-one :: TA.Value TA.Expr
+one :: TA.Value IA.Expr
 one = TA.VPrimInt 1
-two :: TA.Value TA.Expr
+two :: TA.Value IA.Expr
 two = TA.VPrimInt 2
-four :: TA.Value TA.Expr
+four :: TA.Value IA.Expr
 four = TA.VPrimInt 4
 
 tests :: (?conf :: Cfg.Config) => Test

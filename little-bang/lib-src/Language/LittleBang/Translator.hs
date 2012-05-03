@@ -93,7 +93,7 @@ instance (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
         return $ astwrap $ TA.Case e1'
           [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
                         TA.ChiLabelShallow (itl i) $ free) $ astwrap $
-                          TA.Assign (TA.AIdent free) e2' e3' ]
+                          TA.Assign free e2' e3' ]
       LA.Case e brs -> do
         e' <- f e
         brs' <- mapM (selfEncodeBranch f) brs

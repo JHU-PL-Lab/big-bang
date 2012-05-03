@@ -117,7 +117,7 @@ exprBasic = foldl (<|>) (head options) (tail options)
             e1 <- expr
             _ <- isToken L.TokIn
             e2 <- expr
-            return (astwrap $ A.Assign (A.AIdent $ ident i) e1 e2)
+            return (astwrap $ A.Assign (ident i) e1 e2)
         caseS = do
             _ <- isToken L.TokCase
             e <- expr

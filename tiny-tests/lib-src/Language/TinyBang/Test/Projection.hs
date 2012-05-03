@@ -6,17 +6,18 @@ where
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 -- TODO: write a quickcheck that "case `lbl e of { `lbl x -> x }" == e
 
-zero :: A.Value A.Expr
+zero :: A.Value IA.Expr
 zero = A.VPrimInt 0
-one :: A.Value A.Expr
+one :: A.Value IA.Expr
 one = A.VPrimInt 1
-two :: A.Value A.Expr
+two :: A.Value IA.Expr
 two = A.VPrimInt 2
-four :: A.Value A.Expr
+four :: A.Value IA.Expr
 four = A.VPrimInt 4
 
 tests :: (?conf :: Cfg.Config) => Test

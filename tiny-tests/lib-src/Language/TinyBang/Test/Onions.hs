@@ -14,6 +14,7 @@ import Language.TinyBang.Test.NameUtils
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
 import qualified Data.IntMap as IntMap
@@ -38,7 +39,8 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                  ( astwrap $ A.Onion
                     (astwrap $ A.Label lblA Nothing $ E.pi 1)
                     (astwrap $ A.Label lblB Nothing $ E.pi 2) )
-                 ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1) :: A.Value A.Expr
+                 ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
+                    :: A.Value IA.Expr
                  , mkState [(0, V.pi 1), (1, V.pi 2)]
                  )
   -- Test that right wins

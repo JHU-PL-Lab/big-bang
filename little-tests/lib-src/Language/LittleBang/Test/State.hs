@@ -9,12 +9,14 @@ import Language.LittleBang.Test.ExpressionUtils
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Utils.Language.Ast
 
+efour :: LA.Expr
 efour = astwrap $ TA.PrimInt 4
-four :: TA.Value TA.Expr
+four :: TA.Value IA.Expr
 four = TA.VPrimInt 4
-two :: TA.Value TA.Expr
+two :: TA.Value IA.Expr
 two = TA.VPrimInt 2
 
 tests :: (?conf :: Cfg.Config) => Test
@@ -22,16 +24,16 @@ tests = TestLabel "State tests" $ TestList
   [ xPars "def x = 4 in x" $
           astwrap $ TA.Def Nothing idX efour varX
   , xPars "x = 4 in x" $
-          astwrap $ TA.Assign (TA.AIdent idX) efour varX
+          astwrap $ TA.Assign idX efour varX
   , xPars "def x = 4 in x & 'a'" $
           astwrap $ TA.Def Nothing idX efour $ astwrap $
             LA.Onion varX $ astwrap $ TA.PrimChar 'a'
   , xPars "x = 4 in x & 'a'" $
-          astwrap $ TA.Assign (TA.AIdent idX) efour $ astwrap $
+          astwrap $ TA.Assign idX efour $ astwrap $
             LA.Onion varX $ astwrap $ TA.PrimChar 'a'
   , xPars "def x = 3 in x = 4 in x" $
           astwrap $ TA.Def Nothing idX (astwrap $ TA.PrimInt 3) $ astwrap $
-            TA.Assign (TA.AIdent idX) efour varX
+            TA.Assign idX efour varX
 
   -- Test evaluation of definition and assignment
   , xEval "def x = 4 in x" four

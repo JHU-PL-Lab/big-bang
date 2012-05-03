@@ -13,6 +13,7 @@ import Language.LittleBang.Test.ExpressionUtils
   )
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
 import Utils.Language.Ast
 
@@ -36,7 +37,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  ]
                  (astwrap $ TA.Label lblTrue Nothing $ astwrap TA.PrimUnit
                     :: LA.Expr)
-                 ( TA.VLabel lblTrue 0 :: TA.Value TA.Expr
+                 ( TA.VLabel lblTrue 0 :: TA.Value IA.Expr
                  , makeState [(0, TA.VPrimUnit)]
                  )
   , lexParseEval "`False ()"
@@ -47,7 +48,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  ]
                  (astwrap $ TA.Label lblFalse Nothing $ astwrap TA.PrimUnit
                     :: LA.Expr)
-                 ( TA.VLabel lblFalse 0 :: TA.Value TA.Expr
+                 ( TA.VLabel lblFalse 0 :: TA.Value IA.Expr
                  , makeState [(0, TA.VPrimUnit)]
                  )
   ]

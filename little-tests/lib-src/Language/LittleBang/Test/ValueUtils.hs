@@ -18,8 +18,9 @@ import Language.LittleBang.Test.NameUtils
 import Language.LittleBang.Test.UtilFunctions
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
+import qualified Language.TinyBang.Interpreter.Ast as IA
 
-pi :: Integer -> TA.Value TA.Expr
+pi :: Integer -> TA.Value IA.Expr
 pi = TA.VPrimInt
 
 identFuncX = TA.VFunc idX varX

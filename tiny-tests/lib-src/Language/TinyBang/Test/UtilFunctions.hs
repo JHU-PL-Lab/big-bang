@@ -37,6 +37,7 @@ import Language.TinyBang.Interpreter.SourceInterpreter
 import Language.TinyBang.Ast (vmPair, Evaluated)
 import Language.TinyBang.Syntax.Lexer (Token, SourceLocation, defaultSourceLocation)
 import qualified Language.TinyBang.Ast as A (Expr, Value)
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Types.TypeInference as TI
   (TypeInferenceError (..))
 import qualified Language.TinyBang.Syntax.Lexer as L
@@ -47,9 +48,9 @@ import Utils.Render.Display (display, Display)
 import qualified Language.TinyBang.Config as Cfg
 
 type TinyBangCode = String
-type Result = (A.Value A.Expr, IntMap.IntMap (A.Value A.Expr))
+type Result = (A.Value IA.Expr, IntMap.IntMap (A.Value IA.Expr))
 
-xEval :: (Display v, Evaluated A.Expr v, ?conf :: Cfg.Config) => TinyBangCode -> v -> Test
+xEval :: (Display v, Evaluated IA.Expr v, ?conf :: Cfg.Config) => TinyBangCode -> v -> Test
 xEval code expectedResult =
   label ~: TestCase $ case wrappedResult of
     EvalResult _ sOrF -> case sOrF of
@@ -66,7 +67,7 @@ xEval code expectedResult =
         label = show code ++
                 " was expected to produce " ++ display expectedResult
 
-xvEval :: (?conf :: Cfg.Config) => TinyBangCode -> A.Value A.Expr -> Test
+xvEval :: (?conf :: Cfg.Config) => TinyBangCode -> A.Value IA.Expr -> Test
 xvEval = xEval
 
 xsEval :: (?conf :: Cfg.Config) => TinyBangCode -> Result -> Test
@@ -160,7 +161,7 @@ fPars code =
   where label = "Parsing " ++ show code
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
-lexParseEval :: (Display a, Evaluated A.Expr a, ?conf :: Cfg.Config)
+lexParseEval :: (Display a, Evaluated IA.Expr a, ?conf :: Cfg.Config)
              => TinyBangCode -> [SourceLocation -> Token] -> A.Expr -> a
              -> Test
 lexParseEval code lex expr val =
@@ -169,7 +170,7 @@ lexParseEval code lex expr val =
            , xEval code val
            ]
 
-makeState :: [(Int, A.Value A.Expr)] -> IntMap.IntMap (A.Value A.Expr)
+makeState :: [(Int, A.Value IA.Expr)] -> IntMap.IntMap (A.Value IA.Expr)
 makeState = IntMap.fromList
 
 -- label :: (Evaluated a) => String -> a -> Result

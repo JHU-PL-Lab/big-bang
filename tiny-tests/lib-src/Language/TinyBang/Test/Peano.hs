@@ -13,6 +13,7 @@ import Language.TinyBang.Test.NameUtils
   )
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import Data.IntMap (IntMap)
 
 peanoSrcZero =
@@ -35,7 +36,7 @@ peanoSrcMult =
   \                            `S x' -> this (plus accum y) x' y }) in         \
   \def mult = multHelper zero in                                               "
 
-peanoVal :: Int -> (A.Value A.Expr, IntMap (A.Value A.Expr))
+peanoVal :: Int -> (A.Value IA.Expr, IntMap (A.Value IA.Expr))
 peanoVal x = case x of
   0 -> (A.VLabel lblZ 0, makeState [(0,A.VPrimUnit)])
   1 -> (A.VLabel lblS 0, makeState [(0,A.VLabel lblZ 1), (1,A.VPrimUnit)])

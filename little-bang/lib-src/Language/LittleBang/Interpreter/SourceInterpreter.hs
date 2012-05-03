@@ -25,6 +25,7 @@ import Language.LittleBang.Translator (convertLittleToTiny)
 
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cnf
+import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Interpreter.Interpreter as I
 import qualified Language.TinyBang.Types.Closure as C
 import qualified Language.TinyBang.Types.TypeInference as TI
@@ -33,8 +34,8 @@ import qualified Language.TinyBang.Types.Types as T
 import Utils.Render.Display
 
 data EvalSuccessOrFailure
-    = EvalSuccess (TA.Value TA.Expr, IntMap (TA.Value TA.Expr))
-    | EvalFailure (I.EvalError TA.Expr)
+    = EvalSuccess (TA.Value IA.Expr, IntMap (TA.Value IA.Expr))
+    | EvalFailure (I.EvalError IA.Expr)
 
 -- |A result type for evalStringTop
 data EvalStringResult
