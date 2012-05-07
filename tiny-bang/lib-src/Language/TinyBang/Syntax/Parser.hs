@@ -39,6 +39,7 @@ tokCharLit = (flip L.TokCharLiteral 'x')
 tokIntLit :: L.SourceLocation -> L.Token
 tokIntLit = (flip L.TokIntegerLiteral 0)
 
+-- TODO: refactor to use Parsec's error messages in some way
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
 parseTinyBang ts =  case parse parser "" ts of
     Left _ -> Left (ParseError ts)
