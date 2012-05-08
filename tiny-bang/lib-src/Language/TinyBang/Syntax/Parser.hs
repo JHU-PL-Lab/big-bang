@@ -5,13 +5,8 @@
 module Language.TinyBang.Syntax.Parser
 ( parseTinyBang
 , ParseError
-, ParseM
-) where
-
--- imports for ParseError
-import Control.Monad.Error (ErrorT, Error, strMsg)
-import Control.Monad.Identity (Identity)
-import Data.Maybe (listToMaybe)
+)
+where
 
 -- imports from the rest of TinyBang
 import qualified Language.TinyBang.Ast as A
@@ -27,7 +22,7 @@ import Utils.Language.Ast
 import Utils.Render.Display
 
 -- imports for Parsec
-import Text.ParserCombinators.Parsec (GenParser, parse)
+import Text.ParserCombinators.Parsec (GenParser, parse, ParseError)
 import Text.Parsec.Combinator (optionMaybe, eof)
 import Text.Parsec.Prim (token, many,(<|>),try)
 import Text.Parsec.Pos (initialPos)
@@ -41,7 +36,7 @@ tokIntLit = (flip L.TokIntegerLiteral 0)
 
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
 parseTinyBang ts =  case parse parser "" ts of
-    Left _ -> Left (ParseError ts)
+    Left x -> Left x
     Right x -> Right x
 parser :: GenParser L.Token () A.Expr
 parser = do
@@ -380,23 +375,9 @@ op = foldl (<|>) (head options) (tail options)
             _ <- isToken L.TokOpGreaterEquals
             return $ binwrap $ (A.EagerOp A.GreaterEqual)
 
-data ParseError = ParseError [L.Token]
-instance Error ParseError where
-    strMsg = error
 instance Display ParseError where
-    makeDoc err =
-            let desc = case err of
-                        ParseError tokens ->
-                            maybe "<EOS>" display $ listToMaybe tokens
-            in text "unexpected" <+> text desc <+> text "token"
-instance Show ParseError where
-    show err = let ?conf = False in display err
-
-type ParseM a = ErrorT ParseError Identity a
+    makeDoc err = text (show err)
 
 binwrap :: (AstWrap A.ExprPart ast)
         => (ast -> ast -> A.ExprPart ast) -> (ast -> ast -> ast)
 binwrap f = \x y -> astwrap $ f x y
-
---parseError :: [L.Token] -> ParseM a
---parseError = throwError . ParseError
