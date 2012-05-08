@@ -41,7 +41,6 @@ import Language.TinyBang.Ast
   , Chi(..)
   , ChiPrimary
   , ChiStruct
-  , Expr
   , ExprPart(..)
   , Value(..)
   , LazyOperator(..)
@@ -133,11 +132,14 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- Definitions for functions related to expression evaluation.
 
 -- |Performs an evaluation of a TinyBang expression.
-evalTop :: (?conf :: Cfg.Config)
-        => Expr -> Either (EvalError IA.Expr) (Result IA.Expr)
+evalTop :: forall ast xast. 
+           (?conf :: Cfg.Config
+          , AstOp HomOp ast ((ast -> xast) -> xast)
+          , AstOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
+           )
+        => ast -> Either (EvalError xast) (Result xast)
 evalTop e =
-    let e' :: IA.Expr
-        e' = upcast e in
+    let e' = (upcast e :: xast) in
     fmap (second snd) $ runStateT (eval e') (0, IntMap.empty)
 
 onion :: Value t -> Value t -> Value t
@@ -149,16 +151,13 @@ type IdMap = Map Ident CellId
 
 -- |Evaluates a TinyBang expression.
 eval :: (?conf :: Cfg.Config
-        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap ExprPart ast
-        , AstWrap IA.ExprPart ast)
+        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast)))
      => ast -> EvalM ast (Value ast)
 eval e = astop EvalOp e ?conf
 data EvalOp = EvalOp
 
 -- Provides evaluation behavior for intermediate nodes.
 instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap ExprPart ast
         , AstWrap IA.ExprPart ast)
       => AstStep EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
     where

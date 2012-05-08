@@ -4,6 +4,7 @@
             , GADTs
             , StandaloneDeriving
             , MultiParamTypeClasses
+            , ScopedTypeVariables
             #-}
 module Language.LittleBang.Ast
 ( Expr
@@ -22,6 +23,8 @@ module Language.LittleBang.Ast
 , TA.exprVars
 ) where
 
+import Control.Monad (liftM, liftM2, ap)
+import Data.Monoid (Monoid, mappend, mempty)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -82,35 +85,45 @@ instance (AstOp TA.VarsOp ast (Set Ident))
 instance (AstWrap ExprPart ast2
          ,Monad m)
       => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM ast = \f -> case ast of
-    Self -> return $ astwrap $ Self
-    Prior -> return $ astwrap $ Prior
-    Proj e i -> do
-        e' <- f e
-        return $ astwrap $ Proj e' i
-    ProjAssign e1 i e2 e3 -> do
-        e1' <- f e1
-        e2' <- f e2
-        e3' <- f e3
-        return $ astwrap $ ProjAssign e1' i e2' e3'
+  aststep HomOpM part f = liftM astwrap $ case part of
+    Self -> return $ Self
+    Prior -> return $ Prior
+    Proj e i -> Proj <&> e <&^> i
+    ProjAssign e1 i e2 e3 -> ProjAssign <&> e1 <&^> i <&*> e2 <&*> e3
     Case e brs -> do
         e' <- f e
-        brs' <- mapM (appbrs f) brs
-        return $ astwrap $ Case e' brs'
-    Onion e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Onion e1' e2'
-    Func i e -> do
-        e' <- f e
-        return $ astwrap $ Func i e'
-    Appl e1 e2 -> do
-        e1' <- f e1
-        e2' <- f e2
-        return $ astwrap $ Appl e1' e2'
-    where appbrs f (TA.Branch pat expr) = do
+        brs' <- mapM appbr brs
+        return $ Case e' brs'
+    Onion e1 e2 -> Onion <&> e1 <&*> e2
+    Func i e -> Func i <&> e
+    Appl e1 e2 -> Appl <&> e1 <&*> e2
+    where (<&>) :: (ast2 -> b) -> ast1 -> m b
+          c <&> e = liftM c $ f e
+          infixl 4 <&>
+          (<&*>) :: m (ast2 -> b) -> ast1 -> m b
+          mc <&*> e = mc `ap` f e
+          infixl 4 <&*>
+          (<&^>) :: m (a -> b) -> a -> m b
+          mc <&^> p = mc `ap` return p
+          infixl 4 <&^>
+          appbr (TA.Branch pat expr) = do
             expr' <- f expr
             return $ TA.Branch pat expr'
+
+-- |Defines a catamorphism over a tree containing LittleBang AST nodes.
+instance (Monoid r, Monad m)
+      => AstStep CatOpM ExprPart ast1 ((ast1 -> m r) -> m r) where
+  aststep CatOpM part f = case part of
+    Self -> return $ mempty
+    Prior -> return $ mempty
+    Proj e _ -> f e
+    ProjAssign e1 _ e2 e3 -> f e1 *+* f e2 *+* f e3
+    Case e brs -> foldl (*+*) (f e) $ map (\(TA.Branch _ e') -> f e') brs
+    Onion e1 e2 -> f e1 *+* f e2
+    Func _ e -> f e
+    Appl e1 e2 -> f e1 *+* f e2
+    where x *+* y = (liftM2 mappend) x y
+          infixl 4 *+*
 
 -- |Displays LittleBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
