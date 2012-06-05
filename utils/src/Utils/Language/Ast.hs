@@ -72,12 +72,14 @@ instance (AstStep HomOpM part ast1 ((ast1 -> Identity ast2) -> Identity ast2))
 
 -- |Performs an upcasting operation on an AST over which homomorphisms are
 --  defined.
---  NOTE: due to a bug present in at least GHC 7.4.1, attaching a type
---        signature to this function causes a type error.  Leaving the
---        signature inferred seems to work.  The ticket for this bug can be
---        found at http://hackage.haskell.org/trac/ghc/ticket/6065
---upcast :: (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2)) => ast1 -> ast2
-upcast ast = astop HomOp ast upcast
+--  NOTE: due to a bug present in at least GHC 7.4.1, the GHC compiler will
+--        suggest an incorrect type signature for this function.  The type
+--        signature shown here, in concert with the explicit annotation of
+--        upcast in the definition, is sufficient.   The ticket for this bug
+--        can be found at http://hackage.haskell.org/trac/ghc/ticket/6065
+upcast :: forall ast1 ast2.
+            (AstOp HomOp ast1 ((ast1 -> ast2) -> ast2)) => ast1 -> ast2
+upcast ast = astop HomOp ast (upcast :: ast1 -> ast2)
 
 -- |Defines a monadic catamorphic operation over partial AST types which
 --  produces a monoidal result.  Users of this module may provide instances of
