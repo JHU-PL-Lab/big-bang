@@ -20,7 +20,9 @@ import Data.Map (Map)
 import Data.Monoid (Monoid, mempty)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Control.Applicative ((<$>))
+import Control.Monad (foldM)
+import Control.Applicative ((<$>), (<*>), pure)
+import Control.Arrow ((***))
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Types.Types as T
@@ -38,6 +40,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , CellGet(..)
                                      , CellSet(..)
                                      , Cell(..)
+                                     , histFIXME
                                      )
 import Language.TinyBang.Types.UtilTypes
 import Utils.Language.Ast
@@ -51,9 +54,9 @@ data TypeInferenceError
       -- |Indicates that an expression contained an unbound variable.
       = NotClosed Ident
       -- |Indicates that a variable is bound twice in a pattern
-      | DoubleBound Ident A.ChiMain
+      | DoubleBound Ident A.Pattern
       -- |Indicates that a label name is used twice in a multipattern
-      | DoubleLabel LabelName A.ChiMain
+      | DoubleLabel LabelName A.Pattern
     deriving (Show)
 instance Error TypeInferenceError where
     strMsg = error
@@ -112,18 +115,20 @@ inferType ast@(Ast1p1 expr) = do
       a2 <- inferType e2
       tellInferred $ TdOnion a1 a2 <: a0
       return a0
-    A.Func i e -> do
+    A.Scape pat e -> do
+      _ <- tPatCheck pat
       a1 <- freshVar
-      a2 <- freshVar
-      (a3, constraints) <- capture (Map.insert i a2) e
-      vars <-
-        return $ Set.difference
-          ( Set.union (extractConstraintTypeVars constraints)
-          $ Set.fromList [alphaWeaken a2, alphaWeaken a3])
-          ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
-      let funcType = T.TdFunc
-            (T.PolyFuncData (T.ForallVars vars) a2 a3 constraints)
-      tellInferred $ funcType <: a1
+      (gamma', c', tpat) <- tPatType pat
+      -- Since Map.union prefers the leftmost occurrence, the bindings in gamma'
+      -- override the ones in gamma
+      (a2, c) <- capture (Map.union gamma') e
+      let vars = Set.difference
+           ( Set.union (extractConstraintTypeVars c)
+           $ Set.fromList [alphaWeaken a1, alphaWeaken a2])
+           ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
+      let scapeType = T.TdScape
+            (T.ScapeData (T.ForallVars vars) tpat a2 $ Set.union c' c)
+      tellInferred $ scapeType <: a1
       return a1
     A.Appl e1 e2 -> do
       a1' <- freshVar
@@ -146,30 +151,6 @@ inferType ast@(Ast1p1 expr) = do
       a <- freshVar
       tellInferred $ T.PrimUnit <: a
       return a
-    A.Case e branches -> do
-      a1' <- freshVar
-      a2' <- inferType e
-
-      -- validate patterns for well-formedness
-      mapM_ tPatCheck $ map (\(A.Branch chi _) -> chi) branches
-
-      -- branchData contains one element for each branch to process
-      -- it contains information in digested form
-      branchData <- sequence $ do
-        A.Branch chi branchExpr <- branches
-        return $ ( (,branchExpr) <$> tDigestBranch chi)
-
-      guards <- sequence $ do
-        ((branchGamma, branchConstr, tauChi), branchExpr) <- branchData
-        let mAlphaConstraints = capture (Map.union branchGamma) branchExpr
-            buildGuard (an, constraints) =
-              T.Guard tauChi $
-                Set.insert (an <: a1' .: inferred) $
-                Set.unions [constraints,branchConstr]
-        return $ buildGuard <$> mAlphaConstraints
-
-      tell1 $ (\bs -> Case a2' bs $ T.Inferred e gamma) guards
-      return a1'
     A.OnionSub e s -> do
       a1 <- freshVar
       a2 <- inferType e
@@ -248,41 +229,31 @@ extractConstraintTypeVars c =
                 Comparable a1 a2 _ -> insert2Weak set a1 a2
                 Final a _ -> insertWeak set a
                 Immutable a _ -> insertWeak set a
-                T.Case a gs _ ->
-                    let set' = insertWeak set a in
-                    foldl foldGuards set' gs
                 T.Bottom _ -> set
           foldTau set tau =
             case tau of
               TdPrim _ -> set
               TdLabel _ a -> insertWeak set a
               TdOnion a1 a2 -> insert2Weak set a1 a2
-              TdFunc (T.PolyFuncData (T.ForallVars as) ca ia cs) ->
+              TdScape (T.ScapeData (T.ForallVars as) tpat ia cs) ->
                 Set.union set $
                 Set.difference
-                  (insert2Weak (extractConstraintTypeVars cs) ca ia)
+                  (insertWeak
+                   (Set.union (patternAlphas tpat)
+                              (extractConstraintTypeVars cs))
+                   ia)
                   as
               TdOnionSub a _ -> insertWeak set a
               TdOnionProj a _ -> insertWeak set a
               TdEmptyOnion -> set
-          foldGuards set (T.Guard tauChi constraints) =
-            Set.unions [set, chiAlphas tauChi,
-                        extractConstraintTypeVars constraints]
-          chiAlphas :: T.TauChi a -> Set AnyAlpha
-          chiAlphas tauChi =
-            case tauChi of
-              T.TauChiTopVar a -> Set.singleton $ alphaWeaken a
-              T.TauChiTopOnion p s -> Set.union (chiAlphas p) (chiAlphas s)
-              T.TauChiTopBind b -> chiAlphas b
-              T.TauChiOnionMany p s -> Set.union (chiAlphas p) (chiAlphas s)
-              T.TauChiOnionOne p -> chiAlphas p
-              T.TauChiBound a b -> insertWeak (chiAlphas b) a
-              T.TauChiUnbound p -> chiAlphas p
-              T.TauChiPrim _ -> Set.empty
-              T.TauChiLabelShallow _ a -> Set.singleton $ alphaWeaken a
-              T.TauChiLabelDeep _ b -> chiAlphas b
-              T.TauChiFun -> Set.empty
-              T.TauChiInnerStruct s -> chiAlphas s
+          patternAlphas (T.Pattern a pp) =
+            insertWeak (primaryPatternAlphas pp) a
+          primaryPatternAlphas p =
+            case p of
+              T.PatPrim _ -> Set.empty
+              T.PatLabel _ a pp -> insertWeak (primaryPatternAlphas pp) a
+              T.PatOnion pps -> Set.unions $ map primaryPatternAlphas pps
+              T.PatFun -> Set.empty
           insertWeak :: (Alpha a) => Set AnyAlpha -> a -> Set AnyAlpha
           insertWeak set a = Set.insert (alphaWeaken a) set
           insert2Weak :: (Alpha a, Alpha b) => Set AnyAlpha -> a -> b
@@ -302,90 +273,111 @@ freshVar = do
     return $ T.makeNewAlpha idx
 
 -- |Checks a branch pattern to ensure that it is well-formed.
-tPatCheck :: A.ChiMain -> TIM (Set Ident, Set LabelName)
-tPatCheck chiMain = tPatCheckInner chiMain
-  where onion :: A.ChiPrimary -> A.ChiStruct -> TIM (Set Ident, Set LabelName)
-        onion p s = do -- TIM
-          (v1,l1) <- tPatCheckInner p
-          (v2,l2) <- tPatCheckInner s
-          v <- disjointVarsetUnion v1 v2
-          l <- disjointUnion l1 l2
-          return (v,l)
-        disjointVarsetUnion :: Set Ident -> Set Ident -> TIM (Set Ident)
+
+-- TODO: this doesn't need the full power of TIM since it never reads the
+-- environment and more importantly never writes to the constraint set.
+tPatCheck :: A.Pattern -> TIM (Set Ident, Set LabelName)
+tPatCheck p@(A.Pattern i pp) = do
+  (v, l) <- tPatCheckPrimary pp
+  (,) <$> disjointVarsetUnion (Set.singleton i) v <*> pure l
+  where disjointVarsetUnion :: Set Ident -> Set Ident -> TIM (Set Ident)
         disjointVarsetUnion vs1 vs2 = do -- TIM
           let vsi = Set.delete (ident "_") $ Set.intersection vs1 vs2
           if Set.null vsi
             then return $ Set.union vs1 vs2
-            else throwError $ DoubleBound (Set.findMin vsi) chiMain
+            else throwError $ DoubleBound (Set.findMin vsi) p
         disjointUnion :: Set LabelName -> Set LabelName -> TIM (Set LabelName)
         disjointUnion ls1 ls2 = do -- TIM
           let lsi = Set.intersection ls1 ls2
           if Set.null lsi
             then return $ Set.union ls1 ls2
-            else throwError $ DoubleLabel (Set.findMin lsi) chiMain
-        tPatCheckInner :: A.Chi a
-                       -> TIM (Set Ident, Set LabelName)
-        tPatCheckInner chi =
-          case chi of
-            A.ChiTopVar x -> return (Set.singleton x, Set.empty)
-            A.ChiTopOnion p s -> onion p s
-            A.ChiTopBind b -> tPatCheckInner b
-            A.ChiOnionMany p s -> onion p s
-            A.ChiOnionOne p -> tPatCheckInner p
-            A.ChiBound x b -> do -- TIM
-              (v,l) <- tPatCheckInner b
-              v' <- disjointVarsetUnion v $ Set.singleton x
-              return (v', l)
-            A.ChiUnbound p -> tPatCheckInner p
-            A.ChiPrim _ -> return (Set.empty, Set.empty)
-            A.ChiLabelShallow lbl x -> return (Set.singleton x, Set.singleton lbl)
-            A.ChiLabelDeep lbl b -> do -- TIM
-              (v,_) <- tPatCheckInner b
-              return (v, Set.singleton lbl)
-            A.ChiFun -> return (Set.empty, Set.empty)
-            A.ChiInnerStruct s -> tPatCheckInner s
+            else throwError $ DoubleLabel (Set.findMin lsi) p
+        tPatCheckPrimary :: A.PrimaryPattern
+                         -> TIM (Set Ident, Set LabelName)
+        tPatCheckPrimary pat =
+          case pat of
+            A.PatPrim _ -> return (Set.empty, Set.empty)
+            A.PatLabel lbl i' pp' ->
+              (,) <$> (disjointVarsetUnion (Set.singleton i') =<<
+                       fst <$> tPatCheckPrimary pp')
+                  <*> (pure $ Set.singleton lbl)
+            A.PatOnion pps -> do
+              (vs, ls) <- unzip <$> mapM tPatCheckPrimary pps
+              v <- foldM disjointVarsetUnion Set.empty vs
+              l <- foldM disjointUnion       Set.empty ls
+              return (v, l)
+            A.PatFun -> return (Set.empty, Set.empty)
 
--- |Analyzes a branch pattern and produces an appropriate type for it.
-tDigestBranch :: A.Chi a -> TIM (Gamma, Constraints, T.TauChi a)
-tDigestBranch chi =
-  case chi of
-    --TODO: Do we want binders to be final? Not making them final yet.
-    A.ChiTopVar x -> do
-      ai <- freshVar
+-- TODO: handle program points differently.
+-- TODO: specify the monad more precisely than TIM; this function never
+-- updates the global constraint set.
+tPatType :: A.Pattern -> TIM (Gamma, Constraints, T.PatternType)
+tPatType (A.Pattern i pp) = do
+  ac <- freshVar
+  ai <- freshVar
+  (gamma, ppt) <- tPatPriType pp
+-- Since the pattern has already been verified as well-formed, this is
+-- unnecessary.
+--  gamma' <- if Map.member i gamma
+--            then throwError $ DoubleBound i pat
+--            else return $ Map.insert i ac
+  return ( Map.insert i ac gamma
+         , Set.fromList [Cell ai <: ac .: histFIXME, Final ai .: histFIXME]
+         , T.Pattern ai ppt)
+
+tPatPriType :: A.PrimaryPattern -> TIM (Gamma, T.PrimaryPatternType)
+tPatPriType pat =
+  case pat of
+    A.PatPrim tprim -> return (Map.empty, T.PatPrim tprim)
+    A.PatLabel lbl i pp -> do
       ac <- freshVar
-      let c = Set.singleton (T.Cell ai <: ac .: T.histFIXME)
-      return (Map.singleton x ac, c, T.TauChiTopVar ai)
-    A.ChiTopOnion p s -> do
-      (g1,c1,tp) <- tDigestBranch p
-      (g2,c2,ts) <- tDigestBranch s
-      return (Map.union g1 g2, Set.union c1 c2, T.TauChiTopOnion tp ts)
-    A.ChiTopBind b -> do
-      (g,c,tb) <- tDigestBranch b
-      return (g, c, T.TauChiTopBind tb)
-    A.ChiOnionMany p s -> do
-      (g1,c1,tp) <- tDigestBranch p
-      (g2,c2,ts) <- tDigestBranch s
-      return (Map.union g1 g2, Set.union c1 c2, T.TauChiOnionMany tp ts)
-    A.ChiOnionOne p -> do
-      (g,c,tp) <- tDigestBranch p
-      return (g, c, T.TauChiOnionOne tp)
-    A.ChiBound x b -> do
-      (g,c,tb) <- tDigestBranch b
-      ai <- freshVar
-      ac <- freshVar
-      let c' = Set.insert (T.Cell ai <: ac .: T.histFIXME) c
-      return (Map.insert x ac g, c', T.TauChiBound ai tb)
-    A.ChiUnbound p -> do
-      (g,c,tp) <- tDigestBranch p
-      return (g, c, T.TauChiUnbound tp)
-    A.ChiPrim p -> return (Map.empty, Set.empty, T.TauChiPrim p)
-    A.ChiLabelShallow lbl x -> do
-      a <- freshVar
-      return (Map.singleton x a, Set.empty, T.TauChiLabelShallow lbl a)
-    A.ChiLabelDeep lbl b -> do
-      (g,c,tb) <- tDigestBranch b
-      return (g, c, T.TauChiLabelDeep lbl tb)
-    A.ChiFun -> return (Map.empty, Set.empty, T.TauChiFun)
-    A.ChiInnerStruct s -> do
-      (g,c,ts) <- tDigestBranch s
-      return (g, c, T.TauChiInnerStruct ts)
+      (gamma, ppt) <- tPatPriType pp
+      return (Map.insert i ac gamma, T.PatLabel lbl ac ppt)
+    A.PatOnion pps ->
+      (Map.unions *** T.PatOnion) . unzip <$> mapM tPatPriType pps
+    A.PatFun -> return (Map.empty, T.PatFun)
+
+---- |Analyzes a branch pattern and produces an appropriate type for it.
+--tDigestBranch :: A.Chi a -> TIM (Gamma, Constraints, T.TauChi a)
+--tDigestBranch chi =
+--  case chi of
+--    --TODO: Do we want binders to be final? Not making them final yet.
+--    A.ChiTopVar x -> do
+--      ai <- freshVar
+--      ac <- freshVar
+--      let c = Set.singleton (T.Cell ai <: ac .: T.histFIXME)
+--      return (Map.singleton x ac, c, T.TauChiTopVar ai)
+--    A.ChiTopOnion p s -> do
+--      (g1,c1,tp) <- tDigestBranch p
+--      (g2,c2,ts) <- tDigestBranch s
+--      return (Map.union g1 g2, Set.union c1 c2, T.TauChiTopOnion tp ts)
+--    A.ChiTopBind b -> do
+--      (g,c,tb) <- tDigestBranch b
+--      return (g, c, T.TauChiTopBind tb)
+--    A.ChiOnionMany p s -> do
+--      (g1,c1,tp) <- tDigestBranch p
+--      (g2,c2,ts) <- tDigestBranch s
+--      return (Map.union g1 g2, Set.union c1 c2, T.TauChiOnionMany tp ts)
+--    A.ChiOnionOne p -> do
+--      (g,c,tp) <- tDigestBranch p
+--      return (g, c, T.TauChiOnionOne tp)
+--    A.ChiBound x b -> do
+--      (g,c,tb) <- tDigestBranch b
+--      ai <- freshVar
+--      ac <- freshVar
+--      let c' = Set.insert (T.Cell ai <: ac .: T.histFIXME) c
+--      return (Map.insert x ac g, c', T.TauChiBound ai tb)
+--    A.ChiUnbound p -> do
+--      (g,c,tp) <- tDigestBranch p
+--      return (g, c, T.TauChiUnbound tp)
+--    A.ChiPrim p -> return (Map.empty, Set.empty, T.TauChiPrim p)
+--    A.ChiLabelShallow lbl x -> do
+--      a <- freshVar
+--      return (Map.singleton x a, Set.empty, T.TauChiLabelShallow lbl a)
+--    A.ChiLabelDeep lbl b -> do
+--      (g,c,tb) <- tDigestBranch b
+--      return (g, c, T.TauChiLabelDeep lbl tb)
+--    A.ChiFun -> return (Map.empty, Set.empty, T.TauChiFun)
+--    A.ChiInnerStruct s -> do
+--      (g,c,ts) <- tDigestBranch s
+--      return (g, c, T.TauChiInnerStruct ts)

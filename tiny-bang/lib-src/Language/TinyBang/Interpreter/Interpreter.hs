@@ -33,14 +33,11 @@ import Data.IntMap (IntMap, (!))
 import Control.Monad.Writer (tell, listen, execWriter, Writer)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+import Data.Maybe (listToMaybe)
 
 import Language.TinyBang.Ast
-  ( Branch(..)
-  , Branches
-  , Chi(..)
-  , ChiPrimary
-  , ChiStruct
+  ( Pattern(..)
+  , PrimaryPattern(..)
   , ExprPart(..)
   , Value(..)
   , LazyOperator(..)
@@ -63,12 +60,21 @@ import Utils.Render.Display
 -- TODO: remove
 -- import Debug.Trace
 
+-- |This data type is used to indicate the mode of failure in
+-- eApplScape.
+data ApplScapeError
+ = NoScape -- ^ indicates that no scapes were returned in the
+           -- projection.
+ | NoMatch -- ^ indicates that scapes were found, but none could take
+           -- the provided value as input.
+  deriving (Eq, Ord, Enum)
+
 -- |An error type for evaluation failures.
 data EvalError t =
-      ApplNotFunction (Value t) (Value t)
+      ApplNotScape (Value t) (Value t)
     | DynamicTypeError String -- TODO: figure out what goes here
     | NotClosed Ident
-    | UnmatchedCase (Value t) (Branches t)
+    | UnmatchedScape (Value t) (Value t)
     | IllegalComparison EagerOperator (Value t) (Value t)
     deriving (Eq, Show)
 instance Error (EvalError t) where
@@ -76,18 +82,18 @@ instance Error (EvalError t) where
 instance (Display t) => Display (EvalError t) where
   makeDoc ee =
     case ee of
-      ApplNotFunction e e' ->
+      ApplNotScape e e' ->
         text "Attempted to apply" <+> makeDoc e <+> text "to" <+>
-        makeDoc e' <+> text "but the prior is not a function"
+        makeDoc e' <+> text "but the prior contains no scapes"
       DynamicTypeError str ->
         -- TODO: not a string!
         text "Dynamic type error:" <+> text str
       NotClosed i ->
         text "Expression not closed for variable" <+> (text $ unIdent i)
-      UnmatchedCase e brs ->
-        text "Case of" <+> makeDoc e <+>
-        text "cannot be matched by branches" $$
-        (nest 4 $ makeDoc brs)
+      UnmatchedScape e scape ->
+        text "The value" <+> makeDoc e <+>
+        text "cannot be matched by value" $$
+        (nest 4 $ makeDoc scape)
       IllegalComparison op v1 v2 ->
         text "The comparison" <+> makeDoc op <+> makeDoc v1 <+> makeDoc v2 <+>
         text "cannot be is not well typed."
@@ -132,7 +138,7 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- Definitions for functions related to expression evaluation.
 
 -- |Performs an evaluation of a TinyBang expression.
-evalTop :: forall ast xast. 
+evalTop :: forall ast xast.
            (?conf :: Cfg.Config
           , AstOp HomOp ast ((ast -> xast) -> xast)
           , AstOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
@@ -167,7 +173,7 @@ instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
       IA.AssignCell c e1 e2 -> do
         v1 <- eval e1
         writeCell c v1
-        eval e2 
+        eval e2
 
 -- Provides evaluation behavior for TinyBang nodes.
 instance (Eq ast, Display ast
@@ -178,7 +184,8 @@ instance (Eq ast, Display ast
       => AstStep EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
   aststep EvalOp ast = \config -> let ?conf = config in
     case ast of
-      Func i e -> return $ VFunc i e
+      Scape pat e -> return $ VScape pat e
+--      Func i e -> return $ VFunc i e
       PrimInt i -> return $ VPrimInt i
       PrimChar c -> return $ VPrimChar c
       PrimUnit -> return $ VPrimUnit
@@ -200,7 +207,8 @@ instance (Eq ast, Display ast
                   (VPrimInt _, ProjPrim T.PrimInt) -> VEmptyOnion
                   (VPrimChar _, ProjPrim T.PrimChar) -> VEmptyOnion
                   (VPrimUnit, ProjPrim T.PrimUnit) -> VEmptyOnion
-                  (VFunc _ _, ProjFunc) -> VEmptyOnion
+                  (VScape _ _, ProjFunc) -> VEmptyOnion
+--                  (VFunc _ _, ProjFunc) -> VEmptyOnion
                   (VLabel n _, ProjLabel n') | n == n' -> VEmptyOnion
                   _ -> v
       OnionProj e' s -> do
@@ -212,7 +220,8 @@ instance (Eq ast, Display ast
                   (VPrimInt _, ProjPrim T.PrimInt) -> v
                   (VPrimChar _, ProjPrim T.PrimChar) -> v
                   (VPrimUnit, ProjPrim T.PrimUnit) -> v
-                  (VFunc _ _, ProjFunc) -> v
+                  (VScape _ _, ProjFunc) -> v
+--                  (VFunc _ _, ProjFunc) -> v
                   (VLabel n _, ProjLabel n') | n == n' -> v
                   _ -> VEmptyOnion
       EmptyOnion -> return $ VEmptyOnion
@@ -220,28 +229,67 @@ instance (Eq ast, Display ast
         v1 <- eval e1
         v2 <- eval e2
         cellId <- newCell v2
-        let v1' = eProj T.TpFun v1
-        case v1' of
-          Just (VFunc i body) -> eval $ IA.substCell body cellId i
-          _ -> throwError $ ApplNotFunction v1 v2
-      Case e' branches -> do
-        v <- eval e'
---        let answers = mapMaybe (eMatch v) branches
-        let findAnswer bs =
-              case bs of
-                [] -> throwError $ UnmatchedCase v branches
-                b:bs' -> do
-                  mExpr <- eMatch v b
-                  case mExpr of
-                    Nothing -> findAnswer bs'
-                    Just expr -> return expr
-        eval =<< findAnswer branches
-        where eMatch :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+        e4 <- eApplScape (eProj v1 ProjFunc) v2
+        either (\left ->
+                 case left of
+                   NoScape -> throwError $ ApplNotScape v1 v2
+                   NoMatch -> throwError $ UnmatchedScape v2 v1) eval e4
+--        case v1' of
+--          Just (VFunc i body) -> eval $ IA.substCell body cellId i
+--          _ -> throwError $ ApplNotFunction v1 v2
+--      Case e' branches -> do
+--        v <- eval e'
+----        let answers = mapMaybe (eMatch v) branches
+--        let findAnswer bs =
+--              case bs of
+--                [] -> throwError $ UnmatchedCase v branches
+--                b:bs' -> do
+--                  mExpr <- eMatch v b
+--                  case mExpr of
+--                    Nothing -> findAnswer bs'
+--                    Just expr -> return expr
+--        eval =<< findAnswer branches
+        where eApplScape :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                            ,AstWrap ExprPart ast
+                            ,AstWrap IA.ExprPart ast)
+                         => [Value ast] -> Value ast
+                         -> EvalM ast (Either ApplScapeError ast)
+              -- scape list must be provided in order of precedence
+              eApplScape list input =
+                if null matches
+                    then return $ Left NoScape
+                    else do
+                      firstMatch <- firstMatchM
+                      case firstMatch of
+                        Just v -> return $ Right v
+                        Nothing -> return $ Left NoMatch
+                where scapeList = map unScape list
+                      unScape x =
+                        case x of
+                          VScape pat e' -> (pat, e')
+                          _             ->
+                            error "Non-scape value received in eApplScape list"
+                      -- The mapping has been separated from the monadic
+                      -- evaluation to ensure that no eMatch is called unless
+                      -- necessary.
+                      matches =
+                        map (\(pat, e') -> eMatch pat input e') scapeList
+                      findMatch mmexprs = do
+                        case mmexprs of
+                          [] -> return Nothing
+                          x:xs -> do
+                            mexpr <- x
+                            case mexpr of
+                              Just _ -> return mexpr
+                              Nothing -> findMatch xs
+                      firstMatchM :: EvalM ast (Maybe ast)
+                      firstMatchM = findMatch matches
+              eMatch :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
                         ,AstWrap ExprPart ast
                         ,AstWrap IA.ExprPart ast)
-                     => Value ast -> Branch ast -> EvalM ast (Maybe ast)
-              eMatch v (Branch chi e1) = do -- EvalM
-                m <- eSearch v chi
+                     => Pattern -> Value ast -> ast -> EvalM ast (Maybe ast)
+              eMatch pat v1 e1 = do -- EvalM
+                m <- eSearch pat v1
                 return $ do -- Maybe
                   b <- m
                   return $ eSubstAll e1 b
@@ -252,93 +300,31 @@ instance (Eq ast, Display ast
               eSubstAll expr b = Map.foldrWithKey foldSubst expr b
                 where foldSubst ident cellid sexpr =
                         IA.substCell sexpr cellid ident
-              eSearch :: Value ast -> Chi a -> EvalM ast (Maybe IdMap)
-              eSearch v chi =
-                case chi of
-                  ChiTopVar x -> Just <$> (Map.singleton x <$> newCell v)
-                  ChiTopOnion chiPri chiStruct ->
-                    searchAll (chiPri, Just chiStruct)
-                  ChiTopBind chiBind -> eSearch v chiBind
-                  ChiOnionMany chiPri chiStruct ->
-                    searchAll (chiPri, Just chiStruct)
-                  ChiOnionOne chiPri -> searchAll (chiPri, Nothing)
-                  ChiBound i chiBind -> do
-                    idMap <- eSearch v chiBind
-                    c <- newCell v
-                    return $ maybe Nothing (Just . Map.insert i c) idMap
-                  ChiUnbound chiPri -> eSearch v chiPri
-                  ChiPrim prim ->
-                    recurseSearch v chi $ return . (matchPrim prim)
-                  ChiLabelShallow lbl x ->
-                    recurseSearch v chi $ matchLabelSimple lbl x
-                  ChiLabelDeep lbl chiBind ->
-                    recurseSearch v chi $ matchLabelComplex lbl chiBind
-                  ChiFun ->
-                    recurseSearch v chi $ matchFuncs
-                  ChiInnerStruct chiStruct -> eSearch v chiStruct
-                where -- | Takes a (possibly onion) value, a primary pattern,
-                      --   and a function to evaluate non-onion values to a
-                      --   result.  Handles breaking onion values apart to find
-                      --   the first matching result.
-                      recurseSearch :: Value ast -> ChiPrimary
-                                    -> (Value ast -> EvalM ast (Maybe IdMap))
-                                    -> EvalM ast (Maybe IdMap)
-                      recurseSearch v' chiBound f =
-                        case v' of
-                          VOnion vLeft vRight -> do
-                            -- Try to match the right side
-                            mResult <- eSearch vRight chiBound
-                            case mResult of
-                              -- If it works, we're done
-                              Just _ -> return mResult
-                              -- Otherwise, try the left side
-                              Nothing -> eSearch vLeft chiBound
-                          -- If the value is not an onion, it's a singleton.
-                          _ -> f v'
-                      matchPrim :: T.PrimitiveType -> Value ast -> Maybe IdMap
-                      matchPrim prim v' =
-                        case (prim, v') of
-                          (T.PrimInt, VPrimInt _) -> yes
-                          (T.PrimChar, VPrimChar _) -> yes
-                          (T.PrimUnit, VPrimUnit) -> yes
-                          _ -> no
-                          where yes = Just Map.empty
-                                no = Nothing
-                      matchLabelSimple :: LabelName -> Ident -> Value ast
-                                       -> EvalM ast (Maybe IdMap)
-                      matchLabelSimple lbl x v' =
-                        return $ case v' of
-                          VLabel lbl' c | lbl == lbl' ->
-                            Just (Map.singleton x c)
-                          _ -> Nothing
-                      matchLabelComplex :: LabelName -> Chi a -> Value ast
-                                        -> EvalM ast (Maybe IdMap)
-                      matchLabelComplex lbl chiBind v' =
-                        case v' of
-                          VLabel lbl' c0 | lbl == lbl' ->
-                            flip eSearch chiBind =<< readCell c0
-                          _ -> return Nothing
-                      matchFuncs :: Value ast -> EvalM ast (Maybe IdMap)
-                      matchFuncs v' =
-                        case v' of 
-                          VFunc _ _ -> return $ Just Map.empty
-                          _ -> return Nothing
-                      searchAll :: forall .
-                                   (ChiPrimary, Maybe ChiStruct)
-                                -> EvalM ast (Maybe IdMap)
-                      searchAll (p,ms) =
-                        case ms of
-                          Nothing -> eSearch v p
-                          Just s -> do -- EvalM
-                            mLeft <- eSearch v p
-                            mRest <- searchAll $
-                              case s of
-                                ChiOnionOne p' -> (p',Nothing)
-                                ChiOnionMany p' s' -> (p',Just s')
-                            return $ do -- Maybe
-                              idMapLeft <- mLeft
-                              idMapRest <- mRest
-                              return $ Map.union idMapRest idMapLeft
+              eSearchPri :: PrimaryPattern
+                         -> Value ast -> EnvReader ast (Maybe IdMap)
+              eSearchPri pat v =
+                case pat of
+                  PatPrim tprim | not $ null $ eProj v (ProjPrim tprim) ->
+                    return $ Just Map.empty
+                  PatLabel lbl i pp -> maybe (return Nothing) id $ do
+                    -- eProj should never return a list whose first element
+                    -- isn't a label when called with the label projector
+                    VLabel _ c <- listToMaybe $ eProj v (ProjLabel lbl)
+                    return $ do -- EvalM
+                      mIdmap <- eSearchPri pp =<< readCell c
+                      return $ (`Map.union` Map.singleton i c) <$> mIdmap
+                  PatOnion pps -> do -- EnvReader
+                    mMaps <- mapM (`eSearchPri` v) pps
+                    return $ Map.unions <$> sequence mMaps
+                  PatFun | not $ null $ eProj v ProjFunc ->
+                    return $ Just Map.empty
+                  -- In case of an empty list, fail
+                  _ -> return Nothing
+              eSearch :: Pattern -> Value ast -> EvalM ast (Maybe IdMap)
+              eSearch (Pattern i pp) v = do
+                binders <- runEvalMReader $ eSearchPri pp v
+                c <- newCell v
+                return $ (`Map.union` Map.singleton i c) <$> binders
       Def _ i e1 e2 -> do
         v1 <- eval e1
         cellId <- newCell v1
@@ -347,11 +333,11 @@ instance (Eq ast, Display ast
       LazyOp op e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
-        let eProjInt = eProj $ T.TpPrim T.PrimInt
+        let eProjInt = (`eProj` ProjPrim T.PrimInt)
         case (op, eProjInt v1, eProjInt v2) of
-          (Plus,  Just (VPrimInt x), Just (VPrimInt y)) ->
+          (Plus,  (VPrimInt x:_), (VPrimInt y:_)) ->
             return $ VPrimInt $ x + y
-          (Minus, Just (VPrimInt x), Just (VPrimInt y)) ->
+          (Minus, (VPrimInt x:_), (VPrimInt y:_)) ->
             return $ VPrimInt $ x - y
           _ -> throwError $ DynamicTypeError "Uncaught type error in integer operation."
       EagerOp op e1 e2 -> do
@@ -408,7 +394,8 @@ instance (Eq ast, Display ast
                   (VPrimInt _,VPrimInt _) -> True
                   (VPrimChar _,VPrimChar _) -> True
                   (VLabel n _, VLabel n' _) -> n == n'
-                  (VFunc _ _, VFunc _ _) -> True
+                  (VScape _ _, VScape _ _) -> True
+--                  (VFunc _ _, VFunc _ _) -> True
                   _ -> False
               eListLessEq :: (Eq ast, Display ast)
                           => [Value ast] -> [Value ast] -> EnvReader ast Bool
@@ -433,7 +420,8 @@ instance (Eq ast, Display ast
                     v1' <- readCell c1
                     v2' <- readCell c2
                     eCompare v1' v2'
-                  (VFunc _ _, VFunc _ _) -> return $ v1 == v2
+                  (VScape _ _, VScape _ _) -> return $ v1 == v2
+--                  (VFunc _ _, VFunc _ _) -> return $ v1 == v2
                   _ | (valueToOrd v1) < (valueToOrd v2) -> return True
                   _ -> return False
 
@@ -475,7 +463,7 @@ data ValueOrdinal
   | OrdPrimInt
   | OrdPrimChar
   | OrdLabel LabelName
-  | OrdFunc
+  | OrdScape
   deriving (Eq, Ord)
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
@@ -494,7 +482,8 @@ valueToOrd v =
     VPrimInt _ -> OrdPrimInt
     VPrimChar _ -> OrdPrimChar
     VLabel n _ -> OrdLabel n
-    VFunc _ _ -> OrdFunc
+    VScape _ _ -> OrdScape
+--    VFunc _ _ -> OrdFunc
     _ -> error "This value should not be inside an onion"
 
 -- Still useful: commented out to silence "Defined but not used" warnings.
@@ -547,15 +536,19 @@ canonicalize' (v, imap) =
         pairRemap (cell, contents) =
           (remap ! cell, valueRemap contents)
 
--- |Projects values by type.
-eProj :: T.TauProj -> Value ast -> Maybe (Value ast)
-eProj tproj v =
+-- |Projects values by type. The output list is in precedence order.
+
+-- More generally speaking, the return type of this is a pointed
+-- monoid.
+eProj :: Value ast -> ProjTerm -> [Value ast]
+eProj v tproj =
   case (tproj, v) of
-    (T.TpPrim T.PrimInt, VPrimInt _) -> Just v
-    (T.TpPrim T.PrimChar, VPrimChar _) -> Just v
-    (T.TpPrim T.PrimUnit, VPrimUnit) -> Just v
-    (T.TpLabel n, VLabel n' _) | n == n' -> Just v
-    (T.TpFun, VFunc _ _) -> Just v
+    (ProjPrim T.PrimInt, VPrimInt _) -> [v]
+    (ProjPrim T.PrimChar, VPrimChar _) -> [v]
+    (ProjPrim T.PrimUnit, VPrimUnit) -> [v]
+    (ProjLabel n, VLabel n' _) | n == n' -> [v]
+    (ProjFunc, VScape _ _) -> [v]
+--    (T.TpFun, VFunc _ _) -> Just v
     (_, VOnion v1 v2) ->
-      maybe (eProj tproj v1) Just (eProj tproj v2)
-    _ -> Nothing
+      (eProj v2 tproj) ++ (eProj v1 tproj)
+    _ -> []

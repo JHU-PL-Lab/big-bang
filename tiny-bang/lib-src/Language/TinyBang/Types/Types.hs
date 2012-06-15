@@ -8,10 +8,10 @@
              #-}
 module Language.TinyBang.Types.Types
 ( TauDown(..)
-, TauProj(..)
-, PolyFuncData(..)
+, ScapeData(..)
 , PrimitiveType(..)
-, TauChi(..)
+, PatternType(..)
+, PrimaryPatternType(..)
 , Constraints
 , Constraint(..)
 , ConstraintHistory(..)
@@ -34,6 +34,7 @@ module Language.TinyBang.Types.Types
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map (Map)
+import Data.List (intersperse)
 import Data.Function (on)
 
 import Language.TinyBang.Config as Cfg
@@ -67,24 +68,17 @@ data TauDown
   = TdPrim PrimitiveType
   | TdLabel LabelName CellAlpha
   | TdOnion InterAlpha InterAlpha
-  | TdFunc PolyFuncData
+  | TdScape ScapeData
   | TdOnionSub InterAlpha ProjTerm
   | TdOnionProj InterAlpha ProjTerm
   | TdEmptyOnion
   deriving (Eq, Ord, Show)
 
--- |The datatype used to represent projection types.
-data TauProj
-  = TpPrim PrimitiveType
-  | TpLabel LabelName
-  | TpFun
-  deriving (Eq, Ord, Show)
-
 newtype ForallVars = ForallVars (Set AnyAlpha)
   deriving (Eq, Ord, Show)
--- |A wrapper type containing the polymorphic function type information.
-data PolyFuncData =
-  PolyFuncData ForallVars CellAlpha InterAlpha Constraints
+-- |A wrapper type containing the scape type information.
+data ScapeData =
+  ScapeData ForallVars PatternType InterAlpha Constraints
   deriving (Eq, Ord, Show)
 
 -------------------------------------------------------------------------------
@@ -93,33 +87,17 @@ data PolyFuncData =
 --
 -- These types are used to describe type patterns in Little Bang.
 
-type TauChiMain = TauChi A.ChiMainType
-type TauChiStruct = TauChi A.ChiStructType
-type TauChiBind = TauChi A.ChiBindType
-type TauChiPrimary = TauChi A.ChiPrimaryType
-
 -- |Data type describing top level type pattern types in case expressions;
 --  corresponds to tau-chi in the document.
-data TauChi a where
-  TauChiTopVar          :: InterAlpha                    -> TauChiMain
-  TauChiTopOnion        :: TauChiPrimary -> TauChiStruct -> TauChiMain
-  TauChiTopBind         :: TauChiBind                    -> TauChiMain
+data PatternType = Pattern InterAlpha PrimaryPatternType
+  deriving (Eq, Ord, Show)
 
-  TauChiOnionMany       :: TauChiPrimary -> TauChiStruct -> TauChiStruct
-  TauChiOnionOne        :: TauChiPrimary                 -> TauChiStruct
-
-  TauChiBound           :: InterAlpha -> TauChiBind -> TauChiBind
-  TauChiUnbound         :: TauChiPrimary            -> TauChiBind
-
-  TauChiPrim            :: PrimitiveType                  -> TauChiPrimary
-  TauChiLabelShallow    :: LabelName       -> CellAlpha   -> TauChiPrimary
-  TauChiLabelDeep       :: LabelName       -> TauChiBind  -> TauChiPrimary
-  TauChiFun             ::                                   TauChiPrimary
-  TauChiInnerStruct     :: TauChiStruct                   -> TauChiPrimary
-
-deriving instance Show (TauChi a)
-deriving instance Eq (TauChi a)
-deriving instance Ord (TauChi a)
+data PrimaryPatternType
+  = PatPrim PrimitiveType
+  | PatLabel LabelName CellAlpha PrimaryPatternType
+  | PatOnion [PrimaryPatternType] -- An empty one of these matches anything.
+  | PatFun
+  deriving (Eq, Ord, Show)
 
 ------------------------------------------------------------------------------
 -- *Constraints
@@ -144,7 +122,6 @@ data Constraint
   | Comparable InterAlpha InterAlpha ConstraintHistory
   | Final InterAlpha ConstraintHistory
   | Immutable InterAlpha ConstraintHistory
-  | Case InterAlpha [Guard] ConstraintHistory
   | Bottom ConstraintHistory
   deriving (Show)
 
@@ -180,7 +157,6 @@ constraintOrdinal c =
     Comparable       a1 a2    _ -> OrdCmp    a1 a2
     Final            a1       _ -> OrdFin    a1
     Immutable        a1       _ -> OrdImmutable a1
-    Case             a  gs    _ -> OrdCase   a gs
     Bottom                    h -> OrdBottom h
 
 instance Eq Constraint where
@@ -261,7 +237,7 @@ histFIXME :: ConstraintHistory
 histFIXME = HistFIXME --error "History not implemented here!"
 
 -- |A type representing guards in Little Bang case constraints.
-data Guard = Guard TauChiMain Constraints
+data Guard = Guard PatternType Constraints
     deriving (Eq, Ord, Show)
 
 class MkConstraint a b where
@@ -314,46 +290,32 @@ instance Display TauDown where
       TdPrim p -> makeDoc p
       TdLabel n a -> char '`' <> makeDoc n <+> makeDoc a
       TdOnion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
-      TdFunc polyFuncData -> makeDoc polyFuncData
+      TdScape scapeData -> makeDoc scapeData
       TdEmptyOnion -> text "(&)"
       TdOnionSub a s -> makeDoc a <+> text "&-" <+> makeDoc s
       TdOnionProj a s -> makeDoc a <+> text "&." <+> makeDoc s
 
-instance Display PolyFuncData where
-  makeDoc (PolyFuncData (ForallVars alphas) alpha1 alpha2 constraints) =
+instance Display ScapeData where
+  makeDoc (ScapeData (ForallVars alphas) alpha1 alpha2 constraints) =
     (if Set.size alphas > 0
       then text "all" <+> (parens $ makeDoc alphas)
       else empty) <+>
     makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
     char '\\' <+> (parens $ makeDoc constraints)
 
-instance Display TauChiMain where
-  makeDoc tauChi =
-    case tauChi of
-      TauChiTopVar x -> makeDoc x
-      TauChiTopOnion p s -> makeDoc p <+> text "&" <+> makeDoc s
-      TauChiTopBind b -> makeDoc b
+instance Display PatternType where
+  makeDoc pat =
+    case pat of
+      Pattern a pp -> makeDoc a <> char '~' <> makeDoc pp
 
-instance Display TauChiStruct where
-  makeDoc tauChi =
-    case tauChi of
-      TauChiOnionMany p s -> makeDoc p <+> text "&" <+> makeDoc s
-      TauChiOnionOne p -> makeDoc p
+instance Display PrimaryPatternType where
+  makeDoc pat =
+    case pat of
+      PatPrim tprim -> makeDoc tprim
+      PatLabel lbl a pp -> makeDoc lbl <+> makeDoc a <> char '~' <> makeDoc pp
+      PatOnion pps -> parens $ sep $ intersperse (char '&') $ map makeDoc pps
+      PatFun -> text "fun"
 
-instance Display TauChiBind where
-  makeDoc tauChi =
-    case tauChi of
-      TauChiBound i b -> makeDoc i <> text ":" <> makeDoc b
-      TauChiUnbound p -> makeDoc p
-
-instance Display TauChiPrimary where
-  makeDoc tauChi =
-    case tauChi of
-      TauChiPrim p -> makeDoc p
-      TauChiLabelShallow lbl x -> makeDoc lbl <+> makeDoc x
-      TauChiLabelDeep lbl b -> makeDoc lbl <+> makeDoc b
-      TauChiFun -> text "fun"
-      TauChiInnerStruct s -> parens $ makeDoc s
 
 instance Display Constraint where
   makeDoc c =
@@ -374,11 +336,6 @@ instance Display Constraint where
               (subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3, h)
             Comparable a1 a2 h ->
               (text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2), h)
-            Case a gs h ->
-              (text "case" <+> makeDoc a <+> text "of" <+> lbrace $+$
-               (nest indentSize $ vcat $ punctuate semi $ map gDoc gs)
-               $+$ rbrace
-              ,h)
             Final a h -> (text "final" <> parens (makeDoc a), h)
             Immutable a h -> (text "immutable" <> parens (makeDoc a), h)
             Bottom h -> (text "_|_", h)
@@ -386,8 +343,8 @@ instance Display Constraint where
     if Cfg.displayDebugging
         then base $+$ (nest indentSize $ makeDoc hist)
         else base
-    where gDoc (Guard tauChi constraints) =
-            makeDoc tauChi <+> text "->" <+> makeDoc constraints
+    where gDoc (Guard tpat constraints) =
+            makeDoc tpat <+> text "->" <+> makeDoc constraints
           subtype :: (Display a, Display b) => a -> b -> Doc
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
           dispFun :: (Display a, Display b) => a -> b -> Doc

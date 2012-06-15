@@ -1,6 +1,11 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Language.TinyBang.Syntax.Lexer
-( Token(..)
+( Token
+, RawToken(..)
+, getRawToken
 , lexTinyBang
+, matchesRawToken
+, weaklyMatchesRawToken
 , LexerResult
 , getPos
 , weakEq
@@ -12,58 +17,67 @@ import Text.ParserCombinators.Parsec
 import Text.Parsec.Pos (initialPos)
 import Utils.Render.Display (Display, makeDoc, text)
 
+import Data.Function (on)
+import Data.Typeable (Typeable)
+import Data.Data (Data, toConstr)
+
+--FIXME: This should use a LexError type instead of a String.
+type LexerResult = Either String [Token]
+
 lexTinyBang :: String -> LexerResult
 lexTinyBang s = case parse lexer "" s of
     Left x -> Left (show x)
-    Right x -> Right $ map (\(start,t,e) -> t (start,e)) x
+    Right x -> Right $ map (\(start, t, end) -> Token (start, end) t) x
 
 
-lexer :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
+lexer :: Parser [(SourcePos, RawToken, SourcePos)]
 lexer = do
-    toks <- many (whitespaceP <|> thing)
-    eof
-    return (concat toks)
+    toks <- many (whitespaceP >> thing)
+    whitespaceP >> eof
+    return toks
     where
         thing = do
             start <- getPosition
             tok <- tryThemAll
             end <- getPosition
-            return [(start,tok,end)]
-        tryThemAll = let tries = map (try) $ concat [reservedWords, longOperators, hungry, shortOperators] in
-            foldl (<|>) (head tries) (tail tries)
+            return (start, tok, end)
+        tryThemAll = choice $ map try $
+                       concat
+                       [ reservedWords
+                       , longOperators
+                       , hungry
+                       , shortOperators
+                       ]
 
-whitespaceP :: Parser [(SourcePos, (SourceLocation -> Token), SourcePos)]
+whitespaceP :: Parser ()
 whitespaceP = do
-    _ <- oneOf " \n\t"
-    skipMany (oneOf " \n\t")
-    return []
+    -- Should this be skipMany1?
+    skipMany space
 
 validIdentP :: Parser ()
-validIdentP = notFollowedBy (alphaNum <|> oneOf "_'")
+validIdentP = notFollowedBy (alphaNum <|> char '_')
 
-hungry :: [Parser (SourceLocation -> Token)]
+hungry :: [Parser RawToken]
 hungry = [identP, intLiteralP, charLiteralP]
     where
         identP = do
             first <- letter <|> char '_'
-            rest <- many (letter <|> digit <|> oneOf "_'")
+            rest <- many (alphaNum <|> char '_')
             validIdentP
-            return $ (flip TokIdentifier) (first:rest)
+            return $ TokIdentifier (first:rest)
         intLiteralP = do
             prefix <- option ' ' (char '-')
-            first <- digit
-            digits <- many digit
-            return $ (flip TokIntegerLiteral) (read (prefix:(first:digits)))
+            digits <- many1 digit
+            return $ TokIntegerLiteral (read (prefix:digits))
         charLiteralP = do
-            _ <- char '\''
-            l <- anyChar
-            _ <- char '\''
-            return $ (flip TokCharLiteral) l
+            let tick = char '\''
+            l <- between tick tick anyChar
+            return $ TokCharLiteral l
 
-shortOperators :: [Parser (SourceLocation -> Token)]
-shortOperators = map proc
+shortOperators :: [Parser RawToken]
+shortOperators =
+  map proc
     [ lblPrefixP
-    , lambdaP
     , openParenP
     , closeParenP
     , openBlockP
@@ -73,231 +87,190 @@ shortOperators = map proc
     , opPlusP
     , opMinusP
     , equalsP
-    , onionConsP]
+    , onionConsP
+    ]
     where
-        proc (c, t) = do
-            _ <- char c
-            return t
-        lblPrefixP = ('`', TokLabelPrefix)
-        lambdaP = ('\\', TokLambda)
-        openParenP = ('(', TokOpenParen)
-        closeParenP = (')', TokCloseParen)
-        openBlockP = ('{', TokOpenBlock)
-        closeBlockP = ('}', TokCloseBlock)
-        separatorP = (';', TokSeparator)
-        colonP = (':', TokColon)
-        opPlusP = ('+', TokOpPlus)
-        opMinusP = ('-', TokOpMinus)
-        equalsP = ('=', TokEquals)
-        onionConsP = ('&', TokOnionCons)
+      proc (c, t) = do
+        _ <- char c
+        return t
+      lblPrefixP  = ('`', TokLabelPrefix)
+      openParenP  = ('(', TokOpenParen)
+      closeParenP = (')', TokCloseParen)
+      openBlockP  = ('{', TokOpenBlock)
+      closeBlockP = ('}', TokCloseBlock)
+      separatorP  = (';', TokSeparator)
+      colonP      = (':', TokColon)
+      opPlusP     = ('+', TokOpPlus)
+      opMinusP    = ('-', TokOpMinus)
+      equalsP     = ('=', TokEquals)
+      onionConsP  = ('&', TokOnionCons)
 
-longOperators :: [Parser (SourceLocation -> Token)]
-longOperators = map proc [onionSubP, onionProjP, arrowP, opEqualsP, opLessEqualsP, opGreaterEqualsP]
+longOperators :: [Parser RawToken]
+longOperators =
+  map proc
+    [ onionSubP
+    , onionProjP
+    , arrowP
+    , opEqualsP
+    , opLessEqualsP
+    , opGreaterEqualsP
+    ]
     where
-        proc (s, t) = do
-            _ <- string s
-            return t
-        onionSubP = ("&-", TokOnionSub)
-        onionProjP = ("&.", TokOnionProj)
-        arrowP = ("->", TokArrow)
-        opEqualsP = ("==", TokOpEquals)
-        opLessEqualsP = ("<=", TokOpLessEquals)
-        opGreaterEqualsP = (">=", TokOpGreaterEquals)
+      proc (s, t) = do
+        _ <- string s
+        return t
+      onionSubP        = ("&-", TokOnionSub)
+      onionProjP       = ("&.", TokOnionProj)
+      arrowP           = ("->", TokArrow)
+      opEqualsP        = ("==", TokOpEquals)
+      opLessEqualsP    = ("<=", TokOpLessEquals)
+      opGreaterEqualsP = (">=", TokOpGreaterEquals)
 
-reservedWords :: [Parser (SourceLocation -> Token)]
-reservedWords = map proc [funP, caseP, ofP, intP, charP, unitP, defP,inP, finalP,immutP]
+reservedWords :: [Parser RawToken]
+reservedWords =
+  map proc
+    [ funP
+    , intP
+    , charP
+    , unitP
+    , defP
+    , inP
+    , finalP
+    , immutP
+    ]
     where
-        proc (s, t) = do
-            _ <- string s
-            validIdentP
-            return t
-        funP = ("fun", TokFun)
-        caseP = ("case", TokCase)
-        ofP = ("of", TokOf)
-        intP = ("int", TokInteger)
-        charP = ("char", TokChar)
-        unitP = ("unit", TokUnit)
-        defP = ("def", TokDef)
-        inP = ("in", TokIn)
-        finalP = ("final", TokFinal)
-        immutP = ("immut", TokImmut)
-
-type LexerResult = Either String [Token]
+      proc (s, t) = do
+        _ <- string s
+        validIdentP
+        return t
+      funP   = ("fun"   , TokFun)
+      intP   = ("int"   , TokInteger)
+      charP  = ("char"  , TokChar)
+      unitP  = ("unit"  , TokUnit)
+      defP   = ("def"   , TokDef)
+      inP    = ("in"    , TokIn)
+      finalP = ("final" , TokFinal)
+      immutP = ("immut" , TokImmut)
 
 type SourceLocation = (SourcePos, SourcePos)
 defaultSourceLocation :: SourceLocation
 defaultSourceLocation = ((initialPos ""),(initialPos ""))
 
+-- | This data type is used to specify the portion of the token that is
+-- independent of the source location; it will be exported, but it cannot be
+-- used to create a Token outside of this module because that constructor is not
+-- exported.
+data RawToken =
+      TokLabelPrefix
+    | TokOnionCons
+    | TokOnionSub
+    | TokOnionProj
+    | TokFun
+    | TokArrow
+    | TokInteger
+    | TokChar
+    | TokUnit
+    | TokOpenParen
+    | TokCloseParen
+    | TokIntegerLiteral Integer
+    | TokCharLiteral Char
+    | TokIdentifier String
+    | TokOpenBlock
+    | TokCloseBlock
+    | TokSeparator
+    | TokColon
+    | TokDef
+    | TokEquals
+    | TokIn
+    | TokOpPlus
+    | TokOpMinus
+    | TokOpEquals
+    | TokOpLessEquals
+    | TokOpGreaterEquals
+    | TokFinal
+    | TokImmut
+    deriving (Show, Typeable, Data)
 
-data Token =
-      TokLabelPrefix SourceLocation
-    | TokOnionCons SourceLocation
-    | TokOnionSub SourceLocation
-    | TokOnionProj SourceLocation
-    | TokLambda SourceLocation
-    | TokFun SourceLocation
-    | TokArrow SourceLocation
-    | TokCase SourceLocation
-    | TokOf SourceLocation
-    | TokInteger SourceLocation
-    | TokChar SourceLocation
-    | TokUnit SourceLocation
-    | TokOpenParen SourceLocation
-    | TokCloseParen SourceLocation
-    | TokIntegerLiteral SourceLocation Integer
-    | TokCharLiteral SourceLocation Char
-    | TokIdentifier SourceLocation String
-    | TokOpenBlock SourceLocation
-    | TokCloseBlock SourceLocation
-    | TokSeparator SourceLocation
-    | TokColon SourceLocation
-    | TokDef SourceLocation
-    | TokEquals SourceLocation
-    | TokIn SourceLocation
-    | TokOpPlus SourceLocation
-    | TokOpMinus SourceLocation
-    | TokOpEquals SourceLocation
-    | TokOpLessEquals SourceLocation
-    | TokOpGreaterEquals SourceLocation
-    | TokFinal SourceLocation
-    | TokImmut SourceLocation
-    deriving (Show)
+-- | This data type is used to represent tokens and contains the source
+-- location; it is exported, but its constructor is not, so `RawToken`s can't be
+-- used to construct it.
+data Token = Token SourceLocation RawToken
+  deriving (Show)
 
+instance Eq RawToken where
+  t1 == t2 =
+    case (t1,t2) of
+      (TokIntegerLiteral i1,TokIntegerLiteral i2) -> i1 == i2
+      (TokCharLiteral c1,TokCharLiteral c2) -> c1 == c2
+      (TokIdentifier i1,TokIdentifier i2) -> i1 == i2
+      -- In the case that none of the three above branches matched, the only
+      -- information is contained in the constructor; `toConstr` is a method
+      -- provided by the Data type class.
+      _ -> toConstr t1 == toConstr t2
+
+-- TODO: verify that this is the behavior we want.
 instance Eq Token where
-    (==) t1 t2 = case (t1,t2) of
-        (TokLabelPrefix _,TokLabelPrefix _) -> True
-        (TokOnionCons _,TokOnionCons _) -> True
-        (TokOnionSub _,TokOnionSub _) -> True
-        (TokOnionProj _,TokOnionProj _) -> True
-        (TokLambda _,TokLambda _) -> True
-        (TokFun _,TokFun _) -> True
-        (TokArrow _,TokArrow _) -> True
-        (TokCase _,TokCase _) -> True
-        (TokOf _,TokOf _) -> True
-        (TokInteger _,TokInteger _) -> True
-        (TokChar _,TokChar _) -> True
-        (TokUnit _,TokUnit _) -> True
-        (TokOpenParen _,TokOpenParen _) -> True
-        (TokCloseParen _,TokCloseParen _) -> True
-        (TokIntegerLiteral _ i1,TokIntegerLiteral _ i2) | i1 == i2 -> True
-        (TokCharLiteral _ c1,TokCharLiteral _ c2) | c1 == c2 -> True
-        (TokIdentifier _ i1,TokIdentifier _ i2) | i1 == i2 -> True
-        (TokOpenBlock _,TokOpenBlock _) -> True
-        (TokCloseBlock _,TokCloseBlock _) -> True
-        (TokSeparator _,TokSeparator _) -> True
-        (TokColon _,TokColon _) -> True
-        (TokDef _,TokDef _) -> True
-        (TokEquals _,TokEquals _) -> True
-        (TokIn _,TokIn _) -> True
-        (TokOpPlus _,TokOpPlus _) -> True
-        (TokOpMinus _,TokOpMinus _) -> True
-        (TokOpEquals _,TokOpEquals _) -> True
-        (TokOpLessEquals _,TokOpLessEquals _) -> True
-        (TokOpGreaterEquals _,TokOpGreaterEquals _) -> True
-        (TokFinal _,TokFinal _) -> True
-        (TokImmut _,TokImmut _) -> True
-        (_,_) -> False -- they didn't match
+  -- Compares the two tokens by their raw token, ignoring the source location
+  (==) = (==) `on` (\(Token _ rtok) -> rtok)
 
+-- | Compares two `RawToken`s ignoring their payloads; only uses constructors.
+rawWeakEq :: RawToken -> RawToken -> Bool
+rawWeakEq = (==) `on` toConstr
+
+-- | Compares two `Token`s ignoring their source locations and their raw tokens'
+--   payloads (if they have any); only uses constructors.
 weakEq :: Token -> Token -> Bool
-weakEq t1 t2 = case (t1,t2) of
-    (TokLabelPrefix _,TokLabelPrefix _) -> True
-    (TokOnionCons _,TokOnionCons _) -> True
-    (TokOnionSub _,TokOnionSub _) -> True
-    (TokOnionProj _,TokOnionProj _) -> True
-    (TokLambda _,TokLambda _) -> True
-    (TokFun _,TokFun _) -> True
-    (TokArrow _,TokArrow _) -> True
-    (TokCase _,TokCase _) -> True
-    (TokOf _,TokOf _) -> True
-    (TokInteger _,TokInteger _) -> True
-    (TokChar _,TokChar _) -> True
-    (TokUnit _,TokUnit _) -> True
-    (TokOpenParen _,TokOpenParen _) -> True
-    (TokCloseParen _,TokCloseParen _) -> True
-    (TokIntegerLiteral _ _,TokIntegerLiteral _ _) -> True
-    (TokCharLiteral _ _,TokCharLiteral _ _) -> True
-    (TokIdentifier _ _,TokIdentifier _ _) -> True
-    (TokOpenBlock _,TokOpenBlock _) -> True
-    (TokCloseBlock _,TokCloseBlock _) -> True
-    (TokSeparator _,TokSeparator _) -> True
-    (TokColon _,TokColon _) -> True
-    (TokDef _,TokDef _) -> True
-    (TokEquals _,TokEquals _) -> True
-    (TokIn _,TokIn _) -> True
-    (TokOpPlus _,TokOpPlus _) -> True
-    (TokOpMinus _,TokOpMinus _) -> True
-    (TokOpEquals _,TokOpEquals _) -> True
-    (TokOpLessEquals _,TokOpLessEquals _) -> True
-    (TokOpGreaterEquals _,TokOpGreaterEquals _) -> True
-    (TokFinal _,TokFinal _) -> True
-    (TokImmut _,TokImmut _) -> True
-    (_,_) -> False -- they didn't match
+weakEq (Token _ rtok1) (Token _ rtok2) = rawWeakEq rtok1 rtok2
 
+-- | Determines if the contents of a `Token` match a `RawToken`. This is useful
+--   for comparing a token from the stream against a "token" specified in
+--   source.
+matchesRawToken :: Token -> RawToken -> Bool
+matchesRawToken (Token _ rtok) rtok' = rtok == rtok'
+
+-- | Determines if the contents of a `Token` match a `RawToken`, ignoring
+--   payload. This is useful for determining that a token in the stream has a
+--   particular constructor.
+weaklyMatchesRawToken :: Token -> RawToken -> Bool
+weaklyMatchesRawToken (Token _ rtok) rtok' = rawWeakEq rtok rtok'
+
+instance Display RawToken where
+    makeDoc tok = text $ case tok of
+        TokLabelPrefix -> "label prefix"
+        TokOnionCons -> "onion constructor"
+        TokOnionSub -> "onion subtractor"
+        TokOnionProj -> "onion projector"
+        TokFun -> "fun"
+        TokArrow -> "arrow"
+        TokInteger -> "int"
+        TokChar -> "char"
+        TokUnit -> "unit"
+        TokOpenParen -> "open parenthesis"
+        TokCloseParen -> "close parenthesis"
+        TokIntegerLiteral _ -> "int literal"
+        TokCharLiteral _ -> "char literal"
+        TokIdentifier _ -> "identifier"
+        TokOpenBlock -> "open block"
+        TokCloseBlock -> "close block"
+        TokSeparator -> "separator"
+        TokColon -> "colon"
+        TokDef -> "def"
+        TokEquals -> "equals"
+        TokIn -> "in"
+        TokOpPlus -> "op plus"
+        TokOpMinus -> "op minus"
+        TokOpEquals -> "op equals"
+        TokOpLessEquals -> "op less than or equal"
+        TokOpGreaterEquals -> "op greater than or equal"
+        TokFinal -> "final"
+        TokImmut -> "immut"
 
 instance Display Token where
-    makeDoc tok = text $ case tok of
-        TokLabelPrefix _ -> "label prefix"
-        TokOnionCons _ -> "onion constructor"
-        TokOnionSub _ -> "onion subtractor"
-        TokOnionProj _ -> "onion projector"
-        TokLambda _ -> "lambda"
-        TokFun _ -> "fun"
-        TokArrow _ -> "arrow"
-        TokCase _ -> "case"
-        TokOf _ -> "of"
-        TokInteger _ -> "int"
-        TokChar _ -> "char"
-        TokUnit _ -> "unit"
-        TokOpenParen _ -> "open parenthesis"
-        TokCloseParen _ -> "close parenthesis"
-        TokIntegerLiteral _ _ -> "int literal"
-        TokCharLiteral _ _ -> "char literal"
-        TokIdentifier _ _ -> "identifier"
-        TokOpenBlock _ -> "open block"
-        TokCloseBlock _ -> "close block"
-        TokSeparator _ -> "separator"
-        TokColon _ -> "colon"
-        TokDef _ -> "def"
-        TokEquals _ -> "equals"
-        TokIn _ -> "in"
-        TokOpPlus _ -> "op plus"
-        TokOpMinus _ -> "op minus"
-        TokOpEquals _ -> "op equals"
-        TokOpLessEquals _ -> "op less than or equal"
-        TokOpGreaterEquals _ -> "op greater than or equal"
-        TokFinal _ -> "final"
-        TokImmut _ -> "immut"
+  -- Ignore source position in displaying
+  makeDoc (Token _ tok) = makeDoc tok
 
 getPos :: Token -> SourceLocation
-getPos t = case t of
-    TokLabelPrefix p -> p
-    TokOnionCons p -> p
-    TokOnionSub p -> p
-    TokOnionProj p -> p
-    TokLambda p -> p
-    TokFun p -> p
-    TokArrow p -> p
-    TokCase p -> p
-    TokOf p -> p
-    TokInteger p -> p
-    TokChar p -> p
-    TokUnit p -> p
-    TokOpenParen p -> p
-    TokCloseParen p -> p
-    TokIntegerLiteral p _ -> p
-    TokCharLiteral p _ -> p
-    TokIdentifier p _ -> p
-    TokOpenBlock p -> p
-    TokCloseBlock p -> p
-    TokSeparator p -> p
-    TokColon p -> p
-    TokDef p -> p
-    TokEquals p -> p
-    TokIn p -> p
-    TokOpPlus p -> p
-    TokOpMinus p -> p
-    TokOpEquals p -> p
-    TokOpLessEquals p -> p
-    TokOpGreaterEquals p -> p
-    TokFinal p -> p
-    TokImmut p -> p
+getPos (Token loc _) = loc
+
+getRawToken :: Token -> RawToken
+getRawToken (Token _ rtok) = rtok

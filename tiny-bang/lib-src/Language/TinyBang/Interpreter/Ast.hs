@@ -80,9 +80,10 @@ instance (AstWrap ExprPart ast
     A.Def m i e1 e2 | i == ident -> astwrap $ A.Def m i (rec e1) e2
     A.Assign i e1 e2 | i == ident ->
         astwrap $ AssignCell cell (rec e1) (rec e2)
-    A.Case e brs -> astwrap $ A.Case (rec e) $
-        map (\(A.Branch pat bre) -> A.Branch pat $
-          (if ident `Set.member` A.ePatVars pat then id else rec) bre) brs
+    A.Scape chi _ | ident `Set.member` A.ePatVars chi -> astwrap $ orig
+--    A.Case e brs -> astwrap $ A.Case (rec e) $
+--        map (\(A.Branch pat bre) -> A.Branch pat $
+--          (if ident `Set.member` A.ePatVars pat then id else rec) bre) brs
     _ -> aststep HomOp orig rec
     where rec :: ast -> ast
           rec e = substCell e cell ident
@@ -119,4 +120,3 @@ instance (Display t) => Display (ExprPart t) where
     ExprCell c -> text "Cell #" <> int c
     AssignCell c e1 e2 -> text "Cell #" <> int c <+> text "=" <+>
                           makeDoc e1 <+> text "in" <+> makeDoc e2
-

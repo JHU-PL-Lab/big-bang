@@ -12,18 +12,9 @@ module Language.TinyBang.Ast
 ( Expr
 , ExprPart(..)
 , Modifier(..)
-, Chi(..)
-, ChiMain
-, ChiStruct
-, ChiBind
-, ChiPrimary
-, ChiMainType
-, ChiStructType
-, ChiBindType
-, ChiPrimaryType
-, Branches
-, Branch(..)
 , Value(..)
+, Pattern(..)
+, PrimaryPattern(..)
 , Evaluated(..)
 , CellId
 , ePatVars
@@ -42,6 +33,7 @@ module Language.TinyBang.Ast
 
 import Control.Monad (liftM,liftM2,ap)
 import Data.Monoid (Monoid, mempty, mappend)
+import Data.List (intersperse)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Set (Set)
@@ -77,12 +69,13 @@ data ExprPart t
   | OnionSub t ProjTerm
   | OnionProj t ProjTerm
   | EmptyOnion
-  | Func Ident t
+  | Scape Pattern t
+--  | Func Ident t
   | Appl t t
   | PrimInt Integer
   | PrimChar Char
   | PrimUnit
-  | Case t (Branches t)
+--  | Case t (Branches t)
   | Def (Maybe Modifier) Ident t t
   | Assign Ident t t
   | LazyOp LazyOperator t t
@@ -99,7 +92,8 @@ data Modifier
 data Value t
   = VLabel LabelName CellId
   | VOnion (Value t) (Value t)
-  | VFunc Ident t
+  | VScape Pattern t
+--  | VFunc Ident t
   | VPrimInt Integer
   | VPrimChar Char
   | VPrimUnit
@@ -109,65 +103,27 @@ data Value t
 data Assignable = ACell CellId | AIdent Ident
   deriving (Eq, Ord, Show)
 
-
--- TODO: fix this boilerplate using -XDataKinds in ghc 7.4
-data ChiMainType
-data ChiStructType
-data ChiBindType
-data ChiPrimaryType
-
-type ChiMain = Chi ChiMainType
-type ChiStruct = Chi ChiStructType
-type ChiBind = Chi ChiBindType
-type ChiPrimary = Chi ChiPrimaryType
-
--- |Data type describing top level type patterns in case expressions;
---  corresponds to chi in the document.
-data Chi a where
-  ChiTopVar       :: Ident                   -> ChiMain
-  ChiTopOnion     :: ChiPrimary -> ChiStruct -> ChiMain
-  ChiTopBind      :: ChiBind                 -> ChiMain
-
-  ChiOnionMany    :: ChiPrimary -> ChiStruct -> ChiStruct
-  ChiOnionOne     :: ChiPrimary              -> ChiStruct
-
-  ChiBound        :: Ident -> ChiBind -> ChiBind
-  ChiUnbound      :: ChiPrimary       -> ChiBind
-
-  ChiPrim         :: T.PrimitiveType                -> ChiPrimary
-  ChiLabelShallow :: LabelName       -> Ident       -> ChiPrimary
-  ChiLabelDeep    :: LabelName       -> ChiBind     -> ChiPrimary
-  ChiFun          ::                                   ChiPrimary
-  ChiInnerStruct  :: ChiStruct                      -> ChiPrimary
-
-deriving instance Show (Chi a)
-deriving instance Eq (Chi a)
-deriving instance Ord (Chi a)
-
--- |Alias for case branches
-type Branches t = [Branch t]
-data Branch t = Branch ChiMain t
+data Pattern = Pattern Ident PrimaryPattern
   deriving (Eq, Ord, Show)
 
--- TODO: refactor the pattern stuff into its own module?
+data PrimaryPattern
+  = PatPrim T.PrimitiveType
+  | PatLabel LabelName Ident PrimaryPattern
+  | PatOnion [PrimaryPattern] -- An empty one of these matches anything.
+  | PatFun
+  deriving (Eq, Ord, Show)
+
 -- |Obtains the set of bound variables in a pattern.
-ePatVars :: Chi a -> Set Ident
-ePatVars chi =
-  case chi of
-    ChiTopVar x -> Set.singleton x
-    ChiTopOnion p s -> both p s
-    ChiTopBind b -> ePatVars b
-    ChiOnionMany p s -> both p s
-    ChiOnionOne p -> ePatVars p
-    ChiBound i b -> Set.insert i $ ePatVars b
-    ChiUnbound p -> ePatVars p
-    ChiPrim _ -> Set.empty
-    ChiLabelShallow _ x -> Set.singleton x
-    ChiLabelDeep _ b -> ePatVars b
-    ChiFun -> Set.empty
-    ChiInnerStruct s -> ePatVars s
-  where both :: Chi a -> Chi b -> Set Ident
-        both x y = Set.union (ePatVars y) (ePatVars x)
+ePatVars :: Pattern -> Set Ident
+ePatVars pat =
+  case pat of
+    Pattern i pp -> Set.singleton i `Set.union` rec pp
+  where rec pat' =
+          case pat' of
+            PatPrim _ -> Set.empty
+            PatLabel _ i pp -> rec pp `Set.union` Set.singleton i
+            PatOnion pps -> Set.unions $ map rec pps
+            PatFun -> Set.empty
 
 -- TODO: a number of the following operations could be taking more advantage
 -- of HomOp
@@ -180,10 +136,11 @@ instance (AstOp FreeVarsOp ast (Set Ident))
       => AstStep FreeVarsOp ExprPart ast (Set Ident) where
   aststep FreeVarsOp part = case part of
     Var i -> Set.singleton i
-    Func i e' -> i `Set.delete` exprFreeVars e'
-    Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
-      map (\(Branch chi e'') ->
-              exprFreeVars e'' `Set.difference` ePatVars chi) brs
+    Scape pat e' -> exprFreeVars e' `Set.difference` ePatVars pat
+--    Func i e' -> i `Set.delete` exprFreeVars e'
+--    Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
+--      map (\(Branch chi e'') ->
+--              exprFreeVars e'' `Set.difference` ePatVars chi) brs
     Def _ i e1 e2 ->
       (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign i e1 e2 -> i `Set.delete`
@@ -199,10 +156,11 @@ instance (AstOp VarsOp ast (Set Ident))
       => AstStep VarsOp ExprPart ast (Set Ident) where
   aststep VarsOp part = case part of
     Var i -> Set.singleton i
-    Func i e' -> i `Set.insert` exprVars e'
-    Case e' brs -> Set.union (exprVars e') $ Set.unions $
-      map (\(Branch chi e'') ->
-              exprVars e'' `Set.difference` ePatVars chi) brs
+    Scape pat e' -> ePatVars pat `Set.union` exprVars e'
+--    Func i e' -> i `Set.insert` exprVars e'
+--    Case e' brs -> Set.union (exprVars e') $ Set.unions $
+--      map (\(Branch chi e'') ->
+--              exprVars e'' `Set.difference` ePatVars chi) brs
     Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
     Assign i e1 e2 -> i `Set.insert` (exprVars e1 `Set.union` exprVars e2)
     _ -> aststep CatOp part (exprVars :: ast -> Set Ident)
@@ -221,10 +179,11 @@ instance (AstWrap ExprPart ast
       => AstStep SubstOp ExprPart ast (ExprPart ast -> Ident -> ast) where
   aststep SubstOp orig sub ident = case orig of
     Var i | i == ident -> astwrap $ sub
-    Func i _ | i == ident -> astwrap $ orig
-    Case e branches -> astwrap $ Case (rec e) $
-        map (\(Branch pat bre) -> Branch pat $
-          (if ident `Set.member` ePatVars pat then id else rec) bre) branches
+    Scape pat _ | ident `Set.member` ePatVars pat -> astwrap $ orig
+--    Func i _ | i == ident -> astwrap $ orig
+--    Case e branches -> astwrap $ Case (rec e) $
+--        map (\(Branch pat bre) -> Branch pat $
+--          (if ident `Set.member` ePatVars pat then id else rec) bre) branches
     Def m i e1 e2 | i == ident -> astwrap $ Def m i (rec e1) e2
     Assign i e1 e2 | i == ident -> astwrap $ Assign i (rec e1) e2
     _ -> aststep HomOp orig rec
@@ -240,15 +199,16 @@ instance (AstWrap ExprPart ast2
     Onion e1 e2 -> Onion <&> e1 <&*> e2
     OnionSub e s -> OnionSub <&> e <&^> s
     OnionProj e s -> OnionProj <&> e <&^> s
-    Func i e -> Func i <&> e
+    Scape pat e -> Scape pat <&> e
+--    Func i e -> Func i <&> e
     Appl e1 e2 -> Appl <&> e1 <&*> e2
     PrimInt v -> return $ PrimInt v
     PrimChar v -> return $ PrimChar v
     PrimUnit -> return $ PrimUnit
-    Case e brs -> do
-        e' <- f e
-        brs' <- mapM appbr brs
-        return $ Case e' brs'
+--    Case e brs -> do
+--        e' <- f e
+--        brs' <- mapM appbr brs
+--        return $ Case e' brs'
     EmptyOnion -> return $ EmptyOnion
     LazyOp op e1 e2 -> LazyOp op <&> e1 <&*> e2
     EagerOp op e1 e2 -> EagerOp op <&> e1 <&*> e2
@@ -261,9 +221,9 @@ instance (AstWrap ExprPart ast2
           infixl 4 <&*>
           mc <&^> p = mc `ap` return p
           infixl 4 <&^>
-          appbr (Branch pat bre) = do
-            bre' <- f bre
-            return $ Branch pat bre'
+--          appbr (Branch pat bre) = do
+--            bre' <- f bre
+--            return $ Branch pat bre'
 
 -- |Specifies a catamorphic operation over TinyBang AST nodes.
 instance (Monoid r, Monad m)
@@ -274,12 +234,13 @@ instance (Monoid r, Monad m)
     Onion e1 e2 -> f e1 *+* f e2
     OnionSub e _ -> f e
     OnionProj e _ -> f e
-    Func _ e -> f e
+    Scape _ e -> f e
+--    Func _ e -> f e
     Appl e1 e2 -> f e1 *+* f e2
     PrimInt _ -> return $ mempty
     PrimChar _ -> return $ mempty
     PrimUnit -> return $ mempty
-    Case e brs -> foldl (*+*) (f e) $ map (\(Branch _ e') -> f e') brs
+--    Case e brs -> foldl (*+*) (f e) $ map (\(Branch _ e') -> f e') brs
     EmptyOnion -> return $ mempty
     LazyOp _ e1 e2 -> f e1 *+* f e2
     EagerOp _ e1 e2 -> f e1 *+* f e2
@@ -296,16 +257,18 @@ instance (Display t) => Display (ExprPart t) where
     Label n m e ->
       char '`' <> (text $ unLabelName n) <+> dispMod m <+> (parens $ makeDoc e)
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
-    Func i e -> parens $
-            text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
+    Scape pat e -> parens $
+      makeDoc pat <+> text "->" <+> makeDoc e
+--    Func i e -> parens $
+--            text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
     Appl e1 e2 -> parens $ makeDoc e1 <+> makeDoc e2
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
-    Case e brs -> parens $ text "case" <+> (parens $ makeDoc e) <+> text "of"
-            <+> text "{" $+$
-            (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
-            $+$ text "}"
+--    Case e brs -> parens $ text "case" <+> (parens $ makeDoc e) <+> text "of"
+--            <+> text "{" $+$
+--            (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
+--            $+$ text "}"
     OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
     OnionProj e s -> makeDoc e <+> text "&." <+> makeDoc s
     EmptyOnion -> text "(&)"
@@ -326,32 +289,25 @@ instance (Display t) => Display (Value t) where
     case x of
       VLabel n v -> text "`" <> makeDoc n <+> parens (makeDoc v)
       VOnion v1 v2 -> parens (makeDoc v1) <+> text "&" <+> parens (makeDoc v2)
-      VFunc i e -> text "fun" <+> text (unIdent i) <+> text "->" <+> makeDoc e
+      VScape pat e -> parens $ makeDoc pat <+> text "->" <+> makeDoc e
+--      VFunc i e -> text "fun" <+> text (unIdent i) <+> text "->" <+> makeDoc e
       VPrimInt i -> text $ show i
       VPrimChar c -> char c
       VPrimUnit -> text "()"
       VEmptyOnion -> text "(&)"
 
-instance (Display t) => Display (Branch t) where
-  makeDoc (Branch chi e) =
-    makeDoc chi <+> text "->" <+> makeDoc e
+instance Display Pattern where
+  makeDoc pat =
+    case pat of
+      Pattern i pp -> makeDoc i <> colon <> makeDoc pp
 
-instance Display (Chi a) where
-  makeDoc chi =
-    case chi of
-      ChiTopVar x -> iDoc x
-      ChiTopOnion p s -> makeDoc p <+> text "&" <+> makeDoc s
-      ChiTopBind b -> makeDoc b
-      ChiOnionMany p s -> makeDoc p <+> text "&" <+> makeDoc s
-      ChiOnionOne p -> makeDoc p
-      ChiBound i b -> iDoc i <> text ":" <> makeDoc b
-      ChiUnbound p -> makeDoc p
-      ChiPrim p -> makeDoc p
-      ChiLabelShallow lbl x -> text "`" <> makeDoc lbl <+> iDoc x
-      ChiLabelDeep lbl b -> text "`" <> makeDoc lbl <+> makeDoc b
-      ChiFun -> text "fun"
-      ChiInnerStruct s -> parens $ makeDoc s
-    where iDoc = text . unIdent
+instance Display PrimaryPattern where
+  makeDoc pat =
+    case pat of
+      PatPrim tprim -> makeDoc tprim
+      PatLabel lbl i pp -> makeDoc lbl <+> makeDoc i <> colon <> makeDoc pp
+      PatOnion pps -> parens $ sep $ intersperse (char '&') $ map makeDoc pps
+      PatFun -> text "fun"
 
 class Evaluated t a where
   value :: a -> Value t
@@ -368,4 +324,3 @@ instance Evaluated t (Value t, IntMap (Value t)) where
 instance Evaluated t (Value t) where
   value = id
   mapping = const IntMap.empty
-
