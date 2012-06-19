@@ -414,9 +414,11 @@ findNonFunctionApplications cs = Set.fromList $ do -- List
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'
-  -- TODO: What if there are no projections?
-  TdScape (ScapeData _ tpat _ _) <- runReader (tProj t1 ProjFunc) cs
-  Nothing <- runReader (patternCompatible t2 tpat) cs
+  let tpats =
+        [tpat |
+         TdScape (ScapeData _ tpat _ _) <- runReader (tProj t1 ProjFunc) cs]
+      compatibiltyList tpat = runReader (patternCompatible t2 tpat) cs
+  guard $ all (any isNothing . compatibiltyList) tpats
   return $ Bottom histFIXME
 
 closeLops :: Constraints -> Constraints
