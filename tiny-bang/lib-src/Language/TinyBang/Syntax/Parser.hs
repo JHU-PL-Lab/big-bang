@@ -90,12 +90,12 @@ expr = do
     option e $ exprRest e
 
 exprBasic :: TokParser A.Expr
-exprBasic = choice
+exprBasic = choice $ map try $
   [ scape
   , defin
-  , try assign
-  , try opexp
-  , try applexp
+  , assign
+  , opexp
+  , applexp
   ]
   where scape = do
             p <- pattern
