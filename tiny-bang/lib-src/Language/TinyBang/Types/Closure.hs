@@ -68,46 +68,53 @@ type CReader = Reader Constraints
 
 --type CWriter out ret = Writer (Set out) ret
 
--- |A function modeling pattern compatibility.  This function takes a type and
---  a guard in a match case.  This function returns a list of the constraint
---  sets under which the input type is compatible with the guard.  If the type
---  is incompatible, an empty list is returned.
-patternCompatible :: TauDown -> PatternType -> CReader [Constraints]
+-- |A function modeling pattern compatibility.  This function takes a
+--  type and a guard in a match case.  This function returns a list of
+--  the maybe constraint sets under which the input type is compatible
+--  with the guard, where a Nothing indicates incompatibility.
+patternCompatible :: TauDown -> PatternType -> CReader [Maybe Constraints]
 -- TODO: a compatibility history should be returned as well to retain the proof
 patternCompatible tau (Pattern a pp) = do
-  map (Set.insert $ tau <: a .: histFIXME) <$> primaryPatternCompatible tau pp
+  map (fmap $ Set.insert $ tau <: a .: histFIXME)
+    <$> primaryPatternCompatible tau pp
 
 primaryPatternCompatible :: TauDown -> PrimaryPatternType
-                         -> CReader [Constraints]
+                         -> CReader [Maybe Constraints]
 -- TODO: a compatibility history should be returned as well to retain the proof
-primaryPatternCompatible tau pat =
-  let success = return [Set.empty]
-      failure = return [] in
-  case pat of
+primaryPatternCompatible tau tpat =
+  let success = return [Just Set.empty]
+      failure = return [Nothing] in
+  case tpat of
     PatPrim prim -> do
       flag <- null <$> tProj tau (ProjPrim prim)
       if flag
         then failure
         else success
-    PatLabel lbl ca pp -> do
+    PatLabel lbl a2 pp -> do -- CReader
       projections <- tProj tau (ProjLabel lbl)
-      taus <- concretizeCellVariable ca
-      -- The fst is what throws out histore
-      css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
-      return $ case tau of
-        TdLabel _ a2 -> do -- List
-          TdLabel _ a1 <- projections
-          t' <- taus
-          cs <- css
-          c <- cs
-          return $ (a1 <: a2 .: histFIXME) `Set.insert` c
-        _ -> []
+      case listToMaybe [a1 | TdLabel _ a1 <- projections] of
+        Just a1 -> do -- CReader
+          taus <- concretizeCellVariable a1
+          -- The fst is what throws out history
+          css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
+          return $ do -- List
+            cs <- css
+            mc <- cs
+            return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
+        -- An empty list is returned only in the case where there are no
+        -- suitable projections.
+        Nothing -> return []
     PatOnion xs -> do
       xs' <- mapM (primaryPatternCompatible tau) xs
-      -- since xs' is a list of lists of constraints sets, where at least one
+      -- Since xs' is a list of lists of constraints sets, where at least one
       -- element in each inner list must be satisfied, we need to do a
       -- permutation, which is what sequence does on lists, and then union.
-      return $ map Set.unions $ sequence xs'
+
+      -- Since each element of sequence xs' is a [Maybe Constraints], and if any
+      -- of these is a Nothing, the result should be a Nothing; otherwise, the
+      -- constraints should be unioned, hence the parenthesized expression
+      -- below.
+      return $ map (fmap Set.unions . sequence) $ sequence xs'
     PatFun -> do
       flag <- null <$> tProj tau ProjFunc
       if flag
@@ -287,7 +294,7 @@ instance LowerBounded CellAlpha where
 --  corresponds to the Application Substitution Definition in the language
 --  specification.
 substituteVars :: Constraints -> ForallVars
-               -> CellAlpha -> CellAlpha -> Constraints
+               -> InterAlpha -> InterAlpha -> Constraints
 substituteVars constraints forallVars replAlpha otherAlpha =
   (\(a, _, b) -> Set.union a b) $ runRWS
     (substituteAlpha constraints)
@@ -384,26 +391,34 @@ ct cs a = Set.toList $ runReader (concretizeType a) cs
 --
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do -- List
---  c@(UpperSubtype a ai' ao' _) <- Set.toList cs
---  (td, funcChain) <- ct cs a
+  c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
+  (t1, _) <- ct cs a0'
+  (a3', _) <- ct cs a1'
+  (t2, _) <- ct cs a3'
+  TdScape (ScapeData foralls tpat ai ci) <- runReader (tProj t1 ProjFunc) cs
+  Just c' <- runReader (patternCompatible t2 tpat) cs
+  return $
+    substituteVars
+      (Set.insert (ai <: a2' .: histFIXME) (Set.union c' ci))
+      foralls ai a2'
 --  TdScape (ScapeData foralls ai ao cs') <- runReader (tProj td ProjFunc) cs
---  (ca3, caChain) <- ct cs ai'
 --  let funcChain' = IAHead ai' ao' c funcChain
 --      hist = ClosureApplication funcChain' caChain
 --      cs'' = Set.union cs' $
 --               Set.fromList [ Cell ca3 <: ai .: hist
 --                            , ao <: ao' .: hist ]
 --  return $ substituteVars cs'' foralls ai ai'
-  --FIXME: Actually write this rule.
-  return undefined
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do -- List
-  c@(UpperSubtype a ai' ao' _) <- Set.toList cs
-  (tau, chain) <- ct cs a
-  let chain' = IAHead ai' ao' c chain
-  guard $ null $ runReader (tProj tau ProjFunc) cs
-  return $ Bottom $ ContradictionApplication chain'
+  c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
+  (t1, _) <- ct cs a0'
+  (a3', _) <- ct cs a1'
+  (t2, _) <- ct cs a3'
+  -- TODO: What if there are no projections?
+  TdScape (ScapeData _ tpat _ _) <- runReader (tProj t1 ProjFunc) cs
+  Nothing <- runReader (patternCompatible t2 tpat) cs
+  return $ Bottom histFIXME
 
 closeLops :: Constraints -> Constraints
 closeLops cs = Set.fromList $ do
@@ -553,7 +568,7 @@ csaHelper3 constr a1 a2 a3 hist =
     <*> substituteAlpha a3
     <*> pure hist
 
-type AlphaSubstitutionEnv = (ForallVars, CellAlpha, CellAlpha)
+type AlphaSubstitutionEnv = (ForallVars, InterAlpha, InterAlpha)
 type TSubstM a = RWS AlphaSubstitutionEnv Constraints () a
 
 -- |A typeclass for entities which can substitute their type variables.
@@ -562,7 +577,7 @@ class AlphaSubstitutable a where
   --  The set in the reader environment contains alphas to ignore.
   substituteAlpha :: a -> TSubstM a
 
-tContour :: FunctionLowerBound -> CellAlpha -> Contour
+tContour :: FunctionLowerBound -> InterAlpha -> Contour
 tContour l1 a =
   case Map.lookup l1 aContour of
     Just _ ->
@@ -581,7 +596,7 @@ substituteAlphaHelper a = do
       lb = alphaId a1'
   --let cs :: CallSite
   --    cs = alphaId a2'
-  let newContour= tContour lb a2'
+  let newContour = tContour lb a2'
   if not $ Set.member (alphaWeaken a) forallVars
     then return a
     -- The variable we are substituting should never have marked
