@@ -154,24 +154,23 @@ tProj tau proj =
     (TdOnion a1 a2, _) -> do -- CReader
       t1projs <- typesFromTypeVariable a1
       t2projs <- typesFromTypeVariable a2
-      return $ concat $ t2projs ++
-        (if elem [] t2projs then t1projs else [])
+      return $ t2projs ++ t1projs
     (TdOnionSub a s, _) ->
       if tSubProj s proj
         then return []
-        else concat <$> typesFromTypeVariable a
+        else typesFromTypeVariable a
     (TdOnionProj a s, _) ->
       if not $ tSubProj s proj
          then return []
-         else concat <$> typesFromTypeVariable a
+         else typesFromTypeVariable a
     (TdScape _, ProjFunc) -> return [tau]
     _ -> return []
-  where typesFromTypeVariable :: InterAlpha -> CReader [[TauDown]]
+  where typesFromTypeVariable :: InterAlpha -> CReader [TauDown]
         typesFromTypeVariable a = do
           ths <- concretizeType a
           -- TODO: care about history
           let ts = Set.toList $ Set.map fst ths
-          mapM (flip tProj proj) ts
+          concat <$> mapM (flip tProj proj) ts
 
 -- Performs a check to ensure that projection can occur through an onion
 -- subtraction type.
