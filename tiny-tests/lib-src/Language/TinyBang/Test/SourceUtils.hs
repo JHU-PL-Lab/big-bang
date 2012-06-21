@@ -6,42 +6,57 @@ module Language.TinyBang.Test.SourceUtils
 , lblEq
 , lblLt
 , lblGt
+, tbCase
+, tbDef
 )
 where
 
 import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.Test.UtilFunctions
+import Text.Printf (printf)
+import Data.List (intercalate, intersperse)
+
+parens :: String -> String
+parens = printf "(%s)"
+
+tbCase :: TinyBangCode -> [TinyBangCode] -> TinyBangCode
+tbCase e bs =
+  (++ (" " ++ parens e)) $ intercalate " & " $ reverse $ map parens bs
+
+-- TODO: make this not use def
+tbDef :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
+tbDef defWhat eqWhat inWhat =
+  printf "def (%s = %s) in (%s)" defWhat eqWhat inWhat
 
 srcY  :: TinyBangCode
-srcY  = "(fun body ->"
-        ++ " (fun f -> fun arg -> f f arg)"
-        ++ " (fun this -> fun arg -> body (this this) arg))"
+srcY  = "(body ->"
+        ++ " (f -> arg -> f f arg)"
+        ++ " (this -> arg -> body (this this) arg))"
 
 srcMultiAppl :: [TinyBangCode] -> TinyBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"
-srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
+srcMultiAppl xs = concat $ intersperse " " $ map parens xs
 
 srcSummate :: TinyBangCode
-srcSummate = "fun this -> fun x -> case (x == 0) of { `True z -> 0 ; `False z -> x + (this (x - 1))}"
+srcSummate =
+  "this -> x ->" ++
+  tbCase "x == 0" ["`True _ -> 0", "`False _ -> x + this (x - 1)"]
 
 srcGreaterOrLessUtil :: TinyBangCode
 srcGreaterOrLessUtil =
- "fun this -> fun x -> fun y -> fun z ->"++
-     "case (x - y) == z of {"++
-          "`True junk -> `GreaterThan () ;"++
-          "`False junk ->"++
-                 "case (y - x) == z of {"++
-                      "`True junk -> `LessThan () ;"++
-                      "`False junk -> this x y (z + 1) }}"
+ "this -> x -> y -> z ->" ++
+ tbCase "(x - y) == z"
+   [ "`True _ -> `GreaterThan ()"
+   , "`False _ -> " ++ tbCase "(y - x) == z"
+                         [ "`True _ -> `LessThan ()"
+                         , "`False _ -> this x y (z + 1)"]]
 
 srcGreaterOrLess :: TinyBangCode
 srcGreaterOrLess =
- "fun x -> fun y ->"++
-     "case x == y of {"++
-          "`True junk -> `EqualTo () ;"++
-           "`False junk -> "
-           ++ srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"]
-           ++ "}"
+ "x -> y ->" ++
+ tbCase "x == y" [ "`True _ -> `EqualTo ()"
+                 , "`False _ -> " ++
+                   srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"]]
 
 lblEq, lblLt, lblGt :: Result
 lblEq = (A.VLabel (labelName "EqualTo") 0, makeState [(0,A.VPrimUnit)])

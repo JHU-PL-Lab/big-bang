@@ -17,14 +17,14 @@ import Prelude hiding (pi)
 
 --import Language.TinyBang.Test.UtilFunctions
 import Language.TinyBang.Test.NameUtils
-import qualified Language.TinyBang.Ast as A (Expr, ExprPart(..))
+import qualified Language.TinyBang.Ast as A (Expr, ExprPart(..), Pattern(..), PrimaryPattern(..))
 import Utils.Language.Ast
 
 varX = astwrap $ A.Var idX
 varY = astwrap $ A.Var idY
 varZ = astwrap $ A.Var idZ
 
-identFuncX = astwrap $ A.Func idX varX
+identFuncX = astwrap $ A.Scape (A.Pattern idX $ A.PatOnion []) varX
 
 pi = astwrap . A.PrimInt
 

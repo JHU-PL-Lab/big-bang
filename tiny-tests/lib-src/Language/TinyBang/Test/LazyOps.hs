@@ -20,12 +20,12 @@ tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Tests on integer operations" $ TestList
   [ lexParseEval "(3 - 1) + 2"
                  [ TokOpenParen
-                 , (flip TokIntegerLiteral) 3
+                 , TokIntegerLiteral 3
                  , TokOpMinus
-                 , (flip TokIntegerLiteral) 1
+                 , TokIntegerLiteral 1
                  , TokCloseParen
                  , TokOpPlus
-                 , (flip TokIntegerLiteral) 2
+                 , TokIntegerLiteral 2
                  ]
                  (astwrap $ A.LazyOp A.Plus
                     (astwrap $ A.LazyOp A.Minus (E.pi 3) (E.pi 1))

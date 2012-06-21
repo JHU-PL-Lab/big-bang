@@ -24,6 +24,7 @@ module Language.TinyBang.Test.UtilFunctions
 , ident
 , module Test.HUnit
 , Token(..)
+, RawToken(..)
 , makeState
 )
 where
@@ -42,7 +43,7 @@ import qualified Language.TinyBang.Types.TypeInference as TI
   (TypeInferenceError (..))
 import qualified Language.TinyBang.Syntax.Lexer as L
   (lexTinyBang)
-import Language.TinyBang.Syntax.Lexer (Token(..))
+import Language.TinyBang.Syntax.Lexer (Token(..), RawToken(..), matchesRawToken)
 import Language.TinyBang.Types.UtilTypes (labelName, ident)
 import Utils.Render.Display (display, Display)
 import qualified Language.TinyBang.Config as Cfg
@@ -132,11 +133,11 @@ xDLbl = xErrT "DoubleLabel" $ \x ->
             TI.DoubleLabel{} -> True
             _ -> False
 
-xLexs :: TinyBangCode -> [SourceLocation -> Token] -> Test
+xLexs :: TinyBangCode -> [RawToken] -> Test
 xLexs code expected =
   label ~: TestCase $ case L.lexTinyBang code of
     Left err -> assertFailure $ "Lexing failed with: " ++ err
-    Right tokens -> assertEqual "" (map ($defaultSourceLocation) expected) tokens
+    Right tokens -> assert $ and $ zipWith matchesRawToken tokens expected
   where label = "Lexing " ++ show code
 
 xPars :: (?conf :: Cfg.Config) => TinyBangCode -> A.Expr -> Test
@@ -162,7 +163,7 @@ fPars code =
         failWith expr = assertFailure $ "Parse succeeded with " ++ display expr
 
 lexParseEval :: (Display a, Evaluated IA.Expr a, ?conf :: Cfg.Config)
-             => TinyBangCode -> [SourceLocation -> Token] -> A.Expr -> a
+             => TinyBangCode -> [RawToken] -> A.Expr -> a
              -> Test
 lexParseEval code lex expr val =
   TestList [ xLexs code lex

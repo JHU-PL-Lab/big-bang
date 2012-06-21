@@ -6,7 +6,7 @@ module Language.TinyBang.Test.ValueUtils
 )
 where
 
-import Prelude (Integer, ($), (.))
+import Prelude (Integer, ($))
 
 import qualified Data.IntMap as IntMap
 import Language.TinyBang.Test.ExpressionUtils
@@ -16,13 +16,12 @@ import Language.TinyBang.Test.NameUtils
 import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Interpreter.Ast as IA
-import Utils.Language.Ast
 
 pi :: Integer -> A.Value IA.Expr
 pi = A.VPrimInt
 
 identFuncX :: A.Value IA.Expr
-identFuncX = A.VFunc idX varX
+identFuncX = A.VScape (A.Pattern idX $ A.PatOnion []) varX
 
 -- The following should only be used when there is no other expected state.
 true :: (A.Value IA.Expr, IntMap.IntMap (A.Value IA.Expr))

@@ -30,7 +30,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
   , xNotC "x"
   , lexParseEval "`True ()"
                  [ TokLabelPrefix
-                 , flip TokIdentifier "True"
+                 , TokIdentifier "True"
                  , TokOpenParen
                  , TokCloseParen
                  ]
@@ -41,7 +41,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  )
   , lexParseEval "`False ()"
                  [ TokLabelPrefix
-                 , flip TokIdentifier "False"
+                 , TokIdentifier "False"
                  , TokOpenParen
                  , TokCloseParen
                  ]

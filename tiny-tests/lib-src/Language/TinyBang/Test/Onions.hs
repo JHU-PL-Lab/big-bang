@@ -29,12 +29,12 @@ tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Tests of basic onion properties" $ TestList
   [ lexParseEval "`A 1 & `B 2"
                  [ TokLabelPrefix
-                 , flip TokIdentifier "A"
-                 , flip TokIntegerLiteral 1
+                 , TokIdentifier "A"
+                 , TokIntegerLiteral 1
                  , TokOnionCons
                  , TokLabelPrefix
-                 , flip TokIdentifier "B"
-                 , flip TokIntegerLiteral 2
+                 , TokIdentifier "B"
+                 , TokIntegerLiteral 2
                  ]
                  ( astwrap $ A.Onion
                     (astwrap $ A.Label lblA Nothing $ E.pi 1)
@@ -53,7 +53,7 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
             (astwrap $ A.PrimInt 1)
             (astwrap $ A.Onion
               (astwrap $ A.PrimChar 'x')
-              (astwrap $ A.Func idX varX)))
+              (astwrap $ A.Scape (A.Pattern idX $ A.PatOnion []) varX)))
 
   -- Test that onions associate right
   , xPars "`A 1 & `B 2 & `C 3"

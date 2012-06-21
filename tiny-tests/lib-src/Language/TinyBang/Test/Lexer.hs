@@ -14,7 +14,7 @@ import qualified Language.TinyBang.Config as Cfg
 -- TODO: Write a lex-fail construct
 -- TODO: test that [+] and the like fail to lex
 
-lexesAs :: (String, SourceLocation -> Token) -> Test
+lexesAs :: (String, RawToken) -> Test
 lexesAs (str, tok) =
   xLexs str [tok]
 
@@ -25,54 +25,53 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
   , xLexs "\t" []
   , xLexs "\n" []
   , xLexs "'s''t''r''i''n''g'" $
-          map (flip TokCharLiteral) "string"
-  , xLexs "map (\\x -> x) (1;2;3)"
-          [ (flip TokIdentifier) "map"
+          map TokCharLiteral "string"
+  , xLexs "map (x -> x) (1;2;3)"
+          [ TokIdentifier "map"
           , TokOpenParen
-          , TokLambda
-          , flip TokIdentifier "x"
+          , TokIdentifier "x"
           , TokArrow
-          , flip TokIdentifier "x"
+          , TokIdentifier "x"
           , TokCloseParen
           , TokOpenParen
-          , flip TokIntegerLiteral 1
+          , TokIntegerLiteral 1
           , TokSeparator
-          , flip TokIntegerLiteral 2
+          , TokIntegerLiteral 2
           , TokSeparator
-          , flip TokIntegerLiteral 3
+          , TokIntegerLiteral 3
           , TokCloseParen
           ]
   , xLexs "fun double x -> plus x x"
           [ TokFun
-          , flip TokIdentifier "double"
-          , flip TokIdentifier "x"
+          , TokIdentifier "double"
+          , TokIdentifier "x"
           , TokArrow
-          , flip TokIdentifier "plus"
-          , flip TokIdentifier "x"
-          , flip TokIdentifier "x"
+          , TokIdentifier "plus"
+          , TokIdentifier "x"
+          , TokIdentifier "x"
           ]
   , xLexs "fun abs x -> if x GTE 0 then x else negative x"
           [ TokFun
-          , flip TokIdentifier "abs"
-          , flip TokIdentifier "x"
+          , TokIdentifier "abs"
+          , TokIdentifier "x"
           , TokArrow
-          , flip TokIdentifier "if"
-          , flip TokIdentifier "x"
-          , flip TokIdentifier "GTE"
-          , flip TokIntegerLiteral 0
-          , flip TokIdentifier "then"
-          , flip TokIdentifier "x"
-          , flip TokIdentifier "else"
-          , flip TokIdentifier "negative"
-          , flip TokIdentifier "x"
+          , TokIdentifier "if"
+          , TokIdentifier "x"
+          , TokIdentifier "GTE"
+          , TokIntegerLiteral 0
+          , TokIdentifier "then"
+          , TokIdentifier "x"
+          , TokIdentifier "else"
+          , TokIdentifier "negative"
+          , TokIdentifier "x"
           ]
   , xLexs "case val of\n x -> x"
-          [ TokCase
-          , flip TokIdentifier "val"
-          , TokOf
-          , flip TokIdentifier "x"
+          [ TokIdentifier "case"
+          , TokIdentifier "val"
+          , TokIdentifier "of"
+          , TokIdentifier "x"
           , TokArrow
-          , flip TokIdentifier "x"
+          , TokIdentifier "x"
           ]
   , xLexs "{`(int & unit} & char)"
           [ TokOpenBlock
@@ -86,71 +85,67 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           , TokChar
           , TokCloseParen
           ]
-  , xLexs "(\\x->x)"
+  , xLexs "(x->x)"
           [ TokOpenParen
-          , TokLambda
-          , flip TokIdentifier "x"
+          , TokIdentifier "x"
           , TokArrow
-          , flip TokIdentifier "x"
+          , TokIdentifier "x"
           , TokCloseParen
           ]
   , xLexs "a&(b&c)"
-          [ flip TokIdentifier "a"
+          [ TokIdentifier "a"
           , TokOnionCons
           , TokOpenParen
-          , flip TokIdentifier "b"
+          , TokIdentifier "b"
           , TokOnionCons
-          , flip TokIdentifier "c"
+          , TokIdentifier "c"
           , TokCloseParen
           ]
   , xLexs "a&-`b"
-          [ flip TokIdentifier "a"
+          [ TokIdentifier "a"
           , TokOnionSub
           , TokLabelPrefix
-          , flip TokIdentifier "b"
+          , TokIdentifier "b"
           ]
   , xLexs "`True()"
           [ TokLabelPrefix
-          , flip TokIdentifier "True"
+          , TokIdentifier "True"
           , TokOpenParen
           , TokCloseParen
           ]
   , xLexs "(1;xyz;{\'c\';)}"
           [ TokOpenParen
-          , flip TokIntegerLiteral 1
+          , TokIntegerLiteral 1
           , TokSeparator
-          , flip TokIdentifier "xyz"
+          , TokIdentifier "xyz"
           , TokSeparator
           , TokOpenBlock
-          , flip TokCharLiteral 'c'
+          , TokCharLiteral 'c'
           , TokSeparator
           , TokCloseParen
           , TokCloseBlock
           ]
 -- Test that quotes in identifiers lex correctly
   , xLexs "1\'c\'xyz"
-          [ flip TokIntegerLiteral 1
-          , flip TokCharLiteral 'c'
-          , flip TokIdentifier "xyz"
+          [ TokIntegerLiteral 1
+          , TokCharLiteral 'c'
+          , TokIdentifier "xyz"
           ]
   , xLexs "1xyz\'c\'"
-          [ flip TokIntegerLiteral 1
-          , flip TokIdentifier "xyz\'c\'"
+          [ TokIntegerLiteral 1
+          , TokIdentifier "xyz\'c\'"
           ]
   , xLexs "xyz\'c\'1"
-          [flip TokIdentifier "xyz\'c\'1"]
+          [ TokIdentifier "xyz\'c\'1"]
   , xLexs "xyz1\'c\'"
-          [flip TokIdentifier "xyz1\'c\'"]
+          [ TokIdentifier "xyz1\'c\'"]
   ] ++ map lexesAs
     [  ("`"     , TokLabelPrefix)
     ,  ("&"     , TokOnionCons)
     ,  ("&-"    , TokOnionSub)
     ,  ("&."    , TokOnionProj)
-    ,  ("\\"    , TokLambda)
     ,  ("fun"   , TokFun)
     ,  ("->"    , TokArrow)
-    ,  ("case"  , TokCase)
-    ,  ("of"    , TokOf)
     ,  ("int"   , TokInteger)
     ,  ("char"  , TokChar)
     ,  ("unit"  , TokUnit)

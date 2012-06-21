@@ -13,7 +13,7 @@ import Utils.Language.Ast
 
 testInteger :: (?conf :: Cfg.Config) => Integer -> Test
 testInteger i = lexParseEval (show i)
-                             [flip TokIntegerLiteral i]
+                             [TokIntegerLiteral i]
                              (astwrap $ A.PrimInt i)
                              (A.VPrimInt i :: A.Value IA.Expr)
 
@@ -26,7 +26,7 @@ tests = TestLabel "Integer tests" $ TestList $
   , xPars "_1" (astwrap $ A.Var $ ident "_1")
   , xPars "1_" (astwrap $ A.Appl (astwrap $ A.PrimInt 1) (astwrap $ A.Var $ ident "_"))
   , xLexs "0x1"
-      [flip TokIntegerLiteral 0, flip TokIdentifier "x1"]
+      [TokIntegerLiteral 0, TokIdentifier "x1"]
   , xLexs "-0"
-      [flip TokIntegerLiteral 0]
+      [TokIntegerLiteral 0]
   ]

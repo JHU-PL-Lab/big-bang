@@ -58,7 +58,7 @@ Library
     Language.TinyBang.Test.Onions
     Language.TinyBang.Test.Parser
     Language.TinyBang.Test.Peano
-    Language.TinyBang.Test.PrettyPrint
+--    Language.TinyBang.Test.PrettyPrint
     Language.TinyBang.Test.Primitive.Char
     Language.TinyBang.Test.Primitive.Int
     Language.TinyBang.Test.Primitive.Unit
