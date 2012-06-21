@@ -8,6 +8,8 @@ module Language.TinyBang.Test.SourceUtils
 , lblGt
 , tbCase
 , tbDef
+, tbDefInc
+, tbLet
 )
 where
 
@@ -26,7 +28,14 @@ tbCase e bs =
 -- TODO: make this not use def
 tbDef :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
 tbDef defWhat eqWhat inWhat =
-  printf "def (%s = %s) in (%s)" defWhat eqWhat inWhat
+  printf "(`Ref %s -> (%s)) (`Ref (%s))" defWhat inWhat eqWhat
+
+tbLet :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
+tbLet letWhat eqWhat inWhat =
+  printf "(%s -> (%s)) (%s)" letWhat inWhat eqWhat
+
+tbDefInc :: TinyBangCode -> TinyBangCode
+tbDefInc = tbDef "inc" "`Ref y -> y = y + 1 in y"
 
 srcY  :: TinyBangCode
 srcY  = "(body ->"

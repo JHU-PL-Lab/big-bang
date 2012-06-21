@@ -11,6 +11,9 @@ import Language.TinyBang.Test.NameUtils
   , lblC
   , idX
   )
+import Language.TinyBang.Test.SourceUtils
+  ( tbDef
+  , tbDefInc)
 
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
@@ -48,7 +51,7 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
           (A.VLabel lblA 0, mkState [(0, V.pi 2)])
 
   -- Test some parsing
-  , xPars "(1 & ('x' & (fun x -> x)))"
+  , xPars "(1 & ('x' & (x -> x)))"
           (astwrap $ A.Onion
             (astwrap $ A.PrimInt 1)
             (astwrap $ A.Onion
@@ -76,28 +79,20 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
               (astwrap $ A.Label lblC Nothing $ E.pi 3)))
   -- Test that onions evaluate left to right
   -- Uses state
-  , xsEval " def x = 0 in \
-          \ `A (x = x + 1 in x) & `B (x = x + 1 in x)"
+  , xsEval
+     (tbDef "x" "0"
+            "`A (x = x + 1 in x) & `B (x = x + 1 in x)")
           ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
           , mkState [ (0, V.pi 1)
                     , (1, V.pi 2)
                     ]
           )
-  , xsEval " def x = `Ref 0 in \
-          \ def inc = fun x -> case x of { `Ref y -> y = y + 1 in y } in \
-          \ `A (inc x) & `B (inc x)"
-          ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
-          , mkState [ (0, V.pi 1)
-                    , (1, V.pi 2)
-                    ]
-          )
-  , xsEval " def r = `Ref 0 in \
-          \ def inc = fun x -> case x of { `Ref y -> y = y + 1 in y } in \
-          \ `A (case r of { `Ref x -> x = x + 1 in x }) & \
-          \ `B (case r of { `Ref x -> x = x + 1 in x })"
-          ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
-          , mkState [ (0, V.pi 1)
-                    , (1, V.pi 2)
-                    ]
-          )
+  , xsEval
+      (tbDef "x" "`Ref 0" $
+        tbDefInc "`A (inc x) & `B (inc x)")
+      ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
+      , mkState [ (0, V.pi 1)
+                , (1, V.pi 2)
+                ]
+      )
   ]
