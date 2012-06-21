@@ -46,7 +46,7 @@ import Language.TinyBang.Types.Types ( (<:)
 import Data.Function.Utils (leastFixedPoint)
 
 import Debug.Trace (trace)
-import Utils.Render.Display (display, Display)
+import Utils.Render.Display (display, Display, makeDoc, render, vcat)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -103,7 +103,7 @@ primaryPatternCompatible tau tpat =
             return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
         -- An empty list is returned only in the case where there are no
         -- suitable projections.
-        Nothing -> return []
+        Nothing -> failure
     PatOnion xs -> do
       xs' <- mapM (primaryPatternCompatible tau) xs
       -- Since xs' is a list of lists of constraints sets, where at least one
@@ -408,6 +408,9 @@ closeApplications cs = Set.unions $ do -- List
 --                            , ao <: ao' .: hist ]
 --  return $ substituteVars cs'' foralls ai ai'
 
+-- traceValues a0 a1 a2 a3 t1 t2 tpats = let ?conf = True in
+--   trace (render $ vcat [makeDoc a0, makeDoc a1, makeDoc a2, makeDoc a3, makeDoc t1, makeDoc t2, makeDoc tpats]) tpats
+
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do -- List
   c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
@@ -419,6 +422,7 @@ findNonFunctionApplications cs = Set.fromList $ do -- List
          TdScape (ScapeData _ tpat _ _) <- runReader (tProj t1 ProjFunc) cs]
       compatibiltyList tpat = runReader (patternCompatible t2 tpat) cs
   guard $ all (any isNothing . compatibiltyList) tpats
+--    (traceValues a0' a1' a2' a3' t1 t2 $ trace (let ?conf = True in display $ compatibiltyList $ head tpats) tpats)
   return $ Bottom histFIXME
 
 closeLops :: Constraints -> Constraints
