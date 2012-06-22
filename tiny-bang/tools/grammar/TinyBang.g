@@ -2,33 +2,37 @@ grammar TinyBang;
 
 program	:	expr EOF;
 
-expr	:	var | lbl qual expr | expr '&' expr | expr '&-' proj | expr '&.' proj | expr expr | expr op expr | var '=' expr 'in' expr | literal;
+expr	:	'(' expr ')' | var | lbl qual expr | expr '&' expr | expr '&-' proj | expr '&.' proj | expr expr | expr op expr | var '=' expr 'in' expr | literal;
 
-var	:	ID;
 
-lbl	:	'`' ID;
+var :   ID;
 
-qual	:	('final'|'immut')?;
+lbl :   '`' LBL;
 
-proj	:	tprim | lbl | 'fun';
+qual    :   ('final'|'immut')?;
 
-tprim	:	'unit' | 'int' | 'char';
+proj    :   tprim | lbl | 'fun';
 
-op	:	'+' | '-' | '==' | '<=' | '>=';
+tprim   :   'unit' | 'int' | 'char';
 
-literal	:	'()' | INT | CHAR | '(&)' | pat '->' expr;
+op  :   '+' | '-' | '==' | '<=' | '>=';
 
-pat	:	var ':' patpri;
+literal :   '(' ')' | INT | CHAR | '(' '&' ')' | pat '->' expr;
 
-patpri	:	tprim | lbl pat | 'any' | '(' patpri ('&' patpri)* ')' | 'fun';
+pat :   var ':' patpri | patpri | var ;
 
-ID  :	('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')*
+patpri  :   tprim | lbl pat | 'any' | '(' patpri ('&' patpri)* ')' | 'fun';
+
+ID  :   ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')*
     ;
 
-INT :	'0'..'9'+
+LBL :   ('a'..'z'|'A'..'Z'|'0'..'9'|'_'|'`')+
+    ;
+
+INT :   '0'..'9'+
     ;
     
-CHAR	:	'\'' 'A'..'Z' '\''; // Clearly incorrect
+CHAR    :   '\'' 'A'..'Z' '\''; // Clearly incorrect
 
 WS  :   ( ' '
         | '\t'
@@ -36,4 +40,5 @@ WS  :   ( ' '
         | '\n'
         ) {$channel=HIDDEN;}
     ;
+
 
