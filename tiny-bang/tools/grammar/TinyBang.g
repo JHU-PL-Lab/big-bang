@@ -2,12 +2,36 @@ grammar TinyBang;
 
 program	:	expr EOF;
 
-expr	:	'(' expr ')' | var | lbl qual expr | expr '&' expr | expr '&-' proj | expr '&.' proj | expr expr | expr op expr | var '=' expr 'in' expr | literal;
+expr	:	(pat '->') => pat '->' expr | assignExpr;
 
+assignExpr:	opOnionExpr | var '=' expr 'in' expr;
 
-var :   ID;
+opOnionExpr
+	:	opEqExpr
+		( '&' opEqExpr	// onion
+		| '&-' proj	// subtraction
+		| '&.' proj	// projection
+		)*
+	;
 
-lbl :   '`' LBL;
+opEqExpr:	opCompExpr ('==' opCompExpr)*;
+
+opCompExpr
+	:	opAddExpr (('<=' | '>=') opAddExpr)*;
+
+opAddExpr
+	:	opApplExpr (('+' | '-') opApplExpr)*;
+
+opApplExpr
+	:	primaryExpr (primaryExpr)*;
+
+primaryExpr
+	:	'(' expr ')' | lbl qual primaryExpr | var | literal
+	;
+
+var 	:   ID;
+
+lbl 	:   LBL;
 
 qual    :   ('final'|'immut')?;
 
@@ -15,30 +39,28 @@ proj    :   tprim | lbl | 'fun';
 
 tprim   :   'unit' | 'int' | 'char';
 
-op  :   '+' | '-' | '==' | '<=' | '>=';
+literal :   '(' ')' | INT | CHAR | '(' '&' ')';
 
-literal :   '(' ')' | INT | CHAR | '(' '&' ')' | pat '->' expr;
-
-pat :   var ':' patpri | patpri | var ;
+pat 	:   var ':' patpri | patpri | var ;
 
 patpri  :   tprim | lbl pat | 'any' | '(' patpri ('&' patpri)* ')' | 'fun';
 
-ID  :   ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')*
+ID  	:   ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'0'..'9'|'_')*
     ;
 
-LBL :   ('a'..'z'|'A'..'Z'|'0'..'9'|'_'|'`')+
+LBL 	:   '`' ('a'..'z'|'A'..'Z'|'0'..'9'|'_'|'`')+
     ;
 
-INT :   '0'..'9'+
+INT 	:   '0'..'9'+
     ;
     
 CHAR    :   '\'' 'A'..'Z' '\''; // Clearly incorrect
 
-WS  :   ( ' '
-        | '\t'
-        | '\r'
-        | '\n'
-        ) {$channel=HIDDEN;}
-    ;
+WS  	:   ( ' '
+	        | '\t'
+        	| '\r'
+	        | '\n'
+            ) {$channel=HIDDEN;}
+	    ;
 
 
