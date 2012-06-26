@@ -2,6 +2,7 @@ module Language.TinyBang.Test.NameUtils
 ( idX
 , idY
 , idZ
+, id_
 , lblA
 , lblB
 , lblC
@@ -21,6 +22,7 @@ import Language.TinyBang.Test.UtilFunctions
 idX = ident "x"
 idY = ident "y"
 idZ = ident "z"
+id_ = ident "_"
 
 lblA = labelName "A"
 lblB = labelName "B"

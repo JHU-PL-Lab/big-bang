@@ -18,6 +18,9 @@ lexesAs :: (String, RawToken) -> Test
 lexesAs (str, tok) =
   xLexs str [tok]
 
+tokIdX :: RawToken
+tokIdX = TokIdentifier "x"
+
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Miscellaneous lexer tests" $ TestList $
   [ xLexs "" []
@@ -131,14 +134,20 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           , TokCharLiteral 'c'
           , TokIdentifier "xyz"
           ]
-  , xLexs "1xyz\'c\'"
-          [ TokIntegerLiteral 1
-          , TokIdentifier "xyz\'c\'"
-          ]
+  , fLexs "1xyz\'c\'"
+--          [ TokIntegerLiteral 1
+--          , TokIdentifier "xyz\'c\'"
+--          ]
   , xLexs "xyz\'c\'1"
-          [ TokIdentifier "xyz\'c\'1"]
+          [ TokIdentifier "xyz"
+          , TokCharLiteral 'c'
+          , TokIntegerLiteral 1
+          ]
   , xLexs "xyz1\'c\'"
-          [ TokIdentifier "xyz1\'c\'"]
+          [ TokIdentifier "xyz1"
+          , TokCharLiteral 'c'
+          ]
+  , fLexs "1_1"
   ] ++ map lexesAs
     [  ("`"     , TokLabelPrefix)
     ,  ("&"     , TokOnionCons)
@@ -163,4 +172,7 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
     ,  (">="    , TokOpGreaterEquals)
     ,  ("="     , TokEquals)
     ,  ("in"    , TokIn)
-    ]
+    ] ++
+  -- Make sure initial and terminal whitespace doesn't mess up lexing
+  map (\x -> lexesAs (x, tokIdX))
+  ["x", " x", " x", " x "]

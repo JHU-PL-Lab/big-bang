@@ -62,14 +62,14 @@ tests = TestLabel "Eager operations tests" $ TestList $ concat
   , xEvalComp LT "()" "`A 0"
   , xEvalComp LT "1" "`A 0"
   , xEvalComp LT "'a'" "`A 0"
-  , xEvalComp LT "()" "fun x -> x"
-  , xEvalComp LT "5" "fun x -> x"
-  , xEvalComp LT "'a'" "fun x -> x"
-  , xEvalComp LT "`A 0" "fun x -> x"
+  , xEvalComp LT "()" "x -> x"
+  , xEvalComp LT "5" "x -> x"
+  , xEvalComp LT "'a'" "x -> x"
+  , xEvalComp LT "`A 0" "x -> x"
 -- Test function equality by identity
-  , [ xEval "(fun f -> f == f) (fun x -> x)" true
-    , xEval "(fun f -> f <= f) (fun x -> x)" true
-    , xEval "(fun f -> f >= f) (fun x -> x)" true ]
+  , [ xEval "(f -> f == f) (x -> x)" true
+    , xEval "(f -> f <= f) (x -> x)" true
+    , xEval "(f -> f >= f) (x -> x)" true ]
 -- Test deep label comparisons
   , xEvalComp LT "`A ()" "`A 1"
   , xEvalComp LT "`A 'a'" "`A `A ()"

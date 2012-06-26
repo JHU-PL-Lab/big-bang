@@ -8,8 +8,10 @@ module Language.TinyBang.Test.SourceUtils
 , lblGt
 , tbCase
 , tbDef
+, tbAssign
 , tbDefInc
 , tbLet
+, tbScape
 )
 where
 
@@ -23,12 +25,15 @@ parens = printf "(%s)"
 
 tbCase :: TinyBangCode -> [TinyBangCode] -> TinyBangCode
 tbCase e bs =
-  (++ (" " ++ parens e)) $ intercalate " & " $ reverse $ map parens bs
+  (++ (" " ++ parens e)) $ parens $ intercalate " & " $ reverse $ map parens bs
 
--- TODO: make this not use def
 tbDef :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
 tbDef defWhat eqWhat inWhat =
   printf "(`Ref %s -> (%s)) (`Ref (%s))" defWhat inWhat eqWhat
+
+tbAssign :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
+tbAssign assignWhat eqWhat inWhat =
+  printf "%s = (%s) in (%s)" assignWhat eqWhat inWhat
 
 tbLet :: TinyBangCode -> TinyBangCode -> TinyBangCode -> TinyBangCode
 tbLet letWhat eqWhat inWhat =
@@ -36,6 +41,10 @@ tbLet letWhat eqWhat inWhat =
 
 tbDefInc :: TinyBangCode -> TinyBangCode
 tbDefInc = tbDef "inc" "`Ref y -> y = y + 1 in y"
+
+-- TODO: consider parenthesizing args
+tbScape :: [TinyBangCode] -> TinyBangCode -> TinyBangCode
+tbScape args body = (++ parens body) $ (++ " -> ") $ intercalate " -> " args
 
 srcY  :: TinyBangCode
 srcY  = "(body ->"

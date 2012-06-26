@@ -43,13 +43,6 @@ tests = TestLabel "General case tests" $ TestList
   , xNotC $ tbCase "x" ["int -> 0", "char -> 'a'"]
   , xNotC $ tbCase "4" ["int -> x"]
   , xNotC $ tbCase "4" ["int -> ()", "unit -> x"]
-  , xPars (tbCase "x"
-           [ "int -> 5"
-           , "char -> 'a'"
-           , "unit -> ()"
-           , "`True a -> `False ()"
-           , "fun -> (x -> x)"])
-          ({-astwrap $-} varX :: A.Expr)
 
   -- verify the behavior of the fun pattern
   , caseEval "1" ["fun -> 0", "z -> z"] (V.pi 1)
@@ -65,20 +58,20 @@ tests = TestLabel "General case tests" $ TestList
       , "`A 0 & `B (`A 0 & `B ())"]
 
   -- Check broad patterns
-  , xEval "(`A x & `B y -> x + y) (`A 1 & `B 2)"
+  , xEval "((`A x & `B y) -> x + y) (`A 1 & `B 2)"
         $ V.pi 3
-  , xEval "(`B x & `A y -> x + y) (`A 2 & `B 3 & `C 9)"
+  , xEval "((`B x & `A y) -> x + y) (`A 2 & `B 3 & `C 9)"
         $ V.pi 5
   , xEval "(`A i -> i) (`A 3 & `B ())"
         $ V.pi 3
   , caseEval "`A 1 & `B 2"
       [ "`C x -> x"
-      , "`A x & `Z z -> 6 + z"
-      , "`A x & `B y -> x + y"
+      , "(`A x & `Z z) -> 6 + z"
+      , "(`A x & `B y) -> x + y"
       , "`A x -> 9"]
       (V.pi 3)
-  , xCont $ tbCase "`A 1 & `B 2" ["`A x & `B y & `C z -> 0"]
-  , xCont $ tbCase "`A 1 & `B 2" ["`A x & unit -> 0"]
+  , xCont $ tbCase "`A 1 & `B 2" ["(`A x & `B y & `C z) -> 0"]
+  , xCont $ tbCase "`A 1 & `B 2" ["(`A x & unit) -> 0"]
 
   -- Check deep patterns
   , caseEval
@@ -87,11 +80,11 @@ tests = TestLabel "General case tests" $ TestList
         $ V.pi 3
   , caseEval
       "`A (`B 1 & `C 2) & `D (`E 4)"
-      ["(`A `B x) & (`D `E y) -> x + y"]
+      ["((`A `B x) & (`D `E y)) -> x + y"]
         $ V.pi 5
   , caseEval
       "`A (`B 1 & `C 2) & `D (`E 4)"
-      ["(`A (`B x & `C y)) & (`D _) -> x + y"]
+      ["(`A (`B x & `C y) & (`D _)) -> x + y"]
         $ V.pi 3
   , xCont $ tbCase
       "`A (`B 1 & `C 2) & `D (`E 4)"
@@ -104,7 +97,7 @@ tests = TestLabel "General case tests" $ TestList
   , caseEval
       "`A 1 & `B 2"
       ["x:`A _ -> " ++
-         tbCase "x" ["`A y & `B z -> y + z"]]
+         tbCase "x" ["(`A y & `B z) -> y + z"]]
         $ V.pi 3
 
   -- Ensure that outer pattern binders replicate structure rather than the cell
@@ -113,8 +106,8 @@ tests = TestLabel "General case tests" $ TestList
         $ V.pi 1
 
   -- Verify pattern checking.
-  , xDLbl $ tbCase "`A 0" ["`A x & `A y -> 0"]
-  , xDBnd $ tbCase "`A 0 & `B 0" ["`A x & `B x -> 0"]
+  , xDLbl $ tbCase "`A 0" ["(`A x & `A y) -> 0"]
+  , xDBnd $ tbCase "`A 0 & `B 0" ["(`A x & `B x) -> 0"]
   , caseEval "`A `A `A 4" ["`A `A `A x -> x"]
         $ V.pi 4
 

@@ -41,15 +41,19 @@ tests = TestLabel "State tests" $ TestList
   , xNotC "x = 4 in x"
   , xEval "def x = 3 in x = 4 in x" four
   , xEval "def x = () in x = 4 in x" four
-  , xEval "def x = () in case x of { unit -> 4 }" four
+  , xEval "def x = () in (unit -> 4) x" four
 
   -- Test that def can be encoded with case.
-  , xEval "case `Ref 4 of {`Ref x -> x = 2 in x}" two
+  , xEval "(`Ref x -> x = 2 in x) `Ref 4" two
 
   -- The next two tests are contradictions due to flow insensitivity.
-  , xCont "def x = () in x = 2 in case x of { unit -> 4 }"
-  , xCont "def x = () in x = 2 in case x of { int -> 4 }"
-  , xEval "def x = () in x = 2 in case x of { unit -> 2 ; int -> 4 }" four
+  , xCont "def x = () in x = 2 in (unit -> 4) x"
+  , xCont "def x = () in x = 2 in (int -> 4) x"
 
-  -- TODO: add unit tests for finality and immutability
+  , xEval "def x = () in x = 2 in ((unit -> 2) & (int -> 4)) x" four
+
+  -- TODO: add more unit tests for finality and immutability
+  , xCont "(`Ref x -> x = x + 1 in x) `Ref final 5"
+  , xCont "(`Ref x -> x = x + 1 in x) `Ref immut 5"
+  , xCont "(`Ref `Ref x -> x = x + 1 in x) `Ref immut `Ref 5"
   ]

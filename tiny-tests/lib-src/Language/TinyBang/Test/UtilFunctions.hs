@@ -15,6 +15,7 @@ module Language.TinyBang.Test.UtilFunctions
 , xDBnd
 , xErrT
 , xLexs
+, fLexs
 , xPars
 , fPars
 , lexParseEval
@@ -138,6 +139,15 @@ xLexs code expected =
   label ~: TestCase $ case L.lexTinyBang code of
     Left err -> assertFailure $ "Lexing failed with: " ++ err
     Right tokens -> assert $ and $ zipWith matchesRawToken tokens expected
+  where label = "Lexing " ++ show code
+
+fLexs :: TinyBangCode -> Test
+fLexs code =
+  label ~: TestCase $ case L.lexTinyBang code of
+    Left err -> return ()
+    Right tokens ->
+      assertFailure $ "Lexing was expected to fail but succeeded with: "
+                    ++ show tokens
   where label = "Lexing " ++ show code
 
 xPars :: (?conf :: Cfg.Config) => TinyBangCode -> A.Expr -> Test

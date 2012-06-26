@@ -19,6 +19,6 @@ tests = TestLabel "Tests for unit" $ TestList
                  [TokOpenParen, TokCloseParen]
                  (astwrap A.PrimUnit)
                  (A.VPrimUnit :: A.Value IA.Expr)
-  , xvEval "case () of { unit -> () }"
+  , xvEval "(unit -> ()) () "
           A.VPrimUnit
   ]
