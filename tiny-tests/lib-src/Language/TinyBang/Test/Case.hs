@@ -49,13 +49,32 @@ tests = TestLabel "General case tests" $ TestList
   , caseEval "x -> x" ["int -> 0", "fun -> 1"] (V.pi 1)
   , xCont "(fun -> 0) (`A 0)"
 
-  -- Check to make sure that flow sensitivity does not exist, as we don't
-  -- expect it to.
+  -- Check to make sure that path sensitivity does not exist, as we don't
+  -- expect it to in the recursive case.
   , xCont $ srcMultiAppl
       [ srcY
-      , "this -> v -> " ++ tbCase "v" [ "unit -> 0"
-                                      , "`A _ -> (`B y -> 1 + (this y)) v"]
+      , tbScape ["this", "v"] $
+          tbCase "v" [ "unit -> 0"
+                     , "`A _ -> (`B y -> 1 + (this y)) v"]
       , "`A 0 & `B (`A 0 & `B ())"]
+
+   , xCont $ tbDef "z"
+       (srcMultiAppl [ srcY
+                     , tbScape ["this", "x"] $
+                         tbCase "x" ["`A y -> `X (this y)"
+                                    ,"`B y -> `Y (this y)"
+                                    ,"int -> x"]
+                     , "`A `B `A 0"])
+       "(`A q -> q) z"
+
+   , xCont $ tbDef "z"
+       (srcMultiAppl [ srcY
+                     , tbScape ["this", "x"] $
+                         tbCase "x" ["`A y -> `X (this y)"
+                                    ,"`B y -> `Y (this y)"
+                                    ,"int -> x"]
+                     , "`A `B `A 0"])
+       "(`X q -> q) z"
 
   -- Check broad patterns
   , xEval "((`A x & `B y) -> x + y) (`A 1 & `B 2)"

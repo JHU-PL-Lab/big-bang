@@ -306,7 +306,10 @@ instance Display PrimaryPattern where
     case pat of
       PatPrim tprim -> makeDoc tprim
       PatLabel lbl i pp -> makeDoc lbl <+> makeDoc i <> colon <> makeDoc pp
-      PatOnion pps -> parens $ sep $ intersperse (char '&') $ map makeDoc pps
+      PatOnion pps ->
+        if null pps
+        then text "any"
+        else parens $ sep $ intersperse (char '&') $ map makeDoc pps
       PatFun -> text "fun"
 
 class Evaluated t a where
