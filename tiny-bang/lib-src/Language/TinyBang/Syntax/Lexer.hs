@@ -32,8 +32,9 @@ lexTinyBang s = case parse lexer "" s of
 
 lexer :: Parser [(SourcePos, RawToken, SourcePos)]
 lexer = do
-    toks <- many (whitespaceP >> thing)
-    whitespaceP >> eof
+    spaces
+    toks <- many (thing >>= \x -> spaces >> return x)
+    eof
     return toks
     where
         thing = do
@@ -49,13 +50,10 @@ lexer = do
                        , shortOperators
                        ]
 
-whitespaceP :: Parser ()
-whitespaceP = do
-    -- Should this be skipMany1?
-    skipMany space
+identifierCharacter = alphaNum <|> char '_'
 
-validIdentP :: Parser ()
-validIdentP = notFollowedBy (alphaNum <|> char '_')
+--validIdentP :: Parser ()
+--validIdentP = notFollowedBy (alphaNum <|> char '_')
 
 hungry :: [Parser RawToken]
 hungry = [identP, intLiteralP, charLiteralP]
@@ -63,11 +61,12 @@ hungry = [identP, intLiteralP, charLiteralP]
         identP = do
             first <- letter <|> char '_'
             rest <- many (alphaNum <|> char '_')
-            validIdentP
+--            validIdentP
             return $ TokIdentifier (first:rest)
         intLiteralP = do
             prefix <- option ' ' (char '-')
             digits <- many1 digit
+            notFollowedBy identifierCharacter
             return $ TokIntegerLiteral (read (prefix:digits))
         charLiteralP = do
             let tick = char '\''
@@ -137,11 +136,12 @@ reservedWords =
     , inP
     , finalP
     , immutP
+    , anyP
     ]
     where
       proc (s, t) = do
         _ <- string s
-        validIdentP
+        notFollowedBy identifierCharacter
         return t
       funP   = ("fun"   , TokFun)
       intP   = ("int"   , TokInteger)
@@ -151,6 +151,7 @@ reservedWords =
       inP    = ("in"    , TokIn)
       finalP = ("final" , TokFinal)
       immutP = ("immut" , TokImmut)
+      anyP   = ("any"   , TokAny)
 
 type SourceLocation = (SourcePos, SourcePos)
 defaultSourceLocation :: SourceLocation
@@ -189,6 +190,7 @@ data RawToken =
     | TokOpGreaterEquals
     | TokFinal
     | TokImmut
+    | TokAny
     deriving (Show, Typeable, Data)
 
 -- | This data type is used to represent tokens and contains the source
@@ -264,6 +266,7 @@ instance Display RawToken where
         TokOpGreaterEquals -> "op greater than or equal"
         TokFinal -> "final"
         TokImmut -> "immut"
+        TokAny -> "any"
 
 instance Display Token where
   -- Ignore source position in displaying

@@ -33,11 +33,18 @@ import Text.Parsec ( token
                    , ParseError
                    , Parsec
                    , choice
-                   , sepBy
+                   , sepBy1
                    , between
-                   , many1)
+                   , many1
+                   , (<?>)
+                   , chainl1
+                   , notFollowedBy)
 
-import Control.Applicative ((<$>))
+import Text.Parsec.Expr
+
+import Control.Applicative ((<$>), (<*>), (*>), (<*), pure, Applicative)
+
+import Debug.Trace (traceShow)
 
 tokIdent   :: L.RawToken
 tokIdent   =  L.TokIdentifier $ error "tokIdent's payload examined"
@@ -50,14 +57,10 @@ type TokParser = Parsec [L.Token] ()
 
 -- TODO: refactor to use Parsec's error messages in some way
 parseTinyBang :: [L.Token] -> Either ParseError A.Expr
-parseTinyBang ts =  case parse parser "" ts of
+parseTinyBang ts =
+  {-traceShow (map L.getRawToken ts) $-} case parse program "" ts of
     Left x -> Left x
     Right x -> Right x
-parser :: TokParser A.Expr
-parser = do
-    e <- expr
-    eof --must use all the tokens in the stream
-    return e
 
 -- I don't understand how (fst . L.getPos) does what is expected in
 -- `token`'s contract, but I'll leave it as is.
@@ -81,195 +84,261 @@ grabChar = do
     L.TokCharLiteral v <- L.getRawToken <$> isToken tokCharLit
     return v
 
-parseLabelName :: TokParser LabelName
-parseLabelName =  isToken L.TokLabelPrefix >> labelName <$> grabIdent
+--TODO: have a different set of identifiers for labels
+lbl :: TokParser LabelName
+lbl = isToken L.TokLabelPrefix *> (labelName <$> grabIdent)
 
-expr :: TokParser A.Expr
-expr = do
-    e <- exprBasic
-    option e $ exprRest e
+qual :: TokParser (Maybe A.Modifier)
+qual = choice
+  [ isToken L.TokFinal *> rjust A.Final
+  , isToken L.TokImmut *> rjust A.Immutable
+  , pure Nothing
+  ] <?> "qualifier"
+  where rjust = pure . Just
 
-exprBasic :: TokParser A.Expr
-exprBasic = choice $ map try $
-  [ scape
-  , defin
-  , assign
-  , opexp
-  , applexp
+tprim :: TokParser T.PrimitiveType
+tprim = choice
+  [ isToken L.TokInteger *> pure T.PrimInt
+  , isToken L.TokChar    *> pure T.PrimChar
+  , isToken L.TokUnit    *> pure T.PrimUnit
   ]
-  where scape = do
-            p <- pattern
-            _ <- isToken L.TokArrow
-            e <- expr
-            return (astwrap $ A.Scape p e)
-        defin = do
-            _ <- isToken L.TokDef
-            m <- optionMaybe modifier
-            i <- grabIdent
-            _ <- isToken L.TokEquals
-            e1 <- expr
-            _ <- isToken L.TokIn
-            e2 <- expr
-            return (astwrap $ A.Def m (ident i) e1 e2)
-        assign = do
-            i <- grabIdent
-            _ <- isToken L.TokEquals
-            e1 <- expr
-            _ <- isToken L.TokIn
-            e2 <- expr
-            return (astwrap $ A.Assign (ident i) e1 e2)
-        opexp = opExp
-        applexp = applExp
 
-exprRest :: A.Expr -> TokParser A.Expr
-exprRest e1 = do
-    os <- many onionPart
-    return $ foldl (\e f -> f e) e1 os
+projectorTerm :: TokParser A.ProjTerm
+projectorTerm = choice
+  [ isToken L.TokFun *> pure ProjFunc
+  , ProjPrim        <$> tprim
+  , ProjLabel       <$> lbl
+  ] <?> "projector"
+  where rprim :: (Applicative f) => T.PrimitiveType -> f A.ProjTerm
+        rprim = pure . ProjPrim
 
-onionPart :: TokParser (A.Expr -> A.Expr)
-onionPart = choice
-  [ onion
-  , onionsub
-  , onionproj
+pattern :: TokParser A.Pattern
+pattern = choice
+  [ A.Pattern (ident "_") <$> primaryPattern
+  , A.Pattern <$> (ident <$> grabIdent)
+              <*> option (PatOnion []) (isToken L.TokColon *> primaryPattern)
   ]
-  where onion = do
-            --e1 <- expr
-            _ <- isToken L.TokOnionCons
-            e2 <- exprBasic
-            return (astwrap . flip A.Onion e2)
-        onionsub = do
-            --e1 <- expr
-            _ <- isToken L.TokOnionSub
-            p <- projTerm
-            return (astwrap . flip A.OnionSub p)
-        onionproj = do
-            --e1 <- expr
-            _ <- isToken L.TokOnionProj
-            p <- projTerm
-            return (astwrap . flip A.OnionProj p)
 
-applExp :: TokParser A.Expr
-applExp = try primaries
-    where
-        primaries = do
-            ps <- many1 primary
-            return (foldl1 (binwrap A.Appl) ps)
-
-primary :: TokParser A.Expr
-primary = choice $ map try $
-  [ iden
-  , intLit
-  , charLit
-  , unit
-  , emptyOnion
-  , lbl
-  , expre
-  ]
-  where iden = do
-            i <- grabIdent
-            return $ astwrap $ A.Var (ident i)
-        intLit = do
-            v <- grabInt
-            return $ astwrap $ A.PrimInt v
-        charLit = do
-            v <- grabChar
-            return $ astwrap $ A.PrimChar v
-        unit = do
-            _ <- isToken L.TokOpenParen
-            _ <- isToken L.TokCloseParen
-            return $ astwrap A.PrimUnit
-        emptyOnion = do
-            _ <- isToken L.TokOpenParen
-            _ <- isToken L.TokOnionCons
-            _ <- isToken L.TokCloseParen
-            return $ astwrap A.EmptyOnion
-        lbl = do
-            _ <- isToken L.TokLabelPrefix
-            m <- optionMaybe modifier
-            i <- grabIdent
-            p <- primary
-            return $ astwrap $ A.Label (labelName i) m p
-        expre = between
-                  (isToken L.TokOpenParen)
-                  (isToken L.TokCloseParen)
-                  expr
-
-pattern :: TokParser Pattern
-pattern = bound <|> Pattern (ident "_") <$> primaryPattern
-    where bound = do
-            i <- grabIdent
-            pp <- option (PatOnion []) $ isToken L.TokColon >> primaryPattern
-            return $ Pattern (ident i) pp
-
-primaryPattern :: TokParser PrimaryPattern
+primaryPattern :: TokParser A.PrimaryPattern
 primaryPattern = choice
-  [ PatPrim <$> primitiveType
-  , label
+  [ PatPrim <$> tprim
+  , isToken L.TokAny *> pure (PatOnion [])
+  , isToken L.TokFun *> pure PatFun
+  , toPrimaryPattern <$> lbl <*> pattern
   , onion
-  , isToken L.TokFun >> return PatFun
   ]
-  where label = do
-          l <- parseLabelName
-          Pattern i pp <- pattern
-          return $ PatLabel l i pp
-        onion = PatOnion <$> between
-                  (isToken L.TokOpenParen)
+  where toPrimaryPattern :: LabelName -> Pattern -> PrimaryPattern
+        toPrimaryPattern l (Pattern i pp) = PatLabel l i pp
+        onion = PatOnion <$>
+          between (isToken L.TokOpenParen)
                   (isToken L.TokCloseParen)
-                  primaryPattern `sepBy` isToken L.TokOnionCons
-
-primitiveType :: TokParser T.PrimitiveType
-primitiveType = choice [pint, pchar, punit]
-    where
-        pint = isToken L.TokInteger >> return T.PrimInt
-        pchar = isToken L.TokChar >> return T.PrimChar
-        punit = isToken L.TokUnit >> return T.PrimUnit
-
-modifier :: TokParser A.Modifier
-modifier = try final <|> try immut
-    where
-        final = isToken L.TokFinal >> return A.Final
-        immut = isToken L.TokImmut >> return A.Immutable
-
-projTerm :: TokParser A.ProjTerm
-projTerm = choice $ map try $
-  [ pint
-  , pchar
-  , punit
-  , plbl
-  , pfun
-  ]
-  where pint = isToken L.TokInteger >> return (ProjPrim T.PrimInt)
-        pchar = isToken L.TokChar >> return (ProjPrim T.PrimChar)
-        punit = isToken L.TokUnit >> return (ProjPrim T.PrimUnit)
-        plbl = ProjLabel <$> parseLabelName
-        pfun = isToken L.TokFun >> return ProjFunc
-
-opExp :: TokParser A.Expr
-opExp = do
-    p1 <- primary
-    o <- op
-    p2 <- primary
-    return (o p1 p2)
-
-op :: TokParser (A.Expr -> A.Expr -> A.Expr)
-op = choice $ map try $
-  [ plus
-  , minus
-  , equal
-  , lessEqual
-  , greaterEqual
-  ]
-  where plus = isToken L.TokOpPlus >> return (binwrap $ A.LazyOp A.Plus)
-        minus = isToken L.TokOpMinus >> return (binwrap $ A.LazyOp A.Minus)
-        equal = isToken L.TokOpEquals >> return (binwrap $ A.EagerOp A.Equal)
-        lessEqual = isToken L.TokOpLessEquals >>
-                    return (binwrap $ A.EagerOp A.LessEqual)
-        greaterEqual = isToken L.TokOpGreaterEquals >>
-                       return (binwrap $ A.EagerOp A.GreaterEqual)
-
-instance Display ParseError where
-    makeDoc err = text (show err)
+                  (primaryPattern `sepBy1` isToken L.TokOnionCons)
 
 binwrap :: (AstWrap A.ExprPart ast)
         => (ast -> ast -> A.ExprPart ast) -> (ast -> ast -> ast)
 binwrap f = \x y -> astwrap $ f x y
+
+op :: TokParser (A.Expr -> A.Expr -> A.Expr)
+op = choice
+  [ isToken L.TokOpPlus          *> rbin A.LazyOp A.Plus
+  , isToken L.TokOpMinus         *> rbin A.LazyOp A.Minus
+  , isToken L.TokOpEquals        *> rbin A.EagerOp A.Equal
+  , isToken L.TokOpLessEquals    *> rbin A.EagerOp A.LessEqual
+  , isToken L.TokOpGreaterEquals *> rbin A.EagerOp A.GreaterEqual
+  ] <?> "operator"
+  where rbin opType opName = pure $ binwrap $ opType opName
+
+term :: TokParser A.Expr
+term = choice
+  [ try $ between (isToken L.TokOpenParen)
+                  (isToken L.TokCloseParen)
+                  expr'
+  , try $ astwrap . A.Var <$> (ident <$> grabIdent)
+  , literal
+  ]
+
+expr' =
+  buildExpressionParser' table term
+--                         (try $ term <* notFollowedBy (isToken L.TokArrow))
+
+table =
+  [ [ prefix $ unary A.Label labelP]
+  , [ binop (pure ()) A.Appl AssocLeft]
+  , [ tokBinop L.TokOpPlus  (A.LazyOp A.Plus)  AssocLeft
+    , tokBinop L.TokOpMinus (A.LazyOp A.Minus) AssocLeft]
+  , [ cmpOp L.TokOpEquals        A.Equal
+    , cmpOp L.TokOpLessEquals    A.LessEqual
+    , cmpOp L.TokOpGreaterEquals A.GreaterEqual]
+  , [ tokBinop L.TokOnionCons A.Onion AssocLeft]
+  , [ postfix $ choice [ projector A.OnionSub  L.TokOnionSub
+                       , projector A.OnionProj L.TokOnionProj]]
+  , [ tokBinop L.TokOnionCons A.Onion AssocLeft]
+  , [ prefix $ try $ choice [ unary A.Assign (try . assignP)
+                            , unary (A.Def Nothing) defP
+                            , unary A.Scape  (try . scapeP)]]
+--  , [ prefix scapeParser]
+  ]
+  where unary con p = p con >>= \f -> return $ astwrap . f
+        -- definitions for prefix and postfix taken from this SO post:
+        -- http://stackoverflow.com/questions/10475337
+        prefix  p = Prefix  . chainl1 p $ return       (.)
+        postfix p = Postfix . chainl1 p $ return (flip (.))
+        projector con tok =
+          wrapped <$> (isToken tok *> projectorTerm)
+          where wrapped proj e = astwrap $ con e proj
+--        postfix1 con p = Postfix $ wrapped <$> p
+--          where wrapped a b = astwrap $ con b a
+--        postfix con p = Postfix $ unary con p
+        assignP c =
+          c <$> (ident <$> grabIdent) <*>
+                (isToken L.TokEquals *> expr') <* isToken L.TokIn
+        scapeP c = c <$> pattern <* isToken L.TokArrow
+        labelP c = c <$> lbl <*> qual
+        defP c = isToken L.TokDef *> assignP c
+        wrap2 con a1 a2 = astwrap $ con a1 a2
+        binop p con assoc =
+          Infix (p *> (pure $ wrap2 con)) assoc
+        tokBinop tok con assoc = binop (isToken tok) con assoc
+        cmpOp tok con =
+          tokBinop tok (A.EagerOp con) AssocNone
+
+scape :: TokParser A.Expr
+scape = astwrap <$> scape'
+  where scape' =
+          A.Scape <$> pattern <* isToken L.TokArrow <*> expr <?> "scape"
+
+
+literal :: TokParser A.Expr
+literal = astwrap <$> choice
+  [ try unit
+  , try emptyOnion
+  , A.PrimInt <$> grabInt
+  , A.PrimChar <$> grabChar
+  ] <?> "literal value"
+  where
+    unit =
+      isToken L.TokOpenParen *>
+      isToken L.TokCloseParen *>
+      pure A.PrimUnit <?> "unit"
+    emptyOnion =
+      isToken L.TokOpenParen *>
+      isToken L.TokOnionCons *>
+      isToken L.TokCloseParen *>
+      pure A.EmptyOnion <?> "empty onion"
+
+exprStart :: TokParser A.Expr
+exprStart = choice
+  [ try literal
+  , try scape
+  , between (isToken L.TokOpenParen) (isToken L.TokCloseParen) expr
+  , astwrap <$> (A.Label <$> lbl <*> qual <*> expr)
+  , var <$> (ident <$> grabIdent) <*> assignmentSuffix
+  ]
+  where assignmentSuffix =
+          optionMaybe ((,) <$> (isToken L.TokEquals *> expr)
+                           <*> (isToken L.TokIn     *> expr))
+        var i mpair = astwrap $
+          case mpair of
+               Nothing -> A.Var i
+               Just (e1, e2) -> A.Assign i e1 e2
+
+exprRest :: A.Expr -> TokParser A.Expr
+exprRest startOfExpr = choice $ map (fmap astwrap)
+  [ A.Onion     startOfExpr <$> (isToken L.TokOnionCons *> expr)
+  , A.OnionSub  startOfExpr <$> (isToken L.TokOnionSub  *> projectorTerm)
+  , A.OnionProj startOfExpr <$> (isToken L.TokOnionProj *> projectorTerm)
+  , A.Appl      startOfExpr <$> expr
+  ] ++
+  [ mkOpExpr    startOfExpr <$> op <*> expr
+  ]
+  where mkOpExpr e1 operator e2 = operator e1 e2
+
+expr :: TokParser A.Expr
+expr = do
+  e1 <- exprStart
+  option e1 (exprRest e1)
+
+program :: TokParser A.Expr
+program = expr' <* eof
+
+instance Display ParseError where
+    makeDoc err = text (show err)
+
+buildExpressionParser' operators simpleExpr
+    = foldl (makeParser) simpleExpr operators
+    where
+      makeParser term ops
+        = let (rassoc,lassoc,nassoc
+               ,prefix,postfix)      = foldr splitOp ([],[],[],[],[]) ops
+
+              rassocOp   = choice rassoc
+              lassocOp   = choice lassoc
+              nassocOp   = choice nassoc
+              prefixOp   = choice prefix  <?> ""
+              postfixOp  = choice postfix <?> ""
+
+              ambigious assoc op= try $
+                                  do{ op; fail ("ambiguous use of a " ++ assoc
+                                                 ++ " associative operator")
+                                    }
+
+              ambigiousRight    = ambigious "right" rassocOp
+              ambigiousLeft     = ambigious "left" lassocOp
+              ambigiousNon      = ambigious "non" nassocOp
+
+              termP      = do{ pre  <- prefixP
+                             ; x    <- term
+                             ; post <- postfixP
+                             ; return (post (pre x))
+                             }
+
+              postfixP   = postfixOp <|> return id
+
+              prefixP    = prefixOp <|> return id
+
+              rassocP x  = do{ f <- rassocOp
+                             ; y  <- do{ z <- termP; rassocP1 z }
+                             ; return (f x y)
+                             }
+                           <|> ambigiousLeft
+                           <|> ambigiousNon
+                           -- <|> return x
+
+              rassocP1 x = rassocP x  <|> return x
+
+              lassocP x  = do{ f <- lassocOp
+                             ; y <- termP
+                             ; lassocP1 (f x y)
+                             }
+                           <|> ambigiousRight
+                           <|> ambigiousNon
+                           -- <|> return x
+
+              lassocP1 x = lassocP x <|> return x
+
+              nassocP x  = do{ f <- nassocOp
+                             ; y <- termP
+                             ;    ambigiousRight
+                              <|> ambigiousLeft
+                              <|> ambigiousNon
+                              <|> return (f x y)
+                             }
+                           -- <|> return x
+
+           in  do{ x <- termP
+                 ; rassocP x <|> lassocP  x <|> nassocP x <|> return x
+                   <?> "operator"
+                 }
+
+
+      splitOp (Infix op assoc) (rassoc,lassoc,nassoc,prefix,postfix)
+        = case assoc of
+            AssocNone  -> (rassoc,lassoc,op:nassoc,prefix,postfix)
+            AssocLeft  -> (rassoc,op:lassoc,nassoc,prefix,postfix)
+            AssocRight -> (op:rassoc,lassoc,nassoc,prefix,postfix)
+
+      splitOp (Prefix op) (rassoc,lassoc,nassoc,prefix,postfix)
+        = (rassoc,lassoc,nassoc,op:prefix,postfix)
+
+      splitOp (Postfix op) (rassoc,lassoc,nassoc,prefix,postfix)
+        = (rassoc,lassoc,nassoc,prefix,op:postfix)
