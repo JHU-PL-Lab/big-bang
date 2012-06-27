@@ -53,6 +53,9 @@ tests = TestLabel "Test functions" $ TestList
   -- Ensure that constraints from functions propagate correctly from cells
   , xCont "def f = (x:int -> x ) in (f 1) & (f ())"
 
+  -- Ensure that scape application does not expand overridden scapes
+  , xType "((_ -> 0 0) & (_ -> 0)) 0"
+
   -- Test typechecking of some pathological functions
   , xType $ srcMultiAppl
       [srcY, "this -> x -> this (`A x & `B x)"]
