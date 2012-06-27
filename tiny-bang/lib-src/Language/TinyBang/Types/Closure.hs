@@ -55,13 +55,13 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 
 --import Data.Tuple (swap)
-import Data.Maybe (listToMaybe, isNothing)
+import Data.Maybe (listToMaybe, isNothing, catMaybes)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad.RWS (runRWS, RWS)
 --import Control.Monad.Writer (tell)
 import Control.Monad (guard, mzero, liftM)
 import Control.Applicative ((<$>), (<*>), pure)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Exception (assert)
 
 type CReader = Reader Constraints
@@ -394,8 +394,16 @@ closeApplications cs = Set.unions $ do -- List
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'
-  TdScape (ScapeData foralls tpat ai ci) <- runReader (tProj t1 ProjFunc) cs
-  Just c' <- runReader (patternCompatible t2 tpat) cs
+  -- (ScapeData foralls tpat ai ci)
+  let li = do
+             TdScape scapeData <- runReader (tProj t1 ProjFunc) cs
+             let ScapeData _ tpat _ _ = scapeData
+                 compatList = runReader (patternCompatible t2 tpat) cs
+             return (compatList, scapeData)
+  (c', ScapeData foralls _ ai ci) <-
+    map (first $ Set.unions . catMaybes) $
+    (\(x, y) -> x ++ take 1 y) $
+    span (any isNothing . fst) li
   return $
     substituteVars
       (Set.insert (ai <: a2' .: histFIXME) (Set.union c' ci))
