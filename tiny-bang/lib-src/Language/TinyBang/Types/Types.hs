@@ -346,9 +346,7 @@ instance Display Constraint where
     if Cfg.displayDebugging
         then base $+$ (nest indentSize $ makeDoc hist)
         else base
-    where gDoc (Guard tpat constraints) =
-            makeDoc tpat <+> text "->" <+> makeDoc constraints
-          subtype :: (Display a, Display b) => a -> b -> Doc
+    where subtype :: (Display a, Display b) => a -> b -> Doc
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
           dispFun :: (Display a, Display b) => a -> b -> Doc
           dispFun a b = makeDoc a <+> text "->" <+> makeDoc b

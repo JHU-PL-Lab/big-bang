@@ -20,7 +20,6 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , PrimaryPatternType(..)
                                      , ConstraintHistory(..)
                                      , ScapeData(..)
-                                     , Guard(..)
                                      , PrimitiveType(..)
                                      , ProjTerm(..)
                                      , ForallVars(..)
@@ -44,20 +43,15 @@ import Language.TinyBang.Types.Types ( (<:)
 import Data.Function.Utils (leastFixedPoint)
 
 import Debug.Trace (trace)
-import Utils.Render.Display (display, Display, makeDoc, render, vcat)
+import Utils.Render.Display (display, Display)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
 
---import Data.Map (Map)
-import qualified Data.Map as Map
-
---import Data.Tuple (swap)
 import Data.Maybe (listToMaybe, isNothing, catMaybes)
 import Control.Monad.Reader (runReader, ask, local, Reader, MonadReader)
 import Control.Monad.RWS (runRWS, RWS)
---import Control.Monad.Writer (tell)
-import Control.Monad (guard, mzero, liftM)
+import Control.Monad (guard, mzero)
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Arrow (first, second)
 import Control.Exception (assert)
@@ -390,7 +384,7 @@ ct cs a = Set.toList $ runReader (concretizeType a) cs
 --
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do -- List
-  c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
+  UpperSubtype a0' a1' a2' _ <- Set.toList cs
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'
@@ -421,7 +415,7 @@ closeApplications cs = Set.unions $ do -- List
 
 findNonFunctionApplications :: Constraints -> Constraints
 findNonFunctionApplications cs = Set.fromList $ do -- List
-  c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
+  UpperSubtype a0' a1' _ _ <- Set.toList cs
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'

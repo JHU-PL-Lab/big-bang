@@ -228,7 +228,6 @@ instance (Eq ast, Display ast
       Appl e1 e2 -> do
         v1 <- eval e1
         v2 <- eval e2
-        cellId <- newCell v2
         e4 <- eApplScape (eProj v1 ProjFunc) v2
         either (\left ->
                  case left of
@@ -288,11 +287,11 @@ instance (Eq ast, Display ast
                         ,AstWrap ExprPart ast
                         ,AstWrap IA.ExprPart ast)
                      => Pattern -> Value ast -> ast -> EvalM ast (Maybe ast)
-              eMatch pat v1 e1 = do -- EvalM
+              eMatch pat v1 e1' = do -- EvalM
                 m <- eSearch pat v1
                 return $ do -- Maybe
                   b <- m
-                  return $ eSubstAll e1 b
+                  return $ eSubstAll e1' b
               eSubstAll :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
                            ,AstWrap ExprPart ast
                            ,AstWrap IA.ExprPart ast)
