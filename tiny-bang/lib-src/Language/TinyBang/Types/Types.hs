@@ -313,7 +313,10 @@ instance Display PrimaryPatternType where
     case pat of
       PatPrim tprim -> makeDoc tprim
       PatLabel lbl a pp -> makeDoc lbl <+> makeDoc a <> char '~' <> makeDoc pp
-      PatOnion pps -> parens $ sep $ intersperse (char '&') $ map makeDoc pps
+      PatOnion pps ->
+        if null pps
+        then text "any"
+        else parens $ sep $ intersperse (char '&') $ map makeDoc pps
       PatFun -> text "fun"
 
 
