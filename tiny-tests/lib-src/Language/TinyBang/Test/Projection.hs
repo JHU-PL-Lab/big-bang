@@ -5,7 +5,8 @@ where
 
 import Language.TinyBang.Test.UtilFunctions
 import Language.TinyBang.Test.SourceUtils
-  (tbCase)
+  ( tbCase
+  , tbDef)
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Interpreter.Ast as IA
@@ -64,4 +65,20 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
         two
   , xvEval "1 + (1 & 2 & 3 & ())" $
         four
+
+  -- Test that onion projection is polymorphic.
+  -- (Verifies that the onion projection type is properly substituted)
+  , xvEval (tbDef
+              "f"
+              "x -> x &. int"
+              "f () & (f 1 + f 1)")
+        two
+
+  -- Test that onion subtraction is polymorphic.
+  -- (Verifies that the onion subtraction type is properly substituted)
+  , xvEval (tbDef
+              "f"
+              "x -> x &- unit"
+              "f () & (f 1 + 1)")
+        two
   ]
