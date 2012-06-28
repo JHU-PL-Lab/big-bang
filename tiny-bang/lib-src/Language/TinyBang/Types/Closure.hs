@@ -540,7 +540,9 @@ instance AlphaSubstitutable TauDown where
     TdOnion a1 a2 -> saHelper2 TdOnion a1 a2
     TdScape pfd -> saHelper TdScape pfd
     TdOnionSub a s -> saHelper (`TdOnionSub` s) a
-    _ -> return td
+    TdOnionProj a s -> saHelper (`TdOnionProj` s) a
+    TdPrim _ -> return td
+    TdEmptyOnion -> return td
 
 instance AlphaSubstitutable ScapeData where
   substituteAlpha
