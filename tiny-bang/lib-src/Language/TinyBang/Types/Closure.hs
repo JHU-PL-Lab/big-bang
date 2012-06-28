@@ -38,8 +38,6 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , Contour
                                      , contour
                                      , unContour
-                                     , FunctionLowerBound
-                                     --, CallSite
                                      , histFIXME
                                      )
 
@@ -292,12 +290,14 @@ instance LowerBounded CellAlpha where
 --  have the specified alpha in their call sites list.  This function
 --  corresponds to the Application Substitution Definition in the language
 --  specification.
-substituteVars :: Constraints -> ForallVars
-               -> InterAlpha -> InterAlpha -> Constraints
-substituteVars constraints forallVars replAlpha otherAlpha =
+substituteVars :: Constraints
+               -> ForallVars
+               -> InterAlpha
+               -> Constraints
+substituteVars constraints forallVars callSiteAlpha =
   (\(a, _, b) -> Set.union a b) $ runRWS
     (substituteAlpha constraints)
-    (forallVars, replAlpha, otherAlpha)
+    (forallVars, callSiteAlpha)
     ()
 
 -- |Performs cycle detection on a set of constraints.
@@ -407,7 +407,7 @@ closeApplications cs = Set.unions $ do -- List
   return $
     substituteVars
       (Set.insert (ai <: a2' .: histFIXME) (Set.union c' ci))
-      foralls ai a2'
+      foralls a2'
 --  TdScape (ScapeData foralls ai ao cs') <- runReader (tProj td ProjFunc) cs
 --  let funcChain' = IAHead ai' ao' c funcChain
 --      hist = ClosureApplication funcChain' caChain
@@ -556,8 +556,8 @@ instance AlphaSubstitutable ScapeData where
                              => a -> TSubstM a
             substituteAlpha' =
               local newEnv . substituteAlpha
-            newEnv (ForallVars forallVars, a1', a2') =
-              (ForallVars $ Set.difference forallVars alphas, a1', a2')
+            newEnv (ForallVars forallVars, callSiteAlpha) =
+              (ForallVars $ Set.difference forallVars alphas, callSiteAlpha)
 
 csaHelper :: (AlphaSubstitutable a)
           => (a -> hist -> b)
@@ -583,7 +583,10 @@ csaHelper3 constr a1 a2 a3 hist =
     <*> substituteAlpha a3
     <*> pure hist
 
-type AlphaSubstitutionEnv = (ForallVars, InterAlpha, InterAlpha)
+-- |A type alias for environments for alpha substitution.  This represents the
+--  superscript argument list for the application substitution relation.
+type AlphaSubstitutionEnv = (ForallVars, InterAlpha)
+-- |A monad in which alpha substitution occurs.
 type TSubstM a = RWS AlphaSubstitutionEnv Constraints () a
 
 -- |A typeclass for entities which can substitute their type variables.
@@ -592,26 +595,21 @@ class AlphaSubstitutable a where
   --  The set in the reader environment contains alphas to ignore.
   substituteAlpha :: a -> TSubstM a
 
-tContour :: FunctionLowerBound -> InterAlpha -> Contour
-tContour l1 a =
-  case Map.lookup l1 aContour of
-    Just _ ->
-      invocationMap
-    Nothing ->
-      contour $ Map.insert l1 l2 aContour
-  where invocationMap = alphaContour a
-        aContour = unContour invocationMap
-        l2 = alphaId a
+-- Creates a new contour from an existing type variable
+tContour :: InterAlpha -> Contour
+tContour a =
+  if elem aid $ unContour cntr
+    then cntr -- TODO: consider changing TContour in the theory
+              --       this should chop the list off at the dupe
+    else contour $ aid:(unContour cntr)
+  where cntr = alphaContour a
+        aid = alphaId a
 
 substituteAlphaHelper :: (Alpha a)
                       => a -> TSubstM a
 substituteAlphaHelper a = do
-  (ForallVars forallVars, a1', a2') <- ask
-  let lb :: FunctionLowerBound
-      lb = alphaId a1'
-  --let cs :: CallSite
-  --    cs = alphaId a2'
-  let newContour = tContour lb a2'
+  (ForallVars forallVars, cntrAlpha) <- ask
+  let newContour = tContour cntrAlpha
   if not $ Set.member (alphaWeaken a) forallVars
     then return a
     -- The variable we are substituting should never have marked
@@ -620,11 +618,11 @@ substituteAlphaHelper a = do
     -- inference rules themselves (which have no notion of call
     -- sites) and the type replacement function (which does not
     -- replace forall-ed elements within a forall constraint).
-    else assertEmptyContour a1' $ assertEmptyContour a $
-       return (setAlphaContour a newContour)
+    else assertEmptyContour a $
+         return (setAlphaContour a newContour)
   where assertEmptyContour :: (Alpha a) => a -> b -> b
-        assertEmptyContour alpha f =
-          assert ((Map.size . unContour . alphaContour) alpha == 0) f
+        assertEmptyContour alpha v =
+          assert ((length . unContour . alphaContour) alpha == 0) v
 
 instance (AlphaType a) => AlphaSubstitutable (SomeAlpha a) where
   substituteAlpha = substituteAlphaHelper

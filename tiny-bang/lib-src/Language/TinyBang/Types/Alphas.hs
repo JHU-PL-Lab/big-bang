@@ -12,9 +12,7 @@ module Language.TinyBang.Types.Alphas
 , AnyAlpha
 , SomeAlpha
 , AlphaType
-, AlphaSubstitutionEnv
 , ProgramLabel
-, FunctionLowerBound
 , CallSite
 , Contour
 , contour
@@ -24,11 +22,6 @@ module Language.TinyBang.Types.Alphas
 ) where
 
 import Utils.Render.Display
-
-import Data.Set (Set)
-
-import Data.Map (Map)
-import qualified Data.Map as Map
 
 -- TODO: make ProgramLabel more precise
 type ProgramLabel = Integer
@@ -43,7 +36,7 @@ alpha :: (AlphaType a) => AlphaId -> Contour -> SomeAlpha a
 alpha = SomeAlpha
 
 makeNewAlpha :: (AlphaType a) => AlphaId -> SomeAlpha a
-makeNewAlpha i = alpha i $ contour $ Map.empty
+makeNewAlpha i = alpha i $ contour $ []
 
 data InterType
 data CellType
@@ -89,33 +82,19 @@ instance Ord AnyAlpha where
 instance Show AnyAlpha where
   show (AnyAlpha a) = show a
 
-type FunctionLowerBound = ProgramLabel
 type CallSite = ProgramLabel
 
--- TODO: Update this doc; it references call sites.
--- |A data structure representing function call sites.  The call site of a
---  function application is defined by the type parameter used as the domain
---  of the function type upper bounding the function in that application.  The
---  list of call sites is stored in reverse order; that is, the variable
---  '1^['2,'3] represents a1^{a3^{a2}}.  In the event of recursion, a set of
---  multiple call sites is grouped together.  For instance, the variable
---  '1^['3,'4,'3,'2] will be regrouped as the variable '1^[{'3,'4},'2].  Note
---  that, in this case, the use of single variables in the call site list is a
---  notational sugar for singleton sets.
-newtype Contour = Contour { unContour :: Map FunctionLowerBound CallSite }
-  deriving (Eq, Ord, Show)
-contour :: Map FunctionLowerBound CallSite -> Contour
+-- |A data structure representing a type contour.  Type contours are described
+--  in terms of a sequence of call sites.  In the non-recursive case, this
+--  sequence exactly matches the call sequence used to reach a given point in
+--  the program; for recursive cases, contours are reused.  In this
+--  implementation, the call site list is reversed; that is, the head of the
+--  call site list is the *most recent* call site that has been visited.
+newtype Contour = Contour { unContour :: [CallSite] }
+    deriving (Eq, Ord, Show)
+contour :: [CallSite] -> Contour
 contour = Contour
 
--- TODO: Update this doc; it references call sites.
--- |This function transforms a specified alpha into a call site list.  The
---  resulting call site list is in the reverse order form dictated by the
---  CallSites structure; that is, the list [{'3},{'2},{'1}] represents the type
---  variable with the exponent expression ['1,'2,'3].  The resulting call site
---  list is suitable for use in type variable substitution for polymorphic
---  functions.  This function is used in closure.
-
-type AlphaSubstitutionEnv = (Set AnyAlpha, CellAlpha, CellAlpha)
 
 instance Display (SomeAlpha a) where
   makeDoc (SomeAlpha i cSites) =
@@ -130,3 +109,4 @@ instance Display AnyAlpha where
 
 instance Display Contour where
   makeDoc (Contour c) = makeDoc c
+
