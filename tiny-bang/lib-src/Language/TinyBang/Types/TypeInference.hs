@@ -122,12 +122,14 @@ inferType ast@(Ast1p1 expr) = do
       -- Since Map.union prefers the leftmost occurrence, the bindings in gamma'
       -- override the ones in gamma
       (a2, c) <- capture (Map.union gamma') e
+      let scapeConstraints = Set.union c c'
       let vars = Set.difference
-           ( Set.union (extractConstraintTypeVars c)
-           $ Set.fromList [alphaWeaken a1, alphaWeaken a2])
-           ( Set.fromList $ map alphaWeaken $ Map.elems gamma)
+           ( Set.union (extractConstraintTypeVars scapeConstraints)
+           $ Set.insert (alphaWeaken a2) $
+             Set.fromList $ alphaWeaken <$> Map.elems gamma')
+           ( Set.fromList $ alphaWeaken <$> Map.elems gamma)
       let scapeType = T.TdScape
-            (T.ScapeData (T.ForallVars vars) tpat a2 $ Set.union c' c)
+            (T.ScapeData (T.ForallVars vars) tpat a2 scapeConstraints)
       tellInferred $ scapeType <: a1
       return a1
     A.Appl e1 e2 -> do
