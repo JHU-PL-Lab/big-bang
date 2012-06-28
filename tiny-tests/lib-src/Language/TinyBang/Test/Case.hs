@@ -67,7 +67,8 @@ tests = TestLabel "General case tests" $ TestList
                      , "`A `B `A 0"])
        "(`A q -> q) z"
 
-   , xCont $ tbDef "z"
+  -- This unit test fails and we're not sure why
+  , xCont $ tbDef "z"
        (srcMultiAppl [ srcY
                      , tbScape ["this", "x"] $
                          tbCase "x" ["`A y -> `X (this y)"
@@ -75,6 +76,15 @@ tests = TestLabel "General case tests" $ TestList
                                     ,"int -> x"]
                      , "`A `B `A 0"])
        "(`X q -> q) z"
+
+  , xCont $ tbDef "z"
+       (srcMultiAppl [ srcY
+                     , tbScape ["this", "x"] $
+                         tbCase "x" ["`A y -> `X (this y)"
+                                    ,"`B y -> `Y (this y)"
+                                    ,"int -> x"]
+                     , "`A `B `A 0"])
+       "(`X `Y `X q -> q) z"
 
   -- Check broad patterns
   , xEval "((`A x & `B y) -> x + y) (`A 1 & `B 2)"
