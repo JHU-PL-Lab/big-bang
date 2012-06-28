@@ -45,7 +45,7 @@ import Language.TinyBang.Types.Types ( (<:)
 
 import Data.Function.Utils (leastFixedPoint)
 
-import Debug.Trace (trace)
+import Debug.Trace (trace, traceShow)
 import Utils.Render.Display (display, Display, makeDoc, render, vcat)
 
 import Data.Set (Set)
@@ -387,7 +387,12 @@ ct cs a = Set.toList $ runReader (concretizeType a) cs
 --         check (Guard tauChi cs') =
 --           map (Set.union cs') $
 --             runReader (patternCompatible tau tauChi) cs
---
+
+traceShowMe f x = let ?conf = False in trace (f $ display x) x
+
+p x = "(*" ++ x ++ "*)"
+b x = "[*" ++ x ++ "*]"
+
 closeApplications :: Constraints -> Constraints
 closeApplications cs = Set.unions $ do -- List
   c@(UpperSubtype a0' a1' a2' _) <- Set.toList cs
@@ -404,7 +409,7 @@ closeApplications cs = Set.unions $ do -- List
     map (first $ Set.unions . catMaybes) $
     (\(x, y) -> x ++ take 1 y) $
     span (any isNothing . fst) li
-  return $
+  return $ -- traceShowMe b $
     substituteVars
       (Set.insert (ai <: a2' .: histFIXME) (Set.union c' ci))
       foralls ai a2'
@@ -523,7 +528,7 @@ calculateClosure :: (?conf :: Cfg.Config) => Constraints -> Constraints
 calculateClosure c = ddisp $ closeSingleContradictions $ leastFixedPoint closeAll $ ddisp $ c
   where ddisp x =
           if Cfg.debugging
-            then trace ("{-----\n" ++ display x ++ "\n-----}") x
+            then let ?conf = False in trace ("{-----\n" ++ display x ++ "\n-----}") x
             else x
 
 saHelper :: (AlphaSubstitutable a)
