@@ -9,6 +9,7 @@ module Data.ExtensibleVariant.Meta
 , xvDecls
 , opDecls
 , containDecls
+, xvConstrFamilyDecls
 ) where
 
 import Language.Haskell.TH.Syntax
@@ -30,6 +31,14 @@ opDecls n = [declXvOp n]
 --  the j-ary variant type.
 containDecls :: Int -> Int -> [Dec]
 containDecls i j = [declXvContain i j]
+
+-- |A function to produce the @:|:@ declaration for the k-ary variant type.
+xvConstrFamilyDecls :: Int -> [Dec]
+xvConstrFamilyDecls k =
+  [TySynInstD xvExtendOp
+    [appNArgs (k-1) $ ConT $ xvName (k-1), VarT $ mkName "xvp"] $
+    AppT (appNArgs (k-1) $ ConT $ xvName k) $ VarT $ mkName "xvp"]
+  where appNArgs n t = foldl AppT t $ map VarT $ xvTvnames n
 
 -- |Creates the declaration for the k-ary variant type itself.
 declXvType :: Int -> Dec
@@ -180,3 +189,6 @@ xvTvnames n = map (mkName . ("p" ++) . show) [1..n]
 xvConstrName :: Int -> Int -> Name
 xvConstrName n i = mkName $ "Xv" ++ show n ++ "p" ++ show i
 
+-- |Names the infix extension operator
+xvExtendOp :: Name
+xvExtendOp = mkName ":||"

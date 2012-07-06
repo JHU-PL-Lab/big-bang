@@ -5,6 +5,8 @@
                 , UndecidableInstances
                 , ScopedTypeVariables
                 , TypeOperators
+                , TypeFamilies
+                , KindSignatures
                 #-}
 
 {-|
@@ -80,6 +82,18 @@ class comp :<< xv where
 
 $( return $ concat $ map (\(i,j) -> Meta.containDecls i j)
     [(i,j) | j <- Meta.xvArities, i <- [1..j] ] )
+
+-- |Describes an infix operator which represents variant extension.  This
+--  operator may be more legible than the constructor prefix equivalent.
+type family (left :: *) :|| (right :: * -> *) :: *
+infixl :||
+-- |Describes an infix operator which is a synonym for Xv2.
+type family (left :: * -> *) :|: (right :: * -> *) :: *
+infixl :|:
+type instance a :|: b = Xv2 a b
+
+$( return $ concat $ map Meta.xvConstrFamilyDecls $
+        filter (> 2) Meta.xvArities )
 
 -- |Defines a monadic homomorphic operation over extensible variant component
 --  types.  Users of this module should provide an instance of this typeclass
