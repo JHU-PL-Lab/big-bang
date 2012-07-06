@@ -70,12 +70,10 @@ data ExprPart t
   | OnionProj t ProjTerm
   | EmptyOnion
   | Scape Pattern t
---  | Func Ident t
   | Appl t t
   | PrimInt Integer
   | PrimChar Char
   | PrimUnit
---  | Case t (Branches t)
   | Def (Maybe Modifier) Ident t t
   | Assign Ident t t
   | LazyOp LazyOperator t t
@@ -93,7 +91,6 @@ data Value t
   = VLabel LabelName CellId
   | VOnion (Value t) (Value t)
   | VScape Pattern t
---  | VFunc Ident t
   | VPrimInt Integer
   | VPrimChar Char
   | VPrimUnit
@@ -137,10 +134,6 @@ instance (AstOp FreeVarsOp ast (Set Ident))
   aststep FreeVarsOp part = case part of
     Var i -> Set.singleton i
     Scape pat e' -> exprFreeVars e' `Set.difference` ePatVars pat
---    Func i e' -> i `Set.delete` exprFreeVars e'
---    Case e' brs -> Set.union (exprFreeVars e') $ Set.unions $
---      map (\(Branch chi e'') ->
---              exprFreeVars e'' `Set.difference` ePatVars chi) brs
     Def _ i e1 e2 ->
       (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign i e1 e2 -> i `Set.delete`
@@ -157,10 +150,6 @@ instance (AstOp VarsOp ast (Set Ident))
   aststep VarsOp part = case part of
     Var i -> Set.singleton i
     Scape pat e' -> ePatVars pat `Set.union` exprVars e'
---    Func i e' -> i `Set.insert` exprVars e'
---    Case e' brs -> Set.union (exprVars e') $ Set.unions $
---      map (\(Branch chi e'') ->
---              exprVars e'' `Set.difference` ePatVars chi) brs
     Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
     Assign i e1 e2 -> i `Set.insert` (exprVars e1 `Set.union` exprVars e2)
     _ -> aststep CatOp part (exprVars :: ast -> Set Ident)
@@ -180,10 +169,6 @@ instance (AstWrap ExprPart ast
   aststep SubstOp orig sub ident = case orig of
     Var i | i == ident -> astwrap $ sub
     Scape pat _ | ident `Set.member` ePatVars pat -> astwrap $ orig
---    Func i _ | i == ident -> astwrap $ orig
---    Case e branches -> astwrap $ Case (rec e) $
---        map (\(Branch pat bre) -> Branch pat $
---          (if ident `Set.member` ePatVars pat then id else rec) bre) branches
     Def m i e1 e2 | i == ident -> astwrap $ Def m i (rec e1) e2
     Assign i e1 e2 | i == ident -> astwrap $ Assign i (rec e1) e2
     _ -> aststep HomOp orig rec
@@ -200,15 +185,10 @@ instance (AstWrap ExprPart ast2
     OnionSub e s -> OnionSub <&> e <&^> s
     OnionProj e s -> OnionProj <&> e <&^> s
     Scape pat e -> Scape pat <&> e
---    Func i e -> Func i <&> e
     Appl e1 e2 -> Appl <&> e1 <&*> e2
     PrimInt v -> return $ PrimInt v
     PrimChar v -> return $ PrimChar v
     PrimUnit -> return $ PrimUnit
---    Case e brs -> do
---        e' <- f e
---        brs' <- mapM appbr brs
---        return $ Case e' brs'
     EmptyOnion -> return $ EmptyOnion
     LazyOp op e1 e2 -> LazyOp op <&> e1 <&*> e2
     EagerOp op e1 e2 -> EagerOp op <&> e1 <&*> e2
@@ -221,9 +201,6 @@ instance (AstWrap ExprPart ast2
           infixl 4 <&*>
           mc <&^> p = mc `ap` return p
           infixl 4 <&^>
---          appbr (Branch pat bre) = do
---            bre' <- f bre
---            return $ Branch pat bre'
 
 -- |Specifies a catamorphic operation over TinyBang AST nodes.
 instance (Monoid r, Monad m)
@@ -235,12 +212,10 @@ instance (Monoid r, Monad m)
     OnionSub e _ -> f e
     OnionProj e _ -> f e
     Scape _ e -> f e
---    Func _ e -> f e
     Appl e1 e2 -> f e1 *+* f e2
     PrimInt _ -> return $ mempty
     PrimChar _ -> return $ mempty
     PrimUnit -> return $ mempty
---    Case e brs -> foldl (*+*) (f e) $ map (\(Branch _ e') -> f e') brs
     EmptyOnion -> return $ mempty
     LazyOp _ e1 e2 -> f e1 *+* f e2
     EagerOp _ e1 e2 -> f e1 *+* f e2
@@ -259,16 +234,10 @@ instance (Display t) => Display (ExprPart t) where
     Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
     Scape pat e -> parens $
       makeDoc pat <+> text "->" <+> makeDoc e
---    Func i e -> parens $
---            text "fun" <+> (text $ unIdent i) <+> text "->" <+> makeDoc e
     Appl e1 e2 -> parens $ makeDoc e1 <+> makeDoc e2
     PrimInt i -> integer i
     PrimChar c -> quotes $ char c
     PrimUnit -> parens empty
---    Case e brs -> parens $ text "case" <+> (parens $ makeDoc e) <+> text "of"
---            <+> text "{" $+$
---            (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
---            $+$ text "}"
     OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
     OnionProj e s -> makeDoc e <+> text "&." <+> makeDoc s
     EmptyOnion -> text "(&)"
@@ -290,7 +259,6 @@ instance (Display t) => Display (Value t) where
       VLabel n v -> text "`" <> makeDoc n <+> parens (makeDoc v)
       VOnion v1 v2 -> parens (makeDoc v1) <+> text "&" <+> parens (makeDoc v2)
       VScape pat e -> parens $ makeDoc pat <+> text "->" <+> makeDoc e
---      VFunc i e -> text "fun" <+> text (unIdent i) <+> text "->" <+> makeDoc e
       VPrimInt i -> text $ show i
       VPrimChar c -> char c
       VPrimUnit -> text "()"
