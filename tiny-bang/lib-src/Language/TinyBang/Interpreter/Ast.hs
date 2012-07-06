@@ -27,12 +27,12 @@ import Data.Set (Set)
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Types.UtilTypes as U
 
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 import Utils.Render.Display
 
 type CellId = Int
 
-type Expr = Ast2 A.ExprPart ExprPart
+type Expr = Xv2 A.ExprPart ExprPart
 
 -- |Data type for representing TinyBang intermediate AST nodes.
 data ExprPart t
@@ -41,76 +41,76 @@ data ExprPart t
     deriving (Eq, Ord, Show)
 
 -- |Provides behavior for free variable searches.
-instance (AstOp A.FreeVarsOp ast (Set U.Ident))
-      => AstStep A.FreeVarsOp ExprPart ast (Set U.Ident) where
-  aststep A.FreeVarsOp part =
-        aststep CatOp part (A.exprFreeVars :: ast -> Set U.Ident)
+instance (XvOp A.FreeVarsOp ast (Set U.Ident))
+      => XvPart A.FreeVarsOp ExprPart ast (Set U.Ident) where
+  xvpart A.FreeVarsOp part =
+        xvpart CatOp part (A.exprFreeVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for variable searches.
-instance (AstOp A.VarsOp ast (Set U.Ident))
-      => AstStep A.VarsOp ExprPart ast (Set U.Ident) where
-  aststep A.VarsOp part =
-        aststep CatOp part (A.exprVars :: ast -> Set U.Ident)
+instance (XvOp A.VarsOp ast (Set U.Ident))
+      => XvPart A.VarsOp ExprPart ast (Set U.Ident) where
+  xvpart A.VarsOp part =
+        xvpart CatOp part (A.exprVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for free variable substitution.
-instance (AstWrap ExprPart ast
-        , AstWrap A.ExprPart ast
-        , AstOp A.SubstOp ast (A.ExprPart ast -> U.Ident -> ast))
-      => AstStep A.SubstOp ExprPart ast (A.ExprPart ast -> U.Ident -> ast) where
-  aststep A.SubstOp orig sub ident = aststep HomOp orig rec
+instance ((:<<) ExprPart ast
+        , (:<<) A.ExprPart ast
+        , XvOp A.SubstOp ast (A.ExprPart ast -> U.Ident -> ast))
+      => XvPart A.SubstOp ExprPart ast (A.ExprPart ast -> U.Ident -> ast) where
+  xvpart A.SubstOp orig sub ident = xvpart HomOp orig rec
     where rec e = A.subst e sub ident
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST.
 --  This routine will address both LHS and RHS variables.
-substCell :: (AstWrap A.ExprPart ast
-            , AstWrap ExprPart ast
-            , AstStep HomOp ExprPart ast ((ast -> ast) -> ast)
-            , AstOp SubstCellOp ast (CellId -> U.Ident -> ast))
+substCell :: ((:<<) A.ExprPart ast
+            , (:<<) ExprPart ast
+            , XvPart HomOp ExprPart ast ((ast -> ast) -> ast)
+            , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
           => ast -> CellId -> U.Ident -> ast
-substCell = astop SubstCellOp
+substCell = xvop SubstCellOp
 data SubstCellOp = SubstCellOp
-instance (AstWrap ExprPart ast
-        , AstWrap A.ExprPart ast
-        , AstStep HomOp A.ExprPart ast ((ast -> ast) -> ast)
-        --, AstStep SubstOp A.ExprPart ast (A.ExprPart ast -> Ident -> ast)
-        , AstOp SubstCellOp ast (CellId -> U.Ident -> ast))
-      => AstStep SubstCellOp A.ExprPart ast (CellId -> U.Ident -> ast) where
-  aststep SubstCellOp orig cell ident = case orig of
-    A.Var i | i == ident -> astwrap $ ExprCell cell
-    A.Def m i e1 e2 | i == ident -> astwrap $ A.Def m i (rec e1) e2
+instance ((:<<) ExprPart ast
+        , (:<<) A.ExprPart ast
+        , XvPart HomOp A.ExprPart ast ((ast -> ast) -> ast)
+        --, XvPart SubstOp A.ExprPart ast (A.ExprPart ast -> Ident -> ast)
+        , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
+      => XvPart SubstCellOp A.ExprPart ast (CellId -> U.Ident -> ast) where
+  xvpart SubstCellOp orig cell ident = case orig of
+    A.Var i | i == ident -> inj $ ExprCell cell
+    A.Def m i e1 e2 | i == ident -> inj $ A.Def m i (rec e1) e2
     A.Assign i e1 e2 | i == ident ->
-        astwrap $ AssignCell cell (rec e1) (rec e2)
-    A.Scape chi _ | ident `Set.member` A.ePatVars chi -> astwrap $ orig
---    A.Case e brs -> astwrap $ A.Case (rec e) $
+        inj $ AssignCell cell (rec e1) (rec e2)
+    A.Scape chi _ | ident `Set.member` A.ePatVars chi -> inj $ orig
+--    A.Case e brs -> inj $ A.Case (rec e) $
 --        map (\(A.Branch pat bre) -> A.Branch pat $
 --          (if ident `Set.member` A.ePatVars pat then id else rec) bre) brs
-    _ -> aststep HomOp orig rec
+    _ -> xvpart HomOp orig rec
     where rec :: ast -> ast
           rec e = substCell e cell ident
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST
 --  containing intermediate nodes.
-instance (AstOp SubstCellOp ast (CellId -> U.Ident -> ast)
-        , AstWrap A.ExprPart ast
-        , AstWrap ExprPart ast)
-      => AstStep SubstCellOp ExprPart ast (CellId -> U.Ident -> ast) where
-  aststep SubstCellOp orig cell ident = case orig of
-    ExprCell _ -> astwrap $ orig
-    AssignCell c e1 e2 -> astwrap $ AssignCell c (rec e1) (rec e2)
+instance (XvOp SubstCellOp ast (CellId -> U.Ident -> ast)
+        , (:<<) A.ExprPart ast
+        , (:<<) ExprPart ast)
+      => XvPart SubstCellOp ExprPart ast (CellId -> U.Ident -> ast) where
+  xvpart SubstCellOp orig cell ident = case orig of
+    ExprCell _ -> inj $ orig
+    AssignCell c e1 e2 -> inj $ AssignCell c (rec e1) (rec e2)
     where rec e = substCell e cell ident
 
 -- |Specifies a homomorphic operation over TinyBang intermediate AST nodes.
-instance (AstWrap ExprPart ast2
+instance ((:<<) ExprPart ast2
         , Monad m)
-      => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM part f = liftM astwrap $ case part of
+      => XvPart HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+  xvpart HomOpM part f = liftM inj $ case part of
     ExprCell c -> return $ ExprCell c
     AssignCell c e1 e2 -> liftM2 (AssignCell c) (f e1) (f e2)
 
 -- |Specifies a catamorphic operation over TinyBang intermediate AST nodes.
 instance (Monoid r, Monad m)
-      => AstStep CatOpM ExprPart ast ((ast -> m r) -> m r) where
-  aststep CatOpM part f = case part of
+      => XvPart CatOpM ExprPart ast ((ast -> m r) -> m r) where
+  xvpart CatOpM part f = case part of
     ExprCell _ -> return $ mempty
     AssignCell _ e1 e2 -> liftM2 mappend (f e1) (f e2)
 

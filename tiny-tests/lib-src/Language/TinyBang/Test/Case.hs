@@ -23,7 +23,7 @@ import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 --caseEval :: String -> [String] ->
 caseEval e bs v = xEval (tbCase e bs) v

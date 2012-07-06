@@ -9,7 +9,7 @@ import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 -- TODO: Write quickcheck properties that the empty onion is the left and right identity.
 
@@ -17,6 +17,6 @@ tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Tests about the empty onion" $ TestList
   [ lexParseEval "(&)"
                  [TokOpenParen, TokOnionCons, TokCloseParen]
-                 (astwrap $ TA.EmptyOnion)
+                 (inj $ TA.EmptyOnion)
                  (TA.VEmptyOnion :: TA.Value IA.Expr)
   ]

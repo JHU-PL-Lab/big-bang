@@ -15,12 +15,12 @@ import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Miscellaneous tests" $ TestList
   [ xPars "'s''t''r''i''n''g'" $
-          multiAppl $ (map astwrap $
+          multiAppl $ (map inj $
                     [ (TA.PrimChar 's')
                     , (TA.PrimChar 't')
                     , (TA.PrimChar 'r')
@@ -35,7 +35,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (astwrap $ TA.Label lblTrue Nothing $ astwrap TA.PrimUnit
+                 (inj $ TA.Label lblTrue Nothing $ inj TA.PrimUnit
                     :: LA.Expr)
                  ( TA.VLabel lblTrue 0 :: TA.Value IA.Expr
                  , makeState [(0, TA.VPrimUnit)]
@@ -46,7 +46,7 @@ tests = TestLabel "Miscellaneous tests" $ TestList
                  , TokOpenParen
                  , TokCloseParen
                  ]
-                 (astwrap $ TA.Label lblFalse Nothing $ astwrap TA.PrimUnit
+                 (inj $ TA.Label lblFalse Nothing $ inj TA.PrimUnit
                     :: LA.Expr)
                  ( TA.VLabel lblFalse 0 :: TA.Value IA.Expr
                  , makeState [(0, TA.VPrimUnit)]

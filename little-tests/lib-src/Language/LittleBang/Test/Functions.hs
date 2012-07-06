@@ -21,9 +21,9 @@ import Language.LittleBang.Test.SourceUtils
 import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
-selfIdentFuncX = TA.VFunc idSelf $ astwrap $ TA.Func idX varX
+selfIdentFuncX = TA.VFunc idSelf $ inj $ TA.Func idX varX
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Test functions" $ TestList
@@ -37,8 +37,8 @@ tests = TestLabel "Test functions" $ TestList
           selfIdentFuncX
   , xType srcY
   , xvEval "fun x -> x x"
-          (TA.VFunc idSelf $ astwrap $ TA.Func idX $ astwrap $
-            TA.Appl (astwrap $ TA.Appl varX $ astwrap TA.EmptyOnion) varX)
+          (TA.VFunc idSelf $ inj $ TA.Func idX $ inj $
+            TA.Appl (inj $ TA.Appl varX $ inj TA.EmptyOnion) varX)
   , xType "(fun x -> x x) (fun x -> x x)"
   , xType "def omega = fun x -> x x in omega omega"
 
@@ -70,17 +70,17 @@ tests = TestLabel "Test functions" $ TestList
   -- Check that variable closed-ness works in functions
   , xNotC "(fun x -> n + 2)"
   , xPars "fun x -> case x of {`True a -> 1; `False a -> 0}"
-          (astwrap $ LA.Func idX $ astwrap $
+          (inj $ LA.Func idX $ inj $
               LA.Case varX
                      [ TA.Branch
                         (TA.ChiTopBind $ TA.ChiUnbound $
                               (TA.ChiLabelShallow (labelName "True")
                                           (ident "a")))
-                              (astwrap $ TA.PrimInt 1)
+                              (inj $ TA.PrimInt 1)
                      , TA.Branch
                         (TA.ChiTopBind $ TA.ChiUnbound $
                               (TA.ChiLabelShallow (labelName "False")
                                           (ident "a")))
-                              (astwrap $ TA.PrimInt 0)
+                              (inj $ TA.PrimInt 0)
                      ])
   ]

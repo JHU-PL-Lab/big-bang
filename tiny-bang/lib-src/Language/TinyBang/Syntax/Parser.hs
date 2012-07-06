@@ -18,7 +18,7 @@ import Language.TinyBang.Types.UtilTypes
     , labelName
     , LabelName
     )
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 import Utils.Render.Display
 
 -- imports for Parsec
@@ -134,9 +134,9 @@ primaryPattern = choice
                   (isToken L.TokCloseParen)
                   (primaryPattern `sepBy1` isToken L.TokOnionCons)
 
-binwrap :: (AstWrap A.ExprPart ast)
+binwrap :: ((:<<) A.ExprPart ast)
         => (ast -> ast -> A.ExprPart ast) -> (ast -> ast -> ast)
-binwrap f = \x y -> astwrap $ f x y
+binwrap f = \x y -> inj $ f x y
 
 op :: TokParser (A.Expr -> A.Expr -> A.Expr)
 op = choice
@@ -153,7 +153,7 @@ term = choice
   [ try $ between (isToken L.TokOpenParen)
                   (isToken L.TokCloseParen)
                   expr'
-  , try $ astwrap . A.Var <$> (ident <$> grabIdent)
+  , try $ inj . A.Var <$> (ident <$> grabIdent)
   , literal
   ]
 
@@ -178,16 +178,16 @@ table =
                             , unary A.Scape  (try . scapeP)]]
 --  , [ prefix scapeParser]
   ]
-  where unary con p = p con >>= \f -> return $ astwrap . f
+  where unary con p = p con >>= \f -> return $ inj . f
         -- definitions for prefix and postfix taken from this SO post:
         -- http://stackoverflow.com/questions/10475337
         prefix  p = Prefix  . chainl1 p $ return       (.)
         postfix p = Postfix . chainl1 p $ return (flip (.))
         projector con tok =
           wrapped <$> (isToken tok *> projectorTerm)
-          where wrapped proj e = astwrap $ con e proj
+          where wrapped proj e = inj $ con e proj
 --        postfix1 con p = Postfix $ wrapped <$> p
---          where wrapped a b = astwrap $ con b a
+--          where wrapped a b = inj $ con b a
 --        postfix con p = Postfix $ unary con p
         assignP c =
           c <$> (ident <$> grabIdent) <*>
@@ -195,7 +195,7 @@ table =
         scapeP c = c <$> pattern <* isToken L.TokArrow
         labelP c = c <$> lbl <*> qual
         defP c = isToken L.TokDef *> assignP c
-        wrap2 con a1 a2 = astwrap $ con a1 a2
+        wrap2 con a1 a2 = inj $ con a1 a2
         binop p con assoc =
           Infix (p *> (pure $ wrap2 con)) assoc
         tokBinop tok con assoc = binop (isToken tok) con assoc
@@ -203,13 +203,13 @@ table =
           tokBinop tok (A.EagerOp con) AssocNone
 
 scape :: TokParser A.Expr
-scape = astwrap <$> scape'
+scape = inj <$> scape'
   where scape' =
           A.Scape <$> pattern <* isToken L.TokArrow <*> expr <?> "scape"
 
 
 literal :: TokParser A.Expr
-literal = astwrap <$> choice
+literal = inj <$> choice
   [ try unit
   , try emptyOnion
   , A.PrimInt <$> grabInt
@@ -231,19 +231,19 @@ exprStart = choice
   [ try literal
   , try scape
   , between (isToken L.TokOpenParen) (isToken L.TokCloseParen) expr
-  , astwrap <$> (A.Label <$> lbl <*> qual <*> expr)
+  , inj <$> (A.Label <$> lbl <*> qual <*> expr)
   , var <$> (ident <$> grabIdent) <*> assignmentSuffix
   ]
   where assignmentSuffix =
           optionMaybe ((,) <$> (isToken L.TokEquals *> expr)
                            <*> (isToken L.TokIn     *> expr))
-        var i mpair = astwrap $
+        var i mpair = inj $
           case mpair of
                Nothing -> A.Var i
                Just (e1, e2) -> A.Assign i e1 e2
 
 exprRest :: A.Expr -> TokParser A.Expr
-exprRest startOfExpr = choice $ map (fmap astwrap)
+exprRest startOfExpr = choice $ map (fmap inj)
   [ A.Onion     startOfExpr <$> (isToken L.TokOnionCons *> expr)
   , A.OnionSub  startOfExpr <$> (isToken L.TokOnionSub  *> projectorTerm)
   , A.OnionProj startOfExpr <$> (isToken L.TokOnionProj *> projectorTerm)

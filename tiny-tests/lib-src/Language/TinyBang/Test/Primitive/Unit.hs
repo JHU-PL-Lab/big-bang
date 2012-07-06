@@ -7,17 +7,17 @@ import Language.TinyBang.Test.UtilFunctions
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Interpreter.Ast as IA
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "Tests for unit" $ TestList
   [ lexParseEval "()"
                  [TokOpenParen, TokCloseParen]
-                 (astwrap A.PrimUnit)
+                 (inj A.PrimUnit)
                  (A.VPrimUnit :: A.Value IA.Expr)
   , lexParseEval "( )"
                  [TokOpenParen, TokCloseParen]
-                 (astwrap A.PrimUnit)
+                 (inj A.PrimUnit)
                  (A.VPrimUnit :: A.Value IA.Expr)
   , xvEval "(unit -> ()) () "
           A.VPrimUnit

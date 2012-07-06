@@ -8,7 +8,7 @@ import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Interpreter.Ast as IA
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 -- TODO: write a quickcheck that "case `lbl e of { `lbl x -> x }" == e
 

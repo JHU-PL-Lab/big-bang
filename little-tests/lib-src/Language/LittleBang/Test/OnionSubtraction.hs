@@ -8,7 +8,7 @@ import qualified Language.LittleBang.Ast as LA
 import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Interpreter.Ast as IA
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 import qualified Data.IntMap as IntMap
 
@@ -37,32 +37,32 @@ tests = TestLabel "Onion subtraction tests" $ TestList
 
   -- Test that subtraction parses correctly
   , xPars "`A 0 & `A () & `A `B () &- `A & 0"
-          (astwrap $ LA.Onion (
-            (astwrap $ TA.OnionSub (
-              (astwrap $ LA.Onion (
-                (astwrap $ LA.Onion (
-                  astwrap $ TA.Label (labelName "A") Nothing $
-                    astwrap $ TA.PrimInt 0
-                ) (astwrap $ TA.Label (labelName "A") Nothing $
-                    astwrap $ TA.PrimUnit))
-              ) (astwrap $ TA.Label (labelName "A") Nothing $
-                   astwrap $ TA.Label (labelName "B") Nothing $
-                     astwrap TA.PrimUnit))
+          (inj $ LA.Onion (
+            (inj $ TA.OnionSub (
+              (inj $ LA.Onion (
+                (inj $ LA.Onion (
+                  inj $ TA.Label (labelName "A") Nothing $
+                    inj $ TA.PrimInt 0
+                ) (inj $ TA.Label (labelName "A") Nothing $
+                    inj $ TA.PrimUnit))
+              ) (inj $ TA.Label (labelName "A") Nothing $
+                   inj $ TA.Label (labelName "B") Nothing $
+                     inj TA.PrimUnit))
             ) (TA.ProjLabel $ labelName "A"))
-          ) (astwrap $ TA.PrimInt 0))
+          ) (inj $ TA.PrimInt 0))
 
   , xPars "(((`A 0 & `A ()) & `A `B ()) &- `A) & 0"
-          (astwrap $ LA.Onion (
-            (astwrap $ TA.OnionSub (
-              (astwrap $ LA.Onion (
-                (astwrap $ LA.Onion (
-                  astwrap $ TA.Label (labelName "A") Nothing $
-                    astwrap $ TA.PrimInt 0
-                ) (astwrap $ TA.Label (labelName "A") Nothing $
-                    astwrap $ TA.PrimUnit))
-              ) (astwrap $ TA.Label (labelName "A") Nothing
-                 (astwrap $ TA.Label (labelName "B") Nothing $
-                    astwrap $ TA.PrimUnit)))
+          (inj $ LA.Onion (
+            (inj $ TA.OnionSub (
+              (inj $ LA.Onion (
+                (inj $ LA.Onion (
+                  inj $ TA.Label (labelName "A") Nothing $
+                    inj $ TA.PrimInt 0
+                ) (inj $ TA.Label (labelName "A") Nothing $
+                    inj $ TA.PrimUnit))
+              ) (inj $ TA.Label (labelName "A") Nothing
+                 (inj $ TA.Label (labelName "B") Nothing $
+                    inj $ TA.PrimUnit)))
             ) (TA.ProjLabel $ labelName "A"))
-          ) (astwrap $ TA.PrimInt 0))
+          ) (inj $ TA.PrimInt 0))
   ]

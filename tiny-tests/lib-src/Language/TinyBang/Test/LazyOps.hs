@@ -11,7 +11,7 @@ import qualified Language.TinyBang.Test.ExpressionUtils as E
   )
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 --import Language.TinyBang.Syntax.Lexer
 
 -- TODO: write a quickcheck test that any valid +/- tree is correctly computed.
@@ -27,12 +27,12 @@ tests = TestLabel "Tests on integer operations" $ TestList
                  , TokOpPlus
                  , TokIntegerLiteral 2
                  ]
-                 (astwrap $ A.LazyOp A.Plus
-                    (astwrap $ A.LazyOp A.Minus (E.pi 3) (E.pi 1))
+                 (inj $ A.LazyOp A.Plus
+                    (inj $ A.LazyOp A.Minus (E.pi 3) (E.pi 1))
                     (E.pi 2))
                  (V.pi 4)
 -- Test parse and evaluation of some simple arithmetic applications
-  , xPars "2 + 2" $ astwrap $
+  , xPars "2 + 2" $ inj $
           A.LazyOp A.Plus (E.pi 2) (E.pi 2)
   , xType "1 + 2"
   , xType "1 - 2"

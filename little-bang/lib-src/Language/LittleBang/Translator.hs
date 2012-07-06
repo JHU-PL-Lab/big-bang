@@ -24,7 +24,7 @@ import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Types.UtilTypes as TUT
 
 -- import Utils.Render.Display
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 type FreshVars = Consumer TUT.Ident
 
@@ -42,9 +42,9 @@ convertLittleToTiny e =
 -- NOTE: due to a bug in GHC 7.4.1 at the time of this writing, convTiny cannot
 -- have a declared type signature.  For more information, see:
 --     http://hackage.haskell.org/trac/ghc/ticket/6065
---convTiny :: (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2))
+--convTiny :: (XvOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2))
 --         => ast1 -> FreshVars ast2
-convTiny e = astop EncodeLittleBangOp e convTiny
+convTiny e = xvop EncodeLittleBangOp e convTiny
 
 -- |Represents an operation for translating LittleBang AST nodes into TinyBang
 --  AST nodes.
@@ -56,32 +56,32 @@ type LBEnc ast1 ast2 = (ast1 -> FreshVars ast2) -> FreshVars ast2
 
 -- |Performs "encoding" for non-LittleBang ASTs.  This is required to satisfy
 --  the homomorphic properties of non-LittleBang nodes.
-instance (AstStep HomOpM TA.ExprPart ast1 (LBEnc ast1 ast2))
-      => AstStep EncodeLittleBangOp TA.ExprPart ast1 (LBEnc ast1 ast2) where
-  aststep EncodeLittleBangOp p = \f -> aststep HomOpM p f
+instance (XvPart HomOpM TA.ExprPart ast1 (LBEnc ast1 ast2))
+      => XvPart EncodeLittleBangOp TA.ExprPart ast1 (LBEnc ast1 ast2) where
+  xvpart EncodeLittleBangOp p = \f -> xvpart HomOpM p f
 
 -- |Defines an operation for converting LittleBang AST nodes into TinyBang AST
 --  nodes.
-instance (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
-         ,AstOp TA.SubstOp ast2 (TA.ExprPart ast2 -> TUT.Ident -> ast2)
-         ,AstWrap LA.ExprPart ast1
-         ,AstWrap TA.ExprPart ast1
-         ,AstWrap TA.ExprPart ast2)
-      => AstStep EncodeLittleBangOp LA.ExprPart ast1 (LBEnc ast1 ast2)
+instance (XvOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
+         ,XvOp TA.SubstOp ast2 (TA.ExprPart ast2 -> TUT.Ident -> ast2)
+         ,(:<<) LA.ExprPart ast1
+         ,(:<<) TA.ExprPart ast1
+         ,(:<<) TA.ExprPart ast2)
+      => XvPart EncodeLittleBangOp LA.ExprPart ast1 (LBEnc ast1 ast2)
   where
-  aststep EncodeLittleBangOp part = \f ->
+  xvpart EncodeLittleBangOp part = \f ->
     case part of
-      LA.Prior -> return $ astwrap $ TA.Var $ prior
-      LA.Self -> return $ astwrap $ TA.Var $ self
+      LA.Prior -> return $ inj $ TA.Var $ prior
+      LA.Self -> return $ inj $ TA.Var $ self
       LA.Proj e i -> do
         -- Because this is fairly complex, we're going to convert to a
         -- LittleBang case expression and then recurse.
         free <- next
         let caseExpr :: ast1
-            caseExpr = astwrap $ LA.Case e
+            caseExpr = inj $ LA.Case e
                 [ LA.Branch (LA.ChiTopBind $ LA.ChiUnbound $
                         LA.ChiLabelShallow (itl i) free) $
-                            astwrap $ TA.Var free ]
+                            inj $ TA.Var free ]
         (convTiny caseExpr)::(FreshVars ast2)
       LA.ProjAssign e1 i e2 e3 -> do
         -- Because TinyBang self encoding doesn't affect assignment
@@ -90,29 +90,29 @@ instance (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
         e2' <- f e2
         e3' <- f e3
         free <- next
-        return $ astwrap $ TA.Case e1'
+        return $ inj $ TA.Case e1'
           [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
-                        TA.ChiLabelShallow (itl i) $ free) $ astwrap $
+                        TA.ChiLabelShallow (itl i) $ free) $ inj $
                           TA.Assign free e2' e3' ]
       LA.Case e brs -> do
         e' <- f e
         brs' <- mapM (selfEncodeBranch f) brs
-        return $ astwrap $ TA.Case e' brs'
+        return $ inj $ TA.Case e' brs'
       LA.Onion e1 e2 -> do
         e1' <- f e1
         e2' <- f e2
-        return $ astwrap $ TA.Case (astwrap $ TA.EmptyOnion)
-            [ TA.Branch (TA.ChiTopVar prior) $ astwrap $
-                TA.Case e1' [ TA.Branch (TA.ChiTopVar prior) $ astwrap $ 
-                                TA.Onion (astwrap $ TA.Var prior) e2' ] ]
+        return $ inj $ TA.Case (inj $ TA.EmptyOnion)
+            [ TA.Branch (TA.ChiTopVar prior) $ inj $
+                TA.Case e1' [ TA.Branch (TA.ChiTopVar prior) $ inj $ 
+                                TA.Onion (inj $ TA.Var prior) e2' ] ]
       LA.Func i e -> do
         e' <- f e
-        return $ astwrap $ TA.Func self $ astwrap $ TA.Func i $ e'
+        return $ inj $ TA.Func self $ inj $ TA.Func i $ e'
       LA.Appl e1 e2 -> do
         e1' <- f e1
         e2' <- f e2
-        return $ astwrap $ TA.Appl
-            (astwrap $ TA.Appl e1' $ astwrap $ TA.EmptyOnion) e2'
+        return $ inj $ TA.Appl
+            (inj $ TA.Appl e1' $ inj $ TA.EmptyOnion) e2'
     where prior = TUT.ident "prior"
           self = TUT.ident "self"
           itl = TUT.labelName . TUT.unIdent
@@ -192,12 +192,11 @@ instance (AstOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
           exprFuncSubst sexpr (var,vself) = do
             junk <- next
             junk2 <- next
-            let repl = TA.Case (astwrap $ TA.Var var) $
+            let repl = TA.Case (inj $ TA.Var var) $
                         [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound $
-                          TA.ChiFun) $ astwrap $ TA.Func junk $ astwrap $
-                          TA.Appl (astwrap $ TA.Var var) $ astwrap $
+                          TA.ChiFun) $ inj $ TA.Func junk $ inj $
+                          TA.Appl (inj $ TA.Var var) $ inj $
                           TA.Var vself
-                        , TA.Branch (TA.ChiTopVar junk2) $ astwrap $
+                        , TA.Branch (TA.ChiTopVar junk2) $ inj $
                           TA.Var var ]
             return $ TA.subst sexpr repl var
-

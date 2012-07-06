@@ -54,7 +54,7 @@ import Language.TinyBang.Types.UtilTypes
     , LabelName
     , labelName
     )
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 import Utils.Render.Display
 
 -- TODO: remove
@@ -140,8 +140,8 @@ writeCell i v = modify (second $ IntMap.adjust (const v) i)
 -- |Performs an evaluation of a TinyBang expression.
 evalTop :: forall ast xast.
            (?conf :: Cfg.Config
-          , AstOp HomOp ast ((ast -> xast) -> xast)
-          , AstOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
+          , XvOp HomOp ast ((ast -> xast) -> xast)
+          , XvOp EvalOp xast (Cfg.Config -> EvalM xast (Value xast))
            )
         => ast -> Either (EvalError xast) (Result xast)
 evalTop e =
@@ -157,17 +157,17 @@ type IdMap = Map Ident CellId
 
 -- |Evaluates a TinyBang expression.
 eval :: (?conf :: Cfg.Config
-        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast)))
+        , XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast)))
      => ast -> EvalM ast (Value ast)
-eval e = astop EvalOp e ?conf
+eval e = xvop EvalOp e ?conf
 data EvalOp = EvalOp
 
 -- Provides evaluation behavior for intermediate nodes.
-instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstWrap IA.ExprPart ast)
-      => AstStep EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
+instance (XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+        , (:<<) IA.ExprPart ast)
+      => XvPart EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
     where
-  aststep EvalOp ast = \config -> let ?conf = config in
+  xvpart EvalOp ast = \config -> let ?conf = config in
     case ast of
       IA.ExprCell c -> readCell c
       IA.AssignCell c e1 e2 -> do
@@ -177,12 +177,12 @@ instance (AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
 
 -- Provides evaluation behavior for TinyBang nodes.
 instance (Eq ast, Display ast
-        , AstOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
-        , AstWrap ExprPart ast
-        , AstWrap IA.ExprPart ast)
-      => AstStep EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
-  aststep EvalOp ast = \config -> let ?conf = config in
+        , XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
+        , XvOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+        , (:<<) ExprPart ast
+        , (:<<) IA.ExprPart ast)
+      => XvPart EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
+  xvpart EvalOp ast = \config -> let ?conf = config in
     case ast of
       Scape pat e -> return $ VScape pat e
 --      Func i e -> return $ VFunc i e
@@ -248,9 +248,9 @@ instance (Eq ast, Display ast
 --                    Nothing -> findAnswer bs'
 --                    Just expr -> return expr
 --        eval =<< findAnswer branches
-        where eApplScape :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
-                            ,AstWrap ExprPart ast
-                            ,AstWrap IA.ExprPart ast)
+        where eApplScape :: (XvOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                            ,(:<<) ExprPart ast
+                            ,(:<<) IA.ExprPart ast)
                          => [Value ast] -> Value ast
                          -> EvalM ast (Either ApplScapeError ast)
               -- scape list must be provided in order of precedence
@@ -283,18 +283,18 @@ instance (Eq ast, Display ast
                               Nothing -> findMatch xs
                       firstMatchM :: EvalM ast (Maybe ast)
                       firstMatchM = findMatch matches
-              eMatch :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
-                        ,AstWrap ExprPart ast
-                        ,AstWrap IA.ExprPart ast)
+              eMatch :: (XvOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                        ,(:<<) ExprPart ast
+                        ,(:<<) IA.ExprPart ast)
                      => Pattern -> Value ast -> ast -> EvalM ast (Maybe ast)
               eMatch pat v1 e1' = do -- EvalM
                 m <- eSearch pat v1
                 return $ do -- Maybe
                   b <- m
                   return $ eSubstAll e1' b
-              eSubstAll :: (AstOp IA.SubstCellOp ast (CellId -> Ident -> ast)
-                           ,AstWrap ExprPart ast
-                           ,AstWrap IA.ExprPart ast)
+              eSubstAll :: (XvOp IA.SubstCellOp ast (CellId -> Ident -> ast)
+                           ,(:<<) ExprPart ast
+                           ,(:<<) IA.ExprPart ast)
                         => ast -> IdMap -> ast
               eSubstAll expr b = Map.foldrWithKey foldSubst expr b
                 where foldSubst ident cellid sexpr =

@@ -18,7 +18,7 @@ import Language.TinyBang.Test.SourceUtils
 import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Interpreter.Ast as IA
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 import qualified Data.IntMap as IntMap
 
@@ -39,9 +39,9 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
                  , TokIdentifier "B"
                  , TokIntegerLiteral 2
                  ]
-                 ( astwrap $ A.Onion
-                    (astwrap $ A.Label lblA Nothing $ E.pi 1)
-                    (astwrap $ A.Label lblB Nothing $ E.pi 2) )
+                 ( inj $ A.Onion
+                    (inj $ A.Label lblA Nothing $ E.pi 1)
+                    (inj $ A.Label lblB Nothing $ E.pi 2) )
                  ( A.VOnion (A.VLabel lblA 0) (A.VLabel lblB 1)
                     :: A.Value IA.Expr
                  , mkState [(0, V.pi 1), (1, V.pi 2)]
@@ -52,31 +52,31 @@ tests = TestLabel "Tests of basic onion properties" $ TestList
 
   -- Test some parsing
   , xPars "(1 & ('x' & (x -> x)))"
-          (astwrap $ A.Onion
-            (astwrap $ A.PrimInt 1)
-            (astwrap $ A.Onion
-              (astwrap $ A.PrimChar 'x')
-              (astwrap $ A.Scape (A.Pattern idX $ A.PatOnion []) varX)))
+          (inj $ A.Onion
+            (inj $ A.PrimInt 1)
+            (inj $ A.Onion
+              (inj $ A.PrimChar 'x')
+              (inj $ A.Scape (A.Pattern idX $ A.PatOnion []) varX)))
 
   -- Test that onions associate right
   , xPars "`A 1 & `B 2 & `C 3"
-          (astwrap $ A.Onion
-            (astwrap $ A.Onion
-              (astwrap $ A.Label lblA Nothing $ E.pi 1)
-              (astwrap $ A.Label lblB Nothing $ E.pi 2))
-            (astwrap $ A.Label lblC Nothing $ E.pi 3))
+          (inj $ A.Onion
+            (inj $ A.Onion
+              (inj $ A.Label lblA Nothing $ E.pi 1)
+              (inj $ A.Label lblB Nothing $ E.pi 2))
+            (inj $ A.Label lblC Nothing $ E.pi 3))
   , xPars "(`A 1 & `B 2) & `C 3"
-          (astwrap $ A.Onion
-            (astwrap $ A.Onion
-              (astwrap $ A.Label lblA Nothing $ E.pi 1)
-              (astwrap $ A.Label lblB Nothing $ E.pi 2))
-            (astwrap $ A.Label lblC Nothing $ E.pi 3))
+          (inj $ A.Onion
+            (inj $ A.Onion
+              (inj $ A.Label lblA Nothing $ E.pi 1)
+              (inj $ A.Label lblB Nothing $ E.pi 2))
+            (inj $ A.Label lblC Nothing $ E.pi 3))
   , xPars "`A 1 & (`B 2 & `C 3)"
-          (astwrap $ A.Onion
-            (astwrap $ A.Label lblA Nothing $ E.pi 1)
-            (astwrap $ A.Onion
-              (astwrap $ A.Label lblB Nothing $ E.pi 2)
-              (astwrap $ A.Label lblC Nothing $ E.pi 3)))
+          (inj $ A.Onion
+            (inj $ A.Label lblA Nothing $ E.pi 1)
+            (inj $ A.Onion
+              (inj $ A.Label lblB Nothing $ E.pi 2)
+              (inj $ A.Label lblC Nothing $ E.pi 3)))
   -- Test that onions evaluate left to right
   -- Uses state
   , xsEval

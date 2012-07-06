@@ -31,7 +31,7 @@ import qualified Data.Set as Set
 import qualified Language.TinyBang.Ast as TA
 import Language.TinyBang.Ast (exprFreeVars, exprVars)
 import Language.TinyBang.Types.UtilTypes
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 import Utils.Render.Display
 
 -------------------------------------------------------------------------------
@@ -52,9 +52,9 @@ data ExprPart t
 type Expr = Ast2 TA.ExprPart ExprPart
 
 -- |Obtains the set of free variables for LittleBang AST nodes.
-instance (AstOp TA.FreeVarsOp ast (Set Ident))
-      => AstStep TA.FreeVarsOp ExprPart ast (Set Ident) where
-  aststep TA.FreeVarsOp ast = case ast of
+instance (XvOp TA.FreeVarsOp ast (Set Ident))
+      => XvPart TA.FreeVarsOp ExprPart ast (Set Ident) where
+  xvpart TA.FreeVarsOp ast = case ast of
     Self -> Set.empty
     Prior -> Set.empty
     Proj e _ -> exprFreeVars e
@@ -67,9 +67,9 @@ instance (AstOp TA.FreeVarsOp ast (Set Ident))
     Appl e1 e2 -> exprFreeVars e1 `Set.union` exprFreeVars e2
 
 -- |Obtains the set of variables for LittleBang AST nodes.
-instance (AstOp TA.VarsOp ast (Set Ident))
-      => AstStep TA.VarsOp ExprPart ast (Set Ident) where
-  aststep TA.VarsOp ast = case ast of
+instance (XvOp TA.VarsOp ast (Set Ident))
+      => XvPart TA.VarsOp ExprPart ast (Set Ident) where
+  xvpart TA.VarsOp ast = case ast of
     Self -> Set.empty
     Prior -> Set.empty
     Proj e _ -> exprVars e
@@ -82,10 +82,10 @@ instance (AstOp TA.VarsOp ast (Set Ident))
     Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
 
 -- |Defines a homomorphism over a tree containing LittleBang AST nodes.
-instance (AstWrap ExprPart ast2
+instance ((:<<) ExprPart ast2
          ,Monad m)
-      => AstStep HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
-  aststep HomOpM part f = liftM astwrap $ case part of
+      => XvPart HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+  xvpart HomOpM part f = liftM inj $ case part of
     Self -> return $ Self
     Prior -> return $ Prior
     Proj e i -> Proj <&> e <&^> i
@@ -112,8 +112,8 @@ instance (AstWrap ExprPart ast2
 
 -- |Defines a catamorphism over a tree containing LittleBang AST nodes.
 instance (Monoid r, Monad m)
-      => AstStep CatOpM ExprPart ast1 ((ast1 -> m r) -> m r) where
-  aststep CatOpM part f = case part of
+      => XvPart CatOpM ExprPart ast1 ((ast1 -> m r) -> m r) where
+  xvpart CatOpM part f = case part of
     Self -> return $ mempty
     Prior -> return $ mempty
     Proj e _ -> f e
@@ -141,4 +141,3 @@ instance (Display t) => Display (ExprPart t) where
     Onion e1 e2 -> makeDoc e1 <+> text "&" <+> makeDoc e2
     Func i e -> text "fun" <+> makeDoc i <+> text "->" <+> makeDoc e
     Appl e1 e2 -> makeDoc e1 <+> makeDoc e2
-

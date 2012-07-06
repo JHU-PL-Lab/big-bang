@@ -24,7 +24,7 @@ import qualified Language.TinyBang.Ast as TA
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.TinyBang.Types.Types as T
 
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 
 tests :: (?conf :: Cfg.Config) => Test
 tests = TestLabel "General case tests" $ TestList
@@ -45,17 +45,17 @@ tests = TestLabel "General case tests" $ TestList
                       \    unit -> ();           \
                       \    `True a -> `False (); \
                       \    fun -> (fun x -> x)}" $
-          (astwrap $ LA.Case varX
+          (inj $ LA.Case varX
             [ TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
-                            (TA.ChiPrim T.PrimInt)) $ astwrap $ TA.PrimInt 5
+                            (TA.ChiPrim T.PrimInt)) $ inj $ TA.PrimInt 5
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
-                            (TA.ChiPrim T.PrimChar)) $ astwrap $ TA.PrimChar 'a'
+                            (TA.ChiPrim T.PrimChar)) $ inj $ TA.PrimChar 'a'
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
-                            (TA.ChiPrim T.PrimUnit)) $ astwrap $ TA.PrimUnit
+                            (TA.ChiPrim T.PrimUnit)) $ inj $ TA.PrimUnit
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
                             (TA.ChiLabelShallow lblTrue $ ident "a")) E.false
             , TA.Branch (TA.ChiTopBind $ TA.ChiUnbound
-                            TA.ChiFun) $ astwrap $ LA.Func idX varX
+                            TA.ChiFun) $ inj $ LA.Func idX varX
             ]
             :: LA.Expr)
 

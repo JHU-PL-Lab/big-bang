@@ -43,7 +43,7 @@ import Language.TinyBang.Types.Types ( (<:)
                                      , histFIXME
                                      )
 import Language.TinyBang.Types.UtilTypes
-import Utils.Language.Ast
+import Data.ExtensibleVariant
 import Utils.Render.Display
 
 type Gamma = Map Ident CellAlpha
@@ -90,7 +90,7 @@ inferTypeTop expr =
 
 -- |Performs type inference for a given Big Bang expression.
 inferType :: A.Expr -> TIM InterAlpha
-inferType ast@(Ast1p1 expr) = do
+inferType ast@(Xv1p1 expr) = do
   gamma <- ask
   let inferred = T.Inferred ast gamma
       tellInferred c = do

@@ -61,7 +61,7 @@ class XvOp op xv result where
 
 -- |Performs an operation over a component of an extensible variant structure.
 --  Users of this module are expected to provide instances of this typeclass to
---  define AST operations.  Selection of the specific @XvPart@ instance is
+--  define variant operations.  Selection of the specific @XvPart@ instance is
 --  typically driven by the @op@ argument.
 class XvPart op comp xv result where
   xvpart :: op -> comp xv -> result
@@ -138,8 +138,8 @@ data CatOpM = CatOpM
 data CatOp = CatOp
 
 -- |A typeclass instance for @CatOp@ given @CatOpM@.
-instance (XvPart CatOpM comp ast ((ast -> Identity r) -> Identity r))
-      => XvPart CatOp comp ast ((ast -> r) -> r) where
+instance (XvPart CatOpM comp xv ((xv -> Identity r) -> Identity r))
+      => XvPart CatOp comp xv ((xv -> r) -> r) where
   xvpart CatOp comp f =
-    runIdentity $ xvpart CatOpM comp ((return . f)::(ast -> Identity r))
+    runIdentity $ xvpart CatOpM comp ((return . f)::(xv -> Identity r))
 
