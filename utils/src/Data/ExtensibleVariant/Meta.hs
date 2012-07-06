@@ -10,8 +10,11 @@ module Data.ExtensibleVariant.Meta
 , opDecls
 , containDecls
 , xvConstrFamilyDecls
+, genSmartConstr
 ) where
 
+import Data.Char (toLower)
+import Data.Functor ((<$>))
 import Language.Haskell.TH.Syntax
 
 -- |The arities for which variant types are defined.
@@ -192,3 +195,58 @@ xvConstrName n i = mkName $ "Xv" ++ show n ++ "p" ++ show i
 -- |Names the infix extension operator
 xvExtendOp :: Name
 xvExtendOp = mkName ":||"
+
+-- |A function for generating smary constructors on a given extensible variant
+--  component type.  For each constructor in the specified type of the form
+--  @Constr arg1 ... argN@, this metaprogram will generate a function
+--  declaration of the form @inj $ constr arg1 ... argN@.
+genSmartConstr :: Name -> Q [Dec]
+genSmartConstr typeName = do
+  info <- qReify typeName
+  (dCxt,dName,dTyVarBndrs,dCons,_) <-
+        case info of
+          TyConI (DataD dCxt dName dTyVarBndrs dCons dDerivNames) ->
+            return (dCxt,dName,dTyVarBndrs,dCons,dDerivNames)
+          _ -> fail $
+            "Could not obtain constructors for type " ++ show typeName
+  let lowerName n = mkName $
+        case nameBase n of
+          [] -> fail "WTF: empty name!"
+          c:cs -> toLower c : cs
+      vnames = map (mkName . ('v':) . show) [1 :: Int ..]
+  let smartConstrize :: Con -> Q [Dec]
+      smartConstrize constr =
+        case constr of
+          NormalC name strictTypes ->
+            let curVnames = take (length strictTypes) vnames
+                mkArrT t1 t2 = AppT (AppT ArrowT t1) t2
+                unBndr x =
+                  case x of
+                    PlainTV n -> n
+                    KindedTV n _ -> n
+            in
+            do
+              resultName <-
+                if null dTyVarBndrs
+                  then fail $ "Type has no type variables: " ++ show typeName
+                  else return $ unBndr $ head $ reverse $ dTyVarBndrs
+              let func = FunD (lowerName name) $
+                    [Clause (map VarP curVnames) (NormalB $
+                        AppE (VarE $ mkName "inj") $
+                          foldl AppE (ConE name) (map VarE curVnames)
+                      ) []]
+                  tdec = let dropLast = reverse . tail . reverse
+                             typeCxt = (dCxt ++) $
+                              [ClassP (mkName ":<<") $
+                                [ foldl AppT (ConT dName) $
+                                    map (VarT . unBndr) $ dropLast dTyVarBndrs
+                                , VarT resultName]]
+                         in
+                         SigD (lowerName name) $ ForallT dTyVarBndrs typeCxt $
+                           foldr mkArrT (VarT resultName) $
+                             map snd strictTypes
+              return [func,tdec]
+          _ -> fail $
+                "Don't know how to handle constructor type: " ++ show constr
+            
+  concat <$> mapM smartConstrize dCons

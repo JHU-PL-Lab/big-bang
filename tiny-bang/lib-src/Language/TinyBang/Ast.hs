@@ -7,6 +7,7 @@
                 , TypeSynonymInstances
                 , UndecidableInstances
                 , ScopedTypeVariables
+                , TemplateHaskell
                 #-}
 module Language.TinyBang.Ast
 ( Expr
@@ -29,7 +30,23 @@ module Language.TinyBang.Ast
 , EagerOperator(..)
 , ProjTerm(..)
 , Assignable(..)
-) where
+-- Smart constructors
+, var
+, label
+, onion
+, onionSub
+, onionProj
+, emptyOnion
+, scape
+, appl
+, primInt
+, primChar
+, primUnit
+, def
+, assign
+, lazyOp
+, eagerOp
+ ) where
 
 import Control.Monad (liftM,liftM2,ap)
 import Data.Monoid (Monoid, mempty, mappend)
@@ -109,6 +126,9 @@ data PrimaryPattern
   | PatOnion [PrimaryPattern] -- An empty one of these matches anything.
   | PatFun
   deriving (Eq, Ord, Show)
+
+-- Generate smart constructors for Expr type
+$( genSmartConstr ''ExprPart )
 
 -- |Obtains the set of bound variables in a pattern.
 ePatVars :: Pattern -> Set Ident

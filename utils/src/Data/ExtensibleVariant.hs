@@ -49,6 +49,7 @@ module Data.ExtensibleVariant where
 
 import Control.Monad.Identity
 import qualified Data.ExtensibleVariant.Meta as Meta
+import Language.Haskell.TH.Syntax
 import Utils.Render.Display
 
 $( return $ concat $ map Meta.xvDecls Meta.xvArities )
@@ -156,4 +157,11 @@ instance (XvPart CatOpM comp xv ((xv -> Identity r) -> Identity r))
       => XvPart CatOp comp xv ((xv -> r) -> r) where
   xvpart CatOp comp f =
     runIdentity $ xvpart CatOpM comp ((return . f)::(xv -> Identity r))
+
+-- |A function for generating smary constructors on a given extensible variant
+--  component type.  For each constructor in the specified type of the form
+--  @Constr arg1 ... argN@, this metaprogram will generate a function
+--  declaration of the form @inj $ constr arg1 ... argN@.
+genSmartConstr :: Name -> Q [Dec]
+genSmartConstr = Meta.genSmartConstr
 
