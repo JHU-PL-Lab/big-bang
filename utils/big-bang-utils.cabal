@@ -52,13 +52,13 @@ Library
         Control.Monad.Consumer.Lazy
         Control.Monad.Trans.Consumer
         Control.Monad.Trans.Consumer.Lazy
+        Data.ExtensibleVariant
+        Data.ExtensibleVariant.Meta
         Data.Function.Utils
         Data.List.Utils
         Data.Maybe.Utils
         Data.Set.Utils
         Data.String.Utils
-        Utils.Language.Ast
-        Utils.Language.AstMeta
         Utils.Render.Display
 
   Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell
