@@ -49,7 +49,7 @@ data ExprPart t
   deriving (Eq, Ord, Show)
 
 -- |Data type for a LittleBang AST.
-type Expr = Ast2 TA.ExprPart ExprPart
+type Expr = Xv2 TA.ExprPart ExprPart
 
 -- |Obtains the set of free variables for LittleBang AST nodes.
 instance (XvOp TA.FreeVarsOp ast (Set Ident))
@@ -82,9 +82,8 @@ instance (XvOp TA.VarsOp ast (Set Ident))
     Appl e1 e2 -> exprVars e1 `Set.union` exprVars e2
 
 -- |Defines a homomorphism over a tree containing LittleBang AST nodes.
-instance ((:<<) ExprPart ast2
-         ,Monad m)
-      => XvPart HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+instance (ExprPart :<< xv2, Monad m)
+      => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
   xvpart HomOpM part f = liftM inj $ case part of
     Self -> return $ Self
     Prior -> return $ Prior
@@ -97,10 +96,10 @@ instance ((:<<) ExprPart ast2
     Onion e1 e2 -> Onion <&> e1 <&*> e2
     Func i e -> Func i <&> e
     Appl e1 e2 -> Appl <&> e1 <&*> e2
-    where (<&>) :: (ast2 -> b) -> ast1 -> m b
+    where (<&>) :: (xv2 -> b) -> xv1 -> m b
           c <&> e = liftM c $ f e
           infixl 4 <&>
-          (<&*>) :: m (ast2 -> b) -> ast1 -> m b
+          (<&*>) :: m (xv2 -> b) -> xv1 -> m b
           mc <&*> e = mc `ap` f e
           infixl 4 <&*>
           (<&^>) :: m (a -> b) -> a -> m b
@@ -112,7 +111,7 @@ instance ((:<<) ExprPart ast2
 
 -- |Defines a catamorphism over a tree containing LittleBang AST nodes.
 instance (Monoid r, Monad m)
-      => XvPart CatOpM ExprPart ast1 ((ast1 -> m r) -> m r) where
+      => XvPart CatOpM ExprPart xv1 ((xv1 -> m r) -> m r) where
   xvpart CatOpM part f = case part of
     Self -> return $ mempty
     Prior -> return $ mempty

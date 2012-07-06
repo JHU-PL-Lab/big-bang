@@ -155,7 +155,7 @@ instance (XvOp VarsOp ast (Set Ident))
     _ -> xvpart CatOp part (exprVars :: ast -> Set Ident)
 
 -- |Performs a free variable substitution on the provided TinyBang AST.
-subst :: ((:<<) ExprPart ast
+subst :: (ExprPart :<< ast
         , XvOp SubstOp ast (ExprPart ast -> Ident -> ast))
       => ast            -- ^The AST
       -> ExprPart ast   -- ^The substituting expression
@@ -163,7 +163,7 @@ subst :: ((:<<) ExprPart ast
       -> ast            -- ^The resulting AST
 subst = xvop SubstOp
 data SubstOp = SubstOp
-instance ((:<<) ExprPart ast
+instance (ExprPart :<< ast
         , XvOp SubstOp ast (ExprPart ast -> Ident -> ast))
       => XvPart SubstOp ExprPart ast (ExprPart ast -> Ident -> ast) where
   xvpart SubstOp orig sub ident = case orig of
@@ -175,9 +175,8 @@ instance ((:<<) ExprPart ast
     where rec e = subst e sub ident
 
 -- |Specifies a homomorphic operation over TinyBang AST nodes.
-instance ((:<<) ExprPart ast2
-         ,Monad m)
-      => XvPart HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+instance (ExprPart :<< xv2, Monad m)
+      => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
   xvpart HomOpM part f = liftM inj $ case part of
     Var i -> return $ Var i
     Label n m e -> Label n m <&> e
@@ -194,7 +193,7 @@ instance ((:<<) ExprPart ast2
     EagerOp op e1 e2 -> EagerOp op <&> e1 <&*> e2
     Def m i e1 e2 -> Def m i <&> e1 <&*> e2
     Assign i e1 e2 -> Assign i <&> e1 <&*> e2
-    where (<&>) :: (ast2 -> b) -> ast1 -> m b
+    where (<&>) :: (xv2 -> b) -> xv1 -> m b
           c <&> e = liftM c $ f e
           infixl 4 <&>
           mc <&*> e = mc `ap` f e

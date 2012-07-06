@@ -64,9 +64,9 @@ instance (XvPart HomOpM TA.ExprPart ast1 (LBEnc ast1 ast2))
 --  nodes.
 instance (XvOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
          ,XvOp TA.SubstOp ast2 (TA.ExprPart ast2 -> TUT.Ident -> ast2)
-         ,(:<<) LA.ExprPart ast1
-         ,(:<<) TA.ExprPart ast1
-         ,(:<<) TA.ExprPart ast2)
+         ,LA.ExprPart :<< ast1
+         ,TA.ExprPart :<< ast1
+         ,TA.ExprPart :<< ast2)
       => XvPart EncodeLittleBangOp LA.ExprPart ast1 (LBEnc ast1 ast2)
   where
   xvpart EncodeLittleBangOp part = \f ->

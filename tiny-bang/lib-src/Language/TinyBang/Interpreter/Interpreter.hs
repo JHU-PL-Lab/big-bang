@@ -164,7 +164,7 @@ data EvalOp = EvalOp
 
 -- Provides evaluation behavior for intermediate nodes.
 instance (XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
-        , (:<<) IA.ExprPart ast)
+        , IA.ExprPart :<< ast)
       => XvPart EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
     where
   xvpart EvalOp ast = \config -> let ?conf = config in

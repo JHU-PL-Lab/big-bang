@@ -53,8 +53,8 @@ instance (XvOp A.VarsOp ast (Set U.Ident))
         xvpart CatOp part (A.exprVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for free variable substitution.
-instance ((:<<) ExprPart ast
-        , (:<<) A.ExprPart ast
+instance (ExprPart :<< ast
+        , A.ExprPart :<< ast
         , XvOp A.SubstOp ast (A.ExprPart ast -> U.Ident -> ast))
       => XvPart A.SubstOp ExprPart ast (A.ExprPart ast -> U.Ident -> ast) where
   xvpart A.SubstOp orig sub ident = xvpart HomOp orig rec
@@ -62,15 +62,15 @@ instance ((:<<) ExprPart ast
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST.
 --  This routine will address both LHS and RHS variables.
-substCell :: ((:<<) A.ExprPart ast
-            , (:<<) ExprPart ast
+substCell :: (A.ExprPart :<< ast
+            , ExprPart :<< ast
             , XvPart HomOp ExprPart ast ((ast -> ast) -> ast)
             , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
           => ast -> CellId -> U.Ident -> ast
 substCell = xvop SubstCellOp
 data SubstCellOp = SubstCellOp
-instance ((:<<) ExprPart ast
-        , (:<<) A.ExprPart ast
+instance (ExprPart :<< ast
+        , A.ExprPart :<< ast
         , XvPart HomOp A.ExprPart ast ((ast -> ast) -> ast)
         --, XvPart SubstOp A.ExprPart ast (A.ExprPart ast -> Ident -> ast)
         , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
@@ -91,8 +91,8 @@ instance ((:<<) ExprPart ast
 -- |Performs a free variable cell substitution on the provided TinyBang AST
 --  containing intermediate nodes.
 instance (XvOp SubstCellOp ast (CellId -> U.Ident -> ast)
-        , (:<<) A.ExprPart ast
-        , (:<<) ExprPart ast)
+        , A.ExprPart :<< ast
+        , ExprPart :<< ast)
       => XvPart SubstCellOp ExprPart ast (CellId -> U.Ident -> ast) where
   xvpart SubstCellOp orig cell ident = case orig of
     ExprCell _ -> inj $ orig
@@ -100,9 +100,8 @@ instance (XvOp SubstCellOp ast (CellId -> U.Ident -> ast)
     where rec e = substCell e cell ident
 
 -- |Specifies a homomorphic operation over TinyBang intermediate AST nodes.
-instance ((:<<) ExprPart ast2
-        , Monad m)
-      => XvPart HomOpM ExprPart ast1 ((ast1 -> m ast2) -> m ast2) where
+instance (ExprPart :<< xv2, Monad m)
+      => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
   xvpart HomOpM part f = liftM inj $ case part of
     ExprCell c -> return $ ExprCell c
     AssignCell c e1 e2 -> liftM2 (AssignCell c) (f e1) (f e2)

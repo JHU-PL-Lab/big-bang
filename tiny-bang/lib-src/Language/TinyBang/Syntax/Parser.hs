@@ -134,7 +134,7 @@ primaryPattern = choice
                   (isToken L.TokCloseParen)
                   (primaryPattern `sepBy1` isToken L.TokOnionCons)
 
-binwrap :: ((:<<) A.ExprPart ast)
+binwrap :: (A.ExprPart :<< ast)
         => (ast -> ast -> A.ExprPart ast) -> (ast -> ast -> ast)
 binwrap f = \x y -> inj $ f x y
 
