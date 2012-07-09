@@ -74,7 +74,7 @@ $( return $ concat $ map Meta.opDecls Meta.xvArities )
 -- |Indicates containment of a component in an extensible variant type.  This
 --  module provides implementations of this typeclass for each concrete
 --  extensible variant type.
-class comp :<< xv where
+class (comp :: * -> *) :<< (xv :: *) where
   -- Injects a provided component into an extensible variant structure.
   inj :: comp xv -> xv
   -- Projects a given component type from an extensible variant structure.  If
