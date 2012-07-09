@@ -55,9 +55,10 @@ instance (XvOp A.VarsOp ast (Set U.Ident))
 -- |Provides behavior for free variable substitution.
 instance (ExprPart :<< ast
         , A.ExprPart :<< ast
-        , XvOp A.SubstOp ast (A.ExprPart ast -> U.Ident -> ast))
-      => XvPart A.SubstOp ExprPart ast (A.ExprPart ast -> U.Ident -> ast) where
-  xvpart A.SubstOp orig sub ident = xvpart HomOp orig rec
+        , repl :<< ast
+        , XvOp (A.SubstOp (repl ast)) ast ast)
+      => XvPart (A.SubstOp (repl ast)) ExprPart ast ast where
+  xvpart (A.SubstOp sub ident) orig = xvpart HomOp orig rec
     where rec e = A.subst e sub ident
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST.

@@ -175,18 +175,17 @@ instance (XvOp VarsOp ast (Set Ident))
     _ -> xvpart CatOp part (exprVars :: ast -> Set Ident)
 
 -- |Performs a free variable substitution on the provided TinyBang AST.
-subst :: (ExprPart :<< ast
-        , XvOp SubstOp ast (ExprPart ast -> Ident -> ast))
+subst :: (repl :<< ast
+        , XvOp (SubstOp (repl ast)) ast ast)
       => ast            -- ^The AST
-      -> ExprPart ast   -- ^The substituting expression
+      -> repl ast       -- ^The substituting expression
       -> Ident          -- ^The identifier to substitute
       -> ast            -- ^The resulting AST
-subst = xvop SubstOp
-data SubstOp = SubstOp
-instance (ExprPart :<< ast
-        , XvOp SubstOp ast (ExprPart ast -> Ident -> ast))
-      => XvPart SubstOp ExprPart ast (ExprPart ast -> Ident -> ast) where
-  xvpart SubstOp orig sub ident = case orig of
+subst a r i = xvop (SubstOp r i) a
+data SubstOp repl = SubstOp repl Ident
+instance (ExprPart :<< ast, repl :<< ast, XvOp (SubstOp (repl ast)) ast ast)
+      => XvPart (SubstOp (repl ast)) ExprPart ast ast where
+  xvpart (SubstOp sub ident) orig = case orig of
     Var i | i == ident -> inj $ sub
     Scape pat _ | ident `Set.member` ePatVars pat -> inj $ orig
     Def m i e1 e2 | i == ident -> inj $ Def m i (rec e1) e2
