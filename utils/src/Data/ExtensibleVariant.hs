@@ -69,6 +69,14 @@ class XvOp op xv result where
 class XvPart op comp xv result where
   xvpart :: op -> comp xv -> result
 
+-- TODO:
+-- Need four more type classes:
+--   * XvHomOp, XvHomPart (where components are functoral)
+--   * XvCatOp, XvCatPart (where components are foldable)
+-- This permits sensible defaults for homomorphisms and catamorphisms.  The
+-- definitions of Functor and Foldable also have sensibly generated defaults
+-- and can be solved with either deriving or Template Haskell.
+
 $( return $ concat $ map Meta.opDecls Meta.xvArities )
 
 -- |Indicates containment of a component in an extensible variant type.  This
