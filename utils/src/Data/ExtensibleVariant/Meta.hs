@@ -19,7 +19,7 @@ import Language.Haskell.TH.Syntax
 
 -- |The arities for which variant types are defined.
 xvArities :: [Int]
-xvArities = [1..4]
+xvArities = [1..10]
 
 -- |A function to produce declarations for the k-ary variant type.
 xvDecls :: Int -> [Dec]

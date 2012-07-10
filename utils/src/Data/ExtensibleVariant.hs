@@ -94,7 +94,7 @@ infixl :|:
 type instance a :|: b = Xv2 a b
 
 $( return $ concat $ map Meta.xvConstrFamilyDecls $
-        filter (> 2) Meta.xvArities )
+        filter (> 1) Meta.xvArities )
 
 -- |Defines a monadic homomorphic operation over extensible variant component
 --  types.  Users of this module should provide an instance of this typeclass
