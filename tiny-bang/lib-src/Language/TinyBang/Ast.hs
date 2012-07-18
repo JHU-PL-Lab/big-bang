@@ -73,7 +73,6 @@ import Utils.Render.Display
 
 type CellId = Int
 
--- TODO: separate cell AST nodes into a different structure
 -- |Data type for representing TinyBang ASTs.
 type Expr = Xv1 ExprPart
 
