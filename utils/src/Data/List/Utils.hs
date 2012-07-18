@@ -9,4 +9,3 @@ safeUnconcat :: [a] -> (Maybe a, [a])
 safeUnconcat xs = case xs of
   []    -> (Nothing,[])
   x:xs' -> (Just x, xs')
-

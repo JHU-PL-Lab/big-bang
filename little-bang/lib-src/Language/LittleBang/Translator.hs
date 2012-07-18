@@ -44,7 +44,7 @@ convertLittleToTiny e =
 --     http://hackage.haskell.org/trac/ghc/ticket/6065
 --convTiny :: (XvOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2))
 --         => ast1 -> FreshVars ast2
-convTiny e = xvop EncodeLittleBangOp e convTiny
+convTiny e = xvOp EncodeLittleBangOp e convTiny
 
 -- |Represents an operation for translating LittleBang AST nodes into TinyBang
 --  AST nodes.
@@ -58,7 +58,7 @@ type LBEnc ast1 ast2 = (ast1 -> FreshVars ast2) -> FreshVars ast2
 --  the homomorphic properties of non-LittleBang nodes.
 instance (XvPart HomOpM TA.ExprPart ast1 (LBEnc ast1 ast2))
       => XvPart EncodeLittleBangOp TA.ExprPart ast1 (LBEnc ast1 ast2) where
-  xvpart EncodeLittleBangOp p = \f -> xvpart HomOpM p f
+  xvPart EncodeLittleBangOp p = \f -> xvPart HomOpM p f
 
 -- |Defines an operation for converting LittleBang AST nodes into TinyBang AST
 --  nodes.
@@ -69,7 +69,7 @@ instance (XvOp EncodeLittleBangOp ast1 (LBEnc ast1 ast2)
          ,TA.ExprPart :<< ast2)
       => XvPart EncodeLittleBangOp LA.ExprPart ast1 (LBEnc ast1 ast2)
   where
-  xvpart EncodeLittleBangOp part = \f ->
+  xvPart EncodeLittleBangOp part = \f ->
     case part of
       LA.Prior -> return $ inj $ TA.Var $ prior
       LA.Self -> return $ inj $ TA.Var $ self

@@ -43,14 +43,14 @@ data ExprPart t
 -- |Provides behavior for free variable searches.
 instance (XvOp A.FreeVarsOp ast (Set U.Ident))
       => XvPart A.FreeVarsOp ExprPart ast (Set U.Ident) where
-  xvpart A.FreeVarsOp part =
-        xvpart CatOp part (A.exprFreeVars :: ast -> Set U.Ident)
+  xvPart A.FreeVarsOp part =
+        xvPart CatOp part (A.exprFreeVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for variable searches.
 instance (XvOp A.VarsOp ast (Set U.Ident))
       => XvPart A.VarsOp ExprPart ast (Set U.Ident) where
-  xvpart A.VarsOp part =
-        xvpart CatOp part (A.exprVars :: ast -> Set U.Ident)
+  xvPart A.VarsOp part =
+        xvPart CatOp part (A.exprVars :: ast -> Set U.Ident)
 
 -- |Provides behavior for free variable substitution.
 instance (ExprPart :<< ast
@@ -58,7 +58,7 @@ instance (ExprPart :<< ast
         , repl :<< ast
         , XvOp (A.SubstOp (repl ast)) ast ast)
       => XvPart (A.SubstOp (repl ast)) ExprPart ast ast where
-  xvpart (A.SubstOp sub ident) orig = xvpart HomOp orig rec
+  xvPart (A.SubstOp sub ident) orig = xvPart HomOp orig rec
     where rec e = A.subst e sub ident
 
 -- |Performs a free variable cell substitution on the provided TinyBang AST.
@@ -68,7 +68,7 @@ substCell :: (A.ExprPart :<< ast
             , XvPart HomOp ExprPart ast ((ast -> ast) -> ast)
             , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
           => ast -> CellId -> U.Ident -> ast
-substCell = xvop SubstCellOp
+substCell = xvOp SubstCellOp
 data SubstCellOp = SubstCellOp
 instance (ExprPart :<< ast
         , A.ExprPart :<< ast
@@ -76,7 +76,7 @@ instance (ExprPart :<< ast
         --, XvPart SubstOp A.ExprPart ast (A.ExprPart ast -> Ident -> ast)
         , XvOp SubstCellOp ast (CellId -> U.Ident -> ast))
       => XvPart SubstCellOp A.ExprPart ast (CellId -> U.Ident -> ast) where
-  xvpart SubstCellOp orig cell ident = case orig of
+  xvPart SubstCellOp orig cell ident = case orig of
     A.Var i | i == ident -> inj $ ExprCell cell
     A.Def m i e1 e2 | i == ident -> inj $ A.Def m i (rec e1) e2
     A.Assign i e1 e2 | i == ident ->
@@ -85,7 +85,7 @@ instance (ExprPart :<< ast
 --    A.Case e brs -> inj $ A.Case (rec e) $
 --        map (\(A.Branch pat bre) -> A.Branch pat $
 --          (if ident `Set.member` A.ePatVars pat then id else rec) bre) brs
-    _ -> xvpart HomOp orig rec
+    _ -> xvPart HomOp orig rec
     where rec :: ast -> ast
           rec e = substCell e cell ident
 
@@ -95,7 +95,7 @@ instance (XvOp SubstCellOp ast (CellId -> U.Ident -> ast)
         , A.ExprPart :<< ast
         , ExprPart :<< ast)
       => XvPart SubstCellOp ExprPart ast (CellId -> U.Ident -> ast) where
-  xvpart SubstCellOp orig cell ident = case orig of
+  xvPart SubstCellOp orig cell ident = case orig of
     ExprCell _ -> inj $ orig
     AssignCell c e1 e2 -> inj $ AssignCell c (rec e1) (rec e2)
     where rec e = substCell e cell ident
@@ -103,14 +103,14 @@ instance (XvOp SubstCellOp ast (CellId -> U.Ident -> ast)
 -- |Specifies a homomorphic operation over TinyBang intermediate AST nodes.
 instance (ExprPart :<< xv2, Monad m)
       => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
-  xvpart HomOpM part f = liftM inj $ case part of
+  xvPart HomOpM part f = liftM inj $ case part of
     ExprCell c -> return $ ExprCell c
     AssignCell c e1 e2 -> liftM2 (AssignCell c) (f e1) (f e2)
 
 -- |Specifies a catamorphic operation over TinyBang intermediate AST nodes.
 instance (Monoid r, Monad m)
       => XvPart CatOpM ExprPart ast ((ast -> m r) -> m r) where
-  xvpart CatOpM part f = case part of
+  xvPart CatOpM part f = case part of
     ExprCell _ -> return $ mempty
     AssignCell _ e1 e2 -> liftM2 mappend (f e1) (f e2)
 

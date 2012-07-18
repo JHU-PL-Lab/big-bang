@@ -3,4 +3,3 @@ module Control.Monad.Consumer.Lazy
 ) where
 
 import Control.Monad.Trans.Consumer.Lazy
-

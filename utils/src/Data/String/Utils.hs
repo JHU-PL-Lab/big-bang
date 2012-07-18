@@ -23,4 +23,3 @@ numericSuperscript = map f
             '8' -> '\x2078'
             '9' -> '\x2079'
             _ -> c
-

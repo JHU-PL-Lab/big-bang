@@ -109,4 +109,3 @@ instance Display AnyAlpha where
 
 instance Display Contour where
   makeDoc (Contour c) = makeDoc c
-

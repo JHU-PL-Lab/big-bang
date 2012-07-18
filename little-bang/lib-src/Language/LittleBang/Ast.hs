@@ -54,7 +54,7 @@ type Expr = Xv2 TA.ExprPart ExprPart
 -- |Obtains the set of free variables for LittleBang AST nodes.
 instance (XvOp TA.FreeVarsOp ast (Set Ident))
       => XvPart TA.FreeVarsOp ExprPart ast (Set Ident) where
-  xvpart TA.FreeVarsOp ast = case ast of
+  xvPart TA.FreeVarsOp ast = case ast of
     Self -> Set.empty
     Prior -> Set.empty
     Proj e _ -> exprFreeVars e
@@ -69,7 +69,7 @@ instance (XvOp TA.FreeVarsOp ast (Set Ident))
 -- |Obtains the set of variables for LittleBang AST nodes.
 instance (XvOp TA.VarsOp ast (Set Ident))
       => XvPart TA.VarsOp ExprPart ast (Set Ident) where
-  xvpart TA.VarsOp ast = case ast of
+  xvPart TA.VarsOp ast = case ast of
     Self -> Set.empty
     Prior -> Set.empty
     Proj e _ -> exprVars e
@@ -84,7 +84,7 @@ instance (XvOp TA.VarsOp ast (Set Ident))
 -- |Defines a homomorphism over a tree containing LittleBang AST nodes.
 instance (ExprPart :<< xv2, Monad m)
       => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
-  xvpart HomOpM part f = liftM inj $ case part of
+  xvPart HomOpM part f = liftM inj $ case part of
     Self -> return $ Self
     Prior -> return $ Prior
     Proj e i -> Proj <&> e <&^> i
@@ -112,7 +112,7 @@ instance (ExprPart :<< xv2, Monad m)
 -- |Defines a catamorphism over a tree containing LittleBang AST nodes.
 instance (Monoid r, Monad m)
       => XvPart CatOpM ExprPart xv1 ((xv1 -> m r) -> m r) where
-  xvpart CatOpM part f = case part of
+  xvPart CatOpM part f = case part of
     Self -> return $ mempty
     Prior -> return $ mempty
     Proj e _ -> f e

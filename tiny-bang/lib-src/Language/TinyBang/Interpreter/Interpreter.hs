@@ -151,7 +151,7 @@ type IdMap = Map Ident CellId
 eval :: (?conf :: Cfg.Config
         , XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast)))
      => ast -> EvalM ast (Value ast)
-eval e = xvop EvalOp e ?conf
+eval e = xvOp EvalOp e ?conf
 data EvalOp = EvalOp
 
 -- Provides evaluation behavior for intermediate nodes.
@@ -159,7 +159,7 @@ instance (XvOp EvalOp ast (Cfg.Config -> EvalM ast (Value ast))
         , IA.ExprPart :<< ast)
       => XvPart EvalOp IA.ExprPart ast (Cfg.Config -> EvalM ast (Value ast))
     where
-  xvpart EvalOp ast = \config -> let ?conf = config in
+  xvPart EvalOp ast = \config -> let ?conf = config in
     case ast of
       IA.ExprCell c -> readCell c
       IA.AssignCell c e1 e2 -> do
@@ -174,7 +174,7 @@ instance (Eq ast, Display ast
         , ExprPart :<< ast
         , IA.ExprPart :<< ast)
       => XvPart EvalOp ExprPart ast (Cfg.Config -> EvalM ast (Value ast)) where
-  xvpart EvalOp ast = \config -> let ?conf = config in
+  xvPart EvalOp ast = \config -> let ?conf = config in
     case ast of
       Scape pat e -> return $ VScape pat e
       PrimInt i -> return $ VPrimInt i
@@ -572,5 +572,3 @@ canonicalize' (v, imap) =
             filter ((`IntMap.member` remap) . fst) $ IntMap.assocs imap'
         pairRemap (cell, contents) =
           (remap ! cell, valueRemap contents)
-
-

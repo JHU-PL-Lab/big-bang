@@ -642,5 +642,3 @@ retrieve' p cs ss = let sdss = concretization cs p in
     SDEmptyOnion -> Right VEmptyOnion
     SDFunction _ _ _ _ -> Right (if Set.member FSubFun ss then VEmptyOnion else VFunc)
     SDBadness -> Left Badness
-
-

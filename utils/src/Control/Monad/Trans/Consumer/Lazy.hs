@@ -83,4 +83,3 @@ filteredNext f = ConsumerT $ \ds -> do
 filteredSafeNext :: (Monad m) => (d -> Bool) -> ConsumerT d m (Maybe d)
 filteredSafeNext f = ConsumerT $ \ds ->
                         return $ safeUnconcat $ dropWhile (not . f) ds
-

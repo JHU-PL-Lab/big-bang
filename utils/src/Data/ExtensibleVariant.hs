@@ -60,14 +60,14 @@ $( return $ concat $ map Meta.xvDecls Meta.xvArities )
 --  which different typeclass instances can be disambiguated; it is passed
 --  verbatim to the @XvPart@ typeclass instance.
 class XvOp op xv result where
-  xvop :: op -> xv -> result
+  xvOp :: op -> xv -> result
 
 -- |Performs an operation over a component of an extensible variant structure.
 --  Users of this module are expected to provide instances of this typeclass to
 --  define variant operations.  Selection of the specific @XvPart@ instance is
 --  typically driven by the @op@ argument.
 class XvPart op comp xv result where
-  xvpart :: op -> comp xv -> result
+  xvPart :: op -> comp xv -> result
 
 -- TODO:
 -- Need four more type classes:
@@ -125,8 +125,8 @@ data HomOp = HomOp
 -- |A typeclass instance for @HomOp@ given @HomOpM@.
 instance (XvPart HomOpM comp xv1 ((xv1 -> Identity xv2) -> Identity xv2))
       => XvPart HomOp comp xv1 ((xv1 -> xv2) -> xv2) where
-  xvpart HomOp comp = \f ->
-    runIdentity $ xvpart HomOpM comp ((return . f)::(xv1 -> Identity xv2))
+  xvPart HomOp comp = \f ->
+    runIdentity $ xvPart HomOpM comp ((return . f)::(xv1 -> Identity xv2))
 
 -- |Performs an upcasting operation on an extensible variant over which
 --  homomorphisms are defined.
@@ -137,7 +137,7 @@ instance (XvPart HomOpM comp xv1 ((xv1 -> Identity xv2) -> Identity xv2))
 --        can be found at http://hackage.haskell.org/trac/ghc/ticket/6065
 upcast :: forall xv1 xv2.
             (XvOp HomOp xv1 ((xv1 -> xv2) -> xv2)) => xv1 -> xv2
-upcast xv = xvop HomOp xv (upcast :: xv1 -> xv2)
+upcast xv = xvOp HomOp xv (upcast :: xv1 -> xv2)
 
 -- |Defines a monadic catamorphic operation over extensible variant component
 --  types which produces a monoidal result.  Users of this module may provide
@@ -163,8 +163,8 @@ data CatOp = CatOp
 -- |A typeclass instance for @CatOp@ given @CatOpM@.
 instance (XvPart CatOpM comp xv ((xv -> Identity r) -> Identity r))
       => XvPart CatOp comp xv ((xv -> r) -> r) where
-  xvpart CatOp comp f =
-    runIdentity $ xvpart CatOpM comp ((return . f)::(xv -> Identity r))
+  xvPart CatOp comp f =
+    runIdentity $ xvPart CatOpM comp ((return . f)::(xv -> Identity r))
 
 -- |A function for generating smary constructors on a given extensible variant
 --  component type.  For each constructor in the specified type of the form
@@ -172,4 +172,3 @@ instance (XvPart CatOpM comp xv ((xv -> Identity r) -> Identity r))
 --  declaration of the form @inj $ constr arg1 ... argN@.
 genSmartConstr :: Name -> Q [Dec]
 genSmartConstr = Meta.genSmartConstr
-

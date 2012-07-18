@@ -155,12 +155,12 @@ declXvOp n =
                 foldl AppT (ConT name) $
                     map VarT tvnames) $ VarT result
         xv = mkName "xv"
-        impl = FunD (mkName "xvop") $
+        impl = FunD (mkName "xvOp") $
             [Clause [VarP op, VarP xv] (NormalB $ CaseE (VarE xv) matches) []]
         matches = map makeMatch [1..n]
         p = mkName "p"
         makeMatch i = Match (ConP (xvConstrName n i) [VarP p])
-                        (NormalB $ AppE (AppE (VarE $ mkName "xvpart") $
+                        (NormalB $ AppE (AppE (VarE $ mkName "xvPart") $
                             VarE op) $ VarE p) []
 
 -- |Creates the @:<<@ typeclass instance declarations for the k-ary variant

@@ -30,4 +30,3 @@ main = do
     inp <- getContents
     let xs = filter (not . null) $ splitOn "\n\n" inp
     mapM_ (putStrLn . display . SI.evalStringTop) xs
-

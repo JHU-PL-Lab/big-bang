@@ -142,32 +142,32 @@ ePatVars pat =
 
 -- |Obtains the set of free variables for an AST.
 exprFreeVars :: (XvOp FreeVarsOp ast (Set Ident)) => ast -> Set Ident
-exprFreeVars = xvop FreeVarsOp
+exprFreeVars = xvOp FreeVarsOp
 data FreeVarsOp = FreeVarsOp
 instance (XvOp FreeVarsOp ast (Set Ident))
       => XvPart FreeVarsOp ExprPart ast (Set Ident) where
-  xvpart FreeVarsOp part = case part of
+  xvPart FreeVarsOp part = case part of
     Var i -> Set.singleton i
     Scape pat e' -> exprFreeVars e' `Set.difference` ePatVars pat
     Def _ i e1 e2 ->
       (i `Set.delete` exprFreeVars e2) `Set.union` exprFreeVars e1
     Assign i e1 e2 -> i `Set.delete`
         (exprFreeVars e1 `Set.union` exprFreeVars e2)
-    _ -> xvpart CatOp part (exprFreeVars :: ast -> Set Ident)
+    _ -> xvPart CatOp part (exprFreeVars :: ast -> Set Ident)
 
 -- |Obtains the set of all variables in a given expression.  This includes the
 --  variables found in patterns and other constructs.
 exprVars :: (XvOp VarsOp ast (Set Ident)) => ast -> Set Ident
-exprVars = xvop VarsOp
+exprVars = xvOp VarsOp
 data VarsOp = VarsOp
 instance (XvOp VarsOp ast (Set Ident))
       => XvPart VarsOp ExprPart ast (Set Ident) where
-  xvpart VarsOp part = case part of
+  xvPart VarsOp part = case part of
     Var i -> Set.singleton i
     Scape pat e' -> ePatVars pat `Set.union` exprVars e'
     Def _ i e1 e2 -> (i `Set.insert` exprVars e1) `Set.union` exprVars e2
     Assign i e1 e2 -> i `Set.insert` (exprVars e1 `Set.union` exprVars e2)
-    _ -> xvpart CatOp part (exprVars :: ast -> Set Ident)
+    _ -> xvPart CatOp part (exprVars :: ast -> Set Ident)
 
 -- |Performs a free variable substitution on the provided TinyBang AST.
 subst :: (repl :<< ast
@@ -176,22 +176,22 @@ subst :: (repl :<< ast
       -> repl ast       -- ^The substituting expression
       -> Ident          -- ^The identifier to substitute
       -> ast            -- ^The resulting AST
-subst a r i = xvop (SubstOp r i) a
+subst a r i = xvOp (SubstOp r i) a
 data SubstOp repl = SubstOp repl Ident
 instance (ExprPart :<< ast, repl :<< ast, XvOp (SubstOp (repl ast)) ast ast)
       => XvPart (SubstOp (repl ast)) ExprPart ast ast where
-  xvpart (SubstOp sub ident) orig = case orig of
+  xvPart (SubstOp sub ident) orig = case orig of
     Var i | i == ident -> inj $ sub
     Scape pat _ | ident `Set.member` ePatVars pat -> inj $ orig
     Def m i e1 e2 | i == ident -> inj $ Def m i (rec e1) e2
     Assign i e1 e2 | i == ident -> inj $ Assign i (rec e1) e2
-    _ -> xvpart HomOp orig rec
+    _ -> xvPart HomOp orig rec
     where rec e = subst e sub ident
 
 -- |Specifies a homomorphic operation over TinyBang AST nodes.
 instance (ExprPart :<< xv2, Monad m)
       => XvPart HomOpM ExprPart xv1 ((xv1 -> m xv2) -> m xv2) where
-  xvpart HomOpM part f = liftM inj $ case part of
+  xvPart HomOpM part f = liftM inj $ case part of
     Var i -> return $ Var i
     Label n m e -> Label n m <&> e
     Onion e1 e2 -> Onion <&> e1 <&*> e2
@@ -218,7 +218,7 @@ instance (ExprPart :<< xv2, Monad m)
 -- |Specifies a catamorphic operation over TinyBang AST nodes.
 instance (Monoid r, Monad m)
       => XvPart CatOpM ExprPart ast ((ast -> m r) -> m r) where
-  xvpart CatOpM part f = case part of
+  xvPart CatOpM part f = case part of
     Var _ -> return $ mempty
     Label _ _ e -> f e
     Onion e1 e2 -> f e1 *+* f e2
