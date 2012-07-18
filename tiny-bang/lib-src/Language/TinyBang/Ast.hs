@@ -286,7 +286,8 @@ instance Display PrimaryPattern where
   makeDoc pat =
     case pat of
       PatPrim tprim -> makeDoc tprim
-      PatLabel lbl i pp -> makeDoc lbl <+> makeDoc i <> colon <> makeDoc pp
+      PatLabel lbl i pp ->
+        text "`" <> makeDoc lbl <+> makeDoc i <> colon <> makeDoc pp
       PatOnion pps ->
         if null pps
         then text "any"
