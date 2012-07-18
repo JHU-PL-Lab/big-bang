@@ -6,6 +6,7 @@ module Language.LittleBang.Test.ExpressionUtils
 , varY
 , varZ
 , varSelf
+, simplePat
 , identFuncX
 , pi
 , false
@@ -27,7 +28,9 @@ varY = inj $ TA.Var idY
 varZ = inj $ TA.Var idZ
 varSelf = inj $ TA.Var idSelf
 
-identFuncX = inj $ TA.Func idX varX
+simplePat ident = TA.Pattern ident $ TA.PatOnion []
+
+identFuncX = TA.scape (simplePat idX) varX
 
 pi = inj . TA.PrimInt
 

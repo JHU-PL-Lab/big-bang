@@ -14,35 +14,39 @@ import qualified Language.TinyBang.Ast as TA
 import Language.LittleBang.Test.UtilFunctions
 
 srcY  :: LittleBangCode
-srcY  = "(fun body ->"
-        ++ " (fun f -> fun arg -> f f arg)"
-        ++ " (fun this -> fun arg -> body (this this) arg))"
+srcY  = "(body ->"
+        ++ " (f -> arg -> f f arg)"
+        ++ " (this -> arg -> body (this this) arg))"
 
 srcMultiAppl :: [LittleBangCode] -> LittleBangCode
 srcMultiAppl [] = error "srcMultiAppl used on empty list"
 srcMultiAppl xs = concatMap (\x -> "(" ++ x ++ ")") xs
 
 srcSummate :: LittleBangCode
-srcSummate = "fun this -> fun x -> case (x == 0) of { `True z -> 0 ; `False z -> x + (this (x - 1))}"
+srcSummate = "this -> x -> "++
+                "((`True z -> 0) &"++
+                " (`False z -> x + (this (x - 1))))"++
+                "(x == 0)"
 
 srcGreaterOrLessUtil :: LittleBangCode
 srcGreaterOrLessUtil =
- "fun this -> fun x -> fun y -> fun z ->"++
-     "case (x - y) == z of {"++
-          "`True junk -> `GreaterThan () ;"++
-          "`False junk ->"++
-                 "case (y - x) == z of {"++
-                      "`True junk -> `LessThan () ;"++
-                      "`False junk -> this x y (z + 1) }}"
+ "this -> x -> y -> z ->"++
+     "((`True junk -> `GreaterThan ()) &"++
+     " (`False junk ->"++
+        "((`True junk -> `LessThan ()) &"++
+        " (`False junk -> this x y (z + 1)))"++
+        "((y - x) == z)"++
+     " ))"++
+     "((x - y) == z)"
 
 srcGreaterOrLess :: LittleBangCode
 srcGreaterOrLess =
- "fun x -> fun y ->"++
-     "case x == y of {"++
-          "`True junk -> `EqualTo () ;"++
-           "`False junk -> "
-           ++ srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"]
-           ++ "}"
+ "x -> y ->"++
+     "((`True junk -> `EqualTo ()) &"++
+     " (`False junk -> "
+        ++ srcMultiAppl [srcY, srcGreaterOrLessUtil, "x", "y", "1"] ++
+     " ))" ++
+     "(x == y)"
 
 lblEq, lblLt, lblGt :: Result
 lblEq = (TA.VLabel (labelName "EqualTo") 0, makeState [(0,TA.VPrimUnit)])

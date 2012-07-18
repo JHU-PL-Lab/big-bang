@@ -44,21 +44,18 @@ Library
   hs-source-dirs:      lib-src
 
   Exposed-Modules:
-    Language.LittleBang.Test.Case
     Language.LittleBang.Test.EagerOps
     Language.LittleBang.Test.EmptyOnion
     Language.LittleBang.Test.ExpressionUtils
     Language.LittleBang.Test.Functions
     Language.LittleBang.Test.LazyOps
     Language.LittleBang.Test.Lexer
-    Language.LittleBang.Test.ListEncoding
     Language.LittleBang.Test.Misc
     Language.LittleBang.Test.NameUtils
     Language.LittleBang.Test.OnionSubtraction
     Language.LittleBang.Test.Onions
     Language.LittleBang.Test.Parser
     Language.LittleBang.Test.Peano
-    Language.LittleBang.Test.PrettyPrint
     Language.LittleBang.Test.Primitive.Char
     Language.LittleBang.Test.Primitive.Int
     Language.LittleBang.Test.Primitive.Unit

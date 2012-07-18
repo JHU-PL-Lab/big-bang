@@ -25,10 +25,9 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
   , xLexs "\n" []
   , xLexs "'s''t''r''i''n''g'" $
           map TokCharLiteral "string"
-  , xLexs "map (\\x -> x) (1;2;3)"
+  , xLexs "map (x -> x) (1;2;3)"
           [ TokIdentifier "map"
           , TokOpenParen
-          , TokLambda
           , TokIdentifier "x"
           , TokArrow
           , TokIdentifier "x"
@@ -41,18 +40,16 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           , TokIntegerLiteral 3
           , TokCloseParen
           ]
-  , xLexs "fun double x -> plus x x"
-          [ TokFun
-          , TokIdentifier "double"
+  , xLexs "double x -> plus x x"
+          [ TokIdentifier "double"
           , TokIdentifier "x"
           , TokArrow
           , TokIdentifier "plus"
           , TokIdentifier "x"
           , TokIdentifier "x"
           ]
-  , xLexs "fun abs x -> if x GTE 0 then x else negative x"
-          [ TokFun
-          , TokIdentifier "abs"
+  , xLexs "abs x -> if x GTE 0 then x else negative x"
+          [ TokIdentifier "abs"
           , TokIdentifier "x"
           , TokArrow
           , TokIdentifier "if"
@@ -63,14 +60,6 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           , TokIdentifier "x"
           , TokIdentifier "else"
           , TokIdentifier "negative"
-          , TokIdentifier "x"
-          ]
-  , xLexs "case val of\n x -> x"
-          [ TokCase
-          , TokIdentifier "val"
-          , TokOf
-          , TokIdentifier "x"
-          , TokArrow
           , TokIdentifier "x"
           ]
   , xLexs "{`(int & unit} & char)"
@@ -85,9 +74,8 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
           , TokChar
           , TokCloseParen
           ]
-  , xLexs "(\\x->x)"
+  , xLexs "(x->x)"
           [ TokOpenParen
-          , TokLambda
           , TokIdentifier "x"
           , TokArrow
           , TokIdentifier "x"
@@ -145,10 +133,7 @@ tests = TestLabel "Miscellaneous lexer tests" $ TestList $
     ,  ("&"     , TokOnionCons)
     ,  ("&-"    , TokOnionSub)
     ,  ("&."    , TokOnionProj)
-    ,  ("\\"    , TokLambda)
-    ,  ("fun"   , TokFun)
     ,  ("->"    , TokArrow)
-    ,  ("case"  , TokCase)
     ,  ("of"    , TokOf)
     ,  ("int"   , TokInteger)
     ,  ("char"  , TokChar)

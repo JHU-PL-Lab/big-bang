@@ -13,6 +13,7 @@ import Prelude (Integer)
 import qualified Data.IntMap as IntMap
 import Language.LittleBang.Test.ExpressionUtils
   ( varX
+  , simplePat
   )
 import Language.LittleBang.Test.NameUtils
 import Language.LittleBang.Test.UtilFunctions
@@ -23,7 +24,7 @@ import qualified Language.TinyBang.Interpreter.Ast as IA
 pi :: Integer -> TA.Value IA.Expr
 pi = TA.VPrimInt
 
-identFuncX = TA.VFunc idX varX
+identFuncX = TA.VScape (simplePat idX) varX
 
 -- The following should only be used when there is no other expected state.
 true = (TA.VLabel lblTrue 0, makeState [(0, TA.VPrimUnit)])

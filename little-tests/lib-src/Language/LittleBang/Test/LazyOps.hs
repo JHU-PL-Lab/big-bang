@@ -39,7 +39,7 @@ tests = TestLabel "Tests on integer operations" $ TestList
   , xType "1 + 2"
   , xType "1 - 2"
   , xType "((1 + 2) - 3) + ((-2) + (4 - 0))"
-  , xvEval "(fun x -> x + x) 2"
+  , xvEval "(x -> x + x) 2"
           (V.pi 4)
   , xvEval "2 + 2"
           (V.pi 4)
@@ -47,14 +47,14 @@ tests = TestLabel "Tests on integer operations" $ TestList
           (V.pi 0)
   , xvEval "2 - -2"
           (V.pi 4)
-  , xType "(fun x -> x + 1) 1"
+  , xType "(x -> x + 1) 1"
 -- Test that arithmetic expressions on non-numeric literals fail to typecheck
   , xCont "1 + 'a'"
   , xCont "1 + ()"
   , xCont "'a' + 'a'"
   , xCont "() + ()"
   , xCont "2 + 'x'"
-  , xCont "1 + (fun x -> x)"
+  , xCont "1 + (x -> x)"
   , xCont "1 + 'a'"
   , xCont "1 + ()"
   , xCont "'a' + 'a'"

@@ -7,7 +7,6 @@ import System.Console.CmdArgs
 import qualified Language.TinyBang.Config as Cfg
 import qualified Language.LittleBang.Test.Onions as Onions
 import qualified Language.LittleBang.Test.Functions as Functions
-import qualified Language.LittleBang.Test.Case as Case
 import qualified Language.LittleBang.Test.EagerOps as EagerOps
 import qualified Language.LittleBang.Test.EmptyOnion as EmptyOnion
 import qualified Language.LittleBang.Test.LazyOps as LazyOps
@@ -22,13 +21,11 @@ import qualified Language.LittleBang.Test.Primitive.Unit as Primitive.Unit
 import qualified Language.LittleBang.Test.Projection as Projection
 import qualified Language.LittleBang.Test.Self as Self
 import qualified Language.LittleBang.Test.State as State
-import qualified Language.LittleBang.Test.ListEncoding as ListEncoding
 
 tests :: (?conf :: Cfg.Config) => [Test]
 tests =
   [ Onions.tests
   , Functions.tests
-  , Case.tests
   , EagerOps.tests
   , EmptyOnion.tests
   , LazyOps.tests
@@ -42,7 +39,6 @@ tests =
   , Primitive.Unit.tests
   , Projection.tests
   , State.tests
-  , ListEncoding.tests
   , Self.tests
   ]
 

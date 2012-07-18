@@ -4,7 +4,6 @@ module Language.LittleBang.Interpreter.SourceInterpreter
 , EvalStringResult(..)
 , EvalSuccessOrFailure(..)
 , I.canonicalize
-, I.onion
 ) where
 
 -- TODO: much of this logic is painfully similar to the Tiny Bang source

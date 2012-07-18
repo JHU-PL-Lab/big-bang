@@ -31,14 +31,14 @@ tokens :-
     &                                   { constTok TokOnionCons }
     &\-                                 { constTok TokOnionSub }
     &\.                                 { constTok TokOnionProj }
-    \\                                  { constTok TokLambda }
-    fun                                 { constTok TokFun }
     \->                                 { constTok TokArrow }
     case                                { constTok TokCase }
     of                                  { constTok TokOf }
     int                                 { constTok TokInteger }
     char                                { constTok TokChar }
     unit                                { constTok TokUnit }
+    any                                 { constTok TokAny }
+    fun                                 { constTok TokFun }
     \(                                  { constTok TokOpenParen }
     \)                                  { constTok TokCloseParen }
     \-?$digit+                          { strTok $ TokIntegerLiteral . read }
@@ -89,15 +89,14 @@ data Token =
     | TokOnionCons
     | TokOnionSub
     | TokOnionProj
-    | TokLambda
-    | TokFun
     | TokArrow
     | TokCase
     | TokOf
     | TokInteger
     | TokChar
     | TokUnit
-    | TokUnder
+    | TokAny
+    | TokFun
     | TokOpenParen
     | TokCloseParen
     | TokIntegerLiteral Integer
@@ -128,15 +127,14 @@ instance Display Token where
         TokOnionCons -> "onion constructor"
         TokOnionSub -> "onion subtractor"
         TokOnionProj -> "onion projector"
-        TokLambda -> "lambda"
-        TokFun -> "fun"
         TokArrow -> "arrow"
         TokCase -> "case"
         TokOf -> "of"
         TokInteger -> "int"
         TokChar -> "char"
         TokUnit -> "unit"
-        TokUnder -> "underscore"
+        TokAny -> "any"
+        TokFun -> "fun"
         TokOpenParen -> "open parenthesis"
         TokCloseParen -> "close parenthesis"
         TokIntegerLiteral _ -> "int literal"
