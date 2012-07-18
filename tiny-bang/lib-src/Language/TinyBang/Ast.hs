@@ -29,7 +29,6 @@ module Language.TinyBang.Ast
 , LazyOperator(..)
 , EagerOperator(..)
 , ProjTerm(..)
-, Assignable(..)
 -- Smart constructors
 , var
 , label
@@ -112,9 +111,6 @@ data Value t
   | VPrimChar Char
   | VPrimUnit
   | VEmptyOnion
-  deriving (Eq, Ord, Show)
-
-data Assignable = ACell CellId | AIdent Ident
   deriving (Eq, Ord, Show)
 
 data Pattern = Pattern Ident PrimaryPattern
