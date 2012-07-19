@@ -82,9 +82,9 @@ instance Display Expr where
     Appl e1 e2 -> parens $ makeDoc e1 <+> makeDoc e2
     PrimInt i -> integer i
     PrimUnit -> parens empty
-    Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" $+$
+    Case e brs -> text "case" <+> makeDoc e <+> text "of" <+> text "{" <$$>
             (nest indentSize $ vcat $ punctuate semi $ map makeDoc brs)
-            $+$ text "}"
+            <$$> text "}"
     OnionSub e s -> makeDoc e <+> char '&' <> makeDoc s
     EmptyOnion -> text "(&)"
     BinOp op e1 e2 -> makeDoc op <+> makeDoc e1 <+> makeDoc e2

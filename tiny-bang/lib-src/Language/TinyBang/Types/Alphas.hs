@@ -97,10 +97,10 @@ contour = Contour
 
 
 instance Display (SomeAlpha a) where
-  makeDoc (SomeAlpha i cSites) =
+  makeDoc (SomeAlpha i cntr) =
       char '\'' <> makeDoc i <> (
-          let doc = makeDoc cSites in
-          if not $ isEmpty doc
+          let doc = makeDoc cntr in
+          if null $ show doc
               then char '^' <> doc
               else empty)
 

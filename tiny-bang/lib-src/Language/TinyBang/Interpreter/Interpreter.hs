@@ -92,7 +92,7 @@ instance (Display t) => Display (EvalError t) where
         text "Expression not closed for variable" <+> (text $ unIdent i)
       UnmatchedScape e scape ->
         text "The value" <+> makeDoc e <+>
-        text "cannot be matched by value" $$
+        text "cannot be matched by value" <$$>
         (nest 4 $ makeDoc scape)
       IllegalComparison op v1 v2 ->
         text "The comparison" <+> makeDoc op <+> makeDoc v1 <+> makeDoc v2 <+>

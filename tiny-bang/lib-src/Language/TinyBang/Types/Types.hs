@@ -297,11 +297,14 @@ instance Display TauDown where
 
 instance Display ScapeData where
   makeDoc (ScapeData (ForallVars alphas) alpha1 alpha2 constraints) =
+    nest indentSize $
     (if Set.size alphas > 0
       then text "all" <+> (parens $ makeDoc alphas)
       else empty) <+>
     makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
-    char '\\' <+> (parens $ makeDoc constraints)
+    char '\\' <$$> (parens $ makeDoc constraints)
+-- TODO: alpha lists are often in sequence; use a smarter doc creation for
+--       some kind of .. notation
 
 instance Display PatternType where
   makeDoc pat =
@@ -336,7 +339,7 @@ instance Display Constraint where
             CellAlphaSubtype a1 a2 h ->
               (subtype a1 a2, h)
             LazyOpSubtype op a1 a2 a3 h ->
-              (subtype (makeDoc op <+> makeDoc a1 <+> makeDoc a2) a3, h)
+              (subtype (makeDoc a1 <+> makeDoc op <+> makeDoc a2) a3, h)
             Comparable a1 a2 h ->
               (text "cmp" <> parens (makeDoc a1 <> text "," <> makeDoc a2), h)
             Final a h -> (text "final" <> parens (makeDoc a), h)
@@ -344,7 +347,7 @@ instance Display Constraint where
             Bottom h -> (text "_|_", h)
     in
     if Cfg.displayDebugging
-        then base $+$ (nest indentSize $ makeDoc hist)
+        then base <$$> (indent indentSize $ makeDoc hist)
         else base
     where subtype :: (Display a, Display b) => a -> b -> Doc
           subtype a b = makeDoc a <+> text "<:" <+> makeDoc b
@@ -356,31 +359,31 @@ instance Display ConstraintHistory where
     case hist of
       Inferred e env -> text "from expr" <+> makeDoc e <+> text "with env"
                         <+> makeDoc env
-      ClosureCase c cn -> text "by case because" $+$
+      ClosureCase c cn -> text "by case because" <$$>
                           (nest indentSize $ makeDoc c <+> tAnd
-                                         $+$ makeDoc cn)
-      ClosureApplication cn1 cn2 -> text "by application because" $+$
+                                         <$$> makeDoc cn)
+      ClosureApplication cn1 cn2 -> text "by application because" <$$>
                                     (nest indentSize $ makeDoc cn1 <+> tAnd
-                                                   $+$ makeDoc cn2)
-      ClosureLop c cn1 cn2 -> text "by lazy operation because" $+$
+                                                   <$$> makeDoc cn2)
+      ClosureLop c cn1 cn2 -> text "by lazy operation because" <$$>
                               (nest indentSize $ makeDoc c <+> tAnd
-                                             $+$ makeDoc cn1 <+> tAnd
-                                             $+$ makeDoc cn2)
-      ClosureCellForward cn1 cn2 -> text "by cell forward prop. because" $+$
+                                             <$$> makeDoc cn1 <+> tAnd
+                                             <$$> makeDoc cn2)
+      ClosureCellForward cn1 cn2 -> text "by cell forward prop. because" <$$>
                                     (nest indentSize $ makeDoc cn1 <+> tAnd
-                                                   $+$ makeDoc cn2)
-      ClosureCellBackward cn1 cn2 -> text "by cell backward prop. because" $+$
+                                                   <$$> makeDoc cn2)
+      ClosureCellBackward cn1 cn2 -> text "by cell backward prop. because" <$$>
                                      (nest indentSize $ makeDoc cn1 <+> tAnd
-                                                    $+$ makeDoc cn2)
+                                                    <$$> makeDoc cn2)
       ContradictionApplication cn ->
-        text "by application contradiction because" $+$
+        text "by application contradiction because" <$$>
         (nest indentSize $ makeDoc cn)
-      ContradictionCase c cn -> text "by case contradiction because" $+$
+      ContradictionCase c cn -> text "by case contradiction because" <$$>
                                 (nest indentSize $ makeDoc c <+> tAnd
-                                               $+$ makeDoc cn)
-      ContradictionLop c cn -> text "by lazy op. contradiction because" $+$
+                                               <$$> makeDoc cn)
+      ContradictionLop c cn -> text "by lazy op. contradiction because" <$$>
                                (nest indentSize $ makeDoc c <+> tAnd
-                                              $+$ makeDoc cn)
+                                              <$$> makeDoc cn)
       HistFIXME -> text "because of reasons!!"
     where tAnd = text "and"
 

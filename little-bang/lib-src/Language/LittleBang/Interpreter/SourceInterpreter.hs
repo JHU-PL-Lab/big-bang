@@ -119,11 +119,11 @@ eEval e =
 
 instance Display EvalStringResult where
     makeDoc esr = case esr of
-        EvalResult ast res -> makeDoc ast $$ makeDoc res
-        Contradiction ast cs -> text "Contradiction: " $$
-                               (nest 4 $ makeDoc ast $$
+        EvalResult ast res -> makeDoc ast <$$> makeDoc res
+        Contradiction ast cs -> text "Contradiction: " <$$>
+                               (nest 4 $ makeDoc ast <$$>
                                          makeDoc (head . filter isBottom . Set.toList $ cs))
-        TypecheckFailure ast err _ -> makeDoc ast $$ makeDoc err
+        TypecheckFailure ast err _ -> makeDoc ast <$$> makeDoc err
         ParseFailure err -> makeDoc err
         LexFailure msg -> text msg
 

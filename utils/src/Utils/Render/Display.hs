@@ -14,9 +14,12 @@ module Utils.Render.Display
 , makeDoc
 , makeListDoc
 , indentSize
-, module Text.PrettyPrint
+, module Text.PrettyPrint.Leijen
 , ConfigDisplayDebug
 , isDisplayDebug
+, delimSepDoc
+, sepDoc
+, binaryOpDoc
 ) where
 
 import Control.Monad (liftM)
@@ -27,43 +30,39 @@ import Data.Set (Set)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Language.Haskell.TH
-import Text.PrettyPrint
+import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 -- |Defines the indentation used by the pretty printer
 indentSize :: Int
 indentSize = 4
 
-makeDocForList :: (ConfigDisplayDebug b, ?conf :: b, Display a)
-               => (String -> [Doc] -> Doc) -> String -> [a] -> Doc
-makeDocForList = makeDocForListBy makeDoc
+-- |Defines a utility function for loose concatenation of elements.  The given
+--  list will be concatenated by a separator and surrounded in delimiters such
+--  that (1) the elements will either be on different lines or the same line,
+--  (2) the elements will be aligned, and (3) the left delimiter will appear to
+--  the left of the alignment.  This is similar to @encloseSep@ but makes
+--  different decisions regarding delimiter placement and indentation.
+delimSepDoc :: Doc -> Doc -> Doc -> [Doc] -> Doc
+delimSepDoc l r delim xs =
+  let ds =
+        if null xs
+          then []
+          else (map (<> delim) $ init xs) ++ [last xs]
+  in
+  l <> group (align (vsep ds)) <> r
 
--- |A function for displaying a list of elements.  This function will
---  adjust the appearance of the list based on its parameters.
-makeDocForListBy :: (ConfigDisplayDebug b, ?conf :: b)
-                 => (a -> Doc)
-                 -> (String -> [Doc] -> Doc)
-                 -> String
-                 -> [a]
-                 -> Doc
-makeDocForListBy toDoc f s lst = makeDocForDocList f s $ map toDoc lst
+-- |A simpler version of @delimSepDoc@ which uses empty delimiters.  This is
+--  still useful for grouping elements by a delimiter and having the all-or-
+--  nothing newline property.
+sepDoc :: Doc -> [Doc] -> Doc
+sepDoc = delimSepDoc empty empty
 
-makeDocForDocList :: (ConfigDisplayDebug b, ?conf :: b)
-                  => (String -> [Doc] -> Doc)
-                  -> String -> [Doc] -> Doc
-makeDocForDocList
-        catF -- ^The function producing the document concatenator
-        punc -- ^The punctuation to place between each document
-        docs -- ^The documents to display
-  = let dcat = catF $ render $ hcat docs in
-    dcat $ punctuate (text punc) docs
-
-makeCommaSeparatedDocForList :: (ConfigDisplayDebug b, ?conf :: b, Display a)
-                             => [a] -> Doc
-makeCommaSeparatedDocForList lst =
-    makeDocForList catByComma ", " lst
-
-catByComma :: String -> [Doc] -> Doc
-catByComma x = if elem ',' x then vcat else hcat
+-- |A binary version of @sepDoc@ which does makeDoc translation.
+binaryOpDoc :: (ConfigDisplayDebug b, ?conf :: b,
+                Display x, Display y, Display z)
+            => x -> y -> z -> Doc
+binaryOpDoc x y z =
+  group (nest indentSize (vsep [makeDoc x, makeDoc y, makeDoc z]))
 
 -- |A typeclass for implicit configuration of display contexts.
 class ConfigDisplayDebug a where
@@ -71,6 +70,11 @@ class ConfigDisplayDebug a where
 
 instance ConfigDisplayDebug Bool where
     isDisplayDebug = id
+
+-- |A generic rendering function.
+render :: Doc -> String
+render x = displayS (renderPretty 1.0 80 x) ""
+-- TODO: make the rendering function capable of understanding terminal width
 
 -- |A typeclass for displayable types.
 class Display a where
@@ -80,12 +84,12 @@ class Display a where
     makeListDoc :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> Doc
     display = render . makeDoc
     displayList = render . makeListDoc
-    makeListDoc = brackets . makeCommaSeparatedDocForList
+    makeListDoc = delimSepDoc lbracket rbracket comma . map makeDoc
     displayMap :: (ConfigDisplayDebug b, ?conf :: b, Display k, Display v) =>
                   (a -> [(k, v)]) -> a -> Doc
-    displayMap toList = braces . (makeDocForListBy mappingToDoc catByComma ", ")
-                               . toList
-      where mappingToDoc (a,b) = makeDoc a <> char ':' <+> makeDoc b
+    displayMap toList =
+        delimSepDoc lbrace rbrace comma . map mappingToDoc . toList
+      where mappingToDoc (k,v) = makeDoc k <> char ':' <+> makeDoc v
 
 instance Display Doc where
     makeDoc = id
@@ -95,13 +99,13 @@ instance Display Bool where
 
 instance Display Char where
     makeDoc = char
-    makeListDoc = doubleQuotes . text
+    makeListDoc = dquotes . text
 
 instance (Display a) => Display [a] where
     makeDoc = makeListDoc
 
 instance (Display a) => Display (Set a) where
-    makeDoc = braces . makeCommaSeparatedDocForList . Set.toList
+    makeDoc = delimSepDoc lbrace rbrace comma . map makeDoc . Set.toList
 
 instance (Display a) => Display (Maybe a) where
     makeDoc = maybe (text "Nothing") ((text "Just" <+>) . makeDoc)
@@ -134,9 +138,8 @@ $(
                     tvars
                 makeDocFunClauses = [clause ([tupP $ map return params])
                     (normalB [|
-                        char '(' <>
-                        makeDocForDocList catByComma ", " $(return lstExpr) <>
-                        char ')' |])
+                        delimSepDoc lparen rparen comma $(return lstExpr)
+                        |])
                     []]
                 makeDocFun = funD (mkName "makeDoc") makeDocFunClauses
                 decl = instanceD (return context)

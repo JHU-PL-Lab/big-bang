@@ -61,6 +61,6 @@ Library
         Data.String.Utils
         Utils.Render.Display
 
-  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell
+  Build-depends:       base, array, containers == 0.4.0.0, mtl, pretty, template-haskell, wl-pprint
 
   ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-record-updates -fwarn-monomorphism-restriction -fwarn-unrecognised-pragmas -fwarn-auto-orphans
