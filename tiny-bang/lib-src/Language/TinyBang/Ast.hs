@@ -277,9 +277,9 @@ instance XvPart PrecedenceOp ExprPart ast Precedence where
 
 -- |Given a parent node and one of its children, this function will (1) convert
 --  the child node into a document using makeDoc and (2) wrap that document in
---  parentheses if the child node has lower precedence than the parent node.
---  The resulting document is returned.  This function is used in defining the
---  @Display@ instance for AST nodes.
+--  parentheses if the child node has same or lower precedence than the parent
+--  node.  The resulting document is returned.  This function is used in
+--  defining the @Display@ instance for AST nodes.
 childDoc :: (XvPart PrecedenceOp part ast Precedence
             ,XvOp PrecedenceOp ast Precedence
             ,Display (part ast), Display ast
@@ -287,8 +287,11 @@ childDoc :: (XvPart PrecedenceOp part ast Precedence
          => part ast -> ast -> Doc
 childDoc parent child =
   let doc = makeDoc child in
-  if xvPart PrecedenceOp parent > (xvOp PrecedenceOp child :: Precedence)
+  if xvPart PrecedenceOp parent >= (xvOp PrecedenceOp child :: Precedence)
     then parens doc else doc
+-- TODO: the above policy is a bit restrictive; it doesn't handle associativity
+--       even on the same operator.  It'd be nice if "(a b) c" was printed as
+--       "a b c".
 
 -- |Specifies how to display TinyBang AST nodes.
 instance (Display t, XvOp PrecedenceOp t Precedence)
