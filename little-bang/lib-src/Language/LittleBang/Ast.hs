@@ -6,6 +6,7 @@
             , MultiParamTypeClasses
             , ScopedTypeVariables
             , TemplateHaskell
+            , TypeSynonymInstances
             #-}
 module Language.LittleBang.Ast
 ( Expr
@@ -35,6 +36,7 @@ import Data.ExtensibleVariant
 import qualified Language.TinyBang.Ast as TA
 import Language.TinyBang.Ast (exprFreeVars, exprVars)
 import Language.TinyBang.Types.UtilTypes
+import Utils.Numeric
 import Utils.Render.Display
 
 -------------------------------------------------------------------------------
@@ -113,6 +115,17 @@ instance (Monoid r, Monad m)
     Appl e1 e2 -> f e1 *+* f e2
     where x *+* y = (liftM2 mappend) x y
           infixl 4 *+*
+
+-- |Defines precedence of LittleBang AST nodes.
+instance XvPart TA.PrecedenceOp ExprPart ast TA.Precedence where
+  xvPart TA.PrecedenceOp part = case part of
+    Self -> infinity
+    Prior -> infinity
+    Proj _ _ -> 9
+    ProjAssign _ _ _ _ -> 1
+    Onion _ _ -> 4
+    Scape _ _ -> 1
+    Appl _ _ -> 7
 
 -- |Displays LittleBang AST nodes.
 instance (Display t) => Display (ExprPart t) where
