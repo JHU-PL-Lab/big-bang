@@ -147,6 +147,9 @@ Pattern :   ident
 PatternPrimary
         :   PrimitiveType
                                     { TA.PatPrim $1 }
+        |   '`' ident ident
+                                    { TA.PatLabel (labelName $2) (ident $3) $
+                                        TA.PatOnion [] }
         |   '`' ident ident ':' PatternPrimary
                                     { TA.PatLabel (labelName $2) (ident $3) $5 }
         |   any
