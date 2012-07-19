@@ -122,3 +122,4 @@ instance Display EvalSuccessOrFailure where
     makeDoc res = case res of
         EvalSuccess e -> makeDoc e
         EvalFailure err -> makeDoc err
+

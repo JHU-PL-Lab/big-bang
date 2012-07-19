@@ -3,6 +3,7 @@
             , MultiParamTypeClasses
             , UndecidableInstances
             , ScopedTypeVariables
+            , TypeSynonymInstances
             #-}
 
 {-|
@@ -28,6 +29,7 @@ import qualified Language.TinyBang.Ast as A
 import qualified Language.TinyBang.Types.UtilTypes as U
 
 import Data.ExtensibleVariant
+import Utils.Numeric
 import Utils.Render.Display
 
 type CellId = Int
@@ -114,9 +116,16 @@ instance (Monoid r, Monad m)
     ExprCell _ -> return $ mempty
     AssignCell _ e1 e2 -> liftM2 mappend (f e1) (f e2)
 
+-- |Specifies the precedence for TinyBang interpreter nodes.
+instance XvPart A.PrecedenceOp ExprPart t A.Precedence where
+  xvPart A.PrecedenceOp part = case part of
+    ExprCell _ -> -infinity
+    AssignCell _ _ _ -> 1
+
 -- |Specifies how to display TinyBang interpreter AST nodes.
 instance (Display t) => Display (ExprPart t) where
   makeDoc a = case a of
     ExprCell c -> text "Cell #" <> int c
     AssignCell c e1 e2 -> text "Cell #" <> int c <+> text "=" <+>
                           makeDoc e1 <+> text "in" <+> makeDoc e2
+

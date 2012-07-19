@@ -8,6 +8,7 @@
                 , UndecidableInstances
                 , ScopedTypeVariables
                 , TemplateHaskell
+                , ImplicitParams
                 #-}
 module Language.TinyBang.Ast
 ( Expr
@@ -25,6 +26,8 @@ module Language.TinyBang.Ast
 , FreeVarsOp(..)
 , subst
 , SubstOp(..)
+, PrecedenceOp(..)
+, Precedence
 -- Re-exported for convenience
 , LazyOperator(..)
 , EagerOperator(..)
@@ -47,9 +50,11 @@ module Language.TinyBang.Ast
 , eagerOp
  ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad (liftM,liftM2,ap)
 import Data.Monoid (Monoid, mempty, mappend)
 import Data.List (intersperse)
+import Data.Maybe (catMaybes)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import Data.Set (Set)
@@ -67,6 +72,7 @@ import Language.TinyBang.Types.UtilTypes
 import qualified Language.TinyBang.Types.UtilTypes as T
   ( PrimitiveType(..) )
 import Data.ExtensibleVariant
+import Utils.Numeric
 import Utils.Render.Display
 
 -------------------------------------------------------------------------------
@@ -238,32 +244,80 @@ instance (Monoid r, Monad m)
           x *+* y = liftM2 mappend x y
           infixl 4 *+*
 
+-- |Describes an operation which produces, given an AST, its precedence in
+--  terms of grouping.  Lower precedence operators have lower precedence values;
+--  that is, + would have a lower number than *.  This is used during
+--  pretty-printing to ensure that minimal parentheses are inserted.
+data PrecedenceOp = PrecedenceOp
+type Precedence = Double
+instance XvPart PrecedenceOp ExprPart ast Precedence where
+  xvPart PrecedenceOp part = case part of
+    Var _ -> infinity
+    Label _ _ _ -> 8
+    Onion _ _ -> 4
+    OnionSub _ _ -> 3
+    OnionProj _ _ -> 3
+    Scape _ _ -> 1
+    Appl _ _ -> 7
+    PrimInt _ -> infinity
+    PrimChar _ -> infinity
+    PrimUnit -> infinity
+    EmptyOnion -> infinity
+    LazyOp op _ _ ->
+      case op of
+        Plus -> 6
+        Minus -> 6
+    EagerOp op _ _ ->
+      case op of
+        Equal -> 5
+        LessEqual -> 5
+        GreaterEqual -> 5
+    Def _ _ _ _ -> 1
+    Assign _ _ _ -> 1
+
+-- |Given a parent node and one of its children, this function will (1) convert
+--  the child node into a document using makeDoc and (2) wrap that document in
+--  parentheses if the child node has lower precedence than the parent node.
+--  The resulting document is returned.  This function is used in defining the
+--  @Display@ instance for AST nodes.
+childDoc :: (XvPart PrecedenceOp part ast Precedence
+            ,XvOp PrecedenceOp ast Precedence
+            ,Display (part ast), Display ast
+            ,ConfigDisplayDebug c, ?conf::c)
+         => part ast -> ast -> Doc
+childDoc parent child =
+  let doc = makeDoc child in
+  if xvPart PrecedenceOp parent > (xvOp PrecedenceOp child :: Precedence)
+    then parens doc else doc
+
 -- |Specifies how to display TinyBang AST nodes.
-instance (Display t) => Display (ExprPart t) where
-  makeDoc a = case a of
-    Var i -> text $ unIdent i
-    Label n m e ->
-      char '`' <> (text $ unLabelName n) <+> dispMod m <+> (parens $ makeDoc e)
-    Onion e1 e2 -> makeDoc e1 <+> char '&' <+> makeDoc e2
-    Scape pat e -> parens $
-      makeDoc pat <+> text "->" <+> makeDoc e
-    Appl e1 e2 -> (parens $ makeDoc e1) <+> (parens $ makeDoc e2)
-    PrimInt i -> integer i
-    PrimChar c -> squotes $ char c
-    PrimUnit -> parens empty
-    OnionSub e s -> makeDoc e <+> text "&-" <+> makeDoc s
-    OnionProj e s -> makeDoc e <+> text "&." <+> makeDoc s
-    EmptyOnion -> text "(&)"
-    LazyOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    EagerOp op e1 e2 -> parens $ makeDoc e1 <+> makeDoc op <+> makeDoc e2
-    Def m i v e ->
-      hsep [text "def", dispMod m, makeDoc i,
-            text "=", makeDoc v, text "in", makeDoc e]
-    Assign i v e -> hsep [makeDoc i, text "=", makeDoc v, text "in", makeDoc e]
-    where dispMod m = case m of
-            Just Final -> text "final"
-            Just Immutable -> text "immut"
-            Nothing -> empty
+instance (Display t, XvOp PrecedenceOp t Precedence)
+      => Display (ExprPart t) where
+  makeDoc a =
+    let pDoc = childDoc a in
+    case a of
+      Var i -> text $ unIdent i
+      Label n m e ->
+        char '`' <> (text $ unLabelName n) <> dispMod m <+> pDoc e
+      Onion e1 e2 -> nest indentSize $ pDoc e1 <+> char '&' </> pDoc e2
+      Scape pat e -> nest indentSize $ makeDoc pat <+> text "->" </> pDoc e
+      Appl e1 e2 -> nest indentSize $ pDoc e1 </> pDoc e2
+      PrimInt i -> integer i
+      PrimChar c -> squotes $ char c
+      PrimUnit -> text "()"
+      OnionSub e s -> pDoc e <+> text "&-" <+> makeDoc s
+      OnionProj e s -> pDoc e <+> text "&." <+> makeDoc s
+      EmptyOnion -> text "(&)"
+      LazyOp op e1 e2 -> pDoc e1 <+> makeDoc op <+> pDoc e2
+      EagerOp op e1 e2 -> pDoc e1 <+> makeDoc op <+> pDoc e2
+      Def m i v e ->
+        hsep [text "def", dispMod m, makeDoc i,
+              text "=", pDoc v, text "in", pDoc e]
+      Assign i v e -> hsep [makeDoc i, text "=", pDoc v, text "in", pDoc e]
+      where dispMod m = case m of
+              Just Final -> text " final"
+              Just Immutable -> text " immut"
+              Nothing -> empty
 
 -- TODO: fix parens
 instance (Display t) => Display (Value t) where
@@ -277,21 +331,51 @@ instance (Display t) => Display (Value t) where
       VPrimUnit -> text "()"
       VEmptyOnion -> text "(&)"
 
+simplifyPrimaryPattern :: PrimaryPattern -> Maybe PrimaryPattern
+simplifyPrimaryPattern pp =
+  case pp of
+    PatPrim _ -> Just pp
+    PatLabel lbl i pp' ->
+      Just $ PatLabel lbl i $
+        maybe (PatOnion []) id $ simplifyPrimaryPattern pp'
+    PatOnion pps ->
+      let pps' = catMaybes $ map simplifyPrimaryPattern pps in
+      case pps' of
+        [] -> Nothing
+        [spp] -> Just spp
+        _ -> Just $ PatOnion pps'
+    PatFun -> Just pp
+    
+ppMakeDoc :: (ConfigDisplayDebug b, ?conf :: b)
+          => PrimaryPattern -> Maybe Doc
+ppMakeDoc ppat = makeDoc <$> simplifyPrimaryPattern ppat
+
 instance Display Pattern where
   makeDoc pat =
     case pat of
-      Pattern i pp -> makeDoc i <> colon <> makeDoc pp
+      Pattern i pp ->
+        let iDoc = makeDoc i
+            mppDoc = ppMakeDoc pp in
+        case (unIdent i == "_", mppDoc) of
+          (True, Nothing) -> makeDoc $ PatOnion []
+          (True, Just ppDoc) -> ppDoc
+          (False, Nothing) -> iDoc
+          (False, Just ppDoc) -> iDoc <> colon <> ppDoc
 
 instance Display PrimaryPattern where
   makeDoc pat =
-    case pat of
+    let pat' = maybe (PatOnion []) id $ simplifyPrimaryPattern pat in
+    case pat' of
       PatPrim tprim -> makeDoc tprim
       PatLabel lbl i pp ->
-        text "`" <> makeDoc lbl <+> makeDoc i <> colon <> makeDoc pp
+        let ppDoc = maybe empty (colon <>) $ ppMakeDoc pp in
+        text "`" <> makeDoc lbl <+> makeDoc i <> ppDoc
       PatOnion pps ->
-        if null pps
-        then text "any"
-        else parens $ sep $ intersperse (char '&') $ map makeDoc pps
+        let ppDocs = catMaybes $ map ppMakeDoc pps in
+        if null ppDocs
+          then text "any"
+          else parens $ hang indentSize $ fillSep $
+                intersperse (char '&') $ ppDocs
       PatFun -> text "fun"
 
 class Evaluated t a where
