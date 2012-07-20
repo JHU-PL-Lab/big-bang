@@ -81,4 +81,9 @@ tests = TestLabel "Test of projection, both implicit and explicit" $ TestList
               "x -> x &- unit"
               "f () & (f 1 + 1)")
         two
+
+  -- Test that projection properly retains cases in which one of many flows
+  -- does not project.  This code will fail to type error if projection does
+  -- not properly represent the fact that int does not project as a label.
+  , xCont "((`True _ -> 0 0) & (`False _ -> 0)) (5 >= 1 & 0)"
   ]
