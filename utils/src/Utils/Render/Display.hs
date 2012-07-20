@@ -20,6 +20,7 @@ module Utils.Render.Display
 , delimSepDoc
 , sepDoc
 , binaryOpDoc
+, denseDisplay
 ) where
 
 import Control.Monad (liftM)
@@ -32,9 +33,40 @@ import qualified Data.IntMap as IntMap
 import Language.Haskell.TH
 import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
+import Data.Adj
+
 -- |Defines the indentation used by the pretty printer
 indentSize :: Int
 indentSize = 4
+
+-- |A typeclass for implicit configuration of display contexts.
+class ConfigDisplayDebug a where
+    isDisplayDebug :: a -> Bool
+
+instance ConfigDisplayDebug Bool where
+    isDisplayDebug = id
+
+-- |A generic rendering function.
+render :: Doc -> String
+render x = displayS (renderPretty 1.0 80 x) ""
+-- TODO: make the rendering function capable of understanding terminal width
+
+-- |A typeclass for displayable types.
+class Display a where
+    display :: (ConfigDisplayDebug b, ?conf :: b) => a -> String
+    displayList :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> String
+    makeDoc :: (ConfigDisplayDebug b, ?conf :: b) => a -> Doc
+    makeListDoc :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> Doc
+    display = render . makeDoc
+    displayList = render . makeListDoc
+    makeListDoc = delimSepDoc lbracket rbracket comma . map makeDoc
+    displayMap :: (ConfigDisplayDebug b, ?conf :: b, Display k, Display v) =>
+                  (a -> [(k, v)]) -> a -> Doc
+    displayMap toList =
+        delimSepDoc lbrace rbrace comma . map mappingToDoc . toList
+      where mappingToDoc (k,v) = makeDoc k <> char ':' <+> makeDoc v
+
+---- Utility functions ------------------------------------
 
 -- |Defines a utility function for loose concatenation of elements.  The given
 --  list will be concatenated by a separator and surrounded in delimiters such
@@ -64,32 +96,34 @@ binaryOpDoc :: (ConfigDisplayDebug b, ?conf :: b,
 binaryOpDoc x y z =
   group (nest indentSize (vsep [makeDoc x, makeDoc y, makeDoc z]))
 
--- |A typeclass for implicit configuration of display contexts.
-class ConfigDisplayDebug a where
-    isDisplayDebug :: a -> Bool
+-- |Defines a utility function for creating a list of documents over an
+--  ordered type equipped with adjacency.  This function is used to transform a
+--  dense list (such as [1,2,3,4,5,7,8]) into a more manageable one (such as
+--  [1..5,7,8]) by joining adjacent sequences of three or more elements into
+--  a single document.  The @etc@ argument is used whenever documents have been
+--  dropped (as ".." is above).
+denseDisplay :: (Display a, Adj a, Ord a, ConfigDisplayDebug b, ?conf :: b)
+             => Doc -> [a] -> [Doc]
+denseDisplay etc elems =
+  let xs' = reduce $ zip elems elems in
+  concat $ map docify xs'
+  where reduce :: (Display a, Adj a, Ord a, ConfigDisplayDebug b, ?conf :: b)
+               => [(a,a)] -> [(a,a)]
+        reduce xs = case xs of
+                      [] -> xs
+                      _:[] -> xs
+                      (a,b):(c,d):t | adjacent b c -> reduce $ (a,d):t
+                      (a,b):(c,d):t -> (a,b):(reduce $ (c,d):t)
+        docify :: (Display a, Adj a, Ord a, ConfigDisplayDebug b, ?conf :: b)
+               => (a,a) -> [Doc]
+        docify (a,b) =
+          if a == b
+            then [makeDoc a]
+            else if adjacent a b
+                 then [makeDoc a, makeDoc b]
+                 else [makeDoc a <> etc <> makeDoc b]
 
-instance ConfigDisplayDebug Bool where
-    isDisplayDebug = id
-
--- |A generic rendering function.
-render :: Doc -> String
-render x = displayS (renderPretty 1.0 80 x) ""
--- TODO: make the rendering function capable of understanding terminal width
-
--- |A typeclass for displayable types.
-class Display a where
-    display :: (ConfigDisplayDebug b, ?conf :: b) => a -> String
-    displayList :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> String
-    makeDoc :: (ConfigDisplayDebug b, ?conf :: b) => a -> Doc
-    makeListDoc :: (ConfigDisplayDebug b, ?conf :: b) => [a] -> Doc
-    display = render . makeDoc
-    displayList = render . makeListDoc
-    makeListDoc = delimSepDoc lbracket rbracket comma . map makeDoc
-    displayMap :: (ConfigDisplayDebug b, ?conf :: b, Display k, Display v) =>
-                  (a -> [(k, v)]) -> a -> Doc
-    displayMap toList =
-        delimSepDoc lbrace rbrace comma . map mappingToDoc . toList
-      where mappingToDoc (k,v) = makeDoc k <> char ':' <+> makeDoc v
+---- Some basic display instances -------------------------
 
 instance Display Doc where
     makeDoc = id
@@ -150,3 +184,5 @@ $(
     in
     mapM showInstance [2..9]
  )
+
+

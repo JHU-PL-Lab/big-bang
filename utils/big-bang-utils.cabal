@@ -52,6 +52,7 @@ Library
         Control.Monad.Consumer.Lazy
         Control.Monad.Trans.Consumer
         Control.Monad.Trans.Consumer.Lazy
+        Data.Adj
         Data.ExtensibleVariant
         Data.ExtensibleVariant.Meta
         Data.Function.Utils
