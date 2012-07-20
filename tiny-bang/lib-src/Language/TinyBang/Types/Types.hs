@@ -298,9 +298,9 @@ instance Display TauDown where
 instance Display ScapeData where
   makeDoc (ScapeData (ForallVars alphas) alpha1 alpha2 constraints) =
     nest indentSize $
-    (if Set.size alphas > 0
-      then text "all" <+> (parens $ makeDoc alphas)
-      else empty) <+>
+    text "all" <+>
+    (delimSepDoc lbrace rbrace comma $ denseDisplay (text "..")
+        $ Set.toList alphas) <+>
     makeDoc alpha1 <+> text "->" <+> makeDoc alpha2 <+>
     char '\\' <$$> (parens $ makeDoc constraints)
 -- TODO: alpha lists are often in sequence; use a smarter doc creation for
