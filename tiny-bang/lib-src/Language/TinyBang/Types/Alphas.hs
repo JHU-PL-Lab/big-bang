@@ -21,6 +21,7 @@ module Language.TinyBang.Types.Alphas
 , makeNewAlpha
 ) where
 
+import Data.Adj
 import Utils.Render.Display
 
 -- TODO: make ProgramLabel more precise
@@ -78,6 +79,10 @@ instance Eq AnyAlpha where
 instance Ord AnyAlpha where
   AnyAlpha (SomeAlpha i c) `compare` AnyAlpha (SomeAlpha i' c') =
     (i, c) `compare` (i', c')
+
+instance Adj AnyAlpha where
+  (AnyAlpha (SomeAlpha i c)) `adjacent` (AnyAlpha (SomeAlpha i' c')) =
+    (c == c') && (i `adjacent` i')
 
 instance Show AnyAlpha where
   show (AnyAlpha a) = show a
