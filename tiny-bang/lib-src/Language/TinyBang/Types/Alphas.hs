@@ -99,9 +99,8 @@ contour = Contour
 instance Display (SomeAlpha a) where
   makeDoc (SomeAlpha i cntr) =
       char '\'' <> makeDoc i <> (
-          let doc = makeDoc cntr in
-          if null $ show doc
-              then char '^' <> doc
+          if not . null $ unContour cntr
+              then char '^' <> makeDoc cntr
               else empty)
 
 instance Display AnyAlpha where
