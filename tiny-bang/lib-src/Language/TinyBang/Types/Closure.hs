@@ -43,7 +43,7 @@ import Language.TinyBang.Types.Types ( (<:)
 import Data.Function.Utils (leastFixedPoint)
 
 import Debug.Trace (trace)
-import Utils.Render.Display (display, Display)
+import Utils.Render.Display
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -74,28 +74,25 @@ primaryPatternCompatible :: TauDown -> PrimaryPatternType
                          -> CReader [Maybe Constraints]
 -- TODO: a compatibility history should be returned as well to retain the proof
 primaryPatternCompatible tau tpat =
-  let success = return [Just Set.empty]
-      failure = return [Nothing] in
   case tpat of
-    PatPrim prim -> do
-      flag <- null <$> tProj tau (ProjPrim prim)
-      if flag
-        then failure
-        else success
-    PatLabel lbl a2 pp -> do -- CReader
-      projections <- tProj tau (ProjLabel lbl)
-      case listToMaybe [a1 | TdLabel _ a1 <- projections] of
-        Just a1 -> do -- CReader
-          taus <- concretizeCellVariable a1
-          -- The fst is what throws out history
-          css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
-          return $ do -- List
-            cs <- css
-            mc <- cs
-            return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
-        -- An empty list is returned only in the case where there are no
-        -- suitable projections.
-        Nothing -> failure
+    PatPrim prim ->
+      checkProjections (ProjPrim prim) $
+        \projection -> if null projection then failure else easySuccess
+    PatLabel lbl a2 pp ->
+      checkProjections (ProjLabel lbl) $
+        \projection ->
+          case listToMaybe [a1 | TdLabel _ a1 <- projection] of
+            Just a1 -> do -- CReader
+              taus <- concretizeCellVariable a1
+              -- The fst is what throws out history
+              css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
+              return $ do -- List
+                cs <- css
+                mc <- cs
+                return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
+            -- An empty list is returned only in the case where there are no
+            -- suitable projections.
+            Nothing -> failure
     PatOnion xs -> do
       xs' <- mapM (primaryPatternCompatible tau) xs
       -- Since xs' is a list of lists of constraints sets, where at least one
@@ -107,11 +104,19 @@ primaryPatternCompatible tau tpat =
       -- constraints should be unioned, hence the parenthesized expression
       -- below.
       return $ map (fmap Set.unions . sequence) $ sequence xs'
-    PatFun -> do
-      flag <- null <$> tProj tau ProjFunc
-      if flag
-        then failure
-        else success
+    PatFun ->
+      checkProjections ProjFunc $
+        \projection -> if null projection then failure else easySuccess
+  where easySuccess :: CReader [Maybe Constraints]
+        easySuccess = return $ [Just Set.empty]
+        failure :: CReader [Maybe Constraints]
+        failure = return $ [Nothing]
+        checkProjections :: ProjTerm
+                         -> ([TauDown] -> CReader [Maybe Constraints])
+                         -> CReader [Maybe Constraints]
+        checkProjections proj handler = do -- CReader
+          projections <- tProj tau proj
+          concat <$> mapM handler projections
 
 concretizeCellVariable :: CellAlpha
                        -> CReader ([( TauDown
@@ -132,12 +137,48 @@ concretizeCellVariable ca = do
 --     (TauChiFun, ProjFunc) -> True
 --     _ -> False
 
--- |Represents the type projection function from the documentation.  This
---  function determines the types which can be projected from a given type
---  using a specific projector.  There may be many such types; for instance,
---  an onion of a1 & a2 \ { `A int <: a1, `A unit <: a2, int <: a2 } might
---  project either `A int or `A unit for the projector `A (depending on the
---  flow taken).  An empty list indicates that no projection is legal.
+-- |Represents the type projection relation from the documentation.  This
+--  relation determines the types which can be projected from a given type
+--  using a specific projector.  This function returns a list of possible
+--  projection results (as projection is a relation); each result is a list of
+--  the types which may have been projected.  For instance, projecting `A from
+--  "a1 & a2 \ { `A int <: a1, `A unit <: a2, int <: a2 }" would result in
+--  "[[`A int],[`A unit]]", as these represent the projections from each flow.
+tProj :: TauDown -> ProjTerm -> CReader [[TauDown]]
+tProj tau proj =
+  case (tau, proj) of
+    (TdPrim p, ProjPrim p') | p == p' -> return [[tau]]
+    (TdLabel lbl _, ProjLabel lbl') | lbl == lbl' -> return [[tau]]
+    (TdOnion a1 a2, _) -> do
+      -- TODO: care about history; the map fst gets rid of it
+      ctaus1 <- map fst <$> Set.toList <$> concretizeType a1
+      ctaus2 <- map fst <$> Set.toList <$> concretizeType a2
+      -- cprojss: all projections from every concretization of a variable
+      cprojss1 <- mapM (flip tProj proj) ctaus1
+      cprojss2 <- mapM (flip tProj proj) ctaus2
+      -- We have all of the projections from a1 and all of the projections
+      -- from a2.  Every combination of each one is valid.
+      return $ do -- List
+        -- cprojs: all projections from a specific concretization
+        cprojs1 <- cprojss1
+        cprojs2 <- cprojss2
+        -- cproj: one projection from a specific concretization
+        cproj1 <- cprojs1
+        cproj2 <- cprojs2
+        return $ cproj2 ++ cproj1
+    (TdOnionSub a proj', _) | proj /= proj' -> projectionsFromVariable a
+    (TdOnionProj a proj', _) | proj == proj' -> projectionsFromVariable a
+    (TdScape _, ProjFunc) -> return [[tau]]
+    _ -> return [[]]
+  where projectionsFromVariable :: InterAlpha -> CReader [[TauDown]]
+        projectionsFromVariable a = do
+          -- TODO: care about history; the map fst destroys it
+          ctaus <- map fst <$> Set.toList <$> concretizeType a
+          -- cprojss: all projections for each concrete type
+          concat <$> mapM (flip tProj proj) ctaus
+
+{-
+-- TODO: remove - broken!
 tProj :: TauDown -> ProjTerm -> CReader [TauDown]
 tProj tau proj =
   case (tau, proj) of
@@ -164,6 +205,7 @@ tProj tau proj =
           let ts = Set.toList $ Set.map fst ths
           concat <$> mapM (flip tProj proj) ts
 
+-- TODO: remove!
 -- Performs a check to ensure that projection can occur through an onion
 -- subtraction type.
 tSubProj :: ProjTerm -> ProjTerm -> Bool
@@ -173,6 +215,7 @@ tSubProj s proj =
     (ProjLabel n, ProjLabel n') -> n == n'
     (ProjFunc, ProjFunc) -> True
     _ -> False
+-}
 
 --TODO: Consider adding chains to history and handling them here
 --TODO: Docstring this function
@@ -388,9 +431,10 @@ closeApplications cs = Set.unions $ do -- List
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'
+  projection <- runReader (tProj t1 ProjFunc) cs
   -- (ScapeData foralls tpat ai ci)
   let li = do
-             TdScape scapeData <- runReader (tProj t1 ProjFunc) cs
+             TdScape scapeData <- projection
              let ScapeData _ tpat _ _ = scapeData
                  compatList = runReader (patternCompatible t2 tpat) cs
              return (compatList, scapeData)
@@ -433,8 +477,8 @@ closeLops cs = Set.fromList $ do
   (td1, chain1) <- ct cs a1
   (td2, chain2) <- ct cs a2
   -- NOTE: assumes that all lops are int -> int -> int
-  guard $ not . null $ runReader (tProj td1 $ ProjPrim PrimInt) cs
-  guard $ not . null $ runReader (tProj td2 $ ProjPrim PrimInt) cs
+  guard $ all (not . null) $ runReader (tProj td1 $ ProjPrim PrimInt) cs
+  guard $ all (not . null) $ runReader (tProj td2 $ ProjPrim PrimInt) cs
   return $ TdPrim PrimInt <: a .: ClosureLop c chain1 chain2
 
 findLopContradictions :: Constraints -> Constraints
@@ -442,7 +486,7 @@ findLopContradictions cs = Set.fromList $ do
   c@(LazyOpSubtype _ a1 a2 _ _) <- Set.toList cs
   -- NOTE: assumes that all lops are int -> int -> int
   (td, chain) <- ct cs a1 ++ ct cs a2
-  if null $ runReader (tProj td $ ProjPrim PrimInt) cs
+  if any null $ runReader (tProj td $ ProjPrim PrimInt) cs
     then return $ Bottom $ ContradictionLop c chain
     else mzero
 
