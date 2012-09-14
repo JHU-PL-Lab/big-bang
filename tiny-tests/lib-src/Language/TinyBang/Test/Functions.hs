@@ -89,4 +89,38 @@ tests = TestLabel "Test functions" $ TestList
   , xCont "(this -> x -> (`A y -> this this `B y) x)      \
           \(this -> x -> (`A y -> this this `B y) x) `A ()"
   , xCont "(z -> x -> (`A y -> y + 1) x) 0 `A ()"
+  , xCont " def fix = f -> (g -> x -> g g x)  \
+          \                (h -> y -> f (h h) y) in\
+          \ def seal = fix (seal -> obj ->\
+          \              obj & (msg ->  \
+          \                obj (`self (seal obj) & msg))) in\
+          \ def and = (`True _ -> (x -> x)) \
+          \         & (x:(`False _) -> (_ -> x)) in\
+          \ def point = seal (\
+          \     `x 0 & `y 0\
+          \   & ((`l1 _ & `self self) -> (`x x -> x) self + (`y y -> y) self)\
+          \   & ((`isZero _ & `self self) ->\
+          \       and ((`x x -> x) self == 0) ((`y y -> y) self == 0))) in\
+          \ def mixin = seal (\
+          \     ((`nearZero _ & `self self) ->\
+          \        self (`l1 ()) <= 4)) in\
+          \ def mixedPoint = seal (point & mixin) in\
+          \ mixedPoint (`nearZero ()) "
+  , xType " def fix = f -> (g -> x -> g g x)  \
+          \                (h -> y -> f (h h) y) in\
+          \ def seal = fix (seal -> obj ->\
+          \              obj & (msg ->  \
+          \                obj (`self (seal obj) & msg))) in\
+          \ def and = (`True _ -> (x -> x)) \
+          \         & (x:(`False _) -> (_ -> x)) in\
+          \ def point = seal (\
+          \     `x 0 & `y 0\
+          \   & ((`l1 _ & `self self) -> (`x x -> x) self + (`y y -> y) self)\
+          \   & ((`isZero _ & `self self) ->\
+          \       and ((`x x -> x) self == 0) ((`y y -> y) self == 0))) in\
+          \ def mixin = (\
+          \     ((`nearZero _ & `self self) ->\
+          \        self (`l1 ()) <= 4)) in\
+          \ def mixedPoint = seal (point & mixin) in\
+          \ mixedPoint (`nearZero ()) "
   ]
