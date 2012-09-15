@@ -463,9 +463,10 @@ findNonFunctionApplications cs = Set.fromList $ do -- List
   (t1, _) <- ct cs a0'
   (a3', _) <- ct cs a1'
   (t2, _) <- ct cs a3'
+  projection <- runReader (tProj t1 ProjFunc) cs
   let tpats =
         [tpat |
-         TdScape (ScapeData _ tpat _ _) <- runReader (tProj t1 ProjFunc) cs]
+         TdScape (ScapeData _ tpat _ _) <- projection]
       compatibiltyList tpat = runReader (patternCompatible t2 tpat) cs
   guard $ all (any isNothing . compatibiltyList) tpats
 --    (traceValues a0' a1' a2' a3' t1 t2 $ trace (let ?conf = True in display $ compatibiltyList $ head tpats) tpats)
