@@ -88,4 +88,41 @@ tests = TestLabel "Test functions" $ TestList
   -- correctly in light of multiflows
   , xType "def x = 5 in x = () in ((unit -> 0) & (int -> 1)) x"
   , xType "def x = 5 in x = () in ((`A unit -> 0) & (`A int -> 1)) (`A x)"
+  
+  -- Check for expected behavior in light of object sealing operations
+  -- Note that the first test seals the mixin; the second test does not.
+  , xCont " def fix = f -> (g -> x -> g g x)  \
+          \                (h -> y -> f (h h) y) in\
+          \ def seal = fix (seal -> obj ->\
+          \              obj & (msg ->  \
+          \                obj (`self (seal obj) & msg))) in\
+          \ def and = (`True _ -> (x -> x)) \
+          \         & (x:(`False _) -> (_ -> x)) in\
+          \ def point = seal (\
+          \     `x 0 & `y 0\
+          \   & ((`l1 _ & `self self) -> (`x x -> x) self + (`y y -> y) self)\
+          \   & ((`isZero _ & `self self) ->\
+          \       and ((`x x -> x) self == 0) ((`y y -> y) self == 0))) in\
+          \ def mixin = seal (\
+          \     ((`nearZero _ & `self self) ->\
+          \        self (`l1 ()) <= 4)) in\
+          \ def mixedPoint = seal (point & mixin) in\
+          \ mixedPoint (`nearZero ()) "
+  , xType " def fix = f -> (g -> x -> g g x)  \
+          \                (h -> y -> f (h h) y) in\
+          \ def seal = fix (seal -> obj ->\
+          \              obj & (msg ->  \
+          \                obj (`self (seal obj) & msg))) in\
+          \ def and = (`True _ -> (x -> x)) \
+          \         & (x:(`False _) -> (_ -> x)) in\
+          \ def point = seal (\
+          \     `x 0 & `y 0\
+          \   & ((`l1 _ & `self self) -> (`x x -> x) self + (`y y -> y) self)\
+          \   & ((`isZero _ & `self self) ->\
+          \       and ((`x x -> x) self == 0) ((`y y -> y) self == 0))) in\
+          \ def mixin = (\
+          \     ((`nearZero _ & `self self) ->\
+          \        self (`l1 ()) <= 4)) in\
+          \ def mixedPoint = seal (point & mixin) in\
+          \ mixedPoint (`nearZero ()) "
   ]
