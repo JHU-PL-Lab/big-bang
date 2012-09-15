@@ -76,4 +76,16 @@ tests = TestLabel "Test functions" $ TestList
   , xCont "(this -> x -> (`A y -> this this `B y) x)      \
           \(this -> x -> (`A y -> this this `B y) x) `A ()"
   , xCont "(z -> x -> (`A y -> y + 1) x) 0 `A ()"
+
+  -- Check to ensure that scape application typechecks correctly in light of
+  -- multiflows
+  , xType $ "def x = 0 in x = () in " ++
+            "(((int -> 'z') & (int -> 0) & (unit -> 0)) x) + 1"
+  , xType $ "def x = 0 in x = () in " ++
+            "(((`A int -> 'z') & (`A int -> 0) & (`A unit -> 0)) `A x) + 1"
+
+  -- Check to ensure that scape application typecheck errors are generated
+  -- correctly in light of multiflows
+  , xType "def x = 5 in x = () in ((unit -> 0) & (int -> 1)) x"
+  , xType "def x = 5 in x = () in ((`A unit -> 0) & (`A int -> 1)) (`A x)"
   ]
