@@ -67,46 +67,46 @@ type CReader = Reader Constraints
 patternCompatible :: TauDown -> PatternType -> CReader [Maybe Constraints]
 -- TODO: a compatibility history should be returned as well to retain the proof
 patternCompatible tau (Pattern a pp) = do
-  map (fmap $ Set.insert $ tau <: a .: histFIXME)
-    <$> primaryPatternCompatible tau pp
+    map (fmap $ Set.insert $ tau <: a .: histFIXME)
+      <$> primaryPatternCompatible tau pp
 
 primaryPatternCompatible :: TauDown -> PrimaryPatternType
                          -> CReader [Maybe Constraints]
 -- TODO: a compatibility history should be returned as well to retain the proof
 primaryPatternCompatible tau tpat =
-  case tpat of
-    PatPrim prim ->
-      checkProjections (ProjPrim prim) $
-        \projection -> if null projection then failure else easySuccess
-    PatLabel lbl a2 pp ->
-      checkProjections (ProjLabel lbl) $
-        \projection ->
-          case listToMaybe [a1 | TdLabel _ a1 <- projection] of
-            Just a1 -> do -- CReader
-              taus <- concretizeCellVariable a1
-              -- The fst is what throws out history
-              css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
-              return $ do -- List
-                cs <- css
-                mc <- cs
-                return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
-            -- An empty list is returned only in the case where there are no
-            -- suitable projections.
-            Nothing -> failure
-    PatOnion xs -> do
-      xs' <- mapM (primaryPatternCompatible tau) xs
-      -- Since xs' is a list of lists of constraints sets, where at least one
-      -- element in each inner list must be satisfied, we need to do a
-      -- permutation, which is what sequence does on lists, and then union.
+    case tpat of
+      PatPrim prim ->
+        checkProjections (ProjPrim prim) $
+          \projection -> if null projection then failure else easySuccess
+      PatLabel lbl a2 pp ->
+        checkProjections (ProjLabel lbl) $
+          \projection ->
+            case listToMaybe [a1 | TdLabel _ a1 <- projection] of
+              Just a1 -> do -- CReader
+                taus <- concretizeCellVariable a1
+                -- The fst is what throws out history
+                css <- mapM ((`primaryPatternCompatible` pp) . fst) taus
+                return $ do -- List
+                  cs <- css
+                  mc <- cs
+                  return $ Set.insert (a1 <: a2 .: histFIXME) <$> mc
+              -- An empty list is returned only in the case where there are no
+              -- suitable projections.
+              Nothing -> failure
+      PatOnion xs -> do
+        xs' <- mapM (primaryPatternCompatible tau) xs
+        -- Since xs' is a list of lists of constraints sets, where at least one
+        -- element in each inner list must be satisfied, we need to do a
+        -- permutation, which is what sequence does on lists, and then union.
 
-      -- Since each element of sequence xs' is a [Maybe Constraints], and if any
-      -- of these is a Nothing, the result should be a Nothing; otherwise, the
-      -- constraints should be unioned, hence the parenthesized expression
-      -- below.
-      return $ map (fmap Set.unions . sequence) $ sequence xs'
-    PatFun ->
-      checkProjections ProjFunc $
-        \projection -> if null projection then failure else easySuccess
+        -- Since each element of sequence xs' is a [Maybe Constraints], and if any
+        -- of these is a Nothing, the result should be a Nothing; otherwise, the
+        -- constraints should be unioned, hence the parenthesized expression
+        -- below.
+        return $ map (fmap Set.unions . sequence) $ sequence xs'
+      PatFun ->
+        checkProjections ProjFunc $
+          \projection -> if null projection then failure else easySuccess
   where easySuccess :: CReader [Maybe Constraints]
         easySuccess = return $ [Just Set.empty]
         failure :: CReader [Maybe Constraints]
@@ -117,6 +117,17 @@ primaryPatternCompatible tau tpat =
         checkProjections proj handler = do -- CReader
           projections <- tProj tau proj
           concat <$> mapM handler projections
+
+-- TODO: delete this (or move it to a utility somewhere)
+traceAll :: (Display a) => String -> [a] -> b -> b
+traceAll name lst v =
+  let ?conf = False in
+  let doTraceAll lst' =
+        case lst' of
+          [] -> trace "^ END" v
+          h:t -> trace ("^ " ++ display h) $ doTraceAll t
+  in
+  trace ("^ BEGIN: " ++ name) $ doTraceAll lst
 
 concretizeCellVariable :: CellAlpha
                        -> CReader ([( TauDown
@@ -145,37 +156,46 @@ concretizeCellVariable ca = do
 --  "a1 & a2 \ { `A int <: a1, `A unit <: a2, int <: a2 }" would result in
 --  "[[`A int],[`A unit]]", as these represent the projections from each flow.
 tProj :: TauDown -> ProjTerm -> CReader [[TauDown]]
-tProj tau proj =
-  case (tau, proj) of
-    (TdPrim p, ProjPrim p') | p == p' -> return [[tau]]
-    (TdLabel lbl _, ProjLabel lbl') | lbl == lbl' -> return [[tau]]
-    (TdOnion a1 a2, _) -> do
-      -- TODO: care about history; the map fst gets rid of it
-      ctaus1 <- map fst <$> Set.toList <$> concretizeType a1
-      ctaus2 <- map fst <$> Set.toList <$> concretizeType a2
-      -- cprojss: all projections from every concretization of a variable
-      cprojss1 <- mapM (flip tProj proj) ctaus1
-      cprojss2 <- mapM (flip tProj proj) ctaus2
-      -- We have all of the projections from a1 and all of the projections
-      -- from a2.  Every combination of each one is valid.
-      return $ do -- List
-        -- cprojs: all projections from a specific concretization
-        cprojs1 <- cprojss1
-        cprojs2 <- cprojss2
-        -- cproj: one projection from a specific concretization
-        cproj1 <- cprojs1
-        cproj2 <- cprojs2
-        return $ cproj2 ++ cproj1
-    (TdOnionSub a proj', _) | proj /= proj' -> projectionsFromVariable a
-    (TdOnionProj a proj', _) | proj == proj' -> projectionsFromVariable a
-    (TdScape _, ProjFunc) -> return [[tau]]
-    _ -> return [[]]
-  where projectionsFromVariable :: InterAlpha -> CReader [[TauDown]]
-        projectionsFromVariable a = do
-          -- TODO: care about history; the map fst destroys it
-          ctaus <- map fst <$> Set.toList <$> concretizeType a
-          -- cprojss: all projections for each concrete type
-          concat <$> mapM (flip tProj proj) ctaus
+tProj tau proj = doProj tau proj Set.empty
+  where doProj :: TauDown -> ProjTerm -> Set TauDown -> CReader [[TauDown]]
+        doProj tau proj visited =
+          let newVisited = Set.insert tau visited in
+          case (tau, proj) of
+            (TdPrim p, ProjPrim p') | p == p' -> return [[tau]]
+            (TdLabel lbl _, ProjLabel lbl') | lbl == lbl' -> return [[tau]]
+            (TdOnion a1 a2, _) -> do
+              -- TODO: care about history; the map fst gets rid of it
+              ctaus1 <- map fst <$> Set.toList <$> concretizeType a1
+              ctaus2 <- map fst <$> Set.toList <$> concretizeType a2
+              -- ctausf: filtered version of ctaus to prevent cycles
+              let ctausf1 = filter (not . (flip Set.member newVisited)) ctaus1
+              let ctausf2 = filter (not . (flip Set.member newVisited)) ctaus2
+              -- cprojss: all projections from every concretization of a
+              --          variable
+              cprojss1 <- mapM (\t -> doProj t proj newVisited) ctausf1
+              cprojss2 <- mapM (\t -> doProj t proj newVisited) ctausf2
+              -- We have all of the projections from a1 and all of the
+              -- projections from a2.  Every combination of each one is valid.
+              return $ do -- List
+                -- cprojs: all projections from a specific concretization
+                cprojs1 <- cprojss1
+                cprojs2 <- cprojss2
+                -- cproj: one projection from a specific concretization
+                cproj1 <- cprojs1
+                cproj2 <- cprojs2
+                return $ cproj2 ++ cproj1
+            (TdOnionSub a proj', _) | proj /= proj' ->
+                projectionsFromVariable a
+            (TdOnionProj a proj', _) | proj == proj' ->
+                projectionsFromVariable a
+            (TdScape _, ProjFunc) -> return [[tau]]
+            _ -> return [[]]
+          where projectionsFromVariable :: InterAlpha -> CReader [[TauDown]]
+                projectionsFromVariable a = do
+                  -- TODO: care about history; the map fst destroys it
+                  ctaus <- map fst <$> Set.toList <$> concretizeType a
+                  -- cprojss: all projections for each concrete type
+                  concat <$> mapM (\t -> doProj t proj visited) ctaus
 
 {-
 -- TODO: remove - broken!
@@ -426,26 +446,27 @@ ct cs a = Set.toList $ runReader (concretizeType a) cs
 --             runReader (patternCompatible tau tauChi) cs
 --
 closeApplications :: Constraints -> Constraints
-closeApplications cs = Set.unions $ do -- List
-  UpperSubtype a0' a1' a2' _ <- Set.toList cs
-  (t1, _) <- ct cs a0'
-  (a3', _) <- ct cs a1'
-  (t2, _) <- ct cs a3'
-  projection <- runReader (tProj t1 ProjFunc) cs
-  -- (ScapeData foralls tpat ai ci)
-  let li = do
-             TdScape scapeData <- projection
-             let ScapeData _ tpat _ _ = scapeData
-                 compatList = runReader (patternCompatible t2 tpat) cs
-             return (compatList, scapeData)
-  (c', ScapeData foralls _ ai ci) <-
-    map (first $ Set.unions . catMaybes) $
-    (\(x, y) -> x ++ take 1 y) $
-    span (any isNothing . fst) li
-  return $
-    substituteVars
-      (Set.insert (ai <: a2' .: histFIXME) (Set.union c' ci))
-      foralls a2'
+closeApplications cs =
+  Set.unions $ do -- List
+    UpperSubtype a0' a1' a2' _ <- Set.toList cs
+    (t1, _) <- ct cs a0'
+    (a3', _) <- ct cs a1'
+    (t2, _) <- ct cs a3'
+    projection <- runReader (tProj t1 ProjFunc) cs
+    -- (ScapeData foralls tpat ai ci)
+    let li = do
+               TdScape scapeData <- projection
+               let ScapeData _ tpat _ _ = scapeData
+                   compatList = runReader (patternCompatible t2 tpat) cs
+               return (compatList, scapeData)
+    (c', ScapeData foralls _ ai ci) <-
+      map (first $ Set.unions . catMaybes) $
+      (\(x, y) -> x ++ take 1 y) $
+      span (any isNothing . fst) li
+    return $
+      let cSet = Set.insert (ai <: a2' .: histFIXME)
+                            (Set.union c' ci) in
+      substituteVars cSet foralls a2'
 --  TdScape (ScapeData foralls ai ao cs') <- runReader (tProj td ProjFunc) cs
 --  let funcChain' = IAHead ai' ao' c funcChain
 --      hist = ClosureApplication funcChain' caChain
