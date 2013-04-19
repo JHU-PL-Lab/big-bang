@@ -1,0 +1,17 @@
+name:           tiny-bang
+version:        0.1
+cabal-version:  >=1.2
+build-type:     Simple
+author:         Zachary Palmer
+
+library
+  hs-source-dirs:  src
+  build-depends:   base >= 4
+  ghc-options:     -Wall
+
+executable tiny-bang
+  hs-source-dirs:  src
+  main-is:         Main.hs
+  build-depends:   base >= 4
+  ghc-options:     -Wall
+
