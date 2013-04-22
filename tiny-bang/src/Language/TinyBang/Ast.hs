@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 {-|
   A module which defines the TinyBang A-normal form AST.
 -}
@@ -21,10 +23,13 @@ module Language.TinyBang.Ast
 , CellVar(..)
 ) where
 
-import           Language.TinyBang.Syntax.Location
+import Language.TinyBang.Syntax.Location
+import Utils.Meta.Deriving
 
 -- |A data type representing expressions.
-data Expr = Expr SourceRegion [Clause]
+data Expr
+  = Expr SourceRegion [Clause]
+  deriving (Show)
 
 -- |A data type representing general clauses.
 data Clause
@@ -33,17 +38,20 @@ data Clause
   | CellGet SourceRegion FlowVar CellVar
   | Throws SourceRegion FlowVar FlowVar
   | Evaluated EvaluatedClause
+  deriving (Show)
 
 -- |A data type representing evaluated clauses.
 data EvaluatedClause
   = ValueDef SourceRegion FlowVar Value
   | CellDef SourceRegion CellQualifier CellVar FlowVar
   | Flow SourceRegion FlowVar FlowKind FlowVar
+  deriving (Show)
 
 -- |A data type representing reducible expressions.
 data Redex
   = Appl SourceRegion FlowVar FlowVar
   | BinOp SourceRegion FlowVar BinaryOperator FlowVar
+  deriving (Show)
 
 -- |A data type representing value forms.
 data Value
@@ -54,11 +62,13 @@ data Value
   | VOnion SourceRegion FlowVar FlowVar
   | VOnionFilter SourceRegion FlowVar OnionOp Projector
   | VScape SourceRegion Pattern Expr
+  deriving (Show)
 
 -- |A data type describing patterns.
 data Pattern
   = ValuePattern SourceRegion CellVar InnerPattern
   | ExnPattern SourceRegion CellVar InnerPattern
+  deriving (Show)
 
 -- |A data type describing inner patterns.
 data InnerPattern
@@ -67,11 +77,13 @@ data InnerPattern
   | ConjunctionPattern SourceRegion InnerPattern InnerPattern
   | ScapePattern SourceRegion
   | EmptyOnionPattern SourceRegion
+  deriving (Show)
 
 -- |An enumeration of onion filter operators.
 data OnionOp
   = OpOnionSub SourceRegion
   | OpOnionProj SourceRegion
+  deriving (Show)
 
 -- |An enumeration of binary value operators.
 data BinaryOperator
@@ -80,41 +92,49 @@ data BinaryOperator
   | OpEqual SourceRegion
   | OpLess SourceRegion
   | OpGreater SourceRegion
+  deriving (Show)
 
 -- |An enumeration of non-value flow kinds.
 data FlowKind
   = FlowExn
+  deriving (Eq,Ord,Show)
 
 -- |An enumeration of cell qualifiers.
 data CellQualifier
   = QualFinal SourceRegion
   | QualImmutable SourceRegion
   | QualNone SourceRegion
+  deriving (Show)
 
 -- |A data type for projectors.
 data Projector
   = ProjPrim SourceRegion PrimitiveType
   | ProjLabel SourceRegion LabelName
   | ProjFun SourceRegion
+  deriving (Show)
 
 -- |A representation of primitive types.
 data PrimitiveType
   = PrimInt SourceRegion
   | PrimChar SourceRegion
+  deriving (Show)
 
 -- |A semantic wrapper for label names.
 data LabelName = LabelName SourceRegion String
+  deriving (Show)
 
 -- TODO: there is a bad overloading between "flow variable" and "flow kind"
 -- discuss this
 
 -- |A semantic wrapper for flow identifiers.
 data FlowVar = FlowVar SourceRegion String
+  deriving (Show)
 
 -- |A semantic wrapper for cell identifiers.
 data CellVar = CellVar SourceRegion String
+  deriving (Show)
 
-
+-- A series of Regioned declarations for the above types.
 
 instance Regioned Expr where
   regionOf x = case x of
@@ -203,3 +223,19 @@ instance Regioned FlowVar where
 instance Regioned CellVar where
   regionOf x = case x of
     CellVar reg _ -> reg
+
+$(deriveEqSkipFirst ''Expr)
+$(deriveEqSkipFirst ''Clause)
+$(deriveEqSkipFirst ''EvaluatedClause)
+$(deriveEqSkipFirst ''Redex)
+$(deriveEqSkipFirst ''Value)
+$(deriveEqSkipFirst ''Pattern)
+$(deriveEqSkipFirst ''InnerPattern)
+$(deriveEqSkipFirst ''OnionOp)
+$(deriveEqSkipFirst ''BinaryOperator)
+$(deriveEqSkipFirst ''CellQualifier)
+$(deriveEqSkipFirst ''Projector)
+$(deriveEqSkipFirst ''PrimitiveType)
+$(deriveEqSkipFirst ''LabelName)
+$(deriveEqSkipFirst ''FlowVar)
+$(deriveEqSkipFirst ''CellVar)

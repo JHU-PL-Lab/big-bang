@@ -9,13 +9,15 @@ library
   build-depends:   
                    base >= 4,
                    parsec,
-                   transformers
+                   transformers,
+                   template-haskell
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
-                   Language.TinyBang.Syntax.Location
+                   Language.TinyBang.Syntax.Location,
+                   Utils.Meta.Deriving
 
 executable tiny-bang
   hs-source-dirs:  src
@@ -26,5 +28,6 @@ executable tiny-bang
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
-                   Language.TinyBang.Syntax.Location
+                   Language.TinyBang.Syntax.Location,
+                   Utils.Meta.Deriving
 

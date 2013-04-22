@@ -15,6 +15,7 @@ data SourceRegion =
   SourceRegion
     SourceLocation -- ^ The start position
     SourceLocation -- ^ The end position
+  deriving (Eq, Ord, Show)
 
 -- |Defines a data type for text positions.  The @lineNo@ is one-based; the
 --  @colNo@ is zero-based.
