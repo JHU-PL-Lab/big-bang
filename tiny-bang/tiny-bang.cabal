@@ -8,14 +8,23 @@ library
   hs-source-dirs:  src
   build-depends:   
                    base >= 4,
-                   parsec
+                   parsec,
+                   transformers
   ghc-options:     -Wall
-  other-modules:   Language.TinyBang.Syntax.Lexer
+  other-modules:   
+                   Language.TinyBang.Syntax.Lexer,
+                   Language.TinyBang.Syntax.Parser,
+                   Language.TinyBang.Ast,
+                   Language.TinyBang.Syntax.Location
 
 executable tiny-bang
   hs-source-dirs:  src
   main-is:         Main.hs
   build-depends:   base >= 4
   ghc-options:     -Wall
-  other-modules:   Language.TinyBang.Syntax.Lexer
+  other-modules:   
+                   Language.TinyBang.Syntax.Lexer,
+                   Language.TinyBang.Syntax.Parser,
+                   Language.TinyBang.Ast,
+                   Language.TinyBang.Syntax.Location
 
