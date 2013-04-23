@@ -17,7 +17,9 @@ library
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
                    Language.TinyBang.Syntax.Location,
-                   Utils.Meta.Deriving
+                   Utils.Meta.Deriving,
+                   Language.TinyBang.Interpreter,
+                   Language.TinyBang.Ast.Data
 
 executable tiny-bang
   hs-source-dirs:  src
@@ -29,5 +31,7 @@ executable tiny-bang
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
                    Language.TinyBang.Syntax.Location,
-                   Utils.Meta.Deriving
+                   Utils.Meta.Deriving,
+                   Language.TinyBang.Interpreter,
+                   Language.TinyBang.Ast.Data
 
