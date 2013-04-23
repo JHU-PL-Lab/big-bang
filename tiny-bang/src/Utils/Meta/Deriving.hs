@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, TupleSections #-}
 
 {-|
   This module provides a set of useful Template Haskell routines for deriving
@@ -7,10 +7,12 @@
 
 module Utils.Meta.Deriving
 ( deriveEqSkipFirst
+, deriveOrdSkipFirst
 ) where
 
 import Control.Applicative ((<$>),(<*>))
 import Control.Monad (when)
+import Data.Monoid (mconcat)
 import Language.Haskell.TH
 
 -- |Derives an instance of @Eq@ for a given type but skips the first argument
@@ -27,12 +29,10 @@ deriveEqSkipFirst name = do
       clauses <- mapM mkCaseClause cs
       defaultClause <- match (tupP [wildP,wildP]) (normalB [|False|]) []
       CaseE <$> [|($(varE a), $(varE b))|] <*> (return $ clauses ++
-        if length clauses > 1 then [defaultClause] else [])
+        if length cs > 1 then [defaultClause] else [])
     mkCaseClause :: Con -> Q Match
     mkCaseClause con = do
-      (cname,argnum) <- case con of
-                    NormalC cname args -> return (cname,length args)
-                    _ -> fail "Can't handle non-normal data constructor!"
+      (cname,argnum) <- conNameAndArgNum con
       when (argnum < 1) $ fail $
           "Constructor " ++ show cname ++ " has zero arguments"
       names1 <- sequence $ take (argnum-1) $ mkArgNames "a"
@@ -53,6 +53,44 @@ deriveEqSkipFirst name = do
             expPart (aname1,aname2) = [|$(varE aname1) == $(varE aname2)|]
             expJoin :: Q Exp -> Q Exp -> Q Exp
             expJoin a b = [|$a && $b|]
+
+-- |Derives an instance of @Ord@ for a given type but skips the first argument
+--  in each constructor.  Each constructor must have at least one argument.
+deriveOrdSkipFirst :: Name -> Q [Dec]
+deriveOrdSkipFirst name = do
+  info <- reify name
+  [d|instance Ord $(mkInstanceType name) where
+      compare a b = $(mkCaseExpr 'a 'b)|]
+  where
+    mkCaseExpr :: Name -> Name -> Q Exp
+    mkCaseExpr a b = do
+      (_,cs) <- getBindersAndCons name
+      let ncs = zip cs [(1::Int)..]
+      clauses <- mapM makeCaseClause [(x,y) | x <- ncs, y <- ncs]
+      CaseE <$> [|($(varE a), $(varE b))|] <*> (return clauses)
+    makeCaseClause :: ((Con,Int),(Con,Int)) -> Q Match
+    makeCaseClause ((cona,idxa),(conb,idxb)) = do
+      (namea, argnuma) <- conNameAndArgNum cona
+      (nameb, argnumb) <- conNameAndArgNum conb
+      when (argnuma < 1) $ fail $
+          "Constructor " ++ show namea ++ " has zero arguments"
+      when (argnumb < 1) $ fail $
+          "Constructor " ++ show nameb ++ " has zero arguments"
+      let blankpat = TupP [ ConP namea $ replicate argnuma WildP
+                          , ConP nameb $ replicate argnumb WildP ]
+      (pat,e) <- case idxa `compare` idxb of
+        LT -> (blankpat,) <$> [|LT|]
+        GT -> (blankpat,) <$> [|GT|]
+        EQ -> do
+          namesa <- sequence $ take (argnuma-1) $ mkArgNames "a"
+          namesb <- sequence $ take (argnumb-1) $ mkArgNames "b"
+          let pat = TupP [ ConP namea $ WildP : map VarP namesa
+                         , ConP nameb $ WildP : map VarP namesb ]
+          (pat,) <$> [|mconcat $(listE $
+                  zipWith joinExpr (map varE namesa) (map varE namesb) )|]
+      return $ Match pat (NormalB e) []
+    joinExpr :: Q Exp -> Q Exp -> Q Exp
+    joinExpr a b = [|$a `compare` $b|]
   
 -- |Obtains the type variable binders and constructors for a given data type.
 getBindersAndCons :: Name -> Q ([TyVarBndr], [Con])
@@ -62,6 +100,12 @@ getBindersAndCons name = do
     TyConI (DataD _ _ dTyVarBndrs dCons _) -> return (dTyVarBndrs, dCons)
     _ -> fail $ "Could not get constructors for type " ++ show name ++
                     "; got: " ++ show info
+                    
+-- |Determines the name and argument count of a given constructor.
+conNameAndArgNum :: Con -> Q (Name,Int)
+conNameAndArgNum con = case con of
+  NormalC cname args -> return (cname,length args)
+  _ -> fail "Can't handle non-normal data constructor!"
 
 -- |Creates a list of argument names.
 mkArgNames :: String -> [Q Name]

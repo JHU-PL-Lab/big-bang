@@ -23,6 +23,8 @@ module Language.TinyBang.Ast
 , CellVar(..)
 ) where
 
+import Control.Applicative ((<$>))
+
 import Language.TinyBang.Syntax.Location
 import Utils.Meta.Deriving
 
@@ -223,19 +225,26 @@ instance Regioned FlowVar where
 instance Regioned CellVar where
   regionOf x = case x of
     CellVar reg _ -> reg
+    
+$(concat <$> sequence
+  [ f name
+  | f <- [deriveEqSkipFirst, deriveOrdSkipFirst]
+  , name <-
+      [ ''Expr
+      , ''Clause
+      , ''EvaluatedClause
+      , ''Redex
+      , ''Value
+      , ''Pattern
+      , ''InnerPattern
+      , ''OnionOp
+      , ''BinaryOperator
+      , ''CellQualifier
+      , ''Projector
+      , ''PrimitiveType
+      , ''LabelName
+      , ''FlowVar
+      , ''CellVar
+      ]
+  ])
 
-$(deriveEqSkipFirst ''Expr)
-$(deriveEqSkipFirst ''Clause)
-$(deriveEqSkipFirst ''EvaluatedClause)
-$(deriveEqSkipFirst ''Redex)
-$(deriveEqSkipFirst ''Value)
-$(deriveEqSkipFirst ''Pattern)
-$(deriveEqSkipFirst ''InnerPattern)
-$(deriveEqSkipFirst ''OnionOp)
-$(deriveEqSkipFirst ''BinaryOperator)
-$(deriveEqSkipFirst ''CellQualifier)
-$(deriveEqSkipFirst ''Projector)
-$(deriveEqSkipFirst ''PrimitiveType)
-$(deriveEqSkipFirst ''LabelName)
-$(deriveEqSkipFirst ''FlowVar)
-$(deriveEqSkipFirst ''CellVar)
