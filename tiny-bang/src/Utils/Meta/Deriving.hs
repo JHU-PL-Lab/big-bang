@@ -10,7 +10,7 @@ module Utils.Meta.Deriving
 , deriveOrdSkipFirst
 ) where
 
-import Control.Applicative ((<$>),(<*>))
+import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Monoid (mconcat)
 import Language.Haskell.TH
@@ -26,10 +26,10 @@ deriveEqSkipFirst name = do
     mkCaseExpr :: Name -> Name -> Q Exp
     mkCaseExpr a b = do
       (_,cs) <- getBindersAndCons name
-      clauses <- mapM mkCaseClause cs
-      defaultClause <- match (tupP [wildP,wildP]) (normalB [|False|]) []
-      CaseE <$> [|($(varE a), $(varE b))|] <*> (return $ clauses ++
-        if length cs > 1 then [defaultClause] else [])
+      let clauses = map mkCaseClause cs
+      let defaultClause = match (tupP [wildP,wildP]) (normalB [|False|]) []
+      caseE [|($(varE a), $(varE b))|] $ clauses ++
+        if length cs > 1 then [defaultClause] else []
     mkCaseClause :: Con -> Q Match
     mkCaseClause con = do
       (cname,argnum) <- conNameAndArgNum con
@@ -66,8 +66,8 @@ deriveOrdSkipFirst name = do
     mkCaseExpr a b = do
       (_,cs) <- getBindersAndCons name
       let ncs = zip cs [(1::Int)..]
-      clauses <- mapM makeCaseClause [(x,y) | x <- ncs, y <- ncs]
-      CaseE <$> [|($(varE a), $(varE b))|] <*> (return clauses)
+      let clauses = map makeCaseClause [(x,y) | x <- ncs, y <- ncs]
+      caseE [|($(varE a), $(varE b))|] clauses
     makeCaseClause :: ((Con,Int),(Con,Int)) -> Q Match
     makeCaseClause ((cona,idxa),(conb,idxb)) = do
       (namea, argnuma) <- conNameAndArgNum cona
