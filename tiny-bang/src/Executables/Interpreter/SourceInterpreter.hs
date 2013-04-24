@@ -1,6 +1,7 @@
 module Executables.Interpreter.SourceInterpreter
 ( stringyInterpretSource
 , interpretSource
+, InterpreterConfiguration(..)
 ) where
 
 import Data.Map (Map)
@@ -16,6 +17,7 @@ data InterpreterError
   | ParserFailure String
   -- TODO: type error stuff
   | EvaluationFailure EvalError [Clause]
+  | EvaluationDisabled
   deriving (Eq, Ord, Show)
 
 data InterpreterResult
@@ -28,17 +30,27 @@ data InterpreterResult
       (Map CellVar FlowVar)
   deriving (Eq, Ord, Show)
   
+data InterpreterConfiguration
+  = InterpreterConfiguration
+    { typechecking :: Bool
+    , evaluating :: Bool }
+  
 -- |Interprets the provided String as a TinyBang expression.  This value will be
 --  lexed, parsed, typechecked, and executed.
-interpretSource :: String -> Either InterpreterError InterpreterResult
-interpretSource src = do
+interpretSource :: InterpreterConfiguration
+                -> String -> Either InterpreterError InterpreterResult
+interpretSource interpConf src = do
   tokens <- doStep LexerFailure $ lexTinyBang "<stdin>" src
   ast <- doStep ParserFailure $ parseTinyBang 
               ParserContext { contextDocument = UnknownDocument
                             , contextDocumentName = "<stdin>" }
               tokens
-  (env,var) <- doStep evalFail $ eval ast
-  return $ InterpreterResult var (flowVarMap env) (cellVarMap env)
+  if evaluating interpConf
+    then do
+      (env,var) <- doStep evalFail $ eval ast
+      return $ InterpreterResult var (flowVarMap env) (cellVarMap env)
+    else
+      Left $ EvaluationDisabled
   where
     doStep errConstr computation =
       case computation of
@@ -50,9 +62,9 @@ interpretSource src = do
 --  similar to @interpretSource@ from
 --  @Executables.Interpreter.SourceInterpreter@ but converts the result to a
 --  user-readable string.
-stringyInterpretSource :: String -> String
-stringyInterpretSource exprSrc =
-  case interpretSource exprSrc of
+stringyInterpretSource :: InterpreterConfiguration -> String -> String
+stringyInterpretSource interpConf exprSrc =
+  case interpretSource interpConf exprSrc of
     Left err -> case err of
       LexerFailure msg -> "Lexer error: " ++ msg
       ParserFailure msg -> "Parser error: " ++ msg
@@ -74,6 +86,7 @@ stringyInterpretSource exprSrc =
                                         ++ " from " ++ unFlowVar x
         ApplicationFailure x1 x2 -> "Could not apply " ++ unFlowVar x1
                                         ++ " to " ++ unFlowVar x2
+      EvaluationDisabled -> "(evaluation disabled)"
     Right (InterpreterResult x fvs cvs) ->
       "*** Flow variables: \n" ++
       show fvs ++ "\n" ++

@@ -31,13 +31,11 @@ library
                    Language.TinyBang.Interpreter.Equality,
                    Language.TinyBang.Interpreter.Projection,
                    Utils.Monad,
-                   Language.TinyBang.Ast.Substitution,
-                   Executables.Interpreter,
-                   Executables.Interpreter.SourceInterpreter
+                   Language.TinyBang.Ast.Substitution
 
 executable tiny-bang
   hs-source-dirs:  src
-  main-is:         Main.hs
+  main-is:         Executables/Interpreter.hs
   build-depends:   
                    base >= 4,
                    containers,
@@ -59,6 +57,5 @@ executable tiny-bang
                    Language.TinyBang.Interpreter.Projection,
                    Utils.Monad,
                    Language.TinyBang.Ast.Substitution,
-                   Executables.Interpreter,
                    Executables.Interpreter.SourceInterpreter
 
