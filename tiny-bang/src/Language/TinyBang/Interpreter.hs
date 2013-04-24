@@ -6,7 +6,10 @@
 
 module Language.TinyBang.Interpreter
 ( eval
+-- re-exports
 , EvalEnv(..)
+, EvalError(..)
+, EvalState(..)
 ) where
 
 import Control.Applicative ((<$>))
@@ -43,7 +46,9 @@ eval e@(Expr _ cls) =
         Right () ->
           case lastVar $ evalEnv rstate of
             Just var -> Right (evalEnv rstate,var)
-            Nothing -> Left (NonFlowExpressionEnd, evalClauses rstate)
+            Nothing ->
+              let ill = IllFormedExpression $ InvalidExpressionEnd $ last cls in
+              Left (ill, evalClauses rstate)
   where
     smallStepMany :: EvalM ()
     smallStepMany = do

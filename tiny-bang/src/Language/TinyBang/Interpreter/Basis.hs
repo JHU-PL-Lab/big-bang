@@ -40,6 +40,7 @@ data EvalEnv = EvalEnv
                   --   the most recent evaluation did not define a flow
                   --   variable)
                 }
+  deriving (Eq, Ord, Show)
                 
 -- |A data strcture representing evaluation state.
 data EvalState = EvalState
@@ -50,18 +51,20 @@ data EvalState = EvalState
                 , evalUsedVars :: UsedVars
                   -- ^ The set of variables used so far
                 }
+  deriving (Eq, Ord, Show)
 
 -- |A set containing all used variables.
 data UsedVars = UsedVars (Set String) Integer
+  deriving (Eq, Ord, Show)
                 
 -- |A data structure representing evaluation errors.
 data EvalError
   = IllFormedExpression IllFormedness
   | FlowVarNotClosed FlowVar
   | CellVarNotClosed CellVar
-  | NonFlowExpressionEnd -- TODO: report the clause which did this
   | ProjectionFailure FlowVar Projector
   | ApplicationFailure FlowVar FlowVar
+  deriving (Eq, Ord, Show)
 
 -- |The monad in which small-step evaluation takes place.
 type EvalM a = EitherT EvalError (State EvalState) a
