@@ -24,7 +24,10 @@ library
                    Language.TinyBang.Interpreter,
                    Language.TinyBang.Ast.Data,
                    Language.TinyBang.Ast.WellFormedness,
-                   Language.TinyBang.Interpreter.Compatibility
+                   Language.TinyBang.Interpreter.Compatibility,
+                   Language.TinyBang.Interpreter.Basis,
+                   Language.TinyBang.Interpreter.Equality,
+                   Language.TinyBang.Interpreter.Projection
 
 executable tiny-bang
   hs-source-dirs:  src
@@ -43,5 +46,8 @@ executable tiny-bang
                    Language.TinyBang.Interpreter,
                    Language.TinyBang.Ast.Data,
                    Language.TinyBang.Ast.WellFormedness,
-                   Language.TinyBang.Interpreter.Compatibility
+                   Language.TinyBang.Interpreter.Compatibility,
+                   Language.TinyBang.Interpreter.Basis,
+                   Language.TinyBang.Interpreter.Equality,
+                   Language.TinyBang.Interpreter.Projection
 
