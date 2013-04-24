@@ -11,10 +11,10 @@ module Language.TinyBang.Syntax.Location
 ) where
 
 -- |Defines a region of source code.
-data SourceRegion =
-  SourceRegion
-    SourceLocation -- ^ The start position
-    SourceLocation -- ^ The end position
+data SourceRegion
+  = SourceRegion -- ^ Signifies a source region over known locations
+      SourceLocation -- ^ The start position
+      SourceLocation -- ^ The end position
   deriving (Eq, Ord, Show)
 
 -- |Defines a data type for text positions.  The @lineNo@ is one-based; the

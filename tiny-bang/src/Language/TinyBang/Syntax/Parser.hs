@@ -41,37 +41,38 @@ type Parser a = ParsecT [PositionalToken] () ParserMonad a
 expressionParser :: Parser Expr
 expressionParser = do
   cls <- sepBy1 clauseParser $ consume TokSemi
-  return $ Expr (coverRegion (head cls) (last cls)) cls
+  return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
 
 clauseParser :: Parser Clause
 clauseParser =
       Evaluated <$> evaluatedClauseParser
-  <|> argreg2 RedexDef <$> flowVarParser <*> redexParser
-  <|> argreg2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
-  <|> argreg2 CellGet <$> flowVarParser <*> (consume TokGets *> cellVarParser)
-  <|> argreg2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
+  <|> argorig2 RedexDef <$> flowVarParser <*> redexParser
+  <|> argorig2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
+  <|> argorig2 CellGet <$> flowVarParser <*> (consume TokGets *> cellVarParser)
+  <|> argorig2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
 
 evaluatedClauseParser :: Parser EvaluatedClause
 evaluatedClauseParser =
-      argreg2 ValueDef <$> flowVarParser <*> (consume TokIs *> valueParser)
-  <|> argreg3 CellDef <$> cellQualifierParser <*> cellVarParser <*>
+      argorig2 ValueDef <$> flowVarParser <*> (consume TokIs *> valueParser)
+  <|> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*>
         (consume TokIs  *> flowVarParser)
-  <|> argreg3 Flow <$> flowVarParser <*> flowKindParser <*> flowVarParser
+  <|> argorig3 Flow <$> flowVarParser <*> flowKindParser <*> flowVarParser
 
 redexParser :: Parser Redex
 redexParser =
-      argreg2 Appl <$> flowVarParser <*> flowVarParser
-  <|> argreg3 BinOp <$> flowVarParser <*> binaryOperatorParser <*> flowVarParser
+      argorig1 Define <$> flowVarParser
+  <|> argorig2 Appl <$> flowVarParser <*> flowVarParser
+  <|> argorig3 BinOp <$> flowVarParser <*> binaryOperatorParser <*> flowVarParser
 
 valueParser :: Parser Value
 valueParser =
       VInt <$&> require matchIntLit
   <|> VChar <$&> require matchCharLit
   <|> requirex TokEmptyOnion VEmptyOnion
-  <|> argreg2 VLabel <$> labelNameParser <*> cellVarParser
-  <|> argreg2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
-  <|> argreg3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
-  <|> argreg2 VScape <$> patternParser <*>
+  <|> argorig2 VLabel <$> labelNameParser <*> cellVarParser
+  <|> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
+  <|> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
+  <|> argorig2 VScape <$> patternParser <*>
         (consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
         
 flowKindParser :: Parser FlowKind
@@ -86,21 +87,21 @@ flowKindParser = snd <$> require matchFlows
 
 patternParser :: Parser Pattern
 patternParser =
-      argreg2 ValuePattern <$> cellVarParser <*>
+      argorig2 ValuePattern <$> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
-  <|> argreg2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
+  <|> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
         (consume TokColon *> innerPatternParser)
 
 innerPatternParser :: Parser InnerPattern
 innerPatternParser =
       consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
-  <|> argreg1 PrimitivePattern <$> primitiveTypeParser
+  <|> argorig1 PrimitivePattern <$> primitiveTypeParser
   -- note that this ordering makes conjunction bind more loosely than labeling;
   -- e.g. `A x:int & `B y:int is (`A x:int) & (`B y:int) and not
   -- `A x:(int & `B y:int)
-  <|> argreg2 ConjunctionPattern <$> innerPatternParser <*>
+  <|> argorig2 ConjunctionPattern <$> innerPatternParser <*>
         (consume TokOnion *> innerPatternParser)
-  <|> argreg3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
+  <|> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
   <|> requirex TokFun ScapePattern
   <|> requirex TokEmptyOnion EmptyOnionPattern
@@ -122,12 +123,12 @@ cellQualifierParser :: Parser CellQualifier
 cellQualifierParser =
       requirex TokFinal QualFinal
   <|> requirex TokImmut QualImmutable
-  <|> QualNone <$> (SourceRegion <$> parserLocation <*> parserLocation)
+  <|> QualNone . SourceOrigin <$> (SourceRegion <$> parserLocation <*> parserLocation)
 
 projectorParser :: Parser Projector
 projectorParser =
-      argreg1 ProjPrim <$> primitiveTypeParser
-  <|> argreg1 ProjLabel <$> labelNameParser
+      argorig1 ProjPrim <$> primitiveTypeParser
+  <|> argorig1 ProjLabel <$> labelNameParser
   <|> requirex TokFun ProjFun
 
 primitiveTypeParser :: Parser PrimitiveType
@@ -176,7 +177,7 @@ matchLabel x =
 
 -- |This parser is a specialization of the @token@ parser with the necessary
 --  pretty-printing and location-calculating routines embedded.
-require :: forall a. (Token -> Maybe a) -> Parser (SourceRegion, a)
+require :: forall a. (Token -> Maybe a) -> Parser (Origin, a)
 require f = do
   context <- parserContext
   document <- parserDocument
@@ -193,20 +194,20 @@ require f = do
         Just (tok',_) -> startPos tok'
     textPos :: SourceDocument -> SourcePos -> SourceLocation
     textPos document p = TextSource document (sourceLine p) (sourceColumn p)
-    matchToken :: SourceDocument -> PositionalToken -> Maybe (SourceRegion, a)
+    matchToken :: SourceDocument -> PositionalToken -> Maybe (Origin, a)
     matchToken doc ptok = do -- Maybe
       result <- f $ posToken ptok
-      let loc = SourceRegion (textPos doc $ startPos ptok)
+      let reg = SourceRegion (textPos doc $ startPos ptok)
                              (textPos doc $ stopPos ptok)
-      return (loc, result)
+      return (SourceOrigin reg, result)
 
 -- |This parser is a specialization of @require@ which demands exact token
---  equality.  If it is matched, the second argument is applied to the location
+--  equality.  If it is matched, the second argument is applied to the origin
 --  of the token and the result is returned.
-requirex :: Token -> (SourceRegion -> a) -> Parser a
+requirex :: Token -> (Origin -> a) -> Parser a
 requirex t f = do
-  (loc,_) <- require $ \t' -> if t == t' then Just () else Nothing
-  return $ f loc
+  (orig,_) <- require $ \t' -> if t == t' then Just () else Nothing
+  return $ f orig
   
 -- |This parser is a specialization of @requirex@ which produces a unit for all
 --  matched input.
@@ -265,3 +266,104 @@ argreg2 f a1 a2 = f (coverRegion a1 a2) a1 a2
 argreg3 :: (Regioned a1, Regioned a3)
         => (SourceRegion -> a1 -> a2 -> a3 -> r) -> a1 -> a2 -> a3 -> r
 argreg3 f a1 a2 a3 = f (coverRegion a1 a3) a1 a2 a3
+
+argorig1 f = argreg1 $ \x -> f (SourceOrigin x)
+argorig2 f = argreg2 $ \x -> f (SourceOrigin x)
+argorig3 f = argreg3 $ \x -> f (SourceOrigin x)
+
+-- A series of Regioned declarations for the AST types.
+-- TODO: metaprogram these
+
+instance Regioned Origin where
+  regionOf x = case x of
+    SourceOrigin reg -> reg
+    _ -> error $ "Parser is working with a non-source origin: " ++ show x
+
+instance Regioned Expr where
+  regionOf x = case x of
+    Expr orig _ -> regionOf orig
+
+instance Regioned Clause where
+  regionOf x = case x of
+    RedexDef orig _ _ -> regionOf orig
+    CellSet orig _ _ -> regionOf orig
+    CellGet orig _ _ -> regionOf orig
+    Throws orig _ _ -> regionOf orig
+    Evaluated c -> regionOf c
+
+instance Regioned EvaluatedClause where
+  regionOf x = case x of
+    ValueDef orig _ _ -> regionOf orig
+    CellDef orig _ _ _ -> regionOf orig
+    Flow orig _ _ _ -> regionOf orig
+
+instance Regioned Redex where
+  regionOf x = case x of
+    Define orig _ -> regionOf orig
+    Appl orig _ _ -> regionOf orig
+    BinOp orig _ _ _ -> regionOf orig
+
+instance Regioned Value where
+  regionOf x = case x of
+    VInt orig _ -> regionOf orig
+    VChar orig _ -> regionOf orig
+    VEmptyOnion orig -> regionOf orig
+    VLabel orig _ _ -> regionOf orig
+    VOnion orig _ _ -> regionOf orig
+    VOnionFilter orig _ _ _ -> regionOf orig
+    VScape orig _ _ -> regionOf orig
+
+instance Regioned Pattern where
+  regionOf x = case x of
+    ValuePattern orig _ _ -> regionOf orig
+    ExnPattern orig _ _ -> regionOf orig
+
+instance Regioned InnerPattern where
+  regionOf x = case x of
+    PrimitivePattern orig _ -> regionOf orig
+    LabelPattern orig _ _ _ -> regionOf orig
+    ConjunctionPattern orig _ _ -> regionOf orig
+    ScapePattern orig -> regionOf orig
+    EmptyOnionPattern orig -> regionOf orig
+
+instance Regioned OnionOp where
+  regionOf x = case x of
+    OpOnionSub orig -> regionOf orig
+    OpOnionProj orig -> regionOf orig
+
+instance Regioned BinaryOperator where
+  regionOf x = case x of
+    OpPlus orig -> regionOf orig
+    OpMinus orig -> regionOf orig
+    OpEqual orig -> regionOf orig
+    OpLess orig -> regionOf orig
+    OpGreater orig -> regionOf orig
+
+instance Regioned CellQualifier where
+  regionOf x = case x of
+    QualFinal orig -> regionOf orig
+    QualImmutable orig -> regionOf orig
+    QualNone orig -> regionOf orig
+
+instance Regioned Projector where
+  regionOf x = case x of
+    ProjPrim orig _ -> regionOf orig
+    ProjLabel orig _ -> regionOf orig
+    ProjFun orig -> regionOf orig
+
+instance Regioned PrimitiveType where
+  regionOf x = case x of
+    PrimInt orig -> regionOf orig
+    PrimChar orig -> regionOf orig
+
+instance Regioned LabelName where
+  regionOf x = case x of
+    LabelName orig _ -> regionOf orig
+
+instance Regioned FlowVar where
+  regionOf x = case x of
+    FlowVar orig _ -> regionOf orig
+
+instance Regioned CellVar where
+  regionOf x = case x of
+    CellVar orig _ -> regionOf orig

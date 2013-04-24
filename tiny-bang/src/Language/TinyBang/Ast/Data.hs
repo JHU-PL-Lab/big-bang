@@ -22,6 +22,15 @@ module Language.TinyBang.Ast.Data
 , LabelName(..)
 , FlowVar(..)
 , CellVar(..)
+, Origin(..)
+, unLabelName
+, unFlowVar
+, unCellVar
+, projPrim
+, projLabel
+, projFun
+, primInt
+, primChar
 ) where
 
 import Control.Applicative ((<$>))
@@ -31,70 +40,71 @@ import Utils.Meta.Deriving
 
 -- |A data type representing expressions.
 data Expr
-  = Expr SourceRegion [Clause]
+  = Expr Origin [Clause]
   deriving (Show)
 
 -- |A data type representing general clauses.
 data Clause
-  = RedexDef SourceRegion FlowVar Redex
-  | CellSet SourceRegion CellVar FlowVar
-  | CellGet SourceRegion FlowVar CellVar
-  | Throws SourceRegion FlowVar FlowVar
+  = RedexDef Origin FlowVar Redex
+  | CellSet Origin CellVar FlowVar
+  | CellGet Origin FlowVar CellVar
+  | Throws Origin FlowVar FlowVar
   | Evaluated EvaluatedClause
   deriving (Show)
 
 -- |A data type representing evaluated clauses.
 data EvaluatedClause
-  = ValueDef SourceRegion FlowVar Value
-  | CellDef SourceRegion CellQualifier CellVar FlowVar
-  | Flow SourceRegion FlowVar FlowKind FlowVar
+  = ValueDef Origin FlowVar Value
+  | CellDef Origin CellQualifier CellVar FlowVar
+  | Flow Origin FlowVar FlowKind FlowVar
   deriving (Show)
 
 -- |A data type representing reducible expressions.
 data Redex
-  = Appl SourceRegion FlowVar FlowVar
-  | BinOp SourceRegion FlowVar BinaryOperator FlowVar
+  = Define Origin FlowVar
+  | Appl Origin FlowVar FlowVar
+  | BinOp Origin FlowVar BinaryOperator FlowVar
   deriving (Show)
 
 -- |A data type representing value forms.
 data Value
-  = VInt SourceRegion Integer
-  | VChar SourceRegion Char
-  | VEmptyOnion SourceRegion
-  | VLabel SourceRegion LabelName CellVar
-  | VOnion SourceRegion FlowVar FlowVar
-  | VOnionFilter SourceRegion FlowVar OnionOp Projector
-  | VScape SourceRegion Pattern Expr
+  = VInt Origin Integer
+  | VChar Origin Char
+  | VEmptyOnion Origin
+  | VLabel Origin LabelName CellVar
+  | VOnion Origin FlowVar FlowVar
+  | VOnionFilter Origin FlowVar OnionOp Projector
+  | VScape Origin Pattern Expr
   deriving (Show)
 
 -- |A data type describing patterns.
 data Pattern
-  = ValuePattern SourceRegion CellVar InnerPattern
-  | ExnPattern SourceRegion CellVar InnerPattern
+  = ValuePattern Origin CellVar InnerPattern
+  | ExnPattern Origin CellVar InnerPattern
   deriving (Show)
 
 -- |A data type describing inner patterns.
 data InnerPattern
-  = PrimitivePattern SourceRegion PrimitiveType
-  | LabelPattern SourceRegion LabelName CellVar InnerPattern
-  | ConjunctionPattern SourceRegion InnerPattern InnerPattern
-  | ScapePattern SourceRegion
-  | EmptyOnionPattern SourceRegion
+  = PrimitivePattern Origin PrimitiveType
+  | LabelPattern Origin LabelName CellVar InnerPattern
+  | ConjunctionPattern Origin InnerPattern InnerPattern
+  | ScapePattern Origin
+  | EmptyOnionPattern Origin
   deriving (Show)
 
 -- |An enumeration of onion filter operators.
 data OnionOp
-  = OpOnionSub SourceRegion
-  | OpOnionProj SourceRegion
+  = OpOnionSub Origin
+  | OpOnionProj Origin
   deriving (Show)
 
 -- |An enumeration of binary value operators.
 data BinaryOperator
-  = OpPlus SourceRegion
-  | OpMinus SourceRegion
-  | OpEqual SourceRegion
-  | OpLess SourceRegion
-  | OpGreater SourceRegion
+  = OpPlus Origin
+  | OpMinus Origin
+  | OpEqual Origin
+  | OpLess Origin
+  | OpGreater Origin
   deriving (Show)
 
 -- |An enumeration of non-value flow kinds.
@@ -104,129 +114,91 @@ data FlowKind
 
 -- |An enumeration of cell qualifiers.
 data CellQualifier
-  = QualFinal SourceRegion
-  | QualImmutable SourceRegion
-  | QualNone SourceRegion
+  = QualFinal Origin
+  | QualImmutable Origin
+  | QualNone Origin
   deriving (Show)
 
 -- |A data type for projectors.
 data Projector
-  = ProjPrim SourceRegion PrimitiveType
-  | ProjLabel SourceRegion LabelName
-  | ProjFun SourceRegion
+  = ProjPrim Origin PrimitiveType
+  | ProjLabel Origin LabelName
+  | ProjFun Origin
   deriving (Show)
 
 -- |A representation of primitive types.
 data PrimitiveType
-  = PrimInt SourceRegion
-  | PrimChar SourceRegion
+  = PrimInt Origin
+  | PrimChar Origin
   deriving (Show)
 
 -- |A semantic wrapper for label names.
-data LabelName = LabelName SourceRegion String
+data LabelName
+  = LabelName Origin String
   deriving (Show)
 
--- TODO: there is a bad overloading between "flow variable" and "flow kind"
--- discuss this
-
 -- |A semantic wrapper for flow identifiers.
-data FlowVar = FlowVar SourceRegion String
+data FlowVar
+  = FlowVar Origin String
+  | GenFlowVar Origin String Integer
   deriving (Show)
 
 -- |A semantic wrapper for cell identifiers.
-data CellVar = CellVar SourceRegion String
+data CellVar
+  = CellVar Origin String
+  | GenCellVar Origin String Integer
   deriving (Show)
+  
+-- |A data structure describing source origin.
+data Origin
+  = SourceOrigin SourceRegion
+    -- ^ Signifies an AST node which originates from source code.
+  | ComputedOrigin [Origin]
+    -- ^ Signifies an AST node which originates from the computation of other
+    --   nodes.  The list contains the origins of the nodes involved in the
+    --   computation.
+  deriving (Eq, Ord, Show)
+  
+-- Destructors for the above data types
 
--- A series of Regioned declarations for the above types.
+genSeparator :: String
+genSeparator = "__"
 
-instance Regioned Expr where
-  regionOf x = case x of
-    Expr reg _ -> reg
+unLabelName :: LabelName -> String
+unLabelName (LabelName _ s) = s
 
-instance Regioned Clause where
-  regionOf x = case x of
-    RedexDef reg _ _ -> reg
-    CellSet reg _ _ -> reg
-    CellGet reg _ _ -> reg
-    Throws reg _ _ -> reg
-    Evaluated c -> regionOf c
+unFlowVar :: FlowVar -> String
+unFlowVar x = case x of
+  FlowVar _ s -> s
+  GenFlowVar _ s n -> s ++ genSeparator ++ show n
+  
+unCellVar :: CellVar -> String
+unCellVar y = case y of
+  CellVar _ s -> s
+  GenCellVar _ s n -> s ++ genSeparator ++ show n
+  
+-- Smart constructors for the above data types
 
-instance Regioned EvaluatedClause where
-  regionOf x = case x of
-    ValueDef reg _ _ -> reg
-    CellDef reg _ _ _ -> reg
-    Flow reg _ _ _ -> reg
+generated :: Origin
+generated = ComputedOrigin []
 
-instance Regioned Redex where
-  regionOf x = case x of
-    Appl reg _ _ -> reg
-    BinOp reg _ _ _ -> reg
+projPrim :: PrimitiveType -> Projector
+projPrim = ProjPrim generated
 
-instance Regioned Value where
-  regionOf x = case x of
-    VInt reg _ -> reg
-    VChar reg _ -> reg
-    VEmptyOnion reg -> reg
-    VLabel reg _ _ -> reg
-    VOnion reg _ _ -> reg
-    VOnionFilter reg _ _ _ -> reg
-    VScape reg _ _ -> reg
+projLabel :: PrimitiveType -> Projector
+projLabel = ProjPrim generated
 
-instance Regioned Pattern where
-  regionOf x = case x of
-    ValuePattern reg _ _ -> reg
-    ExnPattern reg _ _ -> reg
+projFun :: Projector
+projFun = ProjFun generated
 
-instance Regioned InnerPattern where
-  regionOf x = case x of
-    PrimitivePattern reg _ -> reg
-    LabelPattern reg _ _ _ -> reg
-    ConjunctionPattern reg _ _ -> reg
-    ScapePattern reg -> reg
-    EmptyOnionPattern reg -> reg
+primInt :: PrimitiveType
+primInt = PrimInt generated
 
-instance Regioned OnionOp where
-  regionOf x = case x of
-    OpOnionSub reg -> reg
-    OpOnionProj reg -> reg
+primChar :: PrimitiveType
+primChar = PrimChar generated
 
-instance Regioned BinaryOperator where
-  regionOf x = case x of
-    OpPlus reg -> reg
-    OpMinus reg -> reg
-    OpEqual reg -> reg
-    OpLess reg -> reg
-    OpGreater reg -> reg
+-- Derive appropriate Eq and Ord instances for these data types
 
-instance Regioned CellQualifier where
-  regionOf x = case x of
-    QualFinal reg -> reg
-    QualImmutable reg -> reg
-    QualNone reg -> reg
-
-instance Regioned Projector where
-  regionOf x = case x of
-    ProjPrim reg _ -> reg
-    ProjLabel reg _ -> reg
-    ProjFun reg -> reg
-
-instance Regioned PrimitiveType where
-  regionOf x = case x of
-    PrimInt reg -> reg
-    PrimChar reg -> reg
-
-instance Regioned LabelName where
-  regionOf x = case x of
-    LabelName reg _ -> reg
-
-instance Regioned FlowVar where
-  regionOf x = case x of
-    FlowVar reg _ -> reg
-
-instance Regioned CellVar where
-  regionOf x = case x of
-    CellVar reg _ -> reg
-    
 $(concat <$> sequence
   [ f name
   | f <- [deriveEqSkipFirst, deriveOrdSkipFirst]

@@ -10,7 +10,10 @@ library
                    base >= 4,
                    parsec,
                    transformers,
-                   template-haskell
+                   template-haskell,
+                   containers,
+                   either,
+                   mtl
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
@@ -19,12 +22,17 @@ library
                    Language.TinyBang.Syntax.Location,
                    Utils.Meta.Deriving,
                    Language.TinyBang.Interpreter,
-                   Language.TinyBang.Ast.Data
+                   Language.TinyBang.Ast.Data,
+                   Language.TinyBang.Ast.WellFormedness,
+                   Language.TinyBang.Interpreter.Compatibility
 
 executable tiny-bang
   hs-source-dirs:  src
   main-is:         Main.hs
-  build-depends:   base >= 4
+  build-depends:   
+                   base >= 4,
+                   containers,
+                   mtl
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
@@ -33,5 +41,7 @@ executable tiny-bang
                    Language.TinyBang.Syntax.Location,
                    Utils.Meta.Deriving,
                    Language.TinyBang.Interpreter,
-                   Language.TinyBang.Ast.Data
+                   Language.TinyBang.Ast.Data,
+                   Language.TinyBang.Ast.WellFormedness,
+                   Language.TinyBang.Interpreter.Compatibility
 
