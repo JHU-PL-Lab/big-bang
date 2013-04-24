@@ -27,7 +27,9 @@ library
                    Language.TinyBang.Interpreter.Compatibility,
                    Language.TinyBang.Interpreter.Basis,
                    Language.TinyBang.Interpreter.Equality,
-                   Language.TinyBang.Interpreter.Projection
+                   Language.TinyBang.Interpreter.Projection,
+                   Utils.Monad,
+                   Language.TinyBang.Ast.Substitution
 
 executable tiny-bang
   hs-source-dirs:  src
@@ -49,5 +51,7 @@ executable tiny-bang
                    Language.TinyBang.Interpreter.Compatibility,
                    Language.TinyBang.Interpreter.Basis,
                    Language.TinyBang.Interpreter.Equality,
-                   Language.TinyBang.Interpreter.Projection
+                   Language.TinyBang.Interpreter.Projection,
+                   Utils.Monad,
+                   Language.TinyBang.Ast.Substitution
 

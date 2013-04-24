@@ -7,7 +7,6 @@ module Language.TinyBang.Syntax.Location
 ( SourceRegion(..)
 , SourceLocation(..)
 , SourceDocument(..)
-, Regioned(..)
 ) where
 
 -- |Defines a region of source code.
@@ -32,11 +31,3 @@ data SourceLocation
 data SourceDocument
   = UnknownDocument
   deriving (Eq, Ord, Show)
-
--- |A typeclass for constructs containing a definitive source region.
-class Regioned a where
-  regionOf :: a -> SourceRegion
-  startLoc :: a -> SourceLocation
-  startLoc (regionOf -> SourceRegion start _) = start
-  stopLoc :: a -> SourceLocation
-  stopLoc (regionOf -> SourceRegion _ stop) = stop

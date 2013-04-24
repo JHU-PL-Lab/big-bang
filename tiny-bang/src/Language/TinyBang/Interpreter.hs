@@ -9,18 +9,11 @@ module Language.TinyBang.Interpreter
 , EvalEnv(..)
 ) where
 
-import Control.Applicative ((<$>),(<*>))
-import Control.Arrow (second)
-import Control.Monad (when)
-import Control.Monad.Trans (lift)
+import Control.Applicative ((<$>))
 import Control.Monad.Trans.Either
 import Control.Monad.State
 import qualified Data.Map as Map
-import Data.Map (Map)
-import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid, mappend, mempty)
-import qualified Data.Set as Set
-import Data.Set (Set)
+import Data.Maybe (listToMaybe)
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
@@ -65,45 +58,51 @@ smallStep = do
   cls <- evalClauses <$> get
   case cls of
     [] -> return ()
-    RedexDef orig x r : _ ->
+    RedexDef orig x1 redex : _ ->
       let orig' = ComputedOrigin [orig] in
-      case r of
-        Define _ x' -> do
-          v' <- flowLookup x'
-          replaceFirstClause [Evaluated $ ValueDef orig' x v']
-        Appl _ x' x'' -> undefined -- TODO
-        BinOp _ x' op x'' ->
+      case redex of
+        Define _ x2 -> do
+          v' <- flowLookup x2
+          replaceFirstClause [Evaluated $ ValueDef orig' x1 v']
+        Appl _ x2 x3 ->
+          apply x1 x2 x3 ArgVal (left $ ApplicationFailure x2 x3) (return ())
+        BinOp _ x2 op x3 ->
           let binOp :: (FlowVar -> EvalM (Origin, a))
                     -> (FlowVar -> EvalM (Origin, b))
                     -> (a -> b -> c)
                     -> (Origin -> c -> EvalM Value)
                     -> FlowVar -> FlowVar -> EvalM Value
-              binOp fromL fromR op toV xL xR = do
+              binOp fromL fromR oper toV xL xR = do
                 (oL,vL) <- fromL xL
                 (oR,vR) <- fromR xR
-                toV (ComputedOrigin [oL,oR]) $ op vL vR
+                toV (ComputedOrigin [oL,oR]) $ oper vL vR
               fromIntProj :: FlowVar -> EvalM (Origin, Integer)
-              fromIntProj x = fromInt =<< project x (projPrim primInt)
+              fromIntProj x = do
+                let proj = projPrim primInt
+                mv <- project x proj
+                case mv of
+                  Just v -> fromInt v
+                  Nothing -> left $ ProjectionFailure x proj
               fromInt :: Value -> EvalM (Origin, Integer)
               fromInt v = do { let {VInt o n = v}; return (o,n) }
               toInt :: Origin -> Integer -> EvalM Value
               toInt o n = return $ VInt o n
               binArithIntOp :: (Integer -> Integer -> Integer) -> EvalM ()
               binArithIntOp opf = do
-                vnew <- binOp fromIntProj fromIntProj opf toInt x' x''
-                replaceFirstClause [Evaluated $ ValueDef orig' x vnew]
+                vnew <- binOp fromIntProj fromIntProj opf toInt x2 x3
+                replaceFirstClause [Evaluated $ ValueDef orig' x1 vnew]
               binCompareIntOp :: (Integer -> Integer -> Bool) -> EvalM ()
               binCompareIntOp opf = do
-                xf <- freshFlowVar x
-                yf <- freshCellVarFromFlowVar x
+                xf <- freshFlowVar x1
+                yf <- freshCellVarFromFlowVar x1
                 let toBool o b =
                       let n = LabelName o $ if b then "True" else "False" in
                       return $ VLabel o n yf
-                vnew <- binOp fromIntProj fromIntProj opf toBool x' x''
+                vnew <- binOp fromIntProj fromIntProj opf toBool x2 x3
                 replaceFirstClause
                   [ Evaluated $ ValueDef orig' xf $ VEmptyOnion orig'
                   , Evaluated $ CellDef orig' (QualFinal orig') yf xf
-                  , Evaluated $ ValueDef orig' x vnew ]
+                  , Evaluated $ ValueDef orig' x1 vnew ]
           in
           case op of
             OpPlus _ -> binArithIntOp (+)
@@ -111,35 +110,40 @@ smallStep = do
             OpLess _ -> binCompareIntOp (<)
             OpGreater _ -> binCompareIntOp (>)
             OpEqual _ -> do
-              areEqual <- flowVarValueEq x' x''
-              xf <- freshFlowVar x
-              yf <- freshCellVarFromFlowVar x
+              areEqual <- flowVarValueEq x2 x3
+              x1f <- freshFlowVar x1
+              y1f <- freshCellVarFromFlowVar x1
               let n = LabelName orig' $ if areEqual then "True" else "False"
-              let vnew = VLabel orig' n yf
+              let vnew = VLabel orig' n y1f
               replaceFirstClause
-                [ Evaluated $ ValueDef orig' xf $ VEmptyOnion orig'
-                , Evaluated $ CellDef orig' (QualFinal orig') yf xf
-                , Evaluated $ ValueDef orig' x vnew ]
-    CellSet _ y x : _ -> do
+                [ Evaluated $ ValueDef orig' x1f $ VEmptyOnion orig'
+                , Evaluated $ CellDef orig' (QualFinal orig') y1f x1f
+                , Evaluated $ ValueDef orig' x1 vnew ]
+    CellSet _ y1 x2 : _ -> do
       st <- get
       let env = evalEnv st
-      let env' = env { cellVarMap = Map.insert y x $ cellVarMap env
+      let env' = env { cellVarMap = Map.insert y1 x2 $ cellVarMap env
                      , lastVar = Nothing }
       put $ st { evalEnv = env' }
       replaceFirstClause []
-    CellGet orig x y : _ -> do
-      x' <- cellLookup y
+    CellGet orig x1 y2 : _ -> do
+      x' <- cellLookup y2
       v' <- flowLookup x'
       let orig' = ComputedOrigin [orig]
-      replaceFirstClause [ Evaluated $ ValueDef orig' x v' ]
-    cl@(Throws orig x x') : cls' -> do
+      replaceFirstClause [ Evaluated $ ValueDef orig' x1 v' ]
+    cl@(Throws orig x1 x2) : cls' -> do
       env <- evalEnv <$> get
-      let mx'' = Map.lookup x =<< (Map.lookup FlowExn $ flowPathMap env)
-      case mx'' of
-        Just x'' -> replaceFirstClause [Throws orig x'' x']
+      let mx3 = Map.lookup x1 =<< Map.lookup FlowExn (flowPathMap env)
+      case mx3 of
+        Just x3 -> replaceFirstClause [Throws orig x3 x2]
         Nothing -> case cls' of
-          RedexDef orig' x4 (Appl _ x5 x1) : cls'' | x1 == x ->
-            undefined -- TODO
+          RedexDef _ x4 (Appl _ x5 x1') : _ | x1' == x1 ->
+            -- Application for exceptions is like application for normal values
+            -- except that (1) we just keep going on failure and (2) success
+            -- has to remove the "throws" as well as the application site.
+            apply x4 x5 x1 ArgExn
+              (setClauses $ cl : tail cls') -- TODO: this is wrong; we also need to update the throws clause!
+              (replaceFirstClause [])
           _ ->
             setClauses $ cl : tail cls'
     Evaluated ecl : _ -> do
@@ -159,3 +163,37 @@ smallStep = do
                   , lastVar = Nothing } 
       put $ st { evalEnv = env' }
       replaceFirstClause []
+  where
+    -- |A function containing a generalization of application semantics.
+    --  This function is used by both standard application and to catch
+    --  exceptions.
+    apply :: FlowVar -- ^ The call site variable for the application
+          -> FlowVar -- ^ The variable containing the scapes being called
+          -> FlowVar -- ^ The variable containing the argument
+          -> (FlowVar -> CompatibilityArgument) -- ^ The argument constructor
+          -> EvalM () -- ^ The computation to use if application fails.
+          -> EvalM () -- ^ A computation to be performed on success (immediately
+                      --   before substituting the body).
+          -> EvalM ()
+    apply x1 x2 x3 constr failure success = do
+      scapes <- projectAll x2 projFun
+      mexpr <- applicationCompatibility (constr x3) scapes
+      case mexpr of
+        Just (Expr _ body) -> do
+          let rbody = reverse body
+          rbody' <- freshen rbody
+          case listToMaybe rbody' of
+            Just (RedexDef orig _ r) -> do
+              let body' = reverse $ RedexDef orig x1 r : tail rbody'
+              success
+              replaceFirstClause body'
+            Just cl ->
+              left $ IllFormedExpression $ InvalidExpressionEnd cl
+            Nothing ->
+              left $ IllFormedExpression EmptyExpression
+        Nothing -> failure
+    
+
+-- |A routine to freshen every variable in the provided list of clauses.
+freshen :: [Clause] -> EvalM [Clause]
+freshen cls = undefined -- TODO

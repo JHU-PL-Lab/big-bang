@@ -4,23 +4,23 @@ module Language.TinyBang.Interpreter.Projection
 ) where
 
 import Control.Applicative ((<$>),(<*>))
-import Control.Monad.Trans.Either
+import Data.Maybe (listToMaybe)
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
               
 -- |Performs single evaluation projection on a given variable and projector.
-project :: FlowVar -> Projector -> EvalM Value
-project x proj = do
-  vs <- projectAll x proj
-  if null vs then left $ ProjectionFailure x proj else return $ last vs
+project :: FlowVar -> Projector -> EvalM (Maybe Value)
+project x proj = listToMaybe <$> projectAll x proj
 
--- |Performs evaluation projection on a given variable and projector.
+-- |Performs evaluation projection on a given variable and projector.  This
+--  projection calculation produces a list in *reverse* order; the first element
+--  is the highest priority value.
 projectAll :: FlowVar -> Projector -> EvalM [Value]
 projectAll x proj = do
   v <- flowLookup x
   case v of
-    VOnion _ x' x'' -> (++) <$> projectAll x' proj <*> projectAll x'' proj
+    VOnion _ x' x'' -> (++) <$> projectAll x'' proj <*> projectAll x' proj
     VOnionFilter _ x' op proj' ->
       let fcond = case op of
                     OpOnionSub _ -> (== proj')  

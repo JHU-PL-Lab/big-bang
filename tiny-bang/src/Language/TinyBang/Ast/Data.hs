@@ -26,6 +26,9 @@ module Language.TinyBang.Ast.Data
 , unLabelName
 , unFlowVar
 , unCellVar
+, qualFinal
+, qualImmutable
+, qualNone
 , projPrim
 , projLabel
 , projFun
@@ -182,11 +185,20 @@ unCellVar y = case y of
 generated :: Origin
 generated = ComputedOrigin []
 
+qualFinal :: CellQualifier
+qualFinal = QualFinal generated
+
+qualImmutable :: CellQualifier
+qualImmutable = QualImmutable generated
+
+qualNone :: CellQualifier
+qualNone = QualNone generated
+
 projPrim :: PrimitiveType -> Projector
 projPrim = ProjPrim generated
 
-projLabel :: PrimitiveType -> Projector
-projLabel = ProjPrim generated
+projLabel :: LabelName -> Projector
+projLabel = ProjLabel generated
 
 projFun :: Projector
 projFun = ProjFun generated

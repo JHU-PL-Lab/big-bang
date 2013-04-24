@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns #-}
 
 module Language.TinyBang.Syntax.Parser
 ( parseTinyBang
@@ -267,12 +267,27 @@ argreg3 :: (Regioned a1, Regioned a3)
         => (SourceRegion -> a1 -> a2 -> a3 -> r) -> a1 -> a2 -> a3 -> r
 argreg3 f a1 a2 a3 = f (coverRegion a1 a3) a1 a2 a3
 
+argorig1 :: (Regioned a1) => (Origin -> a1 -> r) -> a1 -> r
 argorig1 f = argreg1 $ \x -> f (SourceOrigin x)
+
+argorig2 :: (Regioned a1, Regioned a2)
+         => (Origin -> a1 -> a2 -> r) -> a1 -> a2 -> r
 argorig2 f = argreg2 $ \x -> f (SourceOrigin x)
+
+argorig3 :: (Regioned a1, Regioned a3)
+         => (Origin -> a1 -> a2 -> a3 -> r) -> a1 -> a2 -> a3 -> r
 argorig3 f = argreg3 $ \x -> f (SourceOrigin x)
 
 -- A series of Regioned declarations for the AST types.
 -- TODO: metaprogram these
+
+-- |A typeclass for constructs containing a definitive source region.
+class Regioned a where
+  regionOf :: a -> SourceRegion
+  startLoc :: a -> SourceLocation
+  startLoc (regionOf -> SourceRegion start _) = start
+  stopLoc :: a -> SourceLocation
+  stopLoc (regionOf -> SourceRegion _ stop) = stop
 
 instance Regioned Origin where
   regionOf x = case x of
@@ -363,7 +378,9 @@ instance Regioned LabelName where
 instance Regioned FlowVar where
   regionOf x = case x of
     FlowVar orig _ -> regionOf orig
+    GenFlowVar orig _ _ -> regionOf orig
 
 instance Regioned CellVar where
   regionOf x = case x of
     CellVar orig _ -> regionOf orig
+    GenCellVar orig _ _ -> regionOf orig
