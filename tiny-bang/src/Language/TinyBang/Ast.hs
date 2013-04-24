@@ -2,12 +2,8 @@
   A module which defines the TinyBang A-normal form AST.
 -}
 
-module Language.TinyBang.Ast
-( module Language.TinyBang.Ast.Data
-, module Language.TinyBang.Ast.Substitution
-, module Language.TinyBang.Ast.WellFormedness
-) where
+module Language.TinyBang.Ast (module X) where
 
-import Language.TinyBang.Ast.Data
-import Language.TinyBang.Ast.Substitution
-import Language.TinyBang.Ast.WellFormedness
+import Language.TinyBang.Ast.Data as X
+import Language.TinyBang.Ast.Substitution as X
+import Language.TinyBang.Ast.WellFormedness as X

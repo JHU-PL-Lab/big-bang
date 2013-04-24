@@ -62,7 +62,6 @@ data EvalError
   | NonFlowExpressionEnd -- TODO: report the clause which did this
   | ProjectionFailure FlowVar Projector
   | ApplicationFailure FlowVar FlowVar
-  -- TODO
 
 -- |The monad in which small-step evaluation takes place.
 type EvalM a = EitherT EvalError (State EvalState) a

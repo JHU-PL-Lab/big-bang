@@ -14,6 +14,7 @@ import Control.Monad.Trans.Either
 import Control.Monad.State
 import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
+import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
@@ -29,7 +30,9 @@ eval :: Expr -> Either (EvalError, [Clause]) (EvalEnv, FlowVar)
 eval e@(Expr _ cls) =
   case checkWellFormed e of
     Left ill -> Left (IllFormedExpression ill, cls)
-    Right usedVars ->
+    Right (VarCount fvs' fvs'' cvs) ->
+      let usedVars = Set.map unFlowVar (fvs' `Set.union` fvs'') `Set.union`
+                     Set.map unCellVar cvs in
       let initialState = EvalState
             ( EvalEnv Map.empty Map.empty Map.empty Nothing )
             cls (UsedVars usedVars 1) in
@@ -142,7 +145,7 @@ smallStep = do
             -- except that (1) we just keep going on failure and (2) success
             -- has to remove the "throws" as well as the application site.
             apply x4 x5 x1 ArgExn
-              (setClauses $ cl : tail cls') -- TODO: this is wrong; we also need to update the throws clause!
+              (setClauses $ Throws orig x4 x2 : tail cls')
               (replaceFirstClause [])
           _ ->
             setClauses $ cl : tail cls'
@@ -181,19 +184,28 @@ smallStep = do
       case mexpr of
         Just (Expr _ body) -> do
           let rbody = reverse body
-          rbody' <- freshen rbody
+          Expr _ rbody' <- freshen $ Expr (ComputedOrigin []) rbody
           case listToMaybe rbody' of
             Just (RedexDef orig _ r) -> do
               let body' = reverse $ RedexDef orig x1 r : tail rbody'
               success
               replaceFirstClause body'
-            Just cl ->
-              left $ IllFormedExpression $ InvalidExpressionEnd cl
-            Nothing ->
-              left $ IllFormedExpression EmptyExpression
+            Just cl -> left $ IllFormedExpression $ InvalidExpressionEnd cl
+            Nothing -> left $ IllFormedExpression EmptyExpression
         Nothing -> failure
-    
 
--- |A routine to freshen every variable in the provided list of clauses.
-freshen :: [Clause] -> EvalM [Clause]
-freshen cls = undefined -- TODO
+-- |A routine to freshen every variable in the provided expression.
+freshen :: Expr -> EvalM Expr
+freshen e =
+  case checkWellFormed e of
+    Left ill -> left $ IllFormedExpression ill
+    Right (VarCount fvs' fvs'' cvs') -> do
+      let fvs = Set.toList $ fvs' `Set.union` fvs''
+      let cvs = Set.toList cvs'
+      fvss <- mapM (makeSubst FlowSubstitution freshFlowVar) fvs
+      cvss <- mapM (makeSubst CellSubstitution freshCellVar) cvs
+      return $ substitute (collect $ fvss ++ cvss) e
+  where
+    makeSubst :: (a -> a -> Substitution)
+              -> (a -> EvalM a) -> a -> EvalM Substitution
+    makeSubst constr makeFreshVar var = flip constr var <$> makeFreshVar var

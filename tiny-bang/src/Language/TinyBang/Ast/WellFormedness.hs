@@ -25,13 +25,8 @@ data IllFormedness
 -- |Determines whether or not the provided expression is well-formed.  The
 --  result is either an ill-formedness complaint or a set of used variable
 --  names; the latter indicates that the expression is well-formed.
-checkWellFormed :: Expr -> Either IllFormedness (Set String)
-checkWellFormed e = do
-  VarCount a b c <- countVar e
-  return $ Set.unions
-    [ Set.map unFlowVar a
-    , Set.map unFlowVar b
-    , Set.map unCellVar c ]
+checkWellFormed :: Expr -> Either IllFormedness VarCount
+checkWellFormed e = countVar e
 
 -- |Represents a variable appearance counting result.
 data VarCount = VarCount
