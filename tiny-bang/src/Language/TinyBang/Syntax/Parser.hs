@@ -8,8 +8,9 @@ module Language.TinyBang.Syntax.Parser
 import Control.Applicative           ((*>), (<$>), (<*), (<*>))
 import Control.Monad.Trans.Class     (lift)
 import Control.Monad.Trans.Reader
+import Text.Parsec.Combinator
 import Text.Parsec.Prim
-import Text.ParserCombinators.Parsec hiding (Parser)
+import Text.Parsec.Pos
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Syntax.Lexer
@@ -38,41 +39,47 @@ type ParserMonad = Reader ParserContext
 -- |A type alias for the TinyBang parser.
 type Parser a = ParsecT [PositionalToken] () ParserMonad a
 
+-- |Defines a parsing combinator which behaves like a packrat parser: the first
+--  parser is attempted and, on failure, the second parser is used instead.
+(</>) :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
+(</>) a b = try a <|> b
+infixr 1 </>
+
 expressionParser :: Parser Expr
 expressionParser = do
   cls <- sepBy1 clauseParser $ consume TokSemi
   return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
 
 clauseParser :: Parser Clause
-clauseParser =
+clauseParser = try $
       Evaluated <$> evaluatedClauseParser
-  <|> argorig2 RedexDef <$> flowVarParser <*> redexParser
-  <|> argorig2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
-  <|> argorig2 CellGet <$> flowVarParser <*> (consume TokGets *> cellVarParser)
-  <|> argorig2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
+  </> argorig2 RedexDef <$> flowVarParser <*> (consume TokIs *> redexParser)
+  </> argorig2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
+  </> argorig2 CellGet <$> flowVarParser <*> (consume TokGets *> cellVarParser)
+  </> argorig2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
 
 evaluatedClauseParser :: Parser EvaluatedClause
 evaluatedClauseParser =
       argorig2 ValueDef <$> flowVarParser <*> (consume TokIs *> valueParser)
-  <|> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*>
+  </> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*>
         (consume TokIs  *> flowVarParser)
-  <|> argorig3 Flow <$> flowVarParser <*> flowKindParser <*> flowVarParser
+  </> argorig3 Flow <$> flowVarParser <*> flowKindParser <*> flowVarParser
 
 redexParser :: Parser Redex
 redexParser =
-      argorig1 Define <$> flowVarParser
-  <|> argorig2 Appl <$> flowVarParser <*> flowVarParser
-  <|> argorig3 BinOp <$> flowVarParser <*> binaryOperatorParser <*> flowVarParser
+      argorig2 Appl <$> flowVarParser <*> flowVarParser
+  </> argorig3 BinOp <$> flowVarParser <*> binaryOperatorParser <*> flowVarParser
+  </> argorig1 Define <$> flowVarParser
 
 valueParser :: Parser Value
 valueParser =
       VInt <$&> require matchIntLit
-  <|> VChar <$&> require matchCharLit
-  <|> requirex TokEmptyOnion VEmptyOnion
-  <|> argorig2 VLabel <$> labelNameParser <*> cellVarParser
-  <|> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
-  <|> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
-  <|> argorig2 VScape <$> patternParser <*>
+  </> VChar <$&> require matchCharLit
+  </> requirex TokEmptyOnion VEmptyOnion
+  </> argorig2 VLabel <$> labelNameParser <*> cellVarParser
+  </> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
+  </> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
+  </> argorig2 VScape <$> patternParser <*>
         (consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
         
 flowKindParser :: Parser FlowKind
@@ -89,52 +96,52 @@ patternParser :: Parser Pattern
 patternParser =
       argorig2 ValuePattern <$> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
-  <|> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
+  </> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
         (consume TokColon *> innerPatternParser)
 
 innerPatternParser :: Parser InnerPattern
 innerPatternParser =
       consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
-  <|> argorig1 PrimitivePattern <$> primitiveTypeParser
+  </> argorig1 PrimitivePattern <$> primitiveTypeParser
   -- note that this ordering makes conjunction bind more loosely than labeling;
   -- e.g. `A x:int & `B y:int is (`A x:int) & (`B y:int) and not
   -- `A x:(int & `B y:int)
-  <|> argorig2 ConjunctionPattern <$> innerPatternParser <*>
+  </> argorig2 ConjunctionPattern <$> innerPatternParser <*>
         (consume TokOnion *> innerPatternParser)
-  <|> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
+  </> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
-  <|> requirex TokFun ScapePattern
-  <|> requirex TokEmptyOnion EmptyOnionPattern
+  </> requirex TokFun ScapePattern
+  </> requirex TokEmptyOnion EmptyOnionPattern
 
 onionOpParser :: Parser OnionOp
 onionOpParser =
       requirex TokOnionSub OpOnionSub
-  <|> requirex TokOnionProj OpOnionProj
+  </> requirex TokOnionProj OpOnionProj
 
 binaryOperatorParser :: Parser BinaryOperator
 binaryOperatorParser =
       requirex TokPlus OpPlus
-  <|> requirex TokMinus OpMinus
-  <|> requirex TokEq OpEqual
-  <|> requirex TokLT OpLess
-  <|> requirex TokGT OpGreater
+  </> requirex TokMinus OpMinus
+  </> requirex TokEq OpEqual
+  </> requirex TokLT OpLess
+  </> requirex TokGT OpGreater
 
 cellQualifierParser :: Parser CellQualifier
 cellQualifierParser =
       requirex TokFinal QualFinal
-  <|> requirex TokImmut QualImmutable
-  <|> QualNone . SourceOrigin <$> (SourceRegion <$> parserLocation <*> parserLocation)
+  </> requirex TokImmut QualImmutable
+  </> QualNone . SourceOrigin <$> (SourceRegion <$> parserLocation <*> parserLocation)
 
 projectorParser :: Parser Projector
 projectorParser =
       argorig1 ProjPrim <$> primitiveTypeParser
-  <|> argorig1 ProjLabel <$> labelNameParser
-  <|> requirex TokFun ProjFun
+  </> argorig1 ProjLabel <$> labelNameParser
+  </> requirex TokFun ProjFun
 
 primitiveTypeParser :: Parser PrimitiveType
 primitiveTypeParser =
       requirex TokInt PrimInt
-  <|> requirex TokChar PrimChar
+  </> requirex TokChar PrimChar
 
 labelNameParser :: Parser LabelName
 labelNameParser = LabelName <$&> require matchLabel
