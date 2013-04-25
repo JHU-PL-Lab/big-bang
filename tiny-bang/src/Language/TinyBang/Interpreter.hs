@@ -190,14 +190,19 @@ smallStep = do
         Just (Expr _ body) -> do
           let rbody = reverse body
           Expr _ rbody' <- freshen $ Expr (ComputedOrigin []) rbody
-          case listToMaybe rbody' of
-            Just (RedexDef orig _ r) -> do
-              let body' = reverse $ RedexDef orig x1 r : tail rbody'
-              success
-              replaceFirstClause body'
+          cl' <- rebindLastClause (listToMaybe rbody') x1
+          success
+          replaceFirstClause $ reverse $ cl' : tail rbody' 
+        Nothing -> failure
+      where
+        rebindLastClause :: Maybe Clause -> FlowVar -> EvalM Clause
+        rebindLastClause mcl x =
+          case mcl of
+            Just (RedexDef orig _ r) -> right $ RedexDef orig x r
+            Just (Evaluated (ValueDef orig _ v)) ->
+              right $ Evaluated $ ValueDef orig x v
             Just cl -> left $ IllFormedExpression $ InvalidExpressionEnd cl
             Nothing -> left $ IllFormedExpression EmptyExpression
-        Nothing -> failure
 
 -- |A routine to freshen every variable in the provided expression.
 freshen :: Expr -> EvalM Expr
