@@ -45,7 +45,7 @@ toploop opts = do
                     { typechecking = not $ noTypecheck opts
                     , evaluating = not $ noEval opts }
                   exprSrc
-      putStr "# "
+      putStrLn "###"
       hFlush stdout
       
 -- |Executes the TinyBang interpreter.
@@ -54,6 +54,6 @@ main = do
   opts <- cmdArgs defOpts
   putStrLn versionStr
   putStrLn ""
-  putStr "# "
+  putStrLn "###"
   hFlush stdout
   toploop opts
