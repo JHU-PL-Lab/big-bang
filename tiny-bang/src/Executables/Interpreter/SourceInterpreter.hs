@@ -50,7 +50,7 @@ interpretSource interpConf src = do
       (env,var) <- doStep evalFail $ eval ast
       return $ InterpreterResult var (flowVarMap env) (cellVarMap env)
     else
-      Left $ EvaluationDisabled
+      Left EvaluationDisabled
   where
     doStep errConstr computation =
       case computation of
