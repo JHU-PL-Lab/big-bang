@@ -26,7 +26,7 @@ data IllFormedness
 --  result is either an ill-formedness complaint or a set of used variable
 --  names; the latter indicates that the expression is well-formed.
 checkWellFormed :: Expr -> Either IllFormedness VarCount
-checkWellFormed e = countVar e
+checkWellFormed = countVar
 
 -- |Represents a variable appearance counting result.
 data VarCount = VarCount
@@ -78,9 +78,12 @@ instance VarCountable Expr where
     Expr _ cs ->
       if null cs
         then Left EmptyExpression
-        else case last cs of
-          RedexDef _ _ (Define _ _) -> mconcat $ map countVar cs
-          x -> Left $ InvalidExpressionEnd x
+        else
+          let valid = mconcat $ map countVar cs in
+          case last cs of
+            RedexDef _ _ (Define _ _) -> valid
+            Evaluated (ValueDef _ _ _) -> valid
+            x -> Left $ InvalidExpressionEnd x
 
 instance VarCountable Clause where
   countVar arg = case arg of
