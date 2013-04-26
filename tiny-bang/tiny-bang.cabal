@@ -15,7 +15,8 @@ library
                    either,
                    mtl,
                    cmdargs,
-                   split
+                   split,
+                   wl-pprint
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
@@ -31,7 +32,9 @@ library
                    Language.TinyBang.Interpreter.Equality,
                    Language.TinyBang.Interpreter.Projection,
                    Utils.Monad,
-                   Language.TinyBang.Ast.Substitution
+                   Language.TinyBang.Ast.Substitution,
+                   Language.TinyBang.Display,
+                   Data.Adj
 
 executable tiny-bang
   hs-source-dirs:  src
@@ -57,5 +60,7 @@ executable tiny-bang
                    Language.TinyBang.Interpreter.Projection,
                    Utils.Monad,
                    Language.TinyBang.Ast.Substitution,
-                   Executables.Interpreter.SourceInterpreter
+                   Executables.Interpreter.SourceInterpreter,
+                   Language.TinyBang.Display,
+                   Data.Adj
 

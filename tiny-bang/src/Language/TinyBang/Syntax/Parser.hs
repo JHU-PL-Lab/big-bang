@@ -16,6 +16,8 @@ import Language.TinyBang.Ast
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 
+import Debug.Trace
+
 -- |A function to parse TinyBang code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
 --  error message.
@@ -51,14 +53,14 @@ infixl 1 </>
 -- TODO: fix debugging
 -- The following is a crude parser-annotating operation for debugging purposes.
 -- It should not use Debug.Trace; we should instead be using HLog or something.
-{-
+
 (<@>) s p = do
   st <- getParserState
   let str = "Trying " ++ s ++ " at " ++ show (statePos st)
   x <- trace str p
   trace ("Found " ++ s ++ ": " ++ show x) $ return x
--}
-(<@>) _ p = p
+
+--(<@>) _ p = p
 infixl 0 <@>
 
 programParser :: Parser Expr
@@ -98,8 +100,8 @@ valueParser = "Value" <@>
   </> argorig2 VLabel <$> labelNameParser <*> cellVarParser
   </> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
   </> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
-  </> argorig2 VScape <$> patternParser <*>
-        (consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
+  </> argorig2 VScape <$> patternParser <*> (consume TokArrow *>
+        consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
         
 flowKindParser :: Parser FlowKind
 flowKindParser = snd <$> require matchFlows
@@ -112,21 +114,27 @@ flowKindParser = snd <$> require matchFlows
       _ -> Nothing
 
 patternParser :: Parser Pattern
-patternParser =
+patternParser = "Pattern" <@>
       argorig2 ValuePattern <$> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
   </> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
         (consume TokColon *> innerPatternParser)
 
 innerPatternParser :: Parser InnerPattern
-innerPatternParser =
+innerPatternParser = "Inner Pattern" <@>
+      argorig2 ConjunctionPattern <$> basicInnerPatternParser <*>
+        (consume TokOnion *> innerPatternParser)
+  </> basicInnerPatternParser
+  
+-- |A parser for non-onion patterns
+basicInnerPatternParser :: Parser InnerPattern
+basicInnerPatternParser = "Basic Inner Pattern" <@>
       consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
   </> argorig1 PrimitivePattern <$> primitiveTypeParser
   -- note that this ordering makes conjunction bind more loosely than labeling;
   -- e.g. `A x:int & `B y:int is (`A x:int) & (`B y:int) and not
   -- `A x:(int & `B y:int)
-  </> argorig2 ConjunctionPattern <$> innerPatternParser <*>
-        (consume TokOnion *> innerPatternParser)
+  </> consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
   </> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
         (consume TokColon *> innerPatternParser)
   </> requirex TokFun ScapePattern

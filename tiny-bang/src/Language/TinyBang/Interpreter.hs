@@ -25,6 +25,8 @@ import Language.TinyBang.Interpreter.Compatibility
 import Language.TinyBang.Interpreter.Equality
 import Language.TinyBang.Interpreter.Projection
 
+import Debug.Trace
+
 -- |The small-step evaluation routine for TinyBang.  The result is an evaluation
 --  environment (representing the heap) and a flow variable (representing the
 --  result of evaluation).  If an error occurs, it is accompanied by the list
@@ -64,7 +66,7 @@ eval e@(Expr _ cls) =
 smallStep :: EvalM ()
 smallStep = do
   cls <- evalClauses <$> get
-  case cls of
+  trace ("Clauses: " ++ show cls) $ case cls of
     [] -> return ()
     RedexDef orig x1 redex : _ ->
       let orig' = ComputedOrigin [orig] in
