@@ -1,5 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
-
 {-|
   A module defining source locations.
 -}
@@ -8,6 +6,8 @@ module Language.TinyBang.Syntax.Location
 , SourceLocation(..)
 , SourceDocument(..)
 ) where
+
+import Language.TinyBang.Display hiding (line)
 
 -- |Defines a region of source code.
 data SourceRegion
@@ -31,3 +31,30 @@ data SourceLocation
 data SourceDocument
   = UnknownDocument
   deriving (Eq, Ord, Show)
+
+
+instance Display SourceRegion where
+  makeDoc (SourceRegion start end) =
+    case (start, end) of
+      (TextSource doc line col, TextSource doc' line' col') | doc == doc' ->
+        if line == line' then
+          if col == col' then
+            makeDoc start
+          else
+            makeDoc doc <> char '@' <> makeDoc line <> makeDoc ':'
+              <> makeDoc col <> char '-' <> makeDoc col'
+        else
+          makeDoc doc <> char '@' <> makeDoc line <> char ':' <> makeDoc col
+            <> char '-' <> makeDoc line' <> char ':' <> makeDoc col'
+      _ -> makeDoc start <> char '-' <> makeDoc end
+
+instance Display SourceLocation where
+  makeDoc sl = case sl of
+    TextSource doc line col ->
+      makeDoc doc <> char '@' <> makeDoc line <> char '-' <> makeDoc col
+    Unknown ->
+      text "(unknown)"
+
+instance Display SourceDocument where
+  makeDoc sd = case sd of
+    UnknownDocument -> text "(unknown)"
