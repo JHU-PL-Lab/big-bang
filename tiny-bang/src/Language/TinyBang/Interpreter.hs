@@ -214,8 +214,8 @@ freshen :: Expr -> EvalM Expr
 freshen e =
   case checkWellFormed e of
     Left ill -> left $ IllFormedExpression ill
-    Right (VarCount fvs' fvs'' cvs') -> do
-      let fvs = Set.toList $ fvs' `Set.union` fvs''
+    Right (VarCount fvs' _ cvs') -> do
+      let fvs = Set.toList fvs'
       let cvs = Set.toList cvs'
       fvss <- mapM (makeSubst FlowSubstitution freshFlowVar) fvs
       cvss <- mapM (makeSubst CellSubstitution freshCellVar) cvs

@@ -221,7 +221,7 @@ instance Display Clause where
   makeDoc cl = case cl of
     RedexDef _ x r -> makeDoc x <+> text "=" <+> makeDoc r
     CellSet _ y x -> makeDoc y <+> text "<-" <+> makeDoc x
-    CellGet _ x y -> makeDoc x <+> text "<-" <+> makeDoc y
+    CellGet _ x y -> makeDoc x <+> text "=" <+> text "!" <> makeDoc y
     Throws _ x x' -> makeDoc x <+> text "throws" <+> makeDoc x'
     Evaluated ecl -> makeDoc ecl
     
