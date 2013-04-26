@@ -18,6 +18,7 @@ data Token
   | TokThrows -- ^@throws@
   | TokDef -- ^@:=@
   | TokFlows Char -- ^@<~X@
+  | TokBang -- ^@!@
   | TokPlus -- ^@+@
   | TokMinus -- ^@-@
   | TokLT -- ^@<@
@@ -102,6 +103,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , (":=", TokDef)
     , ("==", TokEq)
     , ("()", TokEmptyOnion)
+    , ("!", TokBang)
     , ("+", TokPlus)
     , ("-", TokMinus)
     , ("<", TokLT)

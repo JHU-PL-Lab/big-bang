@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 
 import Language.TinyBang.Ast.Data
+import Language.TinyBang.Display
 
 -- |A data type for substitutions.  (The first tuple component is the new cell
 --  variable; the second is the variable to be replaced.)
@@ -67,7 +68,7 @@ instance Substitutable Clause where
 
 instance Substitutable EvaluatedClause where
   subst ss arg = case arg of
-    ValueDef orig x v -> ValueDef orig (subst ss x) v
+    ValueDef orig x v -> ValueDef orig (subst ss x) (subst ss v)
     CellDef orig q y x -> CellDef orig q (subst ss y) (subst ss x)
     Flow orig x k x' -> Flow orig (subst ss x) k (subst ss x')
 
@@ -107,3 +108,11 @@ instance Substitutable FlowVar where
 
 instance Substitutable CellVar where
   subst ss y = fromMaybe y $ Map.lookup y $ cellSubsts ss
+
+instance Display Substitution where
+  makeDoc s = case s of
+    CellSubstitution y y' -> makeDoc y <> char '/' <> makeDoc y'
+    FlowSubstitution x x' -> makeDoc x <> char '/' <> makeDoc x'
+
+instance Display Substitutions where
+  makeDoc ss = makeDoc (flowSubsts ss, cellSubsts ss)

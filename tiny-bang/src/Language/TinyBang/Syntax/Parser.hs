@@ -75,7 +75,8 @@ clauseParser :: Parser Clause
 clauseParser = "Clause" <@>
       Evaluated <$> evaluatedClauseParser
   </> argorig2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
-  </> argorig2 CellGet <$> flowVarParser <*> (consume TokGets *> cellVarParser)
+  </> argorig2 CellGet <$> flowVarParser <*>
+        (consume TokIs *> consume TokBang *> cellVarParser)
   </> argorig2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
   </> argorig2 RedexDef <$> flowVarParser <*> (consume TokIs *> redexParser)
 

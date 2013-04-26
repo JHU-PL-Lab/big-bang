@@ -191,8 +191,10 @@ smallStep = do
       mexpr <- applicationCompatibility (constr x3) scapes
       case mexpr of
         Just (Expr _ body) -> do
-          let rbody = reverse body
-          Expr _ rbody' <- freshen $ Expr (ComputedOrigin []) rbody
+          -- TODO: er... freshen only bound things?  freshen only binders in the
+          -- pattern part?
+          Expr _ body' <- freshen $ Expr (ComputedOrigin []) body
+          let rbody' = reverse body'
           cl' <- rebindLastClause (listToMaybe rbody') x1
           success
           replaceFirstClause $ reverse $ cl' : tail rbody' 
