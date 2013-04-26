@@ -42,7 +42,9 @@ render :: Doc -> String
 render x = displayS (renderPretty 1.0 80 x) ""
 -- TODO: make the rendering function capable of understanding terminal width
 
--- |A typeclass for displayable types.
+-- |A typeclass for displayable types.  This typeclass is distinct from @Show@
+--  in that it presents a human-friendly and potentially *incomplete*
+--  representation of the data.
 class Display a where
     display :: a -> String
     displayList :: [a] -> String
