@@ -20,6 +20,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.Compatibility
 import Language.TinyBang.Interpreter.Equality
@@ -66,7 +67,7 @@ eval e@(Expr _ cls) =
 smallStep :: EvalM ()
 smallStep = do
   cls <- evalClauses <$> get
-  trace ("Clauses: " ++ show cls) $ case cls of
+  trace ("Clauses: " ++ display cls) $ case cls of
     [] -> return ()
     RedexDef orig x1 redex : _ ->
       let orig' = ComputedOrigin [orig] in

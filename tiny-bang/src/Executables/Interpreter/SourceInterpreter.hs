@@ -7,6 +7,7 @@ module Executables.Interpreter.SourceInterpreter
 import Data.Map (Map)
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
@@ -57,7 +58,31 @@ interpretSource interpConf src = do
         Left err -> Left $ errConstr err
         Right ans -> Right ans
     evalFail (err,cls) = EvaluationFailure err cls
-
+    
+instance Display InterpreterError where
+  makeDoc ierr = case ierr of
+    LexerFailure msg -> text "Lexer error:" <+> text msg
+    ParserFailure msg -> text "Parser error:" <+> text msg
+    -- TODO: typechecking case
+    EvaluationFailure evalErr _ -> text "Evaluation error:" <+> case evalErr of
+      IllFormedExpression ill -> text "Ill-formed expression:" <+> case ill of
+        DuplicateFlowBinding x -> text "Duplicate flow variable binding:"
+                                  <+> makeDoc x
+        DuplicateFlowUse x -> text "Duplicate flow variable use:"
+                              <+> makeDoc x
+        DuplicateCellBinding y -> text "Duplicate cell variable binding:"
+                                  <+> makeDoc y
+        InvalidExpressionEnd cl -> text "Invalid ending clause for expression:"
+                                   <+> makeDoc cl
+        EmptyExpression -> text "Empty subexpression"
+      FlowVarNotClosed x -> text "Flow variable not closed:" <+> makeDoc x
+      CellVarNotClosed y -> text "Cell variable not closed:" <+> makeDoc y
+      ProjectionFailure x proj -> text "Could not project" <+> makeDoc proj
+                                      <+> text "from" <+> makeDoc x
+      ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
+                                      <+> text "to" <+> makeDoc x2
+    EvaluationDisabled -> text "(evaluation disabled)"
+    
 -- |Interprets the provided String as a TinyBang expression.  This routine is
 --  similar to @interpretSource@ from
 --  @Executables.Interpreter.SourceInterpreter@ but converts the result to a
@@ -65,32 +90,11 @@ interpretSource interpConf src = do
 stringyInterpretSource :: InterpreterConfiguration -> String -> String
 stringyInterpretSource interpConf exprSrc =
   case interpretSource interpConf exprSrc of
-    Left err -> case err of
-      LexerFailure msg -> "Lexer error: " ++ msg
-      ParserFailure msg -> "Parser error: " ++ msg
-      -- TODO: typechecking case
-      EvaluationFailure evalErr _ -> "Evaluation error: " ++ case evalErr of
-        IllFormedExpression ill -> "Ill-formed expression: " ++ case ill of
-          DuplicateFlowBinding x -> "Duplicate flow variable binding: "
-                                    ++ unFlowVar x
-          DuplicateFlowUse x -> "Duplicate flow variable use: "
-                                ++ unFlowVar x
-          DuplicateCellBinding y -> "Duplicate cell variable binding: "
-                                    ++ unCellVar y
-          InvalidExpressionEnd cl -> "Invalid ending clause for expression: "
-                                     ++ show cl
-          EmptyExpression -> "Empty subexpression"
-        FlowVarNotClosed x -> "Flow variable not closed: " ++ unFlowVar x
-        CellVarNotClosed y -> "Cell variable not closed: " ++ unCellVar y
-        ProjectionFailure x proj -> "Could not project " ++ show proj
-                                        ++ " from " ++ unFlowVar x
-        ApplicationFailure x1 x2 -> "Could not apply " ++ unFlowVar x1
-                                        ++ " to " ++ unFlowVar x2
-      EvaluationDisabled -> "(evaluation disabled)"
+    Left err -> display err
     Right (InterpreterResult x fvs cvs) ->
       "*** Flow variables: \n" ++
-      show fvs ++ "\n" ++
+      display fvs ++ "\n" ++
       "*** Cell variables: \n" ++
-      show cvs ++ "\n" ++
+      display cvs ++ "\n" ++
       "*** Result variable: " ++
-      unFlowVar x
+      display x
