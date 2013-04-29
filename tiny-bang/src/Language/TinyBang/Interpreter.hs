@@ -204,6 +204,7 @@ smallStep = do
         rebindLastClause mcl x =
           case mcl of
             Just (RedexDef orig _ r) -> right $ RedexDef orig x r
+            Just (CellGet orig _ y) -> right $ CellGet orig x y
             Just (Evaluated (ValueDef orig _ v)) ->
               right $ Evaluated $ ValueDef orig x v
             Just cl -> left $ IllFormedExpression $ InvalidExpressionEnd cl

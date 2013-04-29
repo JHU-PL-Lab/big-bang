@@ -81,7 +81,8 @@ instance VarCountable Expr where
         else
           let valid = mconcat $ map countVar cs in
           case last cs of
-            RedexDef _ _ (Define _ _) -> valid
+            RedexDef _ _ _ -> valid
+            CellGet _ _ _ -> valid
             Evaluated (ValueDef _ _ _) -> valid
             x -> Left $ InvalidExpressionEnd x
 
