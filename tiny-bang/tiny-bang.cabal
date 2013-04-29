@@ -5,7 +5,7 @@ build-type:     Simple
 author:         Zachary Palmer
 
 library
-  hs-source-dirs:  src
+  hs-source-dirs:  lib-src
   build-depends:   
                    base >= 4,
                    parsec,
@@ -37,7 +37,7 @@ library
                    Data.Adj
 
 executable tiny-bang
-  hs-source-dirs:  src
+  hs-source-dirs:  lib-src, exec-src
   main-is:         Executables/Interpreter.hs
   build-depends:   
                    base >= 4,
