@@ -95,14 +95,14 @@ redexParser = "Redex" <@>
 
 valueParser :: Parser Value
 valueParser = "Value" <@>
-      VInt <$&> require matchIntLit
+      argorig2 VScape <$> patternParser <*> (consume TokArrow *>
+        consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
+  </> VInt <$&> require matchIntLit
   </> VChar <$&> require matchCharLit
   </> requirex TokEmptyOnion VEmptyOnion
   </> argorig2 VLabel <$> labelNameParser <*> cellVarParser
   </> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
   </> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
-  </> argorig2 VScape <$> patternParser <*> (consume TokArrow *>
-        consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
         
 flowKindParser :: Parser FlowKind
 flowKindParser = snd <$> require matchFlows
