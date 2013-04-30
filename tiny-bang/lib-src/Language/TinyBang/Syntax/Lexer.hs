@@ -77,7 +77,7 @@ lexer = nonTokens *> many (posTokenLexer <* nonTokens) <* eof
 -- | A lexer which matches non-token content.  This includes whitespace and
 --   comments.
 nonTokens :: Lexer ()
-nonTokens = (many $ choice [comment, space *> return ()]) *> return ()
+nonTokens = many (choice [comment, space *> return ()]) *> return ()
 
 -- | A lexer which matches TinyBang comments.  Any # character followed by a
 --   space or alphanumeric character is a comment until the end of the current
