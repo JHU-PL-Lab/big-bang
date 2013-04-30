@@ -40,11 +40,14 @@ library
 
 executable tiny-bang
 <<<<<<< HEAD
+<<<<<<< HEAD
   hs-source-dirs:  
                    lib-src,
                    interp-src
   main-is:         Main.hs
 =======
+=======
+>>>>>>> 13e3e7d741c6cc14ce4b704d98332f12baba1580
   hs-source-dirs:  lib-src, exec-src
   main-is:         Executables/Interpreter.hs
 >>>>>>> 13e3e7d741c6cc14ce4b704d98332f12baba1580
