@@ -13,11 +13,9 @@ import Text.Parsec.Prim
 import Text.Parsec.Pos
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display hiding ((</>))
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
-
-import Debug.Trace
+import Language.TinyBang.Utils.Parsec
 
 -- |A function to parse TinyBang code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
@@ -41,27 +39,6 @@ type ParserMonad = Reader ParserContext
 
 -- |A type alias for the TinyBang parser.
 type Parser a = ParsecT [PositionalToken] () ParserMonad a
-
--- |Defines a parsing combinator which behaves like a packrat parser: the first
---  parser is attempted and, on failure, the second parser is used instead.
-(</>) :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
-(</>) a b = try a <|> b
-infixl 1 </>
-
--- |Defines a parsing combinator which wraps the parser behavior in a debug
---  message routine.
-(<@>) :: (Monad m, Display a) => String -> ParsecT s u m a -> ParsecT s u m a
--- TODO: fix debugging
--- The following is a crude parser-annotating operation for debugging purposes.
--- It should not use Debug.Trace; we should instead be using HLog or something.
-(<@>) s p = do
-  st <- getParserState
-  let str = "Trying " ++ s ++ " at " ++ show (statePos st)
-  x <- trace str p
-  trace ("Found " ++ s ++ ": " ++ display x) $ return x
-
---(<@>) _ p = p
-infixl 0 <@>
 
 programParser :: Parser Expr
 programParser = expressionParser <* eof
