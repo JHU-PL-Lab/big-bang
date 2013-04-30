@@ -72,14 +72,26 @@ lexTinyBang resourceName src =
 
 -- | A lexer which obtains all tokens in a given stream
 lexer :: Lexer [PositionalToken]
-lexer = spaces *> many (posTokenLexer <* spaces) <* eof
+lexer = nonTokens *> many (posTokenLexer <* nonTokens) <* eof
+
+-- | A lexer which matches non-token content.  This includes whitespace and
+--   comments.
+nonTokens :: Lexer ()
+nonTokens = (many $ choice [comment, space *> return ()]) *> return ()
+
+-- | A lexer which matches TinyBang comments.  Any # character followed by a
+--   space or alphanumeric character is a comment until the end of the current
+--   line.
+comment :: Lexer ()
+comment = try $
+  char '#' *> choice [space, alphaNum] *> manyTill anyChar newline *> return ()
 
 -- | A lexer which obtains a single positional token from a stream
 posTokenLexer :: Lexer PositionalToken
 posTokenLexer = do
   (start,tok,stop) <- (,,) <$> getPosition <*> tokenLexer <*> getPosition
   return $ PositionalToken start stop tok
-
+  
 -- | A lexer which obtains a single token from a stream
 tokenLexer :: Lexer Token
 tokenLexer = choice $ map try $
