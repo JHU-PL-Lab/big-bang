@@ -1,4 +1,4 @@
-module Tests.ValueDsl
+module Test.TinyBang.ValueDsl
 ( parseValueDslPredicate
 , DeepOnionPredicate
 ) where

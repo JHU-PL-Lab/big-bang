@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, LambdaCase #-}
+{-# LANTest.TinyBang.ValueDsl.ParserbdaCase #-}
 
 module Tests.ValueDsl.Parser
 ( parseValueDsl

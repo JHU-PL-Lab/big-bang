@@ -79,7 +79,8 @@ test-suite Main
   hs-source-dirs:  lib-src, test-src
   main-is:         Main.hs
   other-modules:   
-                   Tests.ValueDsl,
-                   Tests.ValueDsl.Lexer,
-                   Tests.ValueDsl.Parser,
-                   Language.TinyBang.Utils.Parsec
+                   Language.TinyBang.Utils.Parsec,
+                   Test.TinyBang.ValueDsl
+rceFile
+l.Lexer
+.Parser
