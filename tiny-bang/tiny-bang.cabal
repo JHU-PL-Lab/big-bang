@@ -5,7 +5,7 @@ build-type:     Simple
 author:         Zachary Palmer
 
 library
-  hs-source-dirs:  src
+  hs-source-dirs:  lib-src
   build-depends:   
                    base >= 4,
                    parsec,
@@ -16,7 +16,8 @@ library
                    mtl,
                    cmdargs,
                    split,
-                   wl-pprint
+                   wl-pprint,
+                   errors
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
@@ -34,11 +35,14 @@ library
                    Utils.Monad,
                    Language.TinyBang.Ast.Substitution,
                    Language.TinyBang.Display,
-                   Data.Adj
+                   Data.Adj,
+                   Language.TinyBang.Interpreter.DeepValues
 
 executable tiny-bang
-  hs-source-dirs:  src
-  main-is:         Executables/Interpreter.hs
+  hs-source-dirs:  
+                   lib-src,
+                   interp-src
+  main-is:         Main.hs
   build-depends:   
                    base >= 4,
                    containers,
@@ -60,7 +64,8 @@ executable tiny-bang
                    Language.TinyBang.Interpreter.Projection,
                    Utils.Monad,
                    Language.TinyBang.Ast.Substitution,
-                   Executables.Interpreter.SourceInterpreter,
                    Language.TinyBang.Display,
-                   Data.Adj
+                   Data.Adj,
+                   Language.TinyBang.Interpreter.DeepValues,
+                   Interpreter.SourceInterpreter
 

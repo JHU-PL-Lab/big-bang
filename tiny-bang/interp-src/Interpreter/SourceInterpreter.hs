@@ -1,4 +1,4 @@
-module Executables.Interpreter.SourceInterpreter
+module Interpreter.SourceInterpreter
 ( stringyInterpretSource
 , interpretSource
 , InterpreterConfiguration(..)
@@ -9,6 +9,7 @@ import Data.Map (Map)
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
 import Language.TinyBang.Interpreter
+import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Parser
@@ -92,9 +93,10 @@ stringyInterpretSource interpConf exprSrc =
   case interpretSource interpConf exprSrc of
     Left err -> display err
     Right (InterpreterResult x fvs cvs) ->
-      "*** Flow variables: \n" ++
-      display fvs ++ "\n" ++
-      "*** Cell variables: \n" ++
-      display cvs ++ "\n" ++
-      "*** Result variable: " ++
-      display x
+      case deepOnion fvs cvs x of
+        Left failure -> case failure of
+          UnboundFlowVariable ux ->
+            "Unbound flow variable " ++ display ux ++ " in result!"
+          UnboundCellVariable uy ->
+            "Unbound cell variable " ++ display uy ++ " in result!"
+        Right value -> display value

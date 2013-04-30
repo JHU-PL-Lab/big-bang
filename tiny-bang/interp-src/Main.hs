@@ -9,7 +9,7 @@ import Data.List.Split
 import System.Console.CmdArgs
 import System.IO (hFlush, stdout)
 
-import Executables.Interpreter.SourceInterpreter
+import Interpreter.SourceInterpreter
 
 data Options = Options
   { noTypecheck :: Bool
