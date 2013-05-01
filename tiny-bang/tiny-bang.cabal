@@ -71,16 +71,22 @@ executable tiny-bang
                    Interpreter.SourceInterpreter,
                    Language.TinyBang.Utils.Parsec
 
-test-suite Main
-  type:            exitcode-stdio-1.0
-  x-uses-tf:       true
-  ghc-options:     -Wall -rtsopts
-  build-depends:   base >= 4, HUnit >= 1.2 && < 2, QuickCheck >= 2.4, test-framework >= 0.4.1, test-framework-quickcheck2, test-framework-hunit
+executable tests
   hs-source-dirs:  lib-src, test-src
   main-is:         Main.hs
+  build-depends:   
+                   base >= 4,
+                   HUnit >= 1.2 && < 2,
+                   QuickCheck >= 2.4,
+                   test-framework >= 0.4.1,
+                   test-framework-quickcheck2,
+                   test-framework-hunit,
+                   filepath,
+                   directory
+  ghc-options:     -Wall
   other-modules:   
+                   Test.TinyBang.ValueDsl.Lexer,
+                   Test.TinyBang.ValueDsl.Parser,
                    Language.TinyBang.Utils.Parsec,
+                   Test.TinyBang.SourceFile,
                    Test.TinyBang.ValueDsl
-rceFile
-l.Lexer
-.Parser

@@ -1,6 +1,6 @@
-{-# LANTest.TinyBang.ValueDsl.ParserbdaCase #-}
+{-# LANGUAGE LambdaCase, ExistentialQuantification #-}
 
-module Tests.ValueDsl.Parser
+module Test.TinyBang.ValueDsl.Parser
 ( parseValueDsl
 , DeepOnionPredicate
 ) where
@@ -18,7 +18,7 @@ import Text.Parsec.Pos
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Utils.Parsec
-import Tests.ValueDsl.Lexer
+import Test.TinyBang.ValueDsl.Lexer
 
 -- |A function to parse the value DSL's tokens into a predicate function which
 --  matches against @DeepValue@ structures.  If this is successful, the result

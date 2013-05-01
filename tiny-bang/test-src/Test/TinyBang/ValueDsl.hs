@@ -3,8 +3,8 @@ module Test.TinyBang.ValueDsl
 , DeepOnionPredicate
 ) where
 
-import Tests.ValueDsl.Lexer
-import Tests.ValueDsl.Parser
+import Test.TinyBang.ValueDsl.Lexer
+import Test.TinyBang.ValueDsl.Parser
 
 -- | A function to parse a value DSL string into a predicate function.
 parseValueDslPredicate :: String -> Either String DeepOnionPredicate

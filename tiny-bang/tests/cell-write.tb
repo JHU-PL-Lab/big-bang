@@ -1,0 +1,14 @@
+# EXPECT: `A 4
+
+# Initial scape
+x1 = y1 : `A y2 : () -> {
+    x2 = 4;
+    y2 <- x2;
+    x3 = !y1
+    };
+# Build argument: `A 0
+x4 = 0;
+y3 := x4;
+x5 = `A y3;
+# Call the scape
+x6 = x1 x5
