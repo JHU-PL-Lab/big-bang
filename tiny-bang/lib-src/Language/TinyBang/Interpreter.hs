@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections, ScopedTypeVariables, TemplateHaskell #-}
 
 {-|
   This module implements a small-step interpreter for the TinyBang language.
@@ -20,13 +20,13 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
 import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.Compatibility
 import Language.TinyBang.Interpreter.Equality
 import Language.TinyBang.Interpreter.Projection
+import Language.TinyBang.Logging
 
-import Debug.Trace
+$(loggingFunctions)
 
 -- |The small-step evaluation routine for TinyBang.  The result is an evaluation
 --  environment (representing the heap) and a flow variable (representing the
@@ -67,7 +67,8 @@ eval e@(Expr _ cls) =
 smallStep :: EvalM ()
 smallStep = do
   cls <- evalClauses <$> get
-  trace ("Clauses: " ++ display cls) $ case cls of
+  _infoVal "Clauses: " cls
+  case cls of
     [] -> return ()
     RedexDef orig x1 redex : _ ->
       let orig' = ComputedOrigin [orig] in
@@ -225,3 +226,5 @@ freshen e =
     makeSubst :: (a -> a -> Substitution)
               -> (a -> EvalM a) -> a -> EvalM Substitution
     makeSubst constr makeFreshVar var = flip constr var <$> makeFreshVar var
+
+

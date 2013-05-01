@@ -17,7 +17,8 @@ library
                    cmdargs,
                    split,
                    wl-pprint,
-                   errors
+                   errors,
+                   hslogger
   ghc-options:     -Wall
   other-modules:   
                    Language.TinyBang.Syntax.Lexer,
@@ -37,7 +38,8 @@ library
                    Language.TinyBang.Display,
                    Data.Adj,
                    Language.TinyBang.Interpreter.DeepValues,
-                   Language.TinyBang.Utils.Parsec
+                   Language.TinyBang.Utils.Parsec,
+                   Language.TinyBang.Logging
 
 executable tiny-bang
   hs-source-dirs:  
@@ -69,7 +71,9 @@ executable tiny-bang
                    Data.Adj,
                    Language.TinyBang.Interpreter.DeepValues,
                    Interpreter.SourceInterpreter,
-                   Language.TinyBang.Utils.Parsec
+                   Language.TinyBang.Utils.Parsec,
+                   Language.TinyBang.Logging,
+                   Logging
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -89,4 +93,5 @@ executable tests
                    Test.TinyBang.ValueDsl.Parser,
                    Language.TinyBang.Utils.Parsec,
                    Test.TinyBang.SourceFile,
-                   Test.TinyBang.ValueDsl
+                   Test.TinyBang.ValueDsl,
+                   Language.TinyBang.Logging

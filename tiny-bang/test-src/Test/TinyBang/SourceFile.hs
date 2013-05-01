@@ -5,6 +5,7 @@ module Test.TinyBang.SourceFile
 ( sourceFileTests
 ) where
 
+import Data.List
 import Data.List.Split (splitOn)
 import System.Directory
 import System.FilePath
@@ -26,7 +27,7 @@ sourceFileTests :: IO Test
 sourceFileTests = do
   dirContents <- getDirectoryContents testsPath
   let paths = map ((testsPath ++ [pathSeparator]) ++) $
-                filter (endsWith ".tb") dirContents
+                filter (isSuffixOf ".tb") dirContents
   mtests <- mapM makeTestFromPath paths
   return $
     case sequence mtests of
@@ -77,13 +78,10 @@ sourceFileTests = do
       where
         trimFront :: String -> String
         trimFront = dropWhile (== ' ')
-    beginsWith :: String -> String -> Bool
-    beginsWith pfx str = pfx == take (length pfx) str
-    endsWith :: String -> String -> Bool
-    endsWith sfx str = sfx == drop (length str - length sfx) str
     afterPart :: String -> String -> Maybe String
-    afterPart pfx str = if beginsWith pfx str then Just $ drop (length pfx) str
-                                              else Nothing
+    afterPart pfx str = if pfx `isPrefixOf` str
+                          then Just $ drop (length pfx) str
+                          else Nothing
     createTest :: FilePath -> Expectation -> Expr -> Test
     createTest filepath expectation expr =
       let result = eval expr in
