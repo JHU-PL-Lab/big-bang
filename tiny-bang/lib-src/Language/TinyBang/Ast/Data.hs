@@ -256,7 +256,8 @@ instance Display Pattern where
 instance Display InnerPattern where
   makeDoc ipat = case ipat of
     PrimitivePattern _ p -> makeDoc p
-    LabelPattern _ n y ipat' -> makeDoc n <+> makeDoc y <+> makeDoc ipat'
+    LabelPattern _ n y ipat' ->
+      makeDoc n <+> makeDoc y <+> text ":" <+> makeDoc ipat'
     ConjunctionPattern _ ipat' ipat'' -> text "(" <> makeDoc ipat' <> text ")"
       <+> text "&" <+> text "(" <> makeDoc ipat'' <> text ")"
     ScapePattern _ -> text "fun"
