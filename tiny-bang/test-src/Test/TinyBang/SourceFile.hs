@@ -28,7 +28,7 @@ sourceFileTests = do
   let paths = map ((testsPath ++ [pathSeparator]) ++) $
                 filter (endsWith ".tb") dirContents
   mtests <- mapM makeTestFromPath paths
-  return $ TestLabel "Source file tests" $
+  return $
     case sequence mtests of
       Left err -> TestCase $ assertString $ "Test construction failure: " ++ err 
       Right tests -> TestList tests
