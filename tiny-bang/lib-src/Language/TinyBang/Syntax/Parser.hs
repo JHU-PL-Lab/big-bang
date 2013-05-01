@@ -114,7 +114,7 @@ basicInnerPatternParser = "Basic Inner Pattern" <@>
   -- `A x:(int & `B y:int)
   </> consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
   </> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
-        (consume TokColon *> innerPatternParser)
+        (consume TokColon *> basicInnerPatternParser)
   </> requirex TokFun ScapePattern
   </> requirex TokEmptyOnion EmptyOnionPattern
 
