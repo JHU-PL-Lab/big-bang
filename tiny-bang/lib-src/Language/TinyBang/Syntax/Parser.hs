@@ -44,7 +44,7 @@ programParser :: Parser Expr
 programParser = expressionParser <* eof
 
 expressionParser :: Parser Expr
-expressionParser = do
+expressionParser = "Expression" <@> do
   cls <- sepBy1 clauseParser $ consume TokSemi
   return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
 
