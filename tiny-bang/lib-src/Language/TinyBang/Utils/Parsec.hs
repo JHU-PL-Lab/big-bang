@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 {-|
   This module contains an assortment of Parsec-related utilities.
 -}
@@ -7,10 +9,13 @@ module Language.TinyBang.Utils.Parsec
 , (<@>)
 ) where
 
-import Debug.Trace
+import Control.Applicative ((*>))
 import Text.Parsec.Prim
 
 import Language.TinyBang.Display hiding ((</>))
+import Language.TinyBang.Logging
+
+$(loggingFunctions)
 
 -- |A binary packrat parser operation.  The first parser is attempted; if it
 --  fails, it consumes no input and the second parser is used instead.
@@ -22,18 +27,23 @@ packrat a b = try a <|> b
 (</>) = packrat
 infixl 1 </>
 
--- |Defines a parsing combinator which wraps the parser behavior in a debug
---  message routine.
-(<@>) :: (Monad m, Display a) => String -> ParsecT s u m a -> ParsecT s u m a
--- TODO: fix debugging
--- The following is a crude parser-annotating operation for debugging purposes.
--- It should not use Debug.Trace; we should instead be using HLog or something.
--- TODO: assign <@> as an alias for some named function
-(<@>) s p = do
+-- |Wraps a parser in a debug logger.  This logger will log messages when the
+--  parser starts, succeeds, or fails.  The first argument to this function is
+--  a description of the parser in question.
+loggingParser :: (Monad m, Display a)
+              => String -> ParsecT s u m a -> ParsecT s u m a
+loggingParser desc p = do
   st <- getParserState
-  let str = "Trying " ++ s ++ " at " ++ show (statePos st)
-  x <- trace str p
-  trace ("Found " ++ s ++ ": " ++ display x) $ return x
-
---(<@>) _ p = p
+  _debug $ "Trying " ++ desc ++ " at "  ++ show (statePos st)
+  result <- try p
+              <|> _debug ("Failed to parse " ++ desc ++ " at "
+                      ++ show (statePos st))
+                  *> parserZero
+  _debug $ "Parsed " ++ desc ++ " at " ++ show (statePos st) ++ ": "
+              ++ display result
+  return result
+  
+-- |An infix synonym for @loggingParser@.
+(<@>) :: (Monad m, Display a) => String -> ParsecT s u m a -> ParsecT s u m a
+(<@>) = loggingParser
 infixl 0 <@>
