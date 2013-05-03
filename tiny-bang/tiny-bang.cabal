@@ -40,7 +40,6 @@ library
                    Language.TinyBang.Interpreter.DeepValues,
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
-                   Data.Concat,
                    Utils.Tuple,
                    Utils.TemplateHaskell
 
@@ -77,7 +76,6 @@ executable tiny-bang
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
                    Logging,
-                   Data.Concat,
                    Utils.Tuple,
                    Utils.TemplateHaskell
 
@@ -101,6 +99,5 @@ executable tests
                    Test.TinyBang.SourceFile,
                    Test.TinyBang.ValueDsl,
                    Language.TinyBang.Logging,
-                   Data.Concat,
                    Utils.Tuple,
                    Utils.TemplateHaskell
