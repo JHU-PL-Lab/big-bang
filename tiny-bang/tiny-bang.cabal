@@ -40,7 +40,9 @@ library
                    Language.TinyBang.Interpreter.DeepValues,
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
-                   Data.Concat
+                   Data.Concat,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell
 
 executable tiny-bang
   hs-source-dirs:  
@@ -75,7 +77,9 @@ executable tiny-bang
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
                    Logging,
-                   Data.Concat
+                   Data.Concat,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -97,4 +101,6 @@ executable tests
                    Test.TinyBang.SourceFile,
                    Test.TinyBang.ValueDsl,
                    Language.TinyBang.Logging,
-                   Data.Concat
+                   Data.Concat,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell

@@ -9,11 +9,16 @@ import GHC.Exts (maxTupleSize)
 import Control.Applicative ((<$>))
 import Language.Haskell.TH
 
+import Utils.TemplateHaskell
+
 class Concatenatable a b c where
+  concatenate :: a -> b -> c
   (+++) :: a -> b -> c
+  (+++) = concatenate
+  infixl 3 +++
   
 instance Concatenatable [a] [a] [a] where
-  (+++) = (++)
+  concatenate = (++)
 
 -- Define instances of concatenation
 $(
@@ -32,7 +37,7 @@ $(
                                   (NormalB $ VarE nm) [])
                       [(nmA,namesA),(nmB,namesB)]) $
                 TupE $ map VarE $ namesA ++ namesB
-            defn = FunD (mkName "+++") [Clause [VarP nmA, VarP nmB]
+            defn = FunD (mkName "concatenate") [Clause [VarP nmA, VarP nmB]
                       (NormalB expr) []]
             inst = InstanceD []
                       (foldl AppT (ConT $ mkName "Concatenatable")
@@ -41,9 +46,6 @@ $(
         in
         return [inst]
         where
-          mkNames :: String -> Int -> [Name]
-          mkNames pfx count =
-            map (mkName . (pfx++)) $ map show [1..count]
           mkTupleType names =
             foldl AppT (TupleT $ length names) (map VarT names)
   in

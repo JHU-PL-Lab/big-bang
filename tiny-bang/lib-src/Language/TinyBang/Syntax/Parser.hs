@@ -18,6 +18,8 @@ import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Parsec
 
 {-
+  NOTE: This is, in fact, mostly done.  See Utils.Tuple and Data.Concat.
+
   TODO: The parsing combinators that we're using here aren't good enough.  There
   is no point in parsing a branch at which the parser will commit.  This means,
   for instance, that parsing "y0: `A y1 -> y1" will result in a message like
