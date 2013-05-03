@@ -2,6 +2,8 @@
 
 module Data.Concat
 ( Concatenatable(..)
+, concatenateM
+, (+^+)
 ) where
 
 import GHC.Exts (maxTupleSize)
@@ -12,10 +14,25 @@ import Language.Haskell.TH
 import Utils.TemplateHaskell
 
 class Concatenatable a b c where
+  -- |A function to concatenate two values.
   concatenate :: a -> b -> c
+  -- |An infix alias for @concatenate@.
   (+++) :: a -> b -> c
   (+++) = concatenate
   infixl 3 +++
+  
+-- |A function to concatenate two monadic values.  Effects from the first
+--  argument are applied first.
+concatenateM :: (Concatenatable a b c, Monad m) => m a -> m b -> m c
+concatenateM aM bM = do
+  a <- aM
+  b <- bM
+  return $ a +++ b
+  
+-- |An infix alias for @concatenateM@.
+(+^+) :: (Concatenatable a b c, Monad m) => m a -> m b -> m c
+(+^+) = concatenateM
+infixl 3 +^+
   
 instance Concatenatable [a] [a] [a] where
   concatenate = (++)
@@ -55,3 +72,4 @@ $(
     , m <- [0..tupleInstanceSize]
     , n+m <= maxTupleSize ]
  )
+

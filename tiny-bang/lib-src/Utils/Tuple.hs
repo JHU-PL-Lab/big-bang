@@ -3,6 +3,8 @@
 module Utils.Tuple
 ( tupleApply
 , ($$$)
+, tupleApplyApp
+, ($^$)
 ) where
 
 import GHC.Exts (maxTupleSize)
@@ -13,10 +15,21 @@ import Language.Haskell.TH
 import Utils.TemplateHaskell
 
 class TupleApplication a b c where
+  -- |A function which applies a function to a tuple by uncurrying the tuple.
   tupleApply :: a -> b -> c
+  -- |An indix alias for @tupleApply@.
   ($$$) :: a -> b -> c
   ($$$) = tupleApply
   infixl 2 $$$
+  
+-- |An applicative form of tuple application.
+tupleApplyApp :: (Functor f, TupleApplication a b c) => a -> f b -> f c
+tupleApplyApp a b = tupleApply a <$> b
+
+-- |An infix alias for @tupleApplyApp@.
+($^$) :: (Functor f, TupleApplication a b c) => a -> f b -> f c
+($^$) = tupleApplyApp
+infixl 2 $^$
   
 instance TupleApplication (() -> a) () a where
   tupleApply f = f
