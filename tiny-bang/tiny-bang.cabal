@@ -39,7 +39,8 @@ library
                    Data.Adj,
                    Language.TinyBang.Interpreter.DeepValues,
                    Language.TinyBang.Utils.Parsec,
-                   Language.TinyBang.Logging
+                   Language.TinyBang.Logging,
+                   Data.Concat
 
 executable tiny-bang
   hs-source-dirs:  
@@ -73,7 +74,8 @@ executable tiny-bang
                    Interpreter.SourceInterpreter,
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
-                   Logging
+                   Logging,
+                   Data.Concat
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -94,4 +96,5 @@ executable tests
                    Language.TinyBang.Utils.Parsec,
                    Test.TinyBang.SourceFile,
                    Test.TinyBang.ValueDsl,
-                   Language.TinyBang.Logging
+                   Language.TinyBang.Logging,
+                   Data.Concat
