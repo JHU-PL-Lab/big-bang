@@ -9,9 +9,12 @@ module Language.TinyBang.Utils.Parsec
 , (<@>)
 , conditional
 , (?=>)
+, conditionalDiscard
+, (?+>)
+, eps
 ) where
 
-import Control.Applicative ((*>),(<*>))
+import Control.Applicative ((*>),(<*),(<*>))
 import Text.Parsec.Prim
 
 import Language.TinyBang.Display hiding ((</>))
@@ -43,6 +46,24 @@ conditional a b = try a <*> (b <|> parserZero)
 (?=>) :: ParsecT s u m (a -> b) -> ParsecT s u m a -> ParsecT s u m b
 (?=>) = conditional
 infixl 4 ?=>
+
+-- |A form of @conditional@ which does not expect a useful argument to its
+--  immediate right.  Instead, the second parser's argument is discarded.
+conditionalDiscard :: ParsecT s u m a -> ParsecT s u m b -> ParsecT s u m a
+conditionalDiscard a b = try a <* (b <|> parserZero)
+
+-- |An infix alias for @conditionalDiscard@.  @?+>@ is to @<*@ as @?=>@ is to
+--  @<*>@.
+(?+>) :: ParsecT s u m a -> ParsecT s u m b -> ParsecT s u m a
+(?+>) = conditionalDiscard
+infixl 4 ?+>
+
+-- |A parser which always succeeds, returning unit.  This is equivalent to
+--  @return ()@.  It is particularly useful as an alternative to @try@
+--  expressions: @try (foo <$> bar <*> baz)@ is equivalent to
+--  @foo <$> bar <*> baz ?+> eps@.  (@eps@ is short for "epsilon").
+eps :: ParsecT s u m ()
+eps = return ()
 
 -- |Wraps a parser in a debug logger.  This logger will log messages when the
 --  parser starts, succeeds, or fails.  The first argument to this function is
