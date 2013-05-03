@@ -51,17 +51,17 @@ expressionParser = "Expression" <@> do
 clauseParser :: Parser Clause
 clauseParser = "Clause" <@>
       Evaluated <$> evaluatedClauseParser
-  </> argorig2 CellSet <$> cellVarParser <*> (consume TokGets *> flowVarParser)
-  </> argorig2 CellGet <$> flowVarParser <*>
-        (consume TokIs *> consume TokBang *> cellVarParser)
-  </> argorig2 Throws <$> flowVarParser <*> (consume TokThrows *> flowVarParser)
-  </> argorig2 RedexDef <$> flowVarParser <*> (consume TokIs *> redexParser)
+  </> argorig2 CellSet <$> cellVarParser <* consume TokGets <*> flowVarParser
+  </> argorig2 CellGet <$> flowVarParser <*
+        consume TokIs <* consume TokBang <*> cellVarParser
+  </> argorig2 Throws <$> flowVarParser <* consume TokThrows <*> flowVarParser
+  </> argorig2 RedexDef <$> flowVarParser <* consume TokIs <*> redexParser
 
 evaluatedClauseParser :: Parser EvaluatedClause
 evaluatedClauseParser = "Evaluated Clause" <@>
-      argorig2 ValueDef <$> flowVarParser <*> (consume TokIs *> valueParser)
-  </> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*>
-        (consume TokDef  *> flowVarParser)
+      argorig2 ValueDef <$> flowVarParser <* consume TokIs <*> valueParser
+  </> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*
+        consume TokDef <*> flowVarParser
   </> argorig3 Flow <$> flowVarParser <*> flowKindParser <*> flowVarParser
 
 redexParser :: Parser Redex
@@ -72,13 +72,13 @@ redexParser = "Redex" <@>
 
 valueParser :: Parser Value
 valueParser = "Value" <@>
-      argorig2 VScape <$> patternParser <*> (consume TokArrow *>
-        consume TokOpenBrace *> expressionParser <* consume TokCloseBrace)
+      argorig2 VScape <$> patternParser <* consume TokArrow <*
+        consume TokOpenBrace <*> expressionParser <* consume TokCloseBrace
   </> VInt <$&> require matchIntLit
   </> VChar <$&> require matchCharLit
   </> requirex TokEmptyOnion VEmptyOnion
   </> argorig2 VLabel <$> labelNameParser <*> cellVarParser
-  </> argorig2 VOnion <$> flowVarParser <*> (consume TokOnion *> flowVarParser)
+  </> argorig2 VOnion <$> flowVarParser <* consume TokOnion <*> flowVarParser
   </> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser <*> projectorParser
         
 flowKindParser :: Parser FlowKind
@@ -93,15 +93,15 @@ flowKindParser = snd <$> require matchFlows
 
 patternParser :: Parser Pattern
 patternParser = "Pattern" <@>
-      argorig2 ValuePattern <$> cellVarParser <*>
-        (consume TokColon *> innerPatternParser)
-  </> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*>
-        (consume TokColon *> innerPatternParser)
+      argorig2 ValuePattern <$> cellVarParser <*
+        consume TokColon <*> innerPatternParser
+  </> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) <*
+        consume TokColon <*> innerPatternParser
 
 innerPatternParser :: Parser InnerPattern
 innerPatternParser = "Inner Pattern" <@>
-      argorig2 ConjunctionPattern <$> basicInnerPatternParser <*>
-        (consume TokOnion *> innerPatternParser)
+      argorig2 ConjunctionPattern <$> basicInnerPatternParser <*
+        consume TokOnion <*> innerPatternParser
   </> basicInnerPatternParser
   
 -- |A parser for non-onion patterns
@@ -113,8 +113,8 @@ basicInnerPatternParser = "Basic Inner Pattern" <@>
   -- e.g. `A x:int & `B y:int is (`A x:int) & (`B y:int) and not
   -- `A x:(int & `B y:int)
   </> consume TokOpenParen *> innerPatternParser <* consume TokCloseParen
-  </> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*>
-        (consume TokColon *> basicInnerPatternParser)
+  </> argorig3 LabelPattern <$> labelNameParser <*> cellVarParser <*
+        consume TokColon <*> basicInnerPatternParser
   </> requirex TokFun ScapePattern
   </> requirex TokEmptyOnion EmptyOnionPattern
 
