@@ -22,6 +22,7 @@ module Language.TinyBang.Ast.Data
 , LabelName(..)
 , FlowVar(..)
 , CellVar(..)
+, SomeVar(..)
 , Origin(..)
 , unLabelName
 , unFlowVar
@@ -152,6 +153,12 @@ data FlowVar
 data CellVar
   = CellVar Origin String
   | GenCellVar Origin String Integer
+  deriving (Show)
+  
+-- |A wrapper for variables in general.
+data SomeVar
+  = SomeFlowVar FlowVar
+  | SomeCellVar CellVar
   deriving (Show)
   
 -- |A data structure describing source origin.

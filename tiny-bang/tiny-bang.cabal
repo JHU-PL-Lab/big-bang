@@ -41,7 +41,18 @@ library
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
                    Utils.Tuple,
-                   Utils.TemplateHaskell
+                   Utils.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.Types,
+                   Language.TinyBang.TypeSystem.Contours,
+                   Data.NFA,
+                   Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.Relations.Contours,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.TypeInference,
+                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
+                   Language.TinyBang.TypeSystem.TypeInference.Closure,
+                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
 
 executable tiny-bang
   hs-source-dirs:  
@@ -77,7 +88,18 @@ executable tiny-bang
                    Language.TinyBang.Logging,
                    Logging,
                    Utils.Tuple,
-                   Utils.TemplateHaskell
+                   Utils.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.Types,
+                   Language.TinyBang.TypeSystem.Contours,
+                   Data.NFA,
+                   Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.Relations.Contours,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.TypeInference,
+                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
+                   Language.TinyBang.TypeSystem.TypeInference.Closure,
+                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -100,4 +122,15 @@ executable tests
                    Test.TinyBang.ValueDsl,
                    Language.TinyBang.Logging,
                    Utils.Tuple,
-                   Utils.TemplateHaskell
+                   Utils.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.Types,
+                   Language.TinyBang.TypeSystem.Contours,
+                   Data.NFA,
+                   Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.Relations.Contours,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.TypeInference,
+                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
+                   Language.TinyBang.TypeSystem.TypeInference.Closure,
+                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
