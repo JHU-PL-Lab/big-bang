@@ -1,0 +1,8 @@
+The Language.TinyBang.TypeSystem.Relations.Contours module has enabled
+OverlappingInstaces to suppress a type error.  Haskell does not typecheck
+ContourExtractable otherwise; the Foldable and TypeConstraint instances
+would overlap in the presence of a Foldable instance for TypeConstraint.
+TypeConstraint should therefore not have a Foldable instance (or should
+have an instance such that both ContourExtractable instances behave like
+each other).
+
