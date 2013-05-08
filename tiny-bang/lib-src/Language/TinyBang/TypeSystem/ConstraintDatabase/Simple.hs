@@ -30,4 +30,7 @@ instance ConstraintDatabase SimpleConstraintDatabase where
   empty = SimpleConstraintDatabase Set.empty Map.empty
   add (SimpleConstraintDatabase cs hists) c hist =
     SimpleConstraintDatabase (Set.insert c cs) (Map.insert c hist hists)
+  union (SimpleConstraintDatabase cs hists)
+        (SimpleConstraintDatabase cs' hists') =
+    SimpleConstraintDatabase (cs `Set.union` cs') (hists `Map.union` hists')
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns #-}
 
 {-|
   A module which defines the data structures which comprise the TinyBang ANF
@@ -35,6 +35,7 @@ module Language.TinyBang.Ast.Data
 , projFun
 , primInt
 , primChar
+, HasOrigin(..)
 ) where
 
 import Control.Applicative ((<$>))
@@ -348,5 +349,100 @@ $(concat <$> sequence
       ]
   ])
 
+-- A series of Regioned declarations for the AST types.
+-- TODO: metaprogram these
 
+-- |A typeclass for constructs containing a definitive source region.
+class HasOrigin a where
+  originOf :: a -> Origin
 
+instance HasOrigin Expr where
+  originOf x = case x of
+    Expr orig _ -> orig
+
+instance HasOrigin Clause where
+  originOf x = case x of
+    RedexDef orig _ _ -> orig
+    CellSet orig _ _ -> orig
+    CellGet orig _ _ -> orig
+    Throws orig _ _ -> orig
+    Evaluated c -> originOf c
+
+instance HasOrigin EvaluatedClause where
+  originOf x = case x of
+    ValueDef orig _ _ -> orig
+    CellDef orig _ _ _ -> orig
+    Flow orig _ _ _ -> orig
+
+instance HasOrigin Redex where
+  originOf x = case x of
+    Define orig _ -> orig
+    Appl orig _ _ -> orig
+    BinOp orig _ _ _ -> orig
+
+instance HasOrigin Value where
+  originOf x = case x of
+    VInt orig _ -> orig
+    VChar orig _ -> orig
+    VEmptyOnion orig -> orig
+    VLabel orig _ _ -> orig
+    VOnion orig _ _ -> orig
+    VOnionFilter orig _ _ _ -> orig
+    VScape orig _ _ -> orig
+
+instance HasOrigin Pattern where
+  originOf x = case x of
+    ValuePattern orig _ _ -> orig
+    ExnPattern orig _ _ -> orig
+
+instance HasOrigin InnerPattern where
+  originOf x = case x of
+    PrimitivePattern orig _ -> orig
+    LabelPattern orig _ _ _ -> orig
+    ConjunctionPattern orig _ _ -> orig
+    ScapePattern orig -> orig
+    EmptyOnionPattern orig -> orig
+
+instance HasOrigin OnionOp where
+  originOf x = case x of
+    OpOnionSub orig -> orig
+    OpOnionProj orig -> orig
+
+instance HasOrigin BinaryOperator where
+  originOf x = case x of
+    OpPlus orig -> orig
+    OpMinus orig -> orig
+    OpEqual orig -> orig
+    OpLess orig -> orig
+    OpGreater orig -> orig
+
+instance HasOrigin CellQualifier where
+  originOf x = case x of
+    QualFinal orig -> orig
+    QualImmutable orig -> orig
+    QualNone orig -> orig
+
+instance HasOrigin Projector where
+  originOf x = case x of
+    ProjPrim orig _ -> orig
+    ProjLabel orig _ -> orig
+    ProjFun orig -> orig
+
+instance HasOrigin PrimitiveType where
+  originOf x = case x of
+    PrimInt orig -> orig
+    PrimChar orig -> orig
+
+instance HasOrigin LabelName where
+  originOf x = case x of
+    LabelName orig _ -> orig
+
+instance HasOrigin FlowVar where
+  originOf x = case x of
+    FlowVar orig _ -> orig
+    GenFlowVar orig _ _ -> orig
+
+instance HasOrigin CellVar where
+  originOf x = case x of
+    CellVar orig _ -> orig
+    GenCellVar orig _ _ -> orig

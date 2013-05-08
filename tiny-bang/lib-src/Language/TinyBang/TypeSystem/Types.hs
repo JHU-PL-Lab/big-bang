@@ -13,7 +13,7 @@ module Language.TinyBang.TypeSystem.Types
 , FlowTVar(..)
 , AnyVar(..)
 , Constraint(..)
-, FlowConstraint(..)
+, IntermediateConstraint(..)
 , TypeConstraint(..)
 , ApplicationConstraint(..)
 , OperationConstraint(..)
@@ -22,6 +22,7 @@ module Language.TinyBang.TypeSystem.Types
 , CellSettingConstraint(..)
 , FinalConstraint(..)
 , ImmutableConstraint(..)
+, FlowConstraint(..)
 , ExceptionConstraint(..)
 ) where
 
@@ -30,9 +31,10 @@ import Language.TinyBang.TypeSystem.Contours
 
 data Type db
   = Primitive A.PrimitiveType
+  | EmptyOnion
   | Label A.LabelName CellTVar
   | Onion FlowTVar FlowTVar
-  | OnionFilter FlowTVar A.OnionOp
+  | OnionFilter FlowTVar A.OnionOp A.Projector
   | Scape PatternType FlowTVar db 
   deriving (Eq, Ord, Show)
 
@@ -54,6 +56,11 @@ data CellTVar = CellTVar A.CellVar PossibleContour
 
 data FlowTVar = FlowTVar A.FlowVar PossibleContour
   deriving (Eq, Ord, Show)
+  
+data SomeTVar
+  = SomeCellTVar CellTVar
+  | SomeFlowTVar FlowTVar
+  deriving (Eq, Ord, Show)
 
 data AnyVar
   = SomeCellVar CellTVar
@@ -61,7 +68,7 @@ data AnyVar
   deriving (Eq, Ord, Show)
   
 data Constraint db
-  = WrapFlowConstraint FlowConstraint
+  = WrapIntermediateConstraint IntermediateConstraint
   | WrapTypeConstraint (TypeConstraint db)
   | WrapApplicationConstraint ApplicationConstraint
   | WrapOperationConstraint OperationConstraint
@@ -70,21 +77,22 @@ data Constraint db
   | WrapCellSettingConstraint CellSettingConstraint
   | WrapFinalConstraint FinalConstraint
   | WrapImmutableConstraint ImmutableConstraint
+  | WrapFlowConstraint FlowConstraint
   | WrapExceptionConstraint ExceptionConstraint
   deriving (Eq, Ord, Show)
   
-data FlowConstraint = FlowConstraint FlowTVar A.FlowKind FlowTVar
+data IntermediateConstraint = IntermediateConstraint FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
-
+  
 -- See notes/TypeConstraint-Foldable.txt for a limitation
 data TypeConstraint db = TypeConstraint (Type db) FlowTVar
   deriving (Eq, Ord, Show)
 
-data ApplicationConstraint = ApplicationConstraint FlowTVar FlowTVar
+data ApplicationConstraint = ApplicationConstraint FlowTVar FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
 
 data OperationConstraint
-  = OperationConstraint FlowTVar A.BinaryOperator FlowTVar
+  = OperationConstraint FlowTVar A.BinaryOperator FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
 
 data CellCreationConstraint = CellCreationConstraint FlowTVar CellTVar
@@ -100,6 +108,9 @@ data FinalConstraint = FinalConstraint CellTVar
   deriving (Eq, Ord, Show)
 
 data ImmutableConstraint = ImmutableConstraint CellTVar
+  deriving (Eq, Ord, Show)
+
+data FlowConstraint = FlowConstraint FlowTVar A.FlowKind FlowTVar
   deriving (Eq, Ord, Show)
 
 data ExceptionConstraint = ExceptionConstraint FlowTVar FlowTVar

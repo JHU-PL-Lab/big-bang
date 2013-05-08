@@ -21,8 +21,7 @@ import Language.TinyBang.TypeSystem.TypeInference.InitialDerivation
 
 -- |A data structure defining typechecking errors.
 data TypecheckingError db
-  = IllFormedExpression IllFormedness
-  | InitialDerivationFailed InitialDerivationError
+  = InitialDerivationFailed InitialDerivationError
   | ClosureFailed ClosureError
   | ClosureInconsistent (Set Inconsistency) db 
 
@@ -33,7 +32,6 @@ data TypecheckingError db
 typecheck :: forall db. (ConstraintDatabase db)
           => Expr -> Either (TypecheckingError db) db
 typecheck expr = do
-  _ <- bailWith IllFormedExpression $ checkWellFormed expr
   derivDb::db <- bailWith InitialDerivationFailed $ initialDerivation expr
   let startDb = replaceContours initialContour derivDb
   closedDb <- bailWith ClosureFailed $ calculateClosure startDb

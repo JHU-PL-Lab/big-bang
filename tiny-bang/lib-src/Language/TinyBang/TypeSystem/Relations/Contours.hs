@@ -96,7 +96,7 @@ instance (ContourExtractable a, Data.Foldable.Foldable t)
   
 instance (ConstraintDatabase db) => ContourExtractable (Constraint db) where
   extractContours arg = case arg of
-    WrapFlowConstraint c -> extractContours c
+    WrapIntermediateConstraint c -> extractContours c
     WrapTypeConstraint c -> extractContours c
     WrapApplicationConstraint c -> extractContours c
     WrapOperationConstraint c -> extractContours c
@@ -105,23 +105,26 @@ instance (ConstraintDatabase db) => ContourExtractable (Constraint db) where
     WrapCellSettingConstraint c -> extractContours c
     WrapFinalConstraint c -> extractContours c
     WrapImmutableConstraint c -> extractContours c
+    WrapFlowConstraint c -> extractContours c
     WrapExceptionConstraint c -> extractContours c
-  
-instance ContourExtractable FlowConstraint where
-  extractContours (FlowConstraint a _ a') =
-    extractContours a `Set.union` extractContours a'
 
+instance ContourExtractable IntermediateConstraint where
+  extractContours (IntermediateConstraint a a') =
+    extractContours a `Set.union` extractContours a'
+  
 instance (ConstraintDatabase db) => ContourExtractable (TypeConstraint db) where
   extractContours (TypeConstraint t a) =
     extractContours t `Set.union` extractContours a
 
 instance ContourExtractable ApplicationConstraint where
-  extractContours (ApplicationConstraint a a') = 
+  extractContours (ApplicationConstraint a a' a'') = 
     extractContours a `Set.union` extractContours a'
+      `Set.union` extractContours a''
 
 instance ContourExtractable OperationConstraint where
-  extractContours (OperationConstraint a _ a') = 
+  extractContours (OperationConstraint a _ a' a'') = 
     extractContours a `Set.union` extractContours a'
+      `Set.union` extractContours a''
 
 instance ContourExtractable CellCreationConstraint where
   extractContours (CellCreationConstraint a b) =
@@ -141,6 +144,10 @@ instance ContourExtractable FinalConstraint where
 instance ContourExtractable ImmutableConstraint where
   extractContours (ImmutableConstraint b) = extractContours b 
 
+instance ContourExtractable FlowConstraint where
+  extractContours (FlowConstraint a _ a') =
+    extractContours a `Set.union` extractContours a'
+
 instance ContourExtractable ExceptionConstraint where
   extractContours (ExceptionConstraint a a') = 
     extractContours a `Set.union` extractContours a'
@@ -154,9 +161,10 @@ instance ContourExtractable FlowTVar where
 instance (ConstraintDatabase db) => ContourExtractable (Type db) where
   extractContours arg = case arg of
     Primitive _ -> Set.empty
+    EmptyOnion -> Set.empty
     Label _ b -> extractContours b
     Onion a a' -> extractContours a `Set.union` extractContours a'
-    OnionFilter a _ -> extractContours a
+    OnionFilter a _ _ -> extractContours a
     Scape pat a db -> extractContours pat `Set.union` extractContours a
                         `Set.union` getAllContours db
 

@@ -4,11 +4,24 @@
 -}
 module Language.TinyBang.TypeSystem.ConstraintHistory
 ( ConstraintHistory(..)
+, SourceElement(..)
 ) where
 
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Ast
 
 data ConstraintHistory db
-  = SourceHistory SourceRegion
+  = DerivedFromSource SourceElement
   deriving (Eq, Ord, Show)
 -- TODO
+
+data SourceElement
+  = ClauseElement Clause
+  | PatternElement Pattern
+  | QualifierElement CellQualifier
+  deriving (Eq, Ord, Show)
+
+instance HasOrigin SourceElement where
+  originOf x = case x of
+    ClauseElement cl -> originOf cl
+    PatternElement pat -> originOf pat
+    QualifierElement q -> originOf q
