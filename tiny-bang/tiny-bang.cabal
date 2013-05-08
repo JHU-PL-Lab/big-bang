@@ -48,11 +48,11 @@ library
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
-                   Language.TinyBang.TypeSystem.TypeInference.Closure,
-                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
+                   Language.TinyBang.TypeSystem.Fibrations,
+                   Language.TinyBang.TypeSystem.Relations.Projection,
+                   Language.TinyBang.TypeSystem.Closure.Database.Simple,
+                   Language.TinyBang.TypeSystem.Closure
 
 executable tiny-bang
   hs-source-dirs:  
@@ -95,11 +95,11 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
-                   Language.TinyBang.TypeSystem.TypeInference.Closure,
-                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
+                   Language.TinyBang.TypeSystem.Fibrations,
+                   Language.TinyBang.TypeSystem.Relations.Projection,
+                   Language.TinyBang.TypeSystem.Closure.Database.Simple,
+                   Language.TinyBang.TypeSystem.Closure
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -129,8 +129,8 @@ executable tests
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.TypeInference.InitialDerivation,
-                   Language.TinyBang.TypeSystem.TypeInference.Closure,
-                   Language.TinyBang.TypeSystem.TypeInference.Inconsistency
+                   Language.TinyBang.TypeSystem.Fibrations,
+                   Language.TinyBang.TypeSystem.Relations.Projection,
+                   Language.TinyBang.TypeSystem.Closure.Database.Simple,
+                   Language.TinyBang.TypeSystem.Closure

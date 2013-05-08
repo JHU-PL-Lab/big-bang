@@ -1,12 +1,12 @@
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
-module Language.TinyBang.TypeSystem.TypeInference.Closure
+module Language.TinyBang.TypeSystem.Closure
 ( ClosureError(..)
 , calculateClosure
 ) where
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.Closure.Database
 
 -- |A data structure representing errors in constraint closure.
 data ClosureError

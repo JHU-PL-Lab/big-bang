@@ -4,13 +4,13 @@
   This module provides a routine for determining the initial constraint database
   for an expression.
 -}
-module Language.TinyBang.TypeSystem.TypeInference.InitialDerivation
+module Language.TinyBang.TypeSystem.InitialDerivation
 ( InitialDerivationError(..)
 , initialDerivation
 ) where
 
 import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.Closure.Database
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Types
 import qualified Language.TinyBang.Ast as A
@@ -19,7 +19,6 @@ import qualified Language.TinyBang.TypeSystem.Types as T
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
   = IllFormedExpression IllFormedness
-  | NotClosed SomeVar
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
