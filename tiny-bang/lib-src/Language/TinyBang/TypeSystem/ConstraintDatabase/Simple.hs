@@ -3,7 +3,7 @@
   a simple backing set of constraints.  Lookups and similar operations are
   O(n) time; no smart data structures are used.
 -}
-module Language.TinyBang.TypeSystem.Closure.Database.Simple
+module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
 ( SimpleConstraintDatabase
 ) where
 
@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.TypeSystem.Closure.Database
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Relations

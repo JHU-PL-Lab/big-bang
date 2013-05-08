@@ -16,7 +16,7 @@ import qualified Data.List as List
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.TypeSystem.Closure.Database
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
 

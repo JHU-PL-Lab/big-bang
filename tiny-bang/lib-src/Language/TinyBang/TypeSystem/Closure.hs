@@ -6,7 +6,7 @@ module Language.TinyBang.TypeSystem.Closure
 , calculateClosure
 ) where
 
-import Language.TinyBang.TypeSystem.Closure.Database
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 
 -- |A data structure representing errors in constraint closure.
 data ClosureError

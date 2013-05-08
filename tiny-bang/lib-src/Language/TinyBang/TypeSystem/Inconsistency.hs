@@ -9,7 +9,7 @@ module Language.TinyBang.TypeSystem.Inconsistency
 
 import Data.Set (Set)
 
-import Language.TinyBang.TypeSystem.Closure.Database
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 
 data Inconsistency
   = TODOInconsistency -- TODO

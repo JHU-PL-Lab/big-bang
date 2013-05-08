@@ -10,7 +10,7 @@ module Language.TinyBang.TypeSystem.InitialDerivation
 ) where
 
 import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.Closure.Database
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Types
 import qualified Language.TinyBang.Ast as A

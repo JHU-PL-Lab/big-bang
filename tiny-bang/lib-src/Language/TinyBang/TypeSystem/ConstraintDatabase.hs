@@ -2,7 +2,7 @@
   This module provides the interface for constraint databases.
 -}
 
-module Language.TinyBang.TypeSystem.Closure.Database
+module Language.TinyBang.TypeSystem.ConstraintDatabase
 ( ConstraintDatabase(..)
 ) where
 
