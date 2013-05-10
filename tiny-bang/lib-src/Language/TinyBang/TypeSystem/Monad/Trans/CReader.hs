@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FunctionalDependencies, FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FunctionalDependencies, FlexibleInstances, UndecidableInstances #-}
 module Language.TinyBang.TypeSystem.Monad.Trans.CReader
 ( CReaderT
 , MonadCReader(..)
@@ -10,7 +10,9 @@ where
 
 import Control.Monad.Reader (ReaderT, runReaderT, ask, local)
 import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.Trans (MonadTrans)
+import Control.Monad.Trans (MonadTrans, lift)
+import Control.Monad.List (ListT, mapListT)
+import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
 import Control.Applicative (Applicative, Alternative)
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -26,10 +28,21 @@ runCReaderT (CReaderT m) = runReaderT m
 newtype CReaderT db m a = CReaderT (ReaderT db m a)
   deriving (Monad, Functor, MonadTrans, Applicative, Alternative)
 
-class ConstraintDatabase db => MonadCReader db m | m -> db where
+class (Monad m, ConstraintDatabase db) => MonadCReader db m | m -> db where
   askDb :: m db
   localDb :: (db -> db) -> m a -> m a
 
 instance (Monad m, ConstraintDatabase db) => MonadCReader db (CReaderT db m) where
   askDb = CReaderT ask
   localDb f (CReaderT m) = CReaderT $ local f m
+
+
+instance MonadCReader r m => MonadCReader r (ListT m) where
+    askDb   = lift askDb
+    localDb = mapListT . localDb
+    --readerDb = lift . readerDb
+
+instance MonadCReader r m => MonadCReader r (MaybeT m) where
+    askDb   = lift askDb
+    localDb = mapMaybeT . localDb
+    --readerDb = lift . readerDb
