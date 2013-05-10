@@ -27,7 +27,12 @@ class ConstraintDatabase db where
   getAllContours :: db -> Set Contour
   -- |Performs contour replacement on the contents of a database.
   replaceContours :: Contour -> db -> db
+  
+  -- |Finds all lower bounds for the provided type variable.
+  getLowerBounds :: db -> FlowTVar -> Set (Type db)
+  
   -- TODO: the rest of the interface
+  
   -- ### Convenience functions
   -- |Creates a singleton constraint database.  By default, this simply adds
   --  a constraint to an empty database.
