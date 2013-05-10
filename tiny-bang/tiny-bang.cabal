@@ -52,7 +52,8 @@ library
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.Monad.Trans.Flow
 
 executable tiny-bang
   hs-source-dirs:  
