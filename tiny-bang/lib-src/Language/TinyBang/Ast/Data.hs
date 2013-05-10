@@ -157,12 +157,6 @@ data CellVar
   | GenCellVar Origin String Integer
   deriving (Show)
   
--- |A wrapper for variables in general.
-data SomeVar
-  = SomeFlowVar FlowVar
-  | SomeCellVar CellVar
-  deriving (Show)
-  
 -- |A data structure describing source origin.
 data Origin
   = SourceOrigin SourceRegion
@@ -349,6 +343,12 @@ $(concat <$> sequence
       , ''CellVar
       ]
   ])
+
+-- |A wrapper for variables in general.
+data SomeVar
+  = SomeFlowVar FlowVar
+  | SomeCellVar CellVar
+  deriving (Eq,Ord,Show)
 
 -- A series of Regioned declarations for the AST types.
 -- TODO: metaprogram these
