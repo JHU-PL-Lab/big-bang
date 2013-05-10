@@ -36,6 +36,7 @@ module Language.TinyBang.Ast.Data
 , primInt
 , primChar
 , HasOrigin(..)
+, IsVar(..)
 ) where
 
 import Control.Applicative ((<$>))
@@ -446,3 +447,15 @@ instance HasOrigin CellVar where
   originOf x = case x of
     CellVar orig _ -> orig
     GenCellVar orig _ _ -> orig
+
+class IsVar a where
+  someVar :: a -> SomeVar
+
+instance IsVar SomeVar where
+  someVar = id
+
+instance IsVar FlowVar where
+  someVar = SomeFlowVar
+
+instance IsVar CellVar where
+  someVar = SomeCellVar
