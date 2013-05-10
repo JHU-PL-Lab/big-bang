@@ -53,7 +53,8 @@ library
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
-                   Language.TinyBang.TypeSystem.Monad.Trans.Flow
+                   Language.TinyBang.TypeSystem.Monad.Trans.Flow,
+                   Language.TinyBang.TypeSystem.Monad.Trans.CReader
 
 executable tiny-bang
   hs-source-dirs:  
