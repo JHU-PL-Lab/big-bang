@@ -15,8 +15,10 @@ import Control.Applicative (Applicative, Alternative)
 
 type CReader db a = CReaderT db Identity a
 
+runCReader :: CReader db a -> db -> a
 runCReader m = runIdentity . runCReaderT m
 
+runCReaderT :: CReaderT db m a -> db -> m a
 runCReaderT (CReaderT m) = runReaderT m
 
 newtype CReaderT db m a = CReaderT (ReaderT db m a)
