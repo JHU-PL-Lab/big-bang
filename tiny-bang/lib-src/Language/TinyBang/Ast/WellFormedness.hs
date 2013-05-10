@@ -4,9 +4,13 @@ module Language.TinyBang.Ast.WellFormedness
 ( IllFormedness(..)
 , VarCount(..)
 , checkWellFormed
+, openVariables
+, isClosed
 ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>), (<*>), (<*),)
+import Control.Monad.RWS (RWS, evalRWS, modify, gets, get, put, tell)
+import Control.Monad (unless)
 import Data.Monoid (Monoid, mappend, mconcat, mempty)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -34,6 +38,8 @@ data VarCount = VarCount
                   (Set FlowVar) -- ^ Flow variable uses
                   (Set CellVar) -- ^ Cell variable definitions
   deriving (Eq,Ord,Show)
+
+-- VarCount is not a monoid because union can fail.
                   
 -- |A monad in which variable counting takes place.  This monad contains the
 --  failure modes for that counting operation.
@@ -128,3 +134,101 @@ instance VarCountable InnerPattern where
     ConjunctionPattern _ ipat ipat' -> countVar ipat `mappend` countVar ipat'
     ScapePattern _ -> mempty
     EmptyOnionPattern _ -> mempty
+
+-- | Given an expression returns the set of open variables in it.
+openVariables :: Expr -> Set SomeVar
+openVariables arg = snd $ evalRWS (checkClosed arg) () Set.empty
+
+-- | Given an expression returns @True@ if and only if it has no open
+--   variables.
+isClosed :: Expr -> Bool
+isClosed = Set.null . openVariables
+
+class VarCloseable a where
+  checkClosed :: a -> CloseM ()
+
+-- | CloseM is the monad used in determining whether or not an expression is
+--   closed.  It has three operations, which are described below.
+type CloseM = RWS () (Set SomeVar) (Set SomeVar)
+
+-- | Adds a variable to the set of variables bound in the current scope.
+addVar :: IsVar v => v -> CloseM ()
+addVar = modify . Set.insert . someVar
+
+-- | Checks if a variable is bound in the current scope; if it's not, it @tell@s it.
+checkVar :: IsVar v => v -> CloseM ()
+checkVar x = do
+  b <- gets . Set.member $ someVar x
+  unless b $ tell . Set.singleton $ someVar x
+
+-- | Performs an operation in a new scope; variables bound during the operation
+--   will be unbound outside of this call.
+bracket :: CloseM a -> CloseM a
+bracket m = do
+  frame <- get
+  m <* put frame
+
+-- | Convenience function for running @checkVar@ on two variables of possibly
+--   different types.
+checkVars :: (IsVar v1, IsVar v2) => v1 -> v2 -> CloseM ()
+checkVars v1 v2 = checkVar v1 >> checkVar v2
+
+-- | Convenience function for checking if a term is closed and then adding a
+--   variable to the set of bound variables.
+checkAdd :: (VarCloseable c, IsVar v) => c -> v -> CloseM ()
+checkAdd v1 v2 = checkClosed v1 <* addVar v2
+
+instance VarCloseable FlowVar where
+  checkClosed = checkVar
+
+instance VarCloseable CellVar where
+  checkClosed = checkVar
+
+instance VarCloseable Expr where
+  checkClosed arg = case arg of
+    Expr _ cs -> mapM_ checkClosed cs
+
+instance VarCloseable Clause where
+  checkClosed arg = case arg of
+    RedexDef _ x r -> checkAdd r x
+    CellSet _ y x -> checkVars x y
+    CellGet _ x y -> checkAdd y x
+    Throws _ x x' -> checkAdd x' x
+    Evaluated cl -> checkClosed cl
+
+instance VarCloseable EvaluatedClause where
+  checkClosed arg = case arg of
+    ValueDef _ x v -> checkAdd v x
+    CellDef _ _ y x -> checkAdd x y
+    Flow _ x _ x' -> checkVars x x'
+
+instance VarCloseable Redex where
+  checkClosed arg = case arg of
+    Define _ x -> addVar x
+    Appl _ x x' -> checkVars x x'
+    BinOp _ x _ x' -> checkVars x x'
+
+instance VarCloseable Value where
+  checkClosed arg = case arg of
+    VInt _ _ -> yes
+    VChar _ _ -> yes
+    VEmptyOnion _ -> yes
+    VLabel _ _ y -> checkVar y
+    VOnion _ x x' -> checkVars x x'
+    VOnionFilter _ x _ _ -> checkVar x
+    VScape _ pat e -> bracket $ checkClosed pat >> checkClosed e
+    where yes = return ()
+
+instance VarCloseable Pattern where
+  checkClosed arg = case arg of
+    ValuePattern _ y ipat -> checkAdd ipat y
+    ExnPattern _ y ipat -> checkAdd ipat y
+
+instance VarCloseable InnerPattern where
+  checkClosed arg = case arg of
+    PrimitivePattern _ _ -> yes
+    LabelPattern _ _ y ipat -> checkAdd ipat y
+    ConjunctionPattern _ ipat ipat' -> checkClosed ipat >> checkClosed ipat'
+    ScapePattern _ -> yes
+    EmptyOnionPattern _ -> yes
+    where yes = return ()
