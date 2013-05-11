@@ -9,6 +9,7 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -34,3 +35,10 @@ instance ConstraintDatabase SimpleConstraintDatabase where
         (SimpleConstraintDatabase cs' hists') =
     SimpleConstraintDatabase (cs `Set.union` cs') (hists `Map.union` hists')
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
+
+  getLowerBounds (SimpleConstraintDatabase cs _) a =
+    Set.fromList $ mapMaybe lowerBoundConstraintMapper (Set.toList cs)
+    where
+      lowerBoundConstraintMapper c = case c of
+        WrapTypeConstraint (TypeConstraint t a') | a == a' -> Just t
+        _ -> Nothing
