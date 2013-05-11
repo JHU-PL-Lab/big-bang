@@ -6,12 +6,12 @@
 module Language.TinyBang.TypeSystem.Relations.Projection
 ( ProjectionError(..)
 , project
+, projectSingle
 ) where
 
 import Control.Applicative
 import Control.Arrow ((***))
 import Control.Monad.Reader
-import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Either
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -34,6 +34,9 @@ type ProjM db m a = FlowT (EitherT (ProjectionError db) m) a
 --  operation occurs in the context of a constraint database.  This
 --  implementation differs from the specification in that non-contractive types
 --  are prohibited.
+--
+--  The resulting list of types is in reverse order; the first element of the
+--  list is highest priority.
 project :: forall db m.
            (Applicative m, ConstraintDatabase db, MonadCReader db m)
         => Projector
@@ -42,6 +45,24 @@ project :: forall db m.
 project = projectVar (Set.empty,[])
 
 type OccursCheck = (Set FlowTVar, [FlowTVar])
+
+-- TODO: rewrite projectSingle for efficiency.  It should use a different
+-- exploration tactic for onions so as to avoid exploring the left side of a
+-- tree if it doesn't need it.
+
+-- |Computes the possible single projections of a type variable and projector.
+--  See @project@ for more information.
+projectSingle :: forall db m.
+                 (Applicative m, ConstraintDatabase db, MonadCReader db m)
+              => Projector
+              -> FlowTVar
+              -> FlowT (EitherT (ProjectionError db) m)
+                    (Maybe (Type db), Fibration db)
+projectSingle proj a = do  
+  (typs,fib) <- project proj a
+  case typs of
+    [] -> return (Nothing, fib)
+    typ:_ -> return (Just typ, fib)
 
 -- |The *real* projection function.  This function includes an occurs check for
 --  non-contractive onion types to prevent divergence.
@@ -67,10 +88,13 @@ projectVar check proj a = do
         (Onion a1 a2, _) -> do
           (p1, fib1) <- projectRemembering a1
           (p2, fib2) <- projectRemembering a2
-          return (p1 ++ p2, Fibration lowerBound [fib1, fib2])
-        
-        --(Primitive p, ProjPrim _ p') | p /= p' -> return ([], Unexpanded)
-        --(Label n _, ProjLabel n') | n /= n' -> return ([], Unexpanded)
+          -- Reverse order: first element is highest priority
+          return (p2 ++ p1, Fibration lowerBound [fib1, fib2])
+        (OnionFilter a1 (OpOnionSub _) proj', _) | proj /= proj' ->
+          projectRemembering a1
+        (OnionFilter a1 (OpOnionProj _) proj', _) | proj == proj' ->
+          projectRemembering a1
+        _ -> return ([], blankFibrationFor lowerBound)
       where
         projectRemembering :: FlowTVar
                            -> ProjM db m ([Type db], Fibration db)

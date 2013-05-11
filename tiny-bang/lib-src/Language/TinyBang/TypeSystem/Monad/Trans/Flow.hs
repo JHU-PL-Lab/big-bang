@@ -19,7 +19,7 @@ import Data.Foldable
 -- |A datatype for constraint flow computations.
 newtype FlowT m a = FlowT (ListT m a)
   deriving (Monad, Functor, Applicative, MonadTrans, MonadPlus)
-
+  
 -- |Expands the underlying flow computation into its results.
 runFlowT :: FlowT m a -> m [a]
 runFlowT (FlowT listT) = runListT listT
