@@ -52,11 +52,7 @@ projectVar :: forall db m.
            -> FlowTVar
            -> ProjM db m ([Type db], Fibration db)
 projectVar check proj a = do
-  lowerBound <- (flow $
-                    (lift $
-                        (askLowerBounds a :: m (Set (Type db)))
-                      :: EitherT (ProjectionError db) m (Set (Type db)))
-                  :: ProjM db m (Type db))
+  lowerBound <- flow $ lift $ askLowerBounds a
   projectType lowerBound
   where
     projectType :: Type db -> ProjM db m ([Type db], Fibration db)
