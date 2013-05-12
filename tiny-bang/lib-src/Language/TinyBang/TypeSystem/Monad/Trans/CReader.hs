@@ -20,7 +20,7 @@ import Data.Set (Set)
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
-type CReader db a = CReaderT db Identity a
+type CReader db = CReaderT db Identity
 
 runCReader :: ConstraintDatabase db => CReader db a -> db -> a
 runCReader m = runIdentity . runCReaderT m
