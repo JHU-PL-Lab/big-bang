@@ -9,12 +9,8 @@ module Language.TinyBang.TypeSystem.InitialDerivation
 , initialDerivation
 ) where
 
-import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.ConstraintDatabase
-import Language.TinyBang.TypeSystem.ConstraintHistory
-import Language.TinyBang.TypeSystem.Types
-import qualified Language.TinyBang.Ast as A
-import qualified Language.TinyBang.TypeSystem.Types as T
+import Language.TinyBang.Ast as A
+import Language.TinyBang.TypeSystem.Types as T
 
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError

@@ -39,7 +39,8 @@ data Fibration db
 --  fibration which specifies a superset of the original fibrations' decisions.
 --  If the two input fibrations make conflicting decisions, this function will
 --  return Nothing.
-mergeFibrations :: Eq db => Fibration db -> Fibration db -> Maybe (Fibration db)
+mergeFibrations :: (ConstraintDatabase db)
+                => Fibration db -> Fibration db -> Maybe (Fibration db)
 mergeFibrations f1 f2 =
   case (f1,f2) of
     (_,Unexpanded) -> Just f1

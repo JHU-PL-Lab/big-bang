@@ -6,10 +6,11 @@ module Language.TinyBang.TypeSystem.Monad.Trans.CReader
 , runCReader
 , runCReaderT
 , askLowerBounds
+, askCellOrStoreBounds
 )
 where
 
-import Control.Applicative (Applicative, Alternative, (<$>), (<*>), pure)
+import Control.Applicative (Applicative, Alternative, (<$>))
 import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.List (ListT, mapListT)
 import Control.Monad.Reader (ReaderT, runReaderT, ask, local)
@@ -17,7 +18,6 @@ import Control.Monad.Trans (MonadTrans, lift)
 import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
 import Data.Set (Set)
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
 type CReader db = CReaderT db Identity
@@ -39,7 +39,6 @@ instance (Monad m, ConstraintDatabase db) => MonadCReader db (CReaderT db m) whe
   askDb = CReaderT ask
   localDb f (CReaderT m) = CReaderT $ local f m
 
-
 instance MonadCReader r m => MonadCReader r (ListT m) where
     askDb   = lift askDb
     localDb = mapListT . localDb
@@ -52,4 +51,8 @@ instance MonadCReader r m => MonadCReader r (MaybeT m) where
 
 askLowerBounds :: (Applicative m, MonadCReader db m)
                => FlowTVar -> m (Set (Type db))
-askLowerBounds a = getLowerBounds <$> askDb <*> pure a
+askLowerBounds a = getLowerBounds a <$> askDb
+
+askCellOrStoreBounds :: (Applicative m, MonadCReader db m)
+                     => CellTVar -> m (Set FlowTVar)
+askCellOrStoreBounds b = getCellOrStoreBounds b <$> askDb

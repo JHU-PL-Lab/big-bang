@@ -13,8 +13,6 @@ import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase
-import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Relations
 import Language.TinyBang.TypeSystem.Types
@@ -29,14 +27,14 @@ data SimpleConstraintDatabase
 
 instance ConstraintDatabase SimpleConstraintDatabase where
   empty = SimpleConstraintDatabase Set.empty Map.empty
-  add (SimpleConstraintDatabase cs hists) c hist =
+  add c hist (SimpleConstraintDatabase cs hists) =
     SimpleConstraintDatabase (Set.insert c cs) (Map.insert c hist hists)
   union (SimpleConstraintDatabase cs hists)
         (SimpleConstraintDatabase cs' hists') =
     SimpleConstraintDatabase (cs `Set.union` cs') (hists `Map.union` hists')
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
 
-  getLowerBounds (SimpleConstraintDatabase cs _) a =
+  getLowerBounds a (SimpleConstraintDatabase cs _) =
     Set.fromList $ mapMaybe lowerBoundConstraintMapper (Set.toList cs)
     where
       lowerBoundConstraintMapper c = case c of

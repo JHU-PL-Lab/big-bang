@@ -47,14 +47,14 @@ library
                    Data.NFA,
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.TypeInference,
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
-                   Language.TinyBang.TypeSystem.Monad.Trans.CReader
+                   Language.TinyBang.TypeSystem.Monad.Trans.CReader,
+                   Language.TinyBang.TypeSystem.Relations.Compatibility
 
 executable tiny-bang
   hs-source-dirs:  
@@ -96,12 +96,12 @@ executable tiny-bang
                    Data.NFA,
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.TypeInference,
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.Relations.Compatibility
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -130,9 +130,9 @@ executable tests
                    Data.NFA,
                    Language.TinyBang.TypeSystem.Relations,
                    Language.TinyBang.TypeSystem.Relations.Contours,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.TypeInference,
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.Relations.Compatibility

@@ -5,6 +5,7 @@
 -}
 module Language.TinyBang.TypeSystem.Relations.Projection
 ( ProjectionError(..)
+, ProjM
 , project
 , projectSingle
 ) where
@@ -17,7 +18,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
@@ -28,7 +28,7 @@ data ProjectionError db
   = NonContractiveType Projector (Type db) [FlowTVar]
 
 -- |An alias for the projection monad.
-type ProjM db m a = FlowT (EitherT (ProjectionError db) m) a
+type ProjM db m = FlowT (EitherT (ProjectionError db) m)
 
 -- |Computes the possible projections of a type variable and projector.  This
 --  operation occurs in the context of a constraint database.  This
@@ -41,7 +41,7 @@ project :: forall db m.
            (Applicative m, ConstraintDatabase db, MonadCReader db m)
         => Projector
         -> FlowTVar
-        -> FlowT (EitherT (ProjectionError db) m) ([Type db], Fibration db)
+        -> ProjM db m ([Type db], Fibration db)
 project = projectVar (Set.empty,[])
 
 type OccursCheck = (Set FlowTVar, [FlowTVar])
@@ -56,8 +56,7 @@ projectSingle :: forall db m.
                  (Applicative m, ConstraintDatabase db, MonadCReader db m)
               => Projector
               -> FlowTVar
-              -> FlowT (EitherT (ProjectionError db) m)
-                    (Maybe (Type db), Fibration db)
+              -> ProjM db m (Maybe (Type db), Fibration db)
 projectSingle proj a = do  
   (typs,fib) <- project proj a
   case typs of
