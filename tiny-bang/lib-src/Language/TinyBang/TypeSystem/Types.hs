@@ -196,6 +196,8 @@ class (Eq db) => ConstraintDatabase db where
   
   -- |Obtains the set of contours which appear in a database.
   getAllContours :: db -> Set Contour
+  -- |Instantiates contours on specific variables in a database.
+  instantiateContours :: Contour -> db -> db
   -- |Performs contour replacement on the contents of a database.
   replaceContours :: Contour -> db -> db
   

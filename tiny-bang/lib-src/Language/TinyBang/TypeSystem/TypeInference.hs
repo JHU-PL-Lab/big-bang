@@ -33,7 +33,7 @@ typecheck :: forall db. (ConstraintDatabase db)
           => Expr -> Either (TypecheckingError db) db
 typecheck expr = do
   derivDb::db <- bailWith InitialDerivationFailed $ initialDerivation expr
-  let startDb = replaceContours initialContour derivDb
+  let startDb = instantiateContours initialContour derivDb
   closedDb <- bailWith ClosureFailed $ calculateClosure startDb
   let inconsistencies = determineInconsistencies closedDb
   if Set.null inconsistencies
