@@ -38,6 +38,18 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Display
+  ( Display(..)
+  , (<>)
+  , (<+>)
+  , text
+  , char
+  , parens
+  , lbrace
+  , rbrace
+  , comma
+  , delimFillSep
+  , Doc)
 import Language.TinyBang.TypeSystem.Contours
 
 
@@ -202,4 +214,110 @@ class (Eq db) => ConstraintDatabase db where
 
 -- * Typeclass instances
 
--- TODO: Display instances
+instance (ConstraintDatabase db) => Display (Type db) where
+  makeDoc typ = case typ of
+    Primitive p -> makeDoc p
+    EmptyOnion -> text "()"
+    Label n b -> makeDoc n <+> makeDoc b
+    Onion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
+    OnionFilter a op proj -> makeDoc a <+> makeDoc op <+> makeDoc proj
+    Scape tpat a cs -> makeDoc tpat <+> text "->" <+> makeDoc a <+> char '\\'
+                          <+> delimFillSep lbrace rbrace comma
+                                (map makeDoc $ Set.toList $
+                                  getAllConstraints cs)
+                          
+instance Display PatternType where
+  makeDoc tpat = case tpat of
+    ValuePattern a tipat -> makeDoc a <> char '~' <> makeDoc tipat
+    ExnPattern a tipat -> text "exn" <+> makeDoc a <> char '~' <> makeDoc tipat
+    
+instance Display InnerPatternType where
+  makeDoc = makeDoc'
+    where
+      makeDoc' tipat = case tipat of
+        PrimitivePattern p -> makeDoc p
+        LabelPattern n b tipat' -> makeDoc n <+> makeDoc b <> char '~'
+                                      <> recurse tipat'
+        ConjunctivePattern tipat1 tipat2 -> recurse tipat1 <+> char '&'
+                                              <+> recurse tipat2
+        ScapePattern -> text "fun"
+        EmptyOnionPattern -> text "()"
+        where
+          precedence :: InnerPatternType -> Int
+          precedence tipat' = case tipat' of
+            PrimitivePattern _ -> atom
+            LabelPattern _ _ _ -> 9
+            ConjunctivePattern _ _ -> 4
+            ScapePattern -> atom
+            EmptyOnionPattern ->  atom
+            where
+              atom = -9999
+          recurse :: InnerPatternType -> Doc
+          recurse tipat' =
+            (if precedence tipat > precedence tipat'
+              then parens
+              else id)
+                $ makeDoc tipat'
+
+instance Display FlowTVar where
+  makeDoc (FlowTVar x pc) = makeDoc x <> char '^' <> makeDoc pc
+
+instance Display CellTVar where
+  makeDoc (CellTVar y pc) = makeDoc y <> char '^' <> makeDoc pc
+  
+subdoc :: Doc
+subdoc = text "<:"
+  
+instance (ConstraintDatabase db) => Display (Constraint db) where
+  makeDoc c = case c of
+    WrapIntermediateConstraint arg -> makeDoc arg
+    WrapTypeConstraint arg -> makeDoc arg
+    WrapApplicationConstraint arg -> makeDoc arg
+    WrapOperationConstraint arg -> makeDoc arg
+    WrapCellCreationConstraint arg -> makeDoc arg
+    WrapCellLoadingConstraint arg -> makeDoc arg
+    WrapCellSettingConstraint arg -> makeDoc arg
+    WrapFinalConstraint arg -> makeDoc arg
+    WrapImmutableConstraint arg -> makeDoc arg
+    WrapFlowConstraint arg -> makeDoc arg
+    WrapExceptionConstraint arg -> makeDoc arg
+    
+instance Display IntermediateConstraint where
+  makeDoc (IntermediateConstraint a a') = makeDoc a <+> subdoc <+> makeDoc a'
+
+instance (ConstraintDatabase db) => Display (TypeConstraint db) where
+  makeDoc (TypeConstraint t a) = makeDoc t <+> subdoc <+> makeDoc a
+  
+instance Display ApplicationConstraint where
+  makeDoc (ApplicationConstraint a a' a'') =
+    makeDoc a <+> makeDoc a' <+> subdoc <+> makeDoc a''
+
+instance Display OperationConstraint where
+  makeDoc (OperationConstraint a op a' a'') =
+    makeDoc a <+> makeDoc op <+> makeDoc a' <+> subdoc <+> makeDoc a''
+
+instance Display CellCreationConstraint where
+  makeDoc (CellCreationConstraint a b) =
+    text "cell" <+> makeDoc a <+> subdoc <+> makeDoc b
+
+instance Display CellLoadingConstraint where
+  makeDoc (CellLoadingConstraint b a) =
+    text "load" <+> makeDoc b <+> subdoc <+> makeDoc a
+
+instance Display CellSettingConstraint where
+  makeDoc (CellSettingConstraint a b) =
+    text "store" <+> makeDoc a <+> subdoc <+> makeDoc b
+
+instance Display FinalConstraint where
+  makeDoc (FinalConstraint b) = text "final" <+> makeDoc b
+
+instance Display ImmutableConstraint where
+  makeDoc (ImmutableConstraint b) = text "immut" <+> makeDoc b
+
+instance Display FlowConstraint where
+  makeDoc (FlowConstraint a k a') =
+    makeDoc a <+> makeDoc k <> subdoc <+> makeDoc a'                                     
+
+instance Display ExceptionConstraint where
+  makeDoc (ExceptionConstraint a a') =
+    text "exn" <+> makeDoc a <+> subdoc <+> makeDoc a'

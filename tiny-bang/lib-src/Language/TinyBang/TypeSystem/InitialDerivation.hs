@@ -10,6 +10,7 @@ module Language.TinyBang.TypeSystem.InitialDerivation
 ) where
 
 import Language.TinyBang.Ast as A
+import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types as T
 
 -- |A datatype for errors which may occur during initial derivation.
@@ -44,7 +45,7 @@ clauseListDerivation cls =
       (mtvar, db::db) <- clauseDerivation cl
       case cls' of
         [] -> case mtvar of
-          Just a@(FlowTVar _ Nothing) ->
+          Just a@(FlowTVar _ (PossibleContour Nothing)) ->
             return (a, db)
           _ -> error $
             "Expression's last clause derived with bad type variable ("
@@ -156,8 +157,8 @@ innerPatternDerivation ipat = case ipat of
 
 -- |Creates a type variable for the specified flow variable.
 derivFlowVar :: FlowVar -> FlowTVar
-derivFlowVar x = FlowTVar x Nothing
+derivFlowVar x = FlowTVar x noContour
 
 -- |Creates a type variable for the specified cell variable.
 derivCellVar :: CellVar -> CellTVar
-derivCellVar y = CellTVar y Nothing
+derivCellVar y = CellTVar y noContour

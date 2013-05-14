@@ -16,6 +16,7 @@ import qualified Data.List as List
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
 
@@ -23,9 +24,10 @@ import Language.TinyBang.TypeSystem.Types
 tMakeCntr :: FlowTVar -> Contour
 tMakeCntr (FlowTVar x pcn) =
   case pcn of
-    Nothing -> error $ "tMakeCntr called on non-contoured variable at "
-                        ++ show x -- TODO: perhaps use Display?
-    Just cn -> contour $ Set.map extendStrand $ unContour cn
+    PossibleContour Nothing ->
+      error $ "tMakeCntr called on non-contoured variable at " ++ display x
+    PossibleContour (Just cn) ->
+      contour $ Set.map extendStrand $ unContour cn
   where
     extendStrand :: ContourStrand -> ContourStrand
     extendStrand (ContourStrand es) =
@@ -180,6 +182,9 @@ instance ContourExtractable InnerPatternType where
       extractContours ipat `Set.union` extractContours ipat'
     ScapePattern -> Set.empty
     EmptyOnionPattern -> Set.empty
+    
+instance ContourExtractable PossibleContour where
+  extractContours (PossibleContour mcn) = extractContours mcn
 
 instance ContourExtractable Contour where
   extractContours = Set.singleton

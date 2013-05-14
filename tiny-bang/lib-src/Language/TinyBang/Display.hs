@@ -17,6 +17,7 @@ module Language.TinyBang.Display
 , module Text.PrettyPrint.Leijen
 , delimSepDoc
 , sepDoc
+, delimFillSep
 , binaryOpDoc
 , denseDisplay
 ) where
@@ -74,12 +75,25 @@ delimSepDoc l r delim xs =
           else (map (<> delim) $ init xs) ++ [last xs]
   in
   l <> group (align (vsep ds)) <> r
-
+  
 -- |A simpler version of @delimSepDoc@ which uses empty delimiters.  This is
 --  still useful for grouping elements by a delimiter and having the all-or-
 --  nothing newline property.
 sepDoc :: Doc -> [Doc] -> Doc
 sepDoc = delimSepDoc empty empty
+
+-- |Defines a utility function for concatenation of elements.  The given list
+--  will be concatenated by a separator and surrounded in delimiters.  The
+--  elements will be indented under the open delimiter.  This packs elements
+--  as efficiently as possible in a group in order to avoid wasting space.
+delimFillSep :: Doc -> Doc -> Doc -> [Doc] -> Doc
+delimFillSep l r delim xs =
+  let ds =
+        if null xs
+          then []
+          else (map (<> delim) $ init xs) ++ [last xs]
+  in
+  l <> fillSep ds <> r
 
 -- |A binary version of @sepDoc@ which does makeDoc translation.
 binaryOpDoc :: (Display x, Display y, Display z) => x -> y -> z -> Doc

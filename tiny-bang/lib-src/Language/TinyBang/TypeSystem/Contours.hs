@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances #-}
 
 module Language.TinyBang.TypeSystem.Contours
 ( ContourElement(..)
@@ -7,10 +7,11 @@ module Language.TinyBang.TypeSystem.Contours
 , Contour
 , contour
 , unContour
-, PossibleContour
+, PossibleContour(..)
 , subsumedBy
 , overlap
 , initialContour
+, noContour
 ) where
 
 import Data.Set (Set)
@@ -18,6 +19,7 @@ import qualified Data.Set as Set
 
 import qualified Data.NFA as NFA
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 
 newtype ContourElement = ContourElement FlowVar
   deriving (Eq, Ord, Show)
@@ -31,7 +33,9 @@ newtype ContourStrand = ContourStrand [ContourPart]
   deriving (Eq, Ord, Show)
 
 data Contour = Contour (Set ContourStrand) ContourNfa
-type PossibleContour = Maybe Contour
+
+newtype PossibleContour = PossibleContour (Maybe Contour)
+  deriving (Eq, Ord, Show)
 
 data ContourNfa
   = forall a. (Eq a, Ord a) => ContourNfa (NFA.Nfa a ContourElement)
@@ -56,6 +60,10 @@ overlap (Contour _ (ContourNfa nfa1)) (Contour _ (ContourNfa nfa2)) =
 -- | The initial contour.
 initialContour :: Contour
 initialContour = contour $ Set.singleton $ ContourStrand []
+
+-- | The non-contour.
+noContour :: PossibleContour
+noContour = PossibleContour Nothing
 
 -- | Creates a type contour from just a set of strands.  This function is the
 --   normal constructor for type contours; it generates an NFA from the strands
@@ -88,3 +96,21 @@ nfaFromContourStrand (ContourStrand parts) =
           (idx, Nothing, idx + 1) :
             map (\ e -> (idx, Just e, idx)) (Set.toList es)
 
+instance Display PossibleContour where
+  makeDoc pc = case pc of
+    PossibleContour Nothing -> char '*'
+    PossibleContour (Just cn) -> makeDoc cn
+    
+instance Display Contour where
+  makeDoc cn = makeDoc $ unContour cn
+
+instance Display ContourStrand where
+  makeDoc (ContourStrand parts) = makeDoc parts
+  
+instance Display ContourPart where
+  makeDoc part = case part of
+    SinglePart e -> makeDoc e
+    SetPart es -> makeDoc es
+
+instance Display ContourElement where
+  makeDoc (ContourElement x) = makeDoc x
