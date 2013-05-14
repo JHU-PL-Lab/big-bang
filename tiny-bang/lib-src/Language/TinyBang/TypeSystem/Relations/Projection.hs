@@ -72,7 +72,8 @@ projectVar :: forall db m.
            -> FlowTVar
            -> ProjM db m ([Type db], Fibration db)
 projectVar check proj a = do
-  lowerBound <- flow $ lift $ askLowerBounds a
+  TypeConstraint lowerBound _ <-
+      flow $ lift $ getTypeConstraintsByUpperBound a <$> askDb
   projectType lowerBound
   where
     projectType :: Type db -> ProjM db m ([Type db], Fibration db)

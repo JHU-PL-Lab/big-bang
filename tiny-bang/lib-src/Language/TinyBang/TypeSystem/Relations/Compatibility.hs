@@ -109,7 +109,7 @@ checkInnerCompatible a1 tipat =
         then return (Nothing, fib)
         else do
           let (Label _ b3) = head typs
-          a4 <- flow $ lift $ askCellOrStoreBounds b3
+          a4 <- flow $ lift $ getCellOrStoreBounds b3 <$> askDb
           (msubsts, fib1') <- checkInnerCompatible a4 tipat'
           case mergeFibrations fib1 fib1' of
             Nothing -> mzero

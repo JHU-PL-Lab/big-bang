@@ -32,13 +32,16 @@ instance ConstraintDatabase SimpleConstraintDatabase where
   union (SimpleConstraintDatabase cs hists)
         (SimpleConstraintDatabase cs' hists') =
     SimpleConstraintDatabase (cs `Set.union` cs') (hists `Map.union` hists')
+    
   getAllConstraints (SimpleConstraintDatabase cs _) = cs
-  getLowerBounds a (SimpleConstraintDatabase cs _) =
+  
+  getTypeConstraintsByUpperBound a (SimpleConstraintDatabase cs _) =
     Set.fromList $ mapMaybe getLowerBound $ Set.toList cs
     where
       getLowerBound c = case c of
-        WrapTypeConstraint (TypeConstraint typ a') | a == a' -> Just typ
+        WrapTypeConstraint tc@(TypeConstraint _ a') | a == a' -> Just tc
         _ -> Nothing
+
   getCellOrStoreBounds b (SimpleConstraintDatabase cs _) =
     Set.fromList $ mapMaybe getCellOrStoreBound $ Set.toList cs
     where

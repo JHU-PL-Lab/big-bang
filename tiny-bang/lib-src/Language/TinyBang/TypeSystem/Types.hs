@@ -28,6 +28,7 @@ module Language.TinyBang.TypeSystem.Types
 
 , ConstraintHistory(..)
 , SourceElement(..)
+, ClosureRule(..)
 
 , ConstraintDatabase(..)
 ) where
@@ -155,8 +156,9 @@ data ExceptionConstraint = ExceptionConstraint FlowTVar FlowTVar
 data ConstraintHistory db
   = DerivedFromSource SourceElement
   | CompatibilityWiring -- TODO: more info?
+  | DerivedFromClosure (ClosureRule db)
   deriving (Eq, Ord, Show)
-
+  
 data SourceElement
   = ClauseElement A.Clause
   | PatternElement A.Pattern
@@ -168,7 +170,10 @@ instance A.HasOrigin SourceElement where
     ClauseElement cl -> A.originOf cl
     PatternElement pat -> A.originOf pat
     QualifierElement q -> A.originOf q
-
+    
+data ClosureRule db
+  = TransitivityRule (TypeConstraint db) IntermediateConstraint
+  deriving (Eq, Ord, Show)
 
 -- * Constraint databases
 
@@ -182,10 +187,18 @@ class (Eq db) => ConstraintDatabase db where
   --  ordering of the arguments, it will generally be in favor of the first
   --  database being the larger one.
   union :: db -> db -> db
+
   -- |Retrieves all constraints stored in this database.
   getAllConstraints :: db -> Set (Constraint db)
-  -- |Finds all lower bounds for the provided type variable.
-  getLowerBounds :: FlowTVar -> db -> Set (Type db)
+  -- |Retrieves all type constraints from this database.
+  getTypeConstraints :: db -> Set (TypeConstraint db)
+  
+  -- |Finds all type constraints with the provided upper bound.
+  getTypeConstraintsByUpperBound :: FlowTVar -> db -> Set (TypeConstraint db)
+  -- |Finds all intermediate constraints with the provided lower bound.
+  getIntermediateConstraintsByLowerBound :: FlowTVar -> db
+                                         -> Set IntermediateConstraint
+  
   -- |Finds all cell assignment and construction bounds for the provided cell
   --  variable.
   getCellOrStoreBounds :: CellTVar -> db -> Set FlowTVar
