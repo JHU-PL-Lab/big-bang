@@ -66,30 +66,30 @@ clauseDerivation clause =
       let constraint = case r of
             Define _ x2 ->
               let a2 = derivFlowVar x2 in
-              WrapIntermediateConstraint $ IntermediateConstraint a2 a1
+              cwrap $ IntermediateConstraint a2 a1
             Appl _ x2 x3 ->
               let a2 = derivFlowVar x2 in
               let a3 = derivFlowVar x3 in
-              WrapApplicationConstraint $ ApplicationConstraint a2 a3 a1
+              cwrap $ ApplicationConstraint a2 a3 a1
             BinOp _ x2 op x3 ->
               let a2 = derivFlowVar x2 in
               let a3 = derivFlowVar x3 in
-              WrapOperationConstraint $ OperationConstraint a2 op a3 a1              
+              cwrap $ OperationConstraint a2 op a3 a1              
       in return (Just a1, singleton constraint history)
     CellSet _ y x ->
       let a = derivFlowVar x in
       let b = derivCellVar y in
-      let constraint = WrapCellSettingConstraint $ CellSettingConstraint a b in
+      let constraint = cwrap $ CellSettingConstraint a b in
       return (Nothing, singleton constraint history)
     CellGet _ x y ->
       let a = derivFlowVar x in
       let b = derivCellVar y in
-      let constraint = WrapCellLoadingConstraint $ CellLoadingConstraint b a in
+      let constraint = cwrap $ CellLoadingConstraint b a in
       return (Nothing, singleton constraint history)
     Throws _ x1 x2 ->
       let a1 = derivFlowVar x1 in
       let a2 = derivFlowVar x2 in
-      let constraint = WrapExceptionConstraint $ ExceptionConstraint a2 a1 in
+      let constraint = cwrap $ ExceptionConstraint a2 a1 in
       return (Just a1, singleton constraint history)
     Evaluated ecl -> case ecl of
       ValueDef _ x1 v -> do
@@ -118,18 +118,18 @@ clauseDerivation clause =
         let qhist = DerivedFromSource $ QualifierElement q in
         let qdb =  case q of
                     QualFinal _ -> singleton
-                        (WrapFinalConstraint $ FinalConstraint b) qhist
+                        (cwrap $ FinalConstraint b) qhist
                     QualImmutable _ -> singleton
-                        (WrapImmutableConstraint $ ImmutableConstraint b) qhist
+                        (cwrap $ ImmutableConstraint b) qhist
                     QualNone _ -> empty
         in
-        let constraint = WrapCellCreationConstraint $
+        let constraint = cwrap $
                             CellCreationConstraint a b in
         return (Nothing, singleton constraint history `union` qdb)
       Flow _ x1 k x2 ->
         let a1 = derivFlowVar x1 in
         let a2 = derivFlowVar x2 in
-        let constraint = WrapFlowConstraint $ FlowConstraint a1 k a2 in
+        let constraint = cwrap $ FlowConstraint a1 k a2 in
         return (Nothing, singleton constraint history)
       
 -- |Performs initial derivation for patterns.

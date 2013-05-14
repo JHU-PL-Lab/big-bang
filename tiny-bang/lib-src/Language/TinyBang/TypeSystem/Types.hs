@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-} 
+
 {-|
   This module contains the Haskell data types for basic types, type variables,
   and constraints in TinyBang.  This module's constructors overlap with the
@@ -25,6 +27,7 @@ module Language.TinyBang.TypeSystem.Types
 , ImmutableConstraint(..)
 , FlowConstraint(..)
 , ExceptionConstraint(..)
+, ConstraintWrappable(..)
 
 , ConstraintHistory(..)
 , SourceElement(..)
@@ -149,7 +152,34 @@ data FlowConstraint = FlowConstraint FlowTVar A.FlowKind FlowTVar
 
 data ExceptionConstraint = ExceptionConstraint FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
-
+  
+-- |A convenience typeclass which intelligently wraps contraints based on their
+--  type.
+class ConstraintWrappable db a where
+  cwrap :: a -> Constraint db
+  
+instance ConstraintWrappable db IntermediateConstraint where
+  cwrap = WrapIntermediateConstraint
+instance ConstraintWrappable db (TypeConstraint db) where
+  cwrap = WrapTypeConstraint
+instance ConstraintWrappable db ApplicationConstraint where
+  cwrap = WrapApplicationConstraint
+instance ConstraintWrappable db OperationConstraint where
+  cwrap = WrapOperationConstraint
+instance ConstraintWrappable db CellCreationConstraint where
+  cwrap = WrapCellCreationConstraint
+instance ConstraintWrappable db CellLoadingConstraint where
+  cwrap = WrapCellLoadingConstraint
+instance ConstraintWrappable db CellSettingConstraint where
+  cwrap = WrapCellSettingConstraint
+instance ConstraintWrappable db FinalConstraint where
+  cwrap = WrapFinalConstraint
+instance ConstraintWrappable db ImmutableConstraint where
+  cwrap = WrapImmutableConstraint
+instance ConstraintWrappable db FlowConstraint where
+  cwrap = WrapFlowConstraint
+instance ConstraintWrappable db ExceptionConstraint where
+  cwrap = WrapExceptionConstraint
 
 -- * Constraint history
 

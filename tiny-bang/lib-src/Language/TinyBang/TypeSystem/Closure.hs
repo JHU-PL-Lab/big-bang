@@ -35,4 +35,4 @@ transitivity = do
   ic@(IntermediateConstraint _ a') <-
       flow $ lift $ getIntermediateConstraintsByLowerBound a <$> askDb
   let history = DerivedFromClosure $ TransitivityRule tc ic
-  return $ singleton (WrapTypeConstraint $ TypeConstraint t a') history
+  return $ singleton (cwrap $ TypeConstraint t a') history
