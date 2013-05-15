@@ -24,6 +24,7 @@ module Language.TinyBang.TypeSystem.Fibrations
 import Control.Applicative  ((<$>))
 import Control.Monad (zipWithM)
 
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
 -- |A data structure representing fibrations.  Each fibration level describes

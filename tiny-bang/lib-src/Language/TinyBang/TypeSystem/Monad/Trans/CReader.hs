@@ -15,6 +15,7 @@ import Control.Monad.Reader (ReaderT, runReaderT, ask, local)
 import Control.Monad.Trans (MonadTrans, lift)
 import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
 
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
 type CReader db = CReaderT db Identity

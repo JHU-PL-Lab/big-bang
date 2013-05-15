@@ -10,6 +10,9 @@ module Language.TinyBang.TypeSystem.InitialDerivation
 ) where
 
 import Language.TinyBang.Ast as A
+import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types as T
 

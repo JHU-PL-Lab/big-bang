@@ -13,6 +13,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Closure
 import Language.TinyBang.TypeSystem.Inconsistency

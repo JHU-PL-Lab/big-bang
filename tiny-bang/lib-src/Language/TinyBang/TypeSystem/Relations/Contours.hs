@@ -17,6 +17,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Display
+import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
 

@@ -9,6 +9,7 @@ module Language.TinyBang.TypeSystem.Inconsistency
 
 import Data.Set (Set)
 
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
 data Inconsistency

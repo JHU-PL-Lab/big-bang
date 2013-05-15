@@ -13,6 +13,9 @@ import Control.Monad.Trans.Either
 import Data.Maybe
 
 import Language.TinyBang.Ast
+import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Relations.Projection
@@ -54,12 +57,9 @@ closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerCalculations = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerCalculationConstraints <$> askDb
-  (r1,_) <- liftClosure $ projectSingle (projPrim primInt) a2
-  guard $ isJust r1
-  (r2,_) <- liftClosure $ projectSingle (projPrim primInt) a3
-  guard $ isJust r2
-  let history = DerivedFromClosure $ IntegerOperationRule
-                    oc ProjectionResult ProjectionResult
+  r1 <- projectSingleResult (projPrim primInt) a2
+  r2 <- projectSingleResult (projPrim primInt) a3
+  let history = DerivedFromClosure $ IntegerOperationRule oc r1 r2
   return $ singleton
     (WrapTypeConstraint $ TypeConstraint (Primitive primInt) a1) history
 
@@ -71,9 +71,16 @@ closeIntegerComparisons :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerComparisons = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerOperationConstraints <$> askDb
-  (r1,_) <- liftClosure $ projectSingle (projPrim primInt) a2
-  guard $ isJust r1
-  (r2,_) <- liftClosure $ projectSingle (projPrim primInt) a3
-  guard $ isJust r2
+  r1 <- projectSingleResult (projPrim primInt) a2
+  r2 <- projectSingleResult (projPrim primInt) a3
   
   undefined -- TODO
+  
+-- |Performs a single projection which is assumed to succeed.
+projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
+                       , Functor m, Applicative m )
+                    => Projector -> FlowTVar -> ProjectionResult
+projectSingleResult proj a = do
+  (r,f) <- liftClosure $ projectSingle proj a
+  guard $ isJust r
+  return $ ProjectionResult proj a r f

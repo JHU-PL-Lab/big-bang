@@ -18,6 +18,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
