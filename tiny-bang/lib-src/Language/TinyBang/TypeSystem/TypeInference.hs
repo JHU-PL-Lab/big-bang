@@ -22,7 +22,7 @@ import Language.TinyBang.TypeSystem.Types
 -- |A data structure defining typechecking errors.
 data TypecheckingError db
   = InitialDerivationFailed InitialDerivationError
-  | ClosureFailed ClosureError
+  | ClosureFailed (ClosureError db)
   | ClosureInconsistent (Set Inconsistency) db 
 
 -- |A function which performs top-level typechecking.  The caller must

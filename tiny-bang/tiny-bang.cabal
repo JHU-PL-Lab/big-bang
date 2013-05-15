@@ -54,7 +54,8 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
-                   Language.TinyBang.TypeSystem.Relations.Compatibility
+                   Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints
 
 executable tiny-bang
   hs-source-dirs:  
@@ -101,7 +102,8 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
-                   Language.TinyBang.TypeSystem.Relations.Compatibility
+                   Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -135,4 +137,5 @@ executable tests
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
-                   Language.TinyBang.TypeSystem.Relations.Compatibility
+                   Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints

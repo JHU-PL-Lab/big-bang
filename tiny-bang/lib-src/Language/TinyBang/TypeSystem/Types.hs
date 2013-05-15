@@ -32,6 +32,7 @@ module Language.TinyBang.TypeSystem.Types
 , ConstraintHistory(..)
 , SourceElement(..)
 , ClosureRule(..)
+, ProjectionResult(..)
 
 , ConstraintDatabase(..)
 ) where
@@ -86,11 +87,13 @@ data InnerPatternType
   deriving (Eq, Ord, Show)
 
 -- |Represents cell type variables.
-data CellTVar = CellTVar A.CellVar PossibleContour
+data CellTVar
+  = CellTVar A.CellVar PossibleContour
   deriving (Eq, Ord, Show)
-
+  
 -- |Represents flow type variables.
-data FlowTVar = FlowTVar A.FlowVar PossibleContour
+data FlowTVar
+  = FlowTVar A.FlowVar PossibleContour
   deriving (Eq, Ord, Show)
   
 -- |A wrapper for any type variable.
@@ -202,7 +205,17 @@ instance A.HasOrigin SourceElement where
     QualifierElement q -> A.originOf q
     
 data ClosureRule db
-  = TransitivityRule (TypeConstraint db) IntermediateConstraint
+  = TransitivityRule
+      (TypeConstraint db) -- ^ The triggering constraint.
+      IntermediateConstraint -- ^ The intermediate transitivity constraint.
+  | IntegerOperationRule
+      OperationConstraint -- ^ The triggering constraint.
+      (ProjectionResult db) -- ^ The proof of integer projection for the left.
+      (ProjectionResult db) -- ^ The proof of integer projection for the right.
+  deriving (Eq, Ord, Show)
+  
+data ProjectionResult db
+  = ProjectionResult -- TODO: A.Projector FlowTVar [Type db] (Fibration db)
   deriving (Eq, Ord, Show)
 
 -- * Constraint databases
@@ -222,6 +235,16 @@ class (Eq db) => ConstraintDatabase db where
   getAllConstraints :: db -> Set (Constraint db)
   -- |Retrieves all type constraints from this database.
   getTypeConstraints :: db -> Set (TypeConstraint db)
+  -- |Retrieves all integer calculation constraints from this database.  These
+  --  are operation constraints for which the operator is either plus or minus.
+  getIntegerCalculationConstraints :: db -> Set OperationConstraint
+  -- |Retrieves all integer comparison constraints from this database.  These
+  --  are operation constraints for which the operator is either greater-than
+  --  or less-than.
+  getIntegerOperationConstraints :: db -> Set OperationConstraint
+  -- |Retrieves all equality constraints from this database.  These are
+  --  operation constraints for which the operator is equality.
+  getEqualityConstraints :: db -> Set OperationConstraint
   
   -- |Finds all type constraints with the provided upper bound.
   getTypeConstraintsByUpperBound :: FlowTVar -> db -> Set (TypeConstraint db)
