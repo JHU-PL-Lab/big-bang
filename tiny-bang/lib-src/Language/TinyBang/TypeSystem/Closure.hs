@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
@@ -13,6 +14,7 @@ import Control.Monad.Trans.Either
 import Data.Maybe
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -35,6 +37,8 @@ calculateClosure = undefined -- TODO
 -- |The monad under which each closure step occurs.
 type ClosureM db m = FlowT (EitherT (ClosureError db) m)
 
+-- * Closure routines
+
 -- |Calculates transitivity closures in the constraint database.  The resulting
 --  databases contain the new constraints concluded from this operation.
 closeTransitivity :: ( ConstraintDatabase db, MonadCReader db m, Functor m
@@ -47,9 +51,6 @@ closeTransitivity = do
   let history = DerivedFromClosure $ TransitivityRule tc ic
   return $ singleton (cwrap $ TypeConstraint t a') history
   
-liftClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
-liftClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
-
 -- |Calculates integer operation closures in the constraint database.
 closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
                             , Functor m, Applicative m )
@@ -73,14 +74,77 @@ closeIntegerComparisons = do
       flow $ lift $ getIntegerOperationConstraints <$> askDb
   r1 <- projectSingleResult (projPrim primInt) a2
   r2 <- projectSingleResult (projPrim primInt) a3
+  doEqualityFor a1 oc $ DerivedFromClosure $ IntegerCalculationRule oc r1 r2
+          
+-- |Calculates equality operations in the constraint database.
+closeEquality :: ( ConstraintDatabase db, MonadCReader db m, Functor m
+                 , Applicative m )
+              => ClosureM db m db
+closeEquality = do
+  oc@(OperationConstraint a2 _ a3 a1) <-
+      flow $ lift $ getEqualityConstraints <$> askDb
+  doEqualityFor a1 oc $ DerivedFromClosure $ EqualityRule oc
   
-  undefined -- TODO
+-- |Calculates cell propagation closure.
+closeCellPropagation :: ( ConstraintDatabase db, MonadCReader db m
+                        , Functor m, Applicative m )
+                     => ClosureM db m db
+closeCellPropagation = do
+  lc@(CellLoadingConstraint b a) <-
+      flow $ lift $ getCellLoadingConstraints <$> askDb
+  lbc <- flow $ lift $ getCellLowerBoundConstraints b <$> askDb
+  let a' = lowerBoundOf lbc
+  let history = DerivedFromClosure $ CellPropagationRule lc lbc
+  return $ singleton (cwrap $ IntermediateConstraint a' a) history
+  
+-- |Calculates exception propagation closure.
+closeExceptionPropagation :: ( ConstraintDatabase db, MonadCReader db m
+                             , Functor m, Applicative m )
+                          => ClosureM db m db
+closeExceptionPropagation = do
+  ec@(ExceptionConstraint a2 a1) <-
+      flow $ lift $ getExceptionConstraints <$> askDb
+  fc@(FlowConstraint _ _ a3) <-
+      flow $ lift $ getFlowConstraintsByLowerBound a1 FlowExn <$> askDb
+  let history = DerivedFromClosure $ ExceptionPropagationRule ec fc
+  return $ singleton (cwrap $ ExceptionConstraint a2 a3) history
+
+-- * Utility functions
+
+-- |Lifts operations into the closure monad.
+liftClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
+liftClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+
+-- |Creates a database with equality constraints over the specified type
+--  variable.
+doEqualityFor :: ( ConstraintDatabase db, MonadCReader db m, Functor m
+                 , Applicative m )
+              => FlowTVar -> OperationConstraint -> ConstraintHistory db
+              -> ClosureM db m db
+doEqualityFor a1 oc history =
+  case a1 of
+    GenFlowTVar _ _ ->
+      error $ "How did a generated flow variable (" ++ display a1
+        ++ ") appear as the upper bound of an integer comparison ("
+        ++ display oc ++ ")?" 
+    FlowTVar x pc ->
+      let a' = GenFlowTVar x pc in
+      let b' = GenCellTVar x pc in
+      let labelTrue = LabelName (ComputedOrigin []) "True" in
+      let labelFalse = LabelName (ComputedOrigin []) "False" in
+      return $ fromList $ map (,history)
+          [ WrapTypeConstraint $ TypeConstraint EmptyOnion a'
+          , WrapCellCreationConstraint $ CellCreationConstraint a' b'
+          , WrapTypeConstraint $ TypeConstraint (Label labelTrue b') a1
+          , WrapTypeConstraint $ TypeConstraint (Label labelFalse b') a1
+          ]
   
 -- |Performs a single projection which is assumed to succeed.
 projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
                        , Functor m, Applicative m )
-                    => Projector -> FlowTVar -> ProjectionResult
+                    => Projector -> FlowTVar
+                    -> ClosureM db m (ProjectionResult db)
 projectSingleResult proj a = do
   (r,f) <- liftClosure $ projectSingle proj a
   guard $ isJust r
-  return $ ProjectionResult proj a r f
+  return $ SingleProjectionResult proj a r f

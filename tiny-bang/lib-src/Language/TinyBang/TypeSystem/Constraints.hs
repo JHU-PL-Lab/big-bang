@@ -2,6 +2,8 @@
 
 module Language.TinyBang.TypeSystem.Constraints
 ( Constraint(..)
+, CellLowerBoundingConstraint(..)
+
 , IntermediateConstraint(..)
 , TypeConstraint(..)
 , ApplicationConstraint(..)
@@ -13,13 +15,17 @@ module Language.TinyBang.TypeSystem.Constraints
 , ImmutableConstraint(..)
 , FlowConstraint(..)
 , ExceptionConstraint(..)
+
 , ConstraintWrappable(..)
+, lowerBoundOf
 ) where
 
 import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.TypeSystem.Utils.DocumentContainer
+
+-- * Constraint wrappers
 
 -- |Represents TinyBang type constraints.  Parametric in the type of database
 --  which appears in the scape types within these constraints.
@@ -37,6 +43,13 @@ data Constraint db
   | WrapExceptionConstraint ExceptionConstraint
   deriving (Eq, Ord, Show)
 
+data CellLowerBoundingConstraint
+  = CellCreationLowerBoundingConstraint CellCreationConstraint
+  | CellSettingLowerBoundingConstraint CellSettingConstraint
+  deriving (Eq, Ord, Show)
+  
+-- * Constraint types
+  
 data IntermediateConstraint = IntermediateConstraint FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
   
@@ -72,6 +85,8 @@ data FlowConstraint = FlowConstraint FlowTVar A.FlowKind FlowTVar
 data ExceptionConstraint = ExceptionConstraint FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
   
+-- * Convenience definitions
+  
 -- |A convenience typeclass which intelligently wraps contraints based on their
 --  type.
 class ConstraintWrappable db a where
@@ -99,6 +114,11 @@ instance ConstraintWrappable db FlowConstraint where
   cwrap = WrapFlowConstraint
 instance ConstraintWrappable db ExceptionConstraint where
   cwrap = WrapExceptionConstraint
+  
+lowerBoundOf :: CellLowerBoundingConstraint -> FlowTVar
+lowerBoundOf c = case c of
+  CellCreationLowerBoundingConstraint (CellCreationConstraint a _) -> a
+  CellSettingLowerBoundingConstraint (CellSettingConstraint a _) -> a
 
 -- Display instance code
 
@@ -158,3 +178,8 @@ instance Display FlowConstraint where
 instance Display ExceptionConstraint where
   makeDoc (ExceptionConstraint a a') =
     text "exn" <+> makeDoc a <+> subdoc <+> makeDoc a'
+
+instance Display CellLowerBoundingConstraint where
+  makeDoc arg = case arg of
+    CellCreationLowerBoundingConstraint c -> makeDoc c
+    CellSettingLowerBoundingConstraint c -> makeDoc c

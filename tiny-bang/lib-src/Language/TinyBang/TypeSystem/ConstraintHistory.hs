@@ -36,6 +36,19 @@ data ClosureRule db
       OperationConstraint -- ^ The triggering constraint.
       (ProjectionResult db) -- ^ The proof of integer projection for the left.
       (ProjectionResult db) -- ^ The proof of integer projection for the right.
+  | IntegerCalculationRule
+      OperationConstraint -- ^ The triggering constraint.
+      (ProjectionResult db) -- ^ The proof of integer projection for the left.
+      (ProjectionResult db) -- ^ The proof of integer projection for the right.
+  | EqualityRule
+      OperationConstraint -- ^ The triggering constraint.
+  | CellPropagationRule
+      CellLoadingConstraint -- ^ The triggering constraint
+      CellLowerBoundingConstraint -- ^ The constraint which sets the cell lower
+                                  --   bound.
+  | ExceptionPropagationRule
+      ExceptionConstraint -- ^ The triggering constraint.
+      FlowConstraint -- ^ The flow constraint over which the exception moves.
   deriving (Eq, Ord, Show)
   
 data ProjectionResult db

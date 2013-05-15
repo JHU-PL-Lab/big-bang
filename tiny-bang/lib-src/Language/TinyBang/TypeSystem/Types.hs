@@ -66,11 +66,17 @@ data InnerPatternType
 -- |Represents cell type variables.
 data CellTVar
   = CellTVar A.CellVar PossibleContour
+      -- ^ Standard cell type variables
+  | GenCellTVar A.FlowVar PossibleContour
+      -- ^ Cell type variables modeling the @CVar@ function in the TinyBang spec
   deriving (Eq, Ord, Show)
   
 -- |Represents flow type variables.
 data FlowTVar
   = FlowTVar A.FlowVar PossibleContour
+      -- ^ Standard flow type variables
+  | GenFlowTVar A.FlowVar PossibleContour
+      -- ^ Flow type variables modeling the @FVar@ function in the TinyBang spec
   deriving (Eq, Ord, Show)
   
 -- |A wrapper for any type variable.
@@ -113,10 +119,14 @@ instance Display InnerPatternType where
                 $ makeDoc tipat'
 
 instance Display FlowTVar where
-  makeDoc (FlowTVar x pc) = makeDoc x <> char '^' <> makeDoc pc
+  makeDoc a = case a of
+    FlowTVar x pc -> makeDoc x <> char '^' <> makeDoc pc
+    GenFlowTVar x pc -> makeDoc x <> text "#F^" <> makeDoc pc
 
 instance Display CellTVar where
-  makeDoc (CellTVar y pc) = makeDoc y <> char '^' <> makeDoc pc
+  makeDoc b = case b of
+    CellTVar y pc -> makeDoc y <> char '^' <> makeDoc pc
+    GenCellTVar x pc -> makeDoc x <> text "#C^" <> makeDoc pc
   
 instance (DocumentContainer db) => Display (Type db) where
   makeDoc typ = case typ of

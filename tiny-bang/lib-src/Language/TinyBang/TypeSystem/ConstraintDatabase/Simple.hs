@@ -45,14 +45,4 @@ instance ConstraintDatabase SimpleConstraintDatabase where
         WrapTypeConstraint tc@(TypeConstraint _ a') | a == a' -> Just tc
         _ -> Nothing
 
-  getCellOrStoreBounds b (SimpleConstraintDatabase cs _) =
-    Set.fromList $ mapMaybe getCellOrStoreBound $ Set.toList cs
-    where
-      getCellOrStoreBound c = case c of
-        WrapCellCreationConstraint (CellCreationConstraint a b') | b == b' ->
-          Just a
-        WrapCellSettingConstraint (CellSettingConstraint a b') | b == b' ->
-          Just a
-        _ -> Nothing
-    
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs

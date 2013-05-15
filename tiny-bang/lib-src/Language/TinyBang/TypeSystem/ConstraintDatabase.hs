@@ -10,6 +10,7 @@ import Data.Map (Map)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Language.TinyBang.Ast
 import Language.TinyBang.Display hiding (empty)
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -42,16 +43,22 @@ class (Eq db) => ConstraintDatabase db where
   -- |Retrieves all equality constraints from this database.  These are
   --  operation constraints for which the operator is equality.
   getEqualityConstraints :: db -> Set OperationConstraint
+  -- |Retrieves all cell reading constraints.
+  getCellLoadingConstraints :: db -> Set CellLoadingConstraint
+  -- |Retrieves all exception constraints.
+  getExceptionConstraints :: db -> Set ExceptionConstraint
   
   -- |Finds all type constraints with the provided upper bound.
   getTypeConstraintsByUpperBound :: FlowTVar -> db -> Set (TypeConstraint db)
   -- |Finds all intermediate constraints with the provided lower bound.
   getIntermediateConstraintsByLowerBound :: FlowTVar -> db
                                          -> Set IntermediateConstraint
-  
-  -- |Finds all cell assignment and construction bounds for the provided cell
-  --  variable.
-  getCellOrStoreBounds :: CellTVar -> db -> Set FlowTVar
+  -- |Retrieves all constraints which act as lower bounds for cells.
+  getCellLowerBoundConstraints :: CellTVar -> db
+                               -> Set CellLowerBoundingConstraint
+  -- |Retrieves all flow constraints for a given lower bound and flow kind.
+  getFlowConstraintsByLowerBound :: FlowTVar -> FlowKind -> db
+                                 -> Set FlowConstraint
   
   -- |Performs cell substitution on a database.  The provided map is keyed by
   --  the variables to replace and valued by their replacements.

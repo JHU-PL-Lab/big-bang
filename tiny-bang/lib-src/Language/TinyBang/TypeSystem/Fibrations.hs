@@ -24,7 +24,6 @@ module Language.TinyBang.TypeSystem.Fibrations
 import Control.Applicative  ((<$>))
 import Control.Monad (zipWithM)
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Types
 
 -- |A data structure representing fibrations.  Each fibration level describes
@@ -40,7 +39,7 @@ data Fibration db
 --  fibration which specifies a superset of the original fibrations' decisions.
 --  If the two input fibrations make conflicting decisions, this function will
 --  return Nothing.
-mergeFibrations :: (ConstraintDatabase db)
+mergeFibrations :: (Eq db)
                 => Fibration db -> Fibration db -> Maybe (Fibration db)
 mergeFibrations f1 f2 =
   case (f1,f2) of
