@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, ScopedTypeVariables #-}
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
@@ -32,10 +32,41 @@ data ClosureError db
 --  equivalence of contour folding; this function will produce a representative
 --  of the appropriate equivalence class.
 calculateClosure :: (ConstraintDatabase db) => db -> Either (ClosureError db) db
-calculateClosure = undefined -- TODO
+calculateClosure db =
+  case calculateClosureStep db of
+    Left err -> Left err
+    Right db' ->
+      if db == db' then Right db else calculateClosure db'
 
 -- |The monad under which each closure step occurs.
 type ClosureM db m = FlowT (EitherT (ClosureError db) m)
+
+-- |A routine for expanding a @ClosureM@ monadic value.
+expandClosureM :: (ConstraintDatabase db)
+               => ClosureM db (CReader db) a -> db
+               -> Either (ClosureError db) [a]
+expandClosureM calc db =
+  runCReader (runEitherT $ runFlowT calc) db
+
+-- |Calculates a single step of closure.
+calculateClosureStep :: forall db. (ConstraintDatabase db)
+                     => db -> Either (ClosureError db) db
+calculateClosureStep db =
+  do -- Either (ClosureError db)
+    dbss <- expandClosureM (sequence monotonicClosures) db
+    let dbPlusMonotone = foldr (flip union) db $ concat dbss
+    undefined
+  where
+    monotonicClosures :: ( ConstraintDatabase db, MonadCReader db m, Functor m
+                         , Applicative m)
+                      => [ClosureM db m db]
+    monotonicClosures = [ closeTransitivity
+                        , closeIntegerCalculations
+                        , closeIntegerComparisons
+                        , closeEquality
+                        , closeCellPropagation
+                        , closeExceptionPropagation
+                        ]
 
 -- * Closure routines
 
