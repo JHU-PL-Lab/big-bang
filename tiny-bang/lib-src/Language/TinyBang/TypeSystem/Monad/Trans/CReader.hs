@@ -13,6 +13,7 @@ import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.List (ListT, mapListT)
 import Control.Monad.Reader (ReaderT, runReaderT, ask, local)
 import Control.Monad.Trans (MonadTrans, lift)
+import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -46,3 +47,7 @@ instance MonadCReader r m => MonadCReader r (MaybeT m) where
     askDb   = lift askDb
     localDb = mapMaybeT . localDb
     --readerDb = lift . readerDb
+
+instance MonadCReader r m => MonadCReader r (EitherT e m) where
+    askDb   = lift askDb
+    localDb = mapEitherT . localDb

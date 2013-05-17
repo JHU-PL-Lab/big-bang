@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections, ScopedTypeVariables, TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
@@ -18,9 +18,10 @@ import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
+import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
-import Language.TinyBang.TypeSystem.Relations.Projection
+import Language.TinyBang.TypeSystem.Relations
 import Language.TinyBang.TypeSystem.Types
 
 -- |A data structure representing errors in constraint closure.
@@ -31,7 +32,8 @@ data ClosureError db
 --  transitive closure of a TinyBang database is only confluent up to
 --  equivalence of contour folding; this function will produce a representative
 --  of the appropriate equivalence class.
-calculateClosure :: (ConstraintDatabase db) => db -> Either (ClosureError db) db
+calculateClosure :: (ConstraintDatabase db, Display db)
+                 => db -> Either (ClosureError db) db
 calculateClosure db =
   case calculateClosureStep db of
     Left err -> Left err
@@ -45,17 +47,18 @@ type ClosureM db m = FlowT (EitherT (ClosureError db) m)
 expandClosureM :: (ConstraintDatabase db)
                => ClosureM db (CReader db) a -> db
                -> Either (ClosureError db) [a]
-expandClosureM calc db =
-  runCReader (runEitherT $ runFlowT calc) db
+expandClosureM calc = runCReader (runEitherT $ runFlowT calc)
 
 -- |Calculates a single step of closure.
-calculateClosureStep :: forall db. (ConstraintDatabase db)
+calculateClosureStep :: forall db. (ConstraintDatabase db, Display db)
                      => db -> Either (ClosureError db) db
 calculateClosureStep db =
   do -- Either (ClosureError db)
     dbss <- expandClosureM (sequence monotonicClosures) db
     let dbPlusMonotone = foldr (flip union) db $ concat dbss
-    undefined
+    if dbPlusMonotone /= db
+      then return dbPlusMonotone
+      else calculateApplicationClosure db 
   where
     monotonicClosures :: ( ConstraintDatabase db, MonadCReader db m, Functor m
                          , Applicative m)
@@ -67,6 +70,93 @@ calculateClosureStep db =
                         , closeCellPropagation
                         , closeExceptionPropagation
                         ]
+                        
+-- * Application closure
+
+-- |Calculates application closure on the given database.  This routine will
+--  perform some number of application closures but may not perform all of them.
+--  Nonetheless, this function guarantees that progress will be made if any
+--  progress is possible; if the input and output are equal, the exist no
+--  additional application closures to perform.
+calculateApplicationClosure :: forall db. (ConstraintDatabase db, Display db)
+                            => db -> Either (ClosureError db) db
+calculateApplicationClosure db =
+  do -- Either (ClosureError db)
+    effects <- concat <$> expandClosureM (sequence applicationClosures) db
+    return $ applyEffects effects
+  where
+    applicationClosures :: ( Display db, ConstraintDatabase db
+                           , MonadCReader db m , Functor m, Applicative m)
+                        => [ClosureM db m (db, Maybe Contour)]
+    applicationClosures = [ normalApplicationClosures
+                          , exceptionalApplicationClosures ]
+    applyEffects effects = case effects of
+      [] -> db
+      (db', mcn):effects' ->
+        let f = case mcn of
+                  Nothing -> id
+                  Just cn -> replaceContours cn
+        in
+        let db'' = f $ db `union` db' in
+        if db'' /= db
+          then db''
+          else applyEffects effects'
+  
+-- |Determines the effects of normal application closure in a given database. 
+--  This operation produces pairs of constraint sets and contours to apply to
+--  the database, but it does not perform any replacement.  If the contour is a
+--  @Nothing@, no replacement is to occur.  The resulting list of closures is
+--  produced in arbitrary order.
+normalApplicationClosures :: forall db m.
+                             ( Display db, ConstraintDatabase db
+                             , MonadCReader db m , Functor m, Applicative m)
+                          => ClosureM db m (db, Maybe Contour)
+normalApplicationClosures = do
+  appc@(ApplicationConstraint a1 a2 a3) <-
+      flow $ lift $ getApplicationConstraints <$> askDb
+  (scapes, pFib) <- liftProjToClosure $ project projFun a1
+  let arg = ArgVal a2
+  (mdata@(Just (a4, db')), cFib) <- liftCompatToClosure $
+                  checkApplicationCompatible arg scapes
+  cn <- cNew a3 <$> askDb
+  let wiringConstraint = cwrap $ IntermediateConstraint a4 a3
+      wiringHistory = DerivedFromClosure $ ApplicationRule appc
+                        (MultiProjectionResult projFun a1 scapes pFib)
+                        (ApplicationCompatibilityResult arg scapes mdata cFib)
+                        cn
+  let db'' = instantiateContours cn $ add wiringConstraint wiringHistory db'
+  return (db'', Just cn)
+  
+-- |Determines the effects of exceptional application closure in a given
+--  database.  This function parallels @normalApplicationClosures@ but
+--  handles cases in which exceptions are caught (or not caught).
+exceptionalApplicationClosures :: forall db m.
+                                  ( Display db, ConstraintDatabase db
+                                  , MonadCReader db m , Functor m
+                                  , Applicative m)
+                               => ClosureM db m (db, Maybe Contour)
+exceptionalApplicationClosures = do
+  appc@(ApplicationConstraint a1 a2 a3) <-
+      flow $ lift $ getApplicationConstraints <$> askDb
+  (scapes, pFib) <- liftProjToClosure $ project projFun a1
+  ec@(ExceptionConstraint a4 _) <-
+      flow $ lift $ getExceptionConstraintsByUpperBound a2 <$> askDb
+  let arg = ArgExn a4
+  (mdata, cFib) <- liftCompatToClosure $ checkApplicationCompatible arg scapes
+  let mprojRes = MultiProjectionResult projFun a1 scapes pFib
+  let appCRes = ApplicationCompatibilityResult arg scapes mdata cFib
+  case mdata of
+    Nothing ->
+      let db' = singleton (cwrap $ ExceptionConstraint a4 a3)
+            (DerivedFromClosure $ ExceptionPassRule appc ec mprojRes appCRes) in
+      return (db', Nothing)
+    Just (a5, db') -> do
+      cn <- cNew a3 <$> askDb
+      let wiringConstraint = cwrap $ IntermediateConstraint a5 a3
+          wiringHistory = DerivedFromClosure $
+                              ExceptionCatchRule appc ec mprojRes appCRes cn
+      let db'' = instantiateContours cn $ add wiringConstraint wiringHistory db'
+      return (db'', Just cn)
 
 -- * Closure routines
 
@@ -112,7 +202,7 @@ closeEquality :: ( ConstraintDatabase db, MonadCReader db m, Functor m
                  , Applicative m )
               => ClosureM db m db
 closeEquality = do
-  oc@(OperationConstraint a2 _ a3 a1) <-
+  oc@(OperationConstraint _ _ _ a1) <-
       flow $ lift $ getEqualityConstraints <$> askDb
   doEqualityFor a1 oc $ DerivedFromClosure $ EqualityRule oc
   
@@ -142,9 +232,13 @@ closeExceptionPropagation = do
 
 -- * Utility functions
 
--- |Lifts operations into the closure monad.
-liftClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
-liftClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+-- |Lifts a projection operation into the closure monad.
+liftProjToClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
+liftProjToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+
+-- |Lifts a compatibility operation into the closure monad.
+liftCompatToClosure :: (Functor m, Monad m) => CompatM db m a -> ClosureM db m a
+liftCompatToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
 
 -- |Creates a database with equality constraints over the specified type
 --  variable.
@@ -176,6 +270,6 @@ projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
                     => Projector -> FlowTVar
                     -> ClosureM db m (ProjectionResult db)
 projectSingleResult proj a = do
-  (r,f) <- liftClosure $ projectSingle proj a
+  (r,f) <- liftProjToClosure $ projectSingle proj a
   guard $ isJust r
   return $ SingleProjectionResult proj a r f

@@ -23,17 +23,12 @@ import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
+import Language.TinyBang.TypeSystem.Data.Compatibility
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Relations.Projection
 import Language.TinyBang.TypeSystem.Types as T
-
--- |A data structure representing the argument type passed to a pattern
---  compatibility check.
-data CompatibilityArgument
-  = ArgVal FlowTVar
-  | ArgExn FlowTVar
 
 type CellSubstitutions = Map CellTVar CellTVar
 
@@ -41,7 +36,7 @@ type CompatM db m = FlowT (EitherT (ProjectionError db) m)
 
 checkApplicationCompatible :: forall db m.
                               ( Applicative m, ConstraintDatabase db
-                              , MonadCReader db m, Show db)
+                              , MonadCReader db m, Display db)
                            => CompatibilityArgument
                            -> [Type db]
                            -> CompatM db m (Maybe (FlowTVar, db), Fibration db)
@@ -53,7 +48,7 @@ checkApplicationCompatible arg = doCheck Unexpanded
     doCheck fib scapes =
       case scapes of
         [] -> return (Nothing, fib)
-        (Scape tpat a cs):scapes' -> do
+        Scape tpat a cs : scapes' -> do
           (dat,fib') <- checkCompatible arg tpat
           case mergeFibrations fib fib' of
             Nothing -> mzero
@@ -63,7 +58,7 @@ checkApplicationCompatible arg = doCheck Unexpanded
                  let csOut = substituteCellVariables substs cs `union` cs0 in
                  return (Just (a, csOut), fib'')
         t:_ -> error $ "Called checkApplicationCompatible with list "
-                    ++ "containing non-scape type " ++ show t -- TODO: display instead of show
+                    ++ "containing non-scape type " ++ display t
 
 checkCompatible :: forall db m.
                    (Applicative m, ConstraintDatabase db, MonadCReader db m)

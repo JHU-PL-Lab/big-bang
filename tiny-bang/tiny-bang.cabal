@@ -57,7 +57,9 @@ library
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
                    Language.TinyBang.TypeSystem.Constraints,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase
+                   Language.TinyBang.TypeSystem.ConstraintDatabase,
+                   Language.TinyBang.TypeSystem.Data.Compatibility,
+                   Language.TinyBang.TypeSystem.Data
 
 executable tiny-bang
   hs-source-dirs:  
@@ -107,7 +109,9 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
                    Language.TinyBang.TypeSystem.Constraints,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase
+                   Language.TinyBang.TypeSystem.ConstraintDatabase,
+                   Language.TinyBang.TypeSystem.Data.Compatibility,
+                   Language.TinyBang.TypeSystem.Data
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -144,4 +148,6 @@ executable tests
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
                    Language.TinyBang.TypeSystem.Constraints,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase
+                   Language.TinyBang.TypeSystem.ConstraintDatabase,
+                   Language.TinyBang.TypeSystem.Data.Compatibility,
+                   Language.TinyBang.TypeSystem.Data

@@ -13,6 +13,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display  
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Closure
@@ -30,7 +31,7 @@ data TypecheckingError db
 --  provide an expression over which to perform typechecking.  The result
 --  of this function will be a constraint database (if typechecking was
 --  successful) or an error containing as much information as was obtained.
-typecheck :: forall db. (ConstraintDatabase db)
+typecheck :: forall db. (ConstraintDatabase db, Display db)
           => Expr -> Either (TypecheckingError db) db
 typecheck expr = do
   derivDb::db <- bailWith InitialDerivationFailed $ initialDerivation expr

@@ -47,6 +47,8 @@ class (Eq db) => ConstraintDatabase db where
   getCellLoadingConstraints :: db -> Set CellLoadingConstraint
   -- |Retrieves all exception constraints.
   getExceptionConstraints :: db -> Set ExceptionConstraint
+  -- |Retrieves all application constraints.
+  getApplicationConstraints :: db -> Set ApplicationConstraint
   
   -- |Finds all type constraints with the provided upper bound.
   getTypeConstraintsByUpperBound :: FlowTVar -> db -> Set (TypeConstraint db)
@@ -59,6 +61,9 @@ class (Eq db) => ConstraintDatabase db where
   -- |Retrieves all flow constraints for a given lower bound and flow kind.
   getFlowConstraintsByLowerBound :: FlowTVar -> FlowKind -> db
                                  -> Set FlowConstraint
+  -- |Retrieves all exception constraints for a given upper bound.
+  getExceptionConstraintsByUpperBound :: FlowTVar -> db
+                                      -> Set ExceptionConstraint
   
   -- |Performs cell substitution on a database.  The provided map is keyed by
   --  the variables to replace and valued by their replacements.

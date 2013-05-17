@@ -3,10 +3,13 @@ module Language.TinyBang.TypeSystem.ConstraintHistory
 , SourceElement(..)
 , ClosureRule(..)
 , ProjectionResult(..)
+, ApplicationCompatibilityResult(..)
 ) where
 
 import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.TypeSystem.Contours
+import Language.TinyBang.TypeSystem.Data.Compatibility
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Types
 
@@ -42,6 +45,11 @@ data ClosureRule db
       (ProjectionResult db) -- ^ The proof of integer projection for the right.
   | EqualityRule
       OperationConstraint -- ^ The triggering constraint.
+  | ApplicationRule
+      ApplicationConstraint -- ^ The triggering constraint.
+      (ProjectionResult db) -- ^ The projection of scapes
+      (ApplicationCompatibilityResult db) -- ^ Argument compatibility
+      Contour -- ^ The contour generated for the application
   | CellPropagationRule
       CellLoadingConstraint -- ^ The triggering constraint
       CellLowerBoundingConstraint -- ^ The constraint which sets the cell lower
@@ -49,8 +57,32 @@ data ClosureRule db
   | ExceptionPropagationRule
       ExceptionConstraint -- ^ The triggering constraint.
       FlowConstraint -- ^ The flow constraint over which the exception moves.
+  | ExceptionPassRule
+      ApplicationConstraint -- ^ The triggering constraint.
+      ExceptionConstraint -- ^ The exception constraint describing the argument
+      (ProjectionResult db) -- ^ The projection of scapes
+      (ApplicationCompatibilityResult db) -- ^ Argument compatibility      
+  | ExceptionCatchRule
+      ApplicationConstraint -- ^ The triggering constraint.
+      ExceptionConstraint -- ^ The exception constraint describing the argument
+      (ProjectionResult db) -- ^ The projection of scapes
+      (ApplicationCompatibilityResult db) -- ^ Argument compatibility
+      Contour -- ^ The contour generated for the application
   deriving (Eq, Ord, Show)
   
 data ProjectionResult db
   = SingleProjectionResult A.Projector FlowTVar (Maybe (Type db)) (Fibration db)
+  | MultiProjectionResult A.Projector FlowTVar [Type db] (Fibration db)
   deriving (Eq, Ord, Show)
+
+-- TODO: deep history on this?
+data ApplicationCompatibilityResult db
+  = ApplicationCompatibilityResult
+      CompatibilityArgument -- ^ The argument
+      [Type db] -- ^ The scape types
+      (Maybe (FlowTVar, db))
+        -- ^ The compatibility output variable and constraints (if successful)
+      (Fibration db)
+        -- ^ The fibration of the compatibility
+  deriving (Eq, Ord, Show)
+
