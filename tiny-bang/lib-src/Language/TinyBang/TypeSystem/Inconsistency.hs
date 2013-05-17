@@ -77,7 +77,7 @@ findIntegerOperationInconsistencies :: ( ConstraintDatabase db, Monad m
                                     => InconM db m (Inconsistency db)
 findIntegerOperationInconsistencies = do
   oc@(OperationConstraint a1 _ a2 _) <-
-      flow $ lift $ Set.union
+      flow $ lift $ (++)
                       <$> (getIntegerOperationConstraints <$> askDb)
                       <*> (getIntegerCalculationConstraints <$> askDb)
   (mt1, r1) <- liftProjToIncon $ projectSingleResult projInt a1

@@ -32,38 +32,38 @@ class (Eq db) => ConstraintDatabase db where
   -- |Retrieves all constraints stored in this database.
   getAllConstraints :: db -> Set (Constraint db)
   -- |Retrieves all type constraints from this database.
-  getTypeConstraints :: db -> Set (TypeConstraint db)
+  getTypeConstraints :: db -> [TypeConstraint db]
   -- |Retrieves all integer calculation constraints from this database.  These
   --  are operation constraints for which the operator is either plus or minus.
-  getIntegerCalculationConstraints :: db -> Set OperationConstraint
+  getIntegerCalculationConstraints :: db -> [OperationConstraint]
   -- |Retrieves all integer comparison constraints from this database.  These
   --  are operation constraints for which the operator is either greater-than
   --  or less-than.
-  getIntegerOperationConstraints :: db -> Set OperationConstraint
+  getIntegerOperationConstraints :: db -> [OperationConstraint]
   -- |Retrieves all equality constraints from this database.  These are
   --  operation constraints for which the operator is equality.
-  getEqualityConstraints :: db -> Set OperationConstraint
+  getEqualityConstraints :: db -> [OperationConstraint]
   -- |Retrieves all cell reading constraints.
-  getCellLoadingConstraints :: db -> Set CellLoadingConstraint
+  getCellLoadingConstraints :: db -> [CellLoadingConstraint]
   -- |Retrieves all exception constraints.
-  getExceptionConstraints :: db -> Set ExceptionConstraint
+  getExceptionConstraints :: db -> [ExceptionConstraint]
   -- |Retrieves all application constraints.
-  getApplicationConstraints :: db -> Set ApplicationConstraint
+  getApplicationConstraints :: db -> [ApplicationConstraint]
   
   -- |Finds all type constraints with the provided upper bound.
-  getTypeConstraintsByUpperBound :: FlowTVar -> db -> Set (TypeConstraint db)
+  getTypeConstraintsByUpperBound :: FlowTVar -> db -> [TypeConstraint db]
   -- |Finds all intermediate constraints with the provided lower bound.
   getIntermediateConstraintsByLowerBound :: FlowTVar -> db
-                                         -> Set IntermediateConstraint
+                                         -> [IntermediateConstraint]
   -- |Retrieves all constraints which act as lower bounds for cells.
   getCellLowerBoundConstraints :: CellTVar -> db
-                               -> Set CellLowerBoundingConstraint
+                               -> [CellLowerBoundingConstraint]
   -- |Retrieves all flow constraints for a given lower bound and flow kind.
   getFlowConstraintsByLowerBound :: FlowTVar -> FlowKind -> db
-                                 -> Set FlowConstraint
+                                 -> [FlowConstraint]
   -- |Retrieves all exception constraints for a given upper bound.
   getExceptionConstraintsByUpperBound :: FlowTVar -> db
-                                      -> Set ExceptionConstraint
+                                      -> [ExceptionConstraint]
   
   -- |Performs cell substitution on a database.  The provided map is keyed by
   --  the variables to replace and valued by their replacements.

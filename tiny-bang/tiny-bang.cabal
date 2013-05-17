@@ -59,7 +59,8 @@ library
                    Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
-                   Language.TinyBang.TypeSystem.Data
+                   Language.TinyBang.TypeSystem.Data,
+                   Language.TinyBang.TypeSystem.Utils.DocumentContainer
 
 executable tiny-bang
   hs-source-dirs:  
