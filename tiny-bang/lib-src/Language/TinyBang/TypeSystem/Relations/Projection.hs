@@ -8,6 +8,7 @@ module Language.TinyBang.TypeSystem.Relations.Projection
 , ProjM
 , project
 , projectSingle
+, projectSingleResult
 ) where
 
 import Control.Applicative
@@ -20,6 +21,7 @@ import qualified Data.Set as Set
 import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
@@ -64,6 +66,16 @@ projectSingle proj a = do
   case typs of
     [] -> return (Nothing, fib)
     typ:_ -> return (Just typ, fib)
+
+-- |Performs single projection.  This obtains a prepared projection result
+--  as well as the actual type.
+projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
+                       , Functor m, Applicative m )
+                    => Projector -> FlowTVar
+                    -> ProjM db m (Maybe (Type db), SingleProjectionResult db)
+projectSingleResult proj a = do
+  (r,f) <- projectSingle proj a
+  return (r, SingleProjectionResult proj a r f)
 
 -- |The *real* projection function.  This function includes an occurs check for
 --  non-contractive onion types to prevent divergence.

@@ -9,9 +9,6 @@ module Language.TinyBang.TypeSystem.TypeInference
 , typecheck
 ) where
 
-import Data.Set (Set)
-import qualified Data.Set as Set
-
 import Language.TinyBang.Ast
 import Language.TinyBang.Display  
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -19,13 +16,14 @@ import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Closure
 import Language.TinyBang.TypeSystem.Inconsistency
 import Language.TinyBang.TypeSystem.InitialDerivation
-import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.TypeSystem.Relations
 
 -- |A data structure defining typechecking errors.
 data TypecheckingError db
   = InitialDerivationFailed InitialDerivationError
   | ClosureFailed (ClosureError db)
-  | ClosureInconsistent (Set Inconsistency) db 
+  | InconsistencyFailed (ProjectionError db)
+  | ClosureInconsistent [Inconsistency db] db 
 
 -- |A function which performs top-level typechecking.  The caller must
 --  provide an expression over which to perform typechecking.  The result
@@ -37,8 +35,9 @@ typecheck expr = do
   derivDb::db <- bailWith InitialDerivationFailed $ initialDerivation expr
   let startDb = instantiateContours initialContour derivDb
   closedDb <- bailWith ClosureFailed $ calculateClosure startDb
-  let inconsistencies = determineInconsistencies closedDb
-  if Set.null inconsistencies
+  inconsistencies <- bailWith InconsistencyFailed $
+                        determineInconsistencies closedDb
+  if null inconsistencies
     then Right closedDb
     else Left $ ClosureInconsistent inconsistencies closedDb
   where

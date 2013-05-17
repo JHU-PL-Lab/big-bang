@@ -2,7 +2,8 @@ module Language.TinyBang.TypeSystem.ConstraintHistory
 ( ConstraintHistory(..)
 , SourceElement(..)
 , ClosureRule(..)
-, ProjectionResult(..)
+, SingleProjectionResult(..)
+, MultiProjectionResult(..)
 , ApplicationCompatibilityResult(..)
 ) where
 
@@ -37,17 +38,21 @@ data ClosureRule db
       IntermediateConstraint -- ^ The intermediate transitivity constraint.
   | IntegerOperationRule
       OperationConstraint -- ^ The triggering constraint.
-      (ProjectionResult db) -- ^ The proof of integer projection for the left.
-      (ProjectionResult db) -- ^ The proof of integer projection for the right.
+      (SingleProjectionResult db)
+        -- ^ The proof of integer projection for the left.
+      (SingleProjectionResult db)
+        -- ^ The proof of integer projection for the right.
   | IntegerCalculationRule
       OperationConstraint -- ^ The triggering constraint.
-      (ProjectionResult db) -- ^ The proof of integer projection for the left.
-      (ProjectionResult db) -- ^ The proof of integer projection for the right.
+      (SingleProjectionResult db)
+        -- ^ The proof of integer projection for the left.
+      (SingleProjectionResult db)
+        -- ^ The proof of integer projection for the right.
   | EqualityRule
       OperationConstraint -- ^ The triggering constraint.
   | ApplicationRule
       ApplicationConstraint -- ^ The triggering constraint.
-      (ProjectionResult db) -- ^ The projection of scapes
+      (MultiProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility
       Contour -- ^ The contour generated for the application
   | CellPropagationRule
@@ -60,19 +65,22 @@ data ClosureRule db
   | ExceptionPassRule
       ApplicationConstraint -- ^ The triggering constraint.
       ExceptionConstraint -- ^ The exception constraint describing the argument
-      (ProjectionResult db) -- ^ The projection of scapes
+      (MultiProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility      
   | ExceptionCatchRule
       ApplicationConstraint -- ^ The triggering constraint.
       ExceptionConstraint -- ^ The exception constraint describing the argument
-      (ProjectionResult db) -- ^ The projection of scapes
+      (MultiProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility
       Contour -- ^ The contour generated for the application
   deriving (Eq, Ord, Show)
   
-data ProjectionResult db
+data SingleProjectionResult db
   = SingleProjectionResult A.Projector FlowTVar (Maybe (Type db)) (Fibration db)
-  | MultiProjectionResult A.Projector FlowTVar [Type db] (Fibration db)
+  deriving (Eq, Ord, Show)
+
+data MultiProjectionResult db
+  = MultiProjectionResult A.Projector FlowTVar [Type db] (Fibration db)
   deriving (Eq, Ord, Show)
 
 -- TODO: deep history on this?

@@ -16,6 +16,7 @@ import qualified Data.List as List
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Language.TinyBang.Ast (FlowVar)
 import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -24,15 +25,21 @@ import Language.TinyBang.TypeSystem.Types
 
 -- |Defines contour creation as specified in the TinyBang language document.
 tMakeCntr :: FlowTVar -> Contour
-tMakeCntr (FlowTVar x pcn) =
+tMakeCntr a =
+  let (x,pcn) = case a of
+                  FlowTVar x' pcn' -> (x',pcn')
+                  GenFlowTVar _ _ ->
+                    error $ "tMakeCntr called on generated variable "
+                              ++ display a
+  in
   case pcn of
     PossibleContour Nothing ->
-      error $ "tMakeCntr called on non-contoured variable at " ++ display x
+      error $ "tMakeCntr called on non-contoured variable " ++ display a
     PossibleContour (Just cn) ->
-      contour $ Set.map extendStrand $ unContour cn
+      contour $ Set.map (extendStrand x) $ unContour cn
   where
-    extendStrand :: ContourStrand -> ContourStrand
-    extendStrand (ContourStrand es) =
+    extendStrand :: FlowVar -> ContourStrand -> ContourStrand
+    extendStrand x (ContourStrand es) =
       ContourStrand $ es ++ [SinglePart $ ContourElement x]
 
 -- |Defines contour collapse as specified in the TinyBang language document.
@@ -156,10 +163,14 @@ instance ContourExtractable ExceptionConstraint where
     extractContours a `Set.union` extractContours a'
     
 instance ContourExtractable CellTVar where
-  extractContours (CellTVar _ cn) = extractContours cn
+  extractContours b = case b of
+    CellTVar _ cn -> extractContours cn
+    GenCellTVar _ cn -> extractContours cn
 
 instance ContourExtractable FlowTVar where
-  extractContours (FlowTVar _ cn) = extractContours cn
+  extractContours a = case a of
+    FlowTVar _ cn -> extractContours cn
+    GenFlowTVar _ cn -> extractContours cn
 
 instance (ConstraintDatabase db) => ContourExtractable (Type db) where
   extractContours arg = case arg of

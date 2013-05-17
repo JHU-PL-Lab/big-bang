@@ -17,7 +17,6 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase
-import Language.TinyBang.TypeSystem.Types
 
 type CReader db = CReaderT db Identity
 

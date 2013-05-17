@@ -33,6 +33,8 @@ module Language.TinyBang.Ast.Data
 , projPrim
 , projLabel
 , projFun
+, projInt
+, projChar
 , primInt
 , primChar
 , HasOrigin(..)
@@ -207,6 +209,12 @@ projLabel = ProjLabel generated
 
 projFun :: Projector
 projFun = ProjFun generated
+
+projInt :: Projector
+projInt = projPrim primInt
+
+projChar :: Projector
+projChar = projPrim primChar
 
 primInt :: PrimitiveType
 primInt = PrimInt generated

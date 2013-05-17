@@ -8,10 +8,8 @@ module Language.TinyBang.TypeSystem.Closure
 ) where
 
 import Control.Applicative
-import Control.Monad
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Either
-import Data.Maybe
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
@@ -179,8 +177,8 @@ closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerCalculations = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerCalculationConstraints <$> askDb
-  r1 <- projectSingleResult (projPrim primInt) a2
-  r2 <- projectSingleResult (projPrim primInt) a3
+  (Just _,r1) <- liftProjToClosure $ projectSingleResult projInt a2
+  (Just _,r2) <- liftProjToClosure $ projectSingleResult projInt a3
   let history = DerivedFromClosure $ IntegerOperationRule oc r1 r2
   return $ singleton
     (WrapTypeConstraint $ TypeConstraint (Primitive primInt) a1) history
@@ -193,8 +191,8 @@ closeIntegerComparisons :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerComparisons = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerOperationConstraints <$> askDb
-  r1 <- projectSingleResult (projPrim primInt) a2
-  r2 <- projectSingleResult (projPrim primInt) a3
+  (Just _,r1) <- liftProjToClosure $ projectSingleResult projInt a2
+  (Just _,r2) <- liftProjToClosure $ projectSingleResult projInt a3
   doEqualityFor a1 oc $ DerivedFromClosure $ IntegerCalculationRule oc r1 r2
           
 -- |Calculates equality operations in the constraint database.
@@ -263,13 +261,3 @@ doEqualityFor a1 oc history =
           , WrapTypeConstraint $ TypeConstraint (Label labelTrue b') a1
           , WrapTypeConstraint $ TypeConstraint (Label labelFalse b') a1
           ]
-  
--- |Performs a single projection which is assumed to succeed.
-projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
-                       , Functor m, Applicative m )
-                    => Projector -> FlowTVar
-                    -> ClosureM db m (ProjectionResult db)
-projectSingleResult proj a = do
-  (r,f) <- liftProjToClosure $ projectSingle proj a
-  guard $ isJust r
-  return $ SingleProjectionResult proj a r f

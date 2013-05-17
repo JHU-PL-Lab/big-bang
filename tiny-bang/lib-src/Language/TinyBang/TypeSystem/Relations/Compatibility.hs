@@ -15,8 +15,6 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Either
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
 
 import Language.TinyBang.Ast as A
 import Language.TinyBang.Display
