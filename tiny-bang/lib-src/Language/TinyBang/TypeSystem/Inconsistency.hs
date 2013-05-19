@@ -14,7 +14,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Data.Maybe
-import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
