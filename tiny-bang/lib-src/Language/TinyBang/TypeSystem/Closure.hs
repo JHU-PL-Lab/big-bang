@@ -10,6 +10,7 @@ module Language.TinyBang.TypeSystem.Closure
 import Control.Applicative
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Either
+import qualified Data.Set as Set 
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
@@ -122,7 +123,8 @@ normalApplicationClosures = do
                         (MultiProjectionResult projFun a1 scapes pFib)
                         (ApplicationCompatibilityResult arg scapes mdata cFib)
                         cn
-  let db'' = instantiateContours cn $ add wiringConstraint wiringHistory db'
+  let db'' = instantiateContours Set.empty cn $
+                add wiringConstraint wiringHistory db'
   return (db'', Just cn)
   
 -- |Determines the effects of exceptional application closure in a given
@@ -153,7 +155,8 @@ exceptionalApplicationClosures = do
       let wiringConstraint = cwrap $ IntermediateConstraint a5 a3
           wiringHistory = DerivedFromClosure $
                               ExceptionCatchRule appc ec mprojRes appCRes cn
-      let db'' = instantiateContours cn $ add wiringConstraint wiringHistory db'
+      let db'' = instantiateContours Set.empty cn $
+                    add wiringConstraint wiringHistory db'
       return (db'', Just cn)
 
 -- * Closure routines

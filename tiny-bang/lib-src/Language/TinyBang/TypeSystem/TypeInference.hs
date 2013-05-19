@@ -9,6 +9,8 @@ module Language.TinyBang.TypeSystem.TypeInference
 , typecheck
 ) where
 
+import qualified Data.Set as Set
+
 import Language.TinyBang.Ast
 import Language.TinyBang.Display  
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -33,7 +35,7 @@ typecheck :: forall db. (ConstraintDatabase db, Display db)
           => Expr -> Either (TypecheckingError db) db
 typecheck expr = do
   derivDb::db <- bailWith InitialDerivationFailed $ initialDerivation expr
-  let startDb = instantiateContours initialContour derivDb
+  let startDb = instantiateContours Set.empty initialContour derivDb
   closedDb <- bailWith ClosureFailed $ calculateClosure startDb
   inconsistencies <- bailWith InconsistencyFailed $
                         determineInconsistencies closedDb
