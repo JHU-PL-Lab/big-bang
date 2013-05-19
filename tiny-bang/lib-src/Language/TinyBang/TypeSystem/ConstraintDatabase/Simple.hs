@@ -75,6 +75,28 @@ instance ConstraintDatabase SimpleConstraintDatabase where
   getExceptionConstraintsByUpperBound a = cfilter $ \case
       WrapExceptionConstraint c@(ExceptionConstraint _ a') | a == a' -> Just c
       _ -> Nothing
+      
+  boundVariables (SimpleConstraintDatabase cs _) =
+    Set.fromList $ mapMaybe boundVariableOf $ Set.toList cs
+    where
+      boundVariableOf = \case
+        WrapIntermediateConstraint (IntermediateConstraint _ a) ->
+          Just $ SomeFlowTVar a
+        WrapTypeConstraint (TypeConstraint _ a) -> Just $ SomeFlowTVar a
+        WrapApplicationConstraint (ApplicationConstraint _ _ a) ->
+          Just $ SomeFlowTVar a
+        WrapOperationConstraint (OperationConstraint _ _ _ a) ->
+          Just $ SomeFlowTVar a
+        WrapCellCreationConstraint (CellCreationConstraint _ b) ->
+          Just $ SomeCellTVar b
+        WrapCellLoadingConstraint (CellLoadingConstraint _ a) ->
+          Just $ SomeFlowTVar a
+        WrapCellSettingConstraint _ -> Nothing
+        WrapFinalConstraint _ -> Nothing
+        WrapImmutableConstraint _ -> Nothing
+        WrapFlowConstraint _ -> Nothing
+        WrapExceptionConstraint (ExceptionConstraint _  a) ->
+          Just $ SomeFlowTVar a
 
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
 
