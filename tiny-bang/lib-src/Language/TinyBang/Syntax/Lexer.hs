@@ -8,6 +8,7 @@ module Language.TinyBang.Syntax.Lexer
 import Control.Applicative((<$>), (<*>), (<*), (*>), pure)
 import Text.ParserCombinators.Parsec
 
+import Language.TinyBang.Display (Display(..), text, dquotes, (<>))
 import Language.TinyBang.Syntax.Location
 import Text.Parsec.Prim (Parsec)
 
@@ -165,4 +166,38 @@ variableLengthLexers =
     -- |A convenient operator for composing a unary operator with a binary one.
     (.:) = (.) . (.)
     infixr 8 .:
-    
+
+instance Display Token where
+  makeDoc t = case t of
+    TokIs -> dquotes $ text "="
+    TokGets -> dquotes $ text "<-"
+    TokThrows -> dquotes $ text "throws"
+    TokDef -> dquotes $ text ":="
+    TokFlows k -> dquotes $ text $ "<~" ++ [k]
+    TokBang -> dquotes $ text "!"
+    TokPlus -> dquotes $ text "+"
+    TokMinus -> dquotes $ text "-"
+    TokLT -> dquotes $ text "<"
+    TokGT -> dquotes $ text ">"
+    TokEq -> dquotes $ text "=="
+    TokEmptyOnion -> dquotes $ text "()"
+    TokOnion -> dquotes $ text "&"
+    TokOnionSub -> dquotes $ text "&-"
+    TokOnionProj -> dquotes $ text "&."
+    TokArrow -> dquotes $ text "-> dquotes $"
+    TokImmut -> dquotes $ text "immut"
+    TokFinal -> dquotes $ text "final"
+    TokExn -> dquotes $ text "exn"
+    TokFun -> dquotes $ text "fun"
+    TokInt -> dquotes $ text "int"
+    TokChar -> dquotes $ text "char"
+    TokColon -> dquotes $ text ":"
+    TokOpenParen -> dquotes $ text "("
+    TokCloseParen -> dquotes $ text ")"
+    TokSemi -> dquotes $ text ";"
+    TokOpenBrace -> dquotes $ text "{"
+    TokCloseBrace -> dquotes $ text "}"
+    TokIdentifier s -> text "id#" <> dquotes (text s)
+    TokLitInt n -> text "int#" <> dquotes (text $ show n)
+    TokLitChar c -> text "char#" <> dquotes (text [c])
+    TokLabel n -> text "label#" <> dquotes (text n)

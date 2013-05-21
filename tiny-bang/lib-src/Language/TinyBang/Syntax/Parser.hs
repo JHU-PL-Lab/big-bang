@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns,
+             TemplateHaskell #-}
 
 module Language.TinyBang.Syntax.Parser
 ( parseTinyBang
@@ -14,15 +15,20 @@ import Text.Parsec.Pos
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Parsec
+
+$(loggingFunctions)
 
 -- |A function to parse TinyBang code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
 --  error message.
 parseTinyBang :: ParserContext -> [PositionalToken] -> Either String Expr
 parseTinyBang context ts =
+  _debugI ("Parsing TinyBang source with tokens: " ++
+            (display $ map posToken ts)) $
   let parseResult =
         runParserT programParser () (contextDocumentName context) ts
   in
