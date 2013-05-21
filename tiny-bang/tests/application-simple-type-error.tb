@@ -1,0 +1,5 @@
+# EXPECT: typefail
+x1 = y2:int -> { x3 = !y2 };
+x4 = ();
+x5 = x1 x4
+
