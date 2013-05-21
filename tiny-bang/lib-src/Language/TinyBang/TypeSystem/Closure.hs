@@ -1,4 +1,9 @@
-{-# LANGUAGE TupleSections, ScopedTypeVariables, TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
@@ -7,21 +12,24 @@ module Language.TinyBang.TypeSystem.Closure
 , calculateClosure
 ) where
 
-import Control.Applicative
-import Control.Monad.Trans (lift)
-import Control.Monad.Trans.Either
-import qualified Data.Set as Set 
+import           Control.Applicative
+import           Control.Monad.Trans        (lift)
+import           Control.Monad.Trans.Either
+import qualified Data.Set                   as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
-import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.Logging
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
+import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Relations
 import Language.TinyBang.TypeSystem.Types
+
+$(loggingFunctions)
 
 -- |A data structure representing errors in constraint closure.
 data ClosureError db
@@ -29,7 +37,7 @@ data ClosureError db
   deriving (Eq, Ord, Show)
 instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
   makeDoc (ClosureFailedProjection err) = makeDoc err
-  
+
 -- |Calculates the transitive closure of the provided constraint database.  The
 --  transitive closure of a TinyBang database is only confluent up to
 --  equivalence of contour folding; this function will produce a representative
@@ -56,11 +64,14 @@ calculateClosureStep :: forall db. (ConstraintDatabase db, Display db)
                      => db -> Either (ClosureError db) db
 calculateClosureStep db =
   do -- Either (ClosureError db)
-    dbss <- expandClosureM (sequence monotonicClosures) db
-    let dbPlusMonotone = foldr (flip union) db $ concat dbss
-    if dbPlusMonotone /= db
-      then return dbPlusMonotone
-      else calculateApplicationClosure db 
+    dbss <- mapM (`expandClosureM` db) monotonicClosures
+    _debug $ "Monotonic closure rules gave: " ++ display dbss
+    let dbPlusMonotone = foldr (flip union) db $ concat dbss 
+    answer <- if dbPlusMonotone /= db
+                then return dbPlusMonotone
+                else calculateApplicationClosure db
+    _debug $ "Closure step yields: " ++ display answer
+    return answer
   where
     monotonicClosures :: ( ConstraintDatabase db, MonadCReader db m, Functor m
                          , Applicative m)
@@ -72,7 +83,7 @@ calculateClosureStep db =
                         , closeCellPropagation
                         , closeExceptionPropagation
                         ]
-                        
+
 -- * Application closure
 
 -- |Calculates application closure on the given database.  This routine will
@@ -103,8 +114,8 @@ calculateApplicationClosure db =
         if db'' /= db
           then db''
           else applyEffects effects'
-  
--- |Determines the effects of normal application closure in a given database. 
+
+-- |Determines the effects of normal application closure in a given database.
 --  This operation produces pairs of constraint sets and contours to apply to
 --  the database, but it does not perform any replacement.  If the contour is a
 --  @Nothing@, no replacement is to occur.  The resulting list of closures is
@@ -129,7 +140,7 @@ normalApplicationClosures = do
   let db'' = instantiateContours Set.empty cn $
                 add wiringConstraint wiringHistory db'
   return (db'', Just cn)
-  
+
 -- |Determines the effects of exceptional application closure in a given
 --  database.  This function parallels @normalApplicationClosures@ but
 --  handles cases in which exceptions are caught (or not caught).
@@ -175,7 +186,7 @@ closeTransitivity = do
       flow $ lift $ getIntermediateConstraintsByLowerBound a <$> askDb
   let history = DerivedFromClosure $ TransitivityRule tc ic
   return $ singleton (cwrap $ TypeConstraint t a') history
-  
+
 -- |Calculates integer operation closures in the constraint database.
 closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
                             , Functor m, Applicative m )
@@ -200,7 +211,7 @@ closeIntegerComparisons = do
   (Just _,r1) <- liftProjToClosure $ projectSingleResult projInt a2
   (Just _,r2) <- liftProjToClosure $ projectSingleResult projInt a3
   doEqualityFor a1 oc $ DerivedFromClosure $ IntegerCalculationRule oc r1 r2
-          
+
 -- |Calculates equality operations in the constraint database.
 closeEquality :: ( ConstraintDatabase db, MonadCReader db m, Functor m
                  , Applicative m )
@@ -209,7 +220,7 @@ closeEquality = do
   oc@(OperationConstraint _ _ _ a1) <-
       flow $ lift $ getEqualityConstraints <$> askDb
   doEqualityFor a1 oc $ DerivedFromClosure $ EqualityRule oc
-  
+
 -- |Calculates cell propagation closure.
 closeCellPropagation :: ( ConstraintDatabase db, MonadCReader db m
                         , Functor m, Applicative m )
@@ -221,7 +232,7 @@ closeCellPropagation = do
   let a' = lowerBoundOf lbc
   let history = DerivedFromClosure $ CellPropagationRule lc lbc
   return $ singleton (cwrap $ IntermediateConstraint a' a) history
-  
+
 -- |Calculates exception propagation closure.
 closeExceptionPropagation :: ( ConstraintDatabase db, MonadCReader db m
                              , Functor m, Applicative m )
@@ -255,7 +266,7 @@ doEqualityFor a1 oc history =
     GenFlowTVar _ _ ->
       error $ "How did a generated flow variable (" ++ display a1
         ++ ") appear as the upper bound of an integer comparison ("
-        ++ display oc ++ ")?" 
+        ++ display oc ++ ")?"
     FlowTVar x pc ->
       let a' = GenFlowTVar x pc in
       let b' = GenCellTVar x pc in

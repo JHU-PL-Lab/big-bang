@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell #-}
 
 {-|
   This module provides a mechanism for detecting inconsistency in closed
@@ -17,12 +17,15 @@ import Data.Maybe
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Relations
+
+$(loggingFunctions)
 
 data Inconsistency db
   = ApplicationFailure
@@ -40,7 +43,7 @@ determineInconsistencies :: forall db.
                             (ConstraintDatabase db, Display db)
                          => db -> Either (ProjectionError db) [Inconsistency db]
 determineInconsistencies db = do -- Either (ProjectionError db)
-  iss <- expandClosureM (sequence inconsistencies) db
+  iss <- mapM (`expandInconM` db) inconsistencies
   return $ concat iss
   where
     inconsistencies :: ( ConstraintDatabase db, Monad m, Functor m
@@ -52,10 +55,10 @@ determineInconsistencies db = do -- Either (ProjectionError db)
 type InconM db m = FlowT (EitherT (ProjectionError db) m)
 
 -- |A routine for expanding an @InconM@ monadic value.
-expandClosureM :: (ConstraintDatabase db)
-               => InconM db (CReader db) a -> db
-               -> Either (ProjectionError db) [a]
-expandClosureM calc = runCReader (runEitherT $ runFlowT calc)
+expandInconM :: (ConstraintDatabase db)
+             => InconM db (CReader db) a -> db
+             -> Either (ProjectionError db) [a]
+expandInconM calc = runCReader (runEitherT $ runFlowT calc)
 
 findApplicationInconsistencies :: ( ConstraintDatabase db, Monad m, Functor m
                                   , Applicative m, Display db
