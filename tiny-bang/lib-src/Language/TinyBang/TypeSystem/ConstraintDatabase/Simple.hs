@@ -97,6 +97,9 @@ instance ConstraintDatabase SimpleConstraintDatabase where
         WrapExceptionConstraint (ExceptionConstraint _  a) ->
           Just $ SomeFlowTVar a
 
+  substituteCellVariables m (SimpleConstraintDatabase cs hist) =
+    SimpleConstraintDatabase (substCells m cs) (substCells m hist)
+
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
   instantiateContours vs cn (SimpleConstraintDatabase cs hist) =
     SimpleConstraintDatabase (instContours vs cn cs) (instContours vs cn hist)
@@ -118,3 +121,5 @@ instance ContourInstantiable SimpleConstraintDatabase where
   instContours = instantiateContours
 instance ContourReplacable SimpleConstraintDatabase where
   replContours = replaceContours
+instance CellSubstitutable SimpleConstraintDatabase where
+  substCells = substituteCellVariables
