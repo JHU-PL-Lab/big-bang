@@ -184,7 +184,7 @@ instance Display Token where
     TokOnion -> dquotes $ text "&"
     TokOnionSub -> dquotes $ text "&-"
     TokOnionProj -> dquotes $ text "&."
-    TokArrow -> dquotes $ text "-> dquotes $"
+    TokArrow -> dquotes $ text "->"
     TokImmut -> dquotes $ text "immut"
     TokFinal -> dquotes $ text "final"
     TokExn -> dquotes $ text "exn"
