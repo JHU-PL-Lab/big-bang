@@ -92,7 +92,7 @@ clauseDerivation clause =
       let a = derivFlowVar x in
       let b = derivCellVar y in
       let constraint = cwrap $ CellLoadingConstraint b a in
-      return (Nothing, singleton constraint history)
+      return (Just a, singleton constraint history)
     Throws _ x1 x2 ->
       let a1 = derivFlowVar x1 in
       let a2 = derivFlowVar x2 in
