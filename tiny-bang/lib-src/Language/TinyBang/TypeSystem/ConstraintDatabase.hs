@@ -81,8 +81,6 @@ class (Eq db) => ConstraintDatabase db where
   -- |Performs contour replacement on the contents of a database.
   replaceContours :: Contour -> db -> db
   
-  -- TODO: the rest of the interface
-  
   -- ### Convenience functions
   -- |Creates a singleton constraint database.  By default, this simply adds
   --  a constraint to an empty database.
