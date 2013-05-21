@@ -16,6 +16,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast.Data
+import Language.TinyBang.Display
 
 -- |A result for the well-formedness check.
 data IllFormedness
@@ -25,6 +26,7 @@ data IllFormedness
   | InvalidExpressionEnd Clause
   | EmptyExpression
   deriving (Eq, Ord, Show)
+instance Display IllFormedness where makeDoc = text . show
 
 -- |Determines whether or not the provided expression is well-formed.  The
 --  result is either an ill-formedness complaint or a set of used variable

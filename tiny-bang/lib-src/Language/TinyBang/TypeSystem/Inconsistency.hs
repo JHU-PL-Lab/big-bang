@@ -28,7 +28,8 @@ data Inconsistency db
   = ApplicationFailure
       ApplicationConstraint -- ^ The triggering constraint
       (MultiProjectionResult db) -- ^ The projection of scapes
-      (ApplicationCompatibilityResult db) -- ^ The result of application compa
+      (ApplicationCompatibilityResult db)
+        -- ^ The result of application compatibility
   | IntegerOperationFailure
       OperationConstraint -- ^ The triggering constraint
       (SingleProjectionResult db) -- ^ The projection result for the left side

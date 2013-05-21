@@ -102,7 +102,11 @@ instance Display PossibleContour where
     PossibleContour (Just cn) -> makeDoc cn
     
 instance Display Contour where
-  makeDoc cn = makeDoc $ unContour cn
+  makeDoc cn =
+    let strands = unContour cn in
+    if Set.size strands == 1
+      then let [strand] = Set.toList strands in makeDoc strand
+      else makeDoc strands
 
 instance Display ContourStrand where
   makeDoc (ContourStrand parts) = makeDoc parts

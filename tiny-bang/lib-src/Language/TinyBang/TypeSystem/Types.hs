@@ -122,6 +122,11 @@ instance Display CellTVar where
   makeDoc b = case b of
     CellTVar y pc -> makeDoc y <> char '^' <> makeDoc pc
     GenCellTVar x pc -> makeDoc x <> text "#C^" <> makeDoc pc
+
+instance Display AnyTVar where
+  makeDoc v = case v of
+    SomeFlowTVar a -> makeDoc a
+    SomeCellTVar b -> makeDoc b
   
 instance (DocumentContainer db) => Display (Type db) where
   makeDoc typ = case typ of

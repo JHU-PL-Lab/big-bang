@@ -19,6 +19,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -30,6 +31,11 @@ import Language.TinyBang.TypeSystem.Types
 -- |A data type describing errors projection.
 data ProjectionError db
   = NonContractiveType Projector (Type db) [FlowTVar]
+  deriving (Eq, Ord, Show)
+instance (ConstraintDatabase db, Display db)
+      => Display (ProjectionError db) where
+  makeDoc (NonContractiveType proj typ vars) =
+    text "NonContractiveType" <+> makeDoc proj <+> makeDoc typ <+> makeDoc vars
 
 -- |An alias for the projection monad.
 type ProjM db m = FlowT (EitherT (ProjectionError db) m)

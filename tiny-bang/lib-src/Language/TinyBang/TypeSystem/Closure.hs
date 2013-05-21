@@ -26,7 +26,10 @@ import Language.TinyBang.TypeSystem.Types
 -- |A data structure representing errors in constraint closure.
 data ClosureError db
   = ClosureFailedProjection (ProjectionError db)
-
+  deriving (Eq, Ord, Show)
+instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
+  makeDoc (ClosureFailedProjection err) = makeDoc err
+  
 -- |Calculates the transitive closure of the provided constraint database.  The
 --  transitive closure of a TinyBang database is only confluent up to
 --  equivalence of contour folding; this function will produce a representative

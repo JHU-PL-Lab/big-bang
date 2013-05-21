@@ -98,7 +98,7 @@ instance ContourInstantiable CellTVar where
             CellTVar _y _pcn' -> (CellTVar _y,_pcn')
             GenCellTVar _x _pcn' -> (GenCellTVar _x,_pcn')
     in
-    if SomeCellTVar b `Set.member` vs || isNothing mcn'
+    if SomeCellTVar b `Set.member` vs || isJust mcn'
       then b
       else con $ PossibleContour $ Just cn
 
@@ -109,7 +109,7 @@ instance ContourInstantiable FlowTVar where
             FlowTVar _x _pcn' -> (FlowTVar _x,_pcn')
             GenFlowTVar _x _pcn' -> (GenFlowTVar _x,_pcn')
     in
-    if SomeFlowTVar a `Set.member` vs || isNothing mcn'
+    if SomeFlowTVar a `Set.member` vs || isJust mcn'
       then a
       else con $ PossibleContour $ Just cn
 
