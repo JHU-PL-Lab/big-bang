@@ -17,6 +17,7 @@ data Options = Options
   { noTypecheck :: Bool
   , noEval :: Bool
   , loggingInstructions :: [String]
+  , databaseName :: String
   } deriving (Data, Typeable, Show, Eq)
   
 defOpts :: Options
@@ -36,6 +37,12 @@ defOpts = Options { noTypecheck = def
                               ++ "of debug, info, notice, warning, error, or "
                               ++ "critical) or a Haskell module hierarchy name "
                               ++ "followed by a colon and a logging level.")
+                  , databaseName = def
+                        &= name "db"
+                        &= explicit
+                        &= help ("Selects the closure database.  This "
+                              ++ "must be one of the following: "
+                              ++ "simple")
                   }
           &= program "interpreter"
           &= summary versionStr
@@ -53,13 +60,22 @@ toploop opts = do
   where
     doEvalPrint :: String -> IO ()
     doEvalPrint exprSrc = do
+      dtype <- case typeFromName $ databaseName opts of
+        Just t -> return t
+        Nothing -> ioError $ userError $
+                      "Invalid database name: " ++ databaseName opts
       putStrLn $ stringyInterpretSource
                   InterpreterConfiguration
                     { typechecking = not $ noTypecheck opts
-                    , evaluating = not $ noEval opts }
+                    , evaluating = not $ noEval opts
+                    , databaseType = dtype }
                   exprSrc
       putStrLn "###"
       hFlush stdout
+      where
+        typeFromName dbname = case dbname of
+          "simple" -> Just Simple
+          _ -> Nothing
       
 -- |Executes the TinyBang interpreter.
 main :: IO ()

@@ -24,7 +24,9 @@ module Language.TinyBang.TypeSystem.Fibrations
 import Control.Applicative  ((<$>))
 import Control.Monad (zipWithM)
 
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.TypeSystem.Utils.DocumentContainer
 
 -- |A data structure representing fibrations.  Each fibration level describes
 --  a single value-level decision of lower bound.  The type parameter @db@
@@ -60,3 +62,8 @@ blankFibrationFor t = Fibration t $ case t of
   Onion _ _ -> [Unexpanded, Unexpanded]
   OnionFilter _ _ _ -> [Unexpanded]
   Scape _ _ _ -> []
+
+instance (Display db, DocumentContainer db) => Display (Fibration db) where
+  makeDoc fib = case fib of
+    Unexpanded -> char '*'
+    Fibration typ fibs -> parens $ makeDoc typ <+> char ',' <+> makeDoc fibs

@@ -16,6 +16,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -123,3 +124,6 @@ instance ContourReplacable SimpleConstraintDatabase where
   replContours = replaceContours
 instance CellSubstitutable SimpleConstraintDatabase where
   substCells = substituteCellVariables
+
+instance Display SimpleConstraintDatabase where
+  makeDoc (SimpleConstraintDatabase cs _) = makeDoc cs
