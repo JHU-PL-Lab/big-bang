@@ -19,7 +19,6 @@ import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
-import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Relations
 import Language.TinyBang.TypeSystem.Types
 
@@ -99,6 +98,10 @@ instance ConstraintDatabase SimpleConstraintDatabase where
           Just $ SomeFlowTVar a
 
   getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
+  instantiateContours vs cn (SimpleConstraintDatabase cs hist) =
+    SimpleConstraintDatabase (instContours vs cn cs) (instContours vs cn hist)
+  replaceContours cn (SimpleConstraintDatabase cs hist) =
+    SimpleConstraintDatabase (replContours cn cs) (replContours cn hist)
 
 cfilter :: (Ord a, ConstraintDatabase db)
         => (Constraint db -> Maybe a) -> db -> [a]
@@ -110,3 +113,8 @@ opfilter f = cfilter $ \case
     WrapOperationConstraint (oc@(OperationConstraint _ op _ _)) ->
       if f op then Just oc else Nothing
     _ -> Nothing
+
+instance ContourInstantiable SimpleConstraintDatabase where
+  instContours = instantiateContours
+instance ContourReplacable SimpleConstraintDatabase where
+  replContours = replaceContours

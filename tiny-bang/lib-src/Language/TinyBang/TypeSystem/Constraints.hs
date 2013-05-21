@@ -53,7 +53,7 @@ data CellLowerBoundingConstraint
 data IntermediateConstraint = IntermediateConstraint FlowTVar FlowTVar
   deriving (Eq, Ord, Show)
   
--- See notes/TypeConstraint-Foldable.txt for a limitation
+-- See notes/TypeConstraint-Overlapping.txt for limitations
 data TypeConstraint db = TypeConstraint (Type db) FlowTVar
   deriving (Eq, Ord, Show)
 

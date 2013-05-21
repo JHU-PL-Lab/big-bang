@@ -60,7 +60,10 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
                    Language.TinyBang.TypeSystem.Data,
-                   Language.TinyBang.TypeSystem.Utils.DocumentContainer
+                   Language.TinyBang.TypeSystem.Utils.DocumentContainer,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable
 
 executable tiny-bang
   hs-source-dirs:  
@@ -112,7 +115,10 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
-                   Language.TinyBang.TypeSystem.Data
+                   Language.TinyBang.TypeSystem.Data,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -151,4 +157,7 @@ executable tests
                    Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
-                   Language.TinyBang.TypeSystem.Data
+                   Language.TinyBang.TypeSystem.Data,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable
