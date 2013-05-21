@@ -96,7 +96,7 @@ posTokenLexer = do
 -- | A lexer which obtains a single token from a stream
 tokenLexer :: Lexer Token
 tokenLexer = choice $ map try $
-  concat [variableLengthLexers, operators, reservedWords]
+  concat [reservedWords, operators, variableLengthLexers]
 
 -- | A lexer which matches a character which may appear within an identifier.
 identChar :: Lexer Char
