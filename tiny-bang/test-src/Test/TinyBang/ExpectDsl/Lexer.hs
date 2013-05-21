@@ -2,7 +2,7 @@
   This module provides a Parsec lexer for the value DSL.
 -}
 
-module Test.TinyBang.ValueDsl.Lexer
+module Test.TinyBang.ExpectDsl.Lexer
 ( lexValueDsl
 , Token(..)
 , PositionalToken(..)
@@ -23,6 +23,7 @@ data Token
   | TokLitChar Char
   | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
   | TokScapes -- ^@scapes@
+  | TokTypeFail -- ^@typefail@
   deriving (Eq, Ord, Show)
   
 -- |Parsec-annotated tokens.
@@ -74,6 +75,7 @@ reservedWords :: [Parser Token]
 reservedWords =
   map (\(s, t) -> string s *> notFollowedBy identChar *> pure t)
     [ ("scapes", TokScapes)
+    , ("typefail", TokTypeFail)
     ]
 
 -- | This group of lexers matches parametric tokens.

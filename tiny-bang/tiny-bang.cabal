@@ -136,11 +136,8 @@ executable tests
                    directory
   ghc-options:     -Wall
   other-modules:   
-                   Test.TinyBang.ValueDsl.Lexer,
-                   Test.TinyBang.ValueDsl.Parser,
                    Language.TinyBang.Utils.Parsec,
                    Test.TinyBang.SourceFile,
-                   Test.TinyBang.ValueDsl,
                    Language.TinyBang.Logging,
                    Utils.Tuple,
                    Utils.TemplateHaskell,
@@ -163,4 +160,8 @@ executable tests
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
-                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable
+                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
+                   Test.TinyBang.ExpectDsl.Lexer,
+                   Test.TinyBang.ExpectDsl,
+                   Test.TinyBang.ExpectDsl.Data
+

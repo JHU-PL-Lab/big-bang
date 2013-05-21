@@ -28,7 +28,8 @@ data TypecheckingError db
   = InitialDerivationFailed InitialDerivationError
   | ClosureFailed (ClosureError db)
   | InconsistencyFailed (ProjectionError db)
-  | ClosureInconsistent [Inconsistency db] db 
+  | ClosureInconsistent [Inconsistency db] db
+  deriving (Eq, Ord, Show) 
 
 -- |A function which performs top-level typechecking.  The caller must
 --  provide an expression over which to perform typechecking.  The result

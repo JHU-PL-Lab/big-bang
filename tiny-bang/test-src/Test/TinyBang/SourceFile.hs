@@ -18,7 +18,9 @@ import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Parser
-import Test.TinyBang.ValueDsl
+import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
+import Language.TinyBang.TypeSystem.TypeInference
+import Test.TinyBang.ExpectDsl
 
 testsPath :: FilePath
 testsPath = "tests"
@@ -48,7 +50,7 @@ sourceFileTests = do
         Left noExpectation -> case noExpectation of
           NoExpectationFound ->
             error "Test.TinyBang.SourceFile: didn't we just filter this out?"
-          BadDeepOnionPredicateParse src err ->
+          BadExpectationParse src err ->
             return $ Left $ filepath ++ ": could not parse expectation " ++ src
               ++ ": " ++ err
         Right expectations -> case expectations of
@@ -69,9 +71,9 @@ sourceFileTests = do
       case afterPart "# EXPECT:" str of
         Just src ->
           let src' = trim src in
-          case parseValueDslPredicate src' of
-            Left err -> Left $ BadDeepOnionPredicateParse src' err
-            Right predicate -> Right $ Pass predicate src'
+          case parseExpectDslPredicate src' of
+            Left err -> Left $ BadExpectationParse src' err
+            Right expectation -> Right expectation
         Nothing -> Left NoExpectationFound
     trim :: String -> String
     trim str = reverse $ trimFront $ reverse $ trimFront str
@@ -84,14 +86,21 @@ sourceFileTests = do
                           else Nothing
     createTest :: FilePath -> Expectation -> Expr -> Test
     createTest filepath expectation expr =
+      let tcResult = typecheck expr
+          tcResult :: Either (TypecheckingError SimpleConstraintDatabase)
+                        SimpleConstraintDatabase
+      in
       let result = eval expr in
       case expectation of
         Pass predicate predSrc -> TestLabel filepath $ TestCase $
-          case result of
-            Left (err,_) ->
+          case (tcResult, result) of
+            (Left err, _) ->
+              assertString $ "Expected " ++ display predSrc
+                ++ " but type error occurred: " ++ show err
+            (_, Left (err,_)) ->
               assertString $ "Expected " ++ display predSrc
                 ++ " but error occurred: " ++ show err
-            Right (env,var) ->
+            (_, Right (env,var)) ->
               let monion = deepOnion (flowVarMap env) (cellVarMap env) var in
               case monion of
                 Left failure ->
@@ -101,16 +110,18 @@ sourceFileTests = do
                   assertBool ("Expected " ++ display predSrc
                       ++ " but evaluation produced: " ++ display onion) $
                     predicate onion
+        TypeFailure -> TestLabel filepath $ TestCase $
+        
+          case tcResult of
+            Left _ -> assert True
+            Right db ->
+              assertString $ "Expected type failure but typechecking produced "
+                          ++ "a valid database: " ++ show db
 
 data NoExpectation
   = NoExpectationFound
-  | BadDeepOnionPredicateParse
+  | BadExpectationParse
       String -- ^ The source string for the predicate.
       String -- ^ The error message from the lexer/parser.
   deriving (Eq, Ord, Show)
 
-data Expectation
-  = Pass
-      DeepOnionPredicate -- ^ The predicate that the result must match
-      String -- ^ The original source of the predicate (for display purposes)
-  -- TODO: add cases for expected failure

@@ -1,13 +1,13 @@
 {-# LANGUAGE LambdaCase, ExistentialQuantification #-}
 
-module Test.TinyBang.ValueDsl.Parser
+module Test.TinyBang.ExpectDsl.Parser
 ( parseValueDsl
 , DeepOnionPredicate
 ) where
 
 import Prelude hiding (lookup)
 
-import Control.Applicative           ((*>), (<$>), (<*))
+import Control.Applicative
 import Control.Monad.Identity
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
@@ -18,24 +18,29 @@ import Text.Parsec.Pos
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Utils.Parsec
-import Test.TinyBang.ValueDsl.Lexer
+import Test.TinyBang.ExpectDsl.Lexer
+import Test.TinyBang.ExpectDsl.Data
 
 -- |A function to parse the value DSL's tokens into a predicate function which
 --  matches against @DeepValue@ structures.  If this is successful, the result
 --  is the right predicate function; otherwise, it is a left error message.
-parseValueDsl :: [PositionalToken] -> Either String DeepOnionPredicate
-parseValueDsl toks = case parse programParser "<input>" toks of
+parseValueDsl :: [PositionalToken] -- ^ The tokenized source
+              -> String -- ^ The original source string (for reference)
+              -> Either String Expectation -- ^ The expectation or an error
+parseValueDsl toks src = case parse (programParser src) "<input>" toks of
   Left err -> Left $ show err
   Right ans -> Right ans
-
--- |The type of predicate function produced by this module.
-type DeepOnionPredicate = DeepOnion -> Bool
 
 -- |A type alias for the TinyBang parser.
 type Parser a = Parsec [PositionalToken] () a
 
-programParser :: Parser DeepOnionPredicate
-programParser = predicateParser <* eof
+programParser :: String -> Parser Expectation
+programParser src = expectationParser src <* eof
+
+expectationParser :: String -> Parser Expectation
+expectationParser src =
+      Pass <$> predicateParser <*> pure src
+  </> consume TokTypeFail *> pure TypeFailure
 
 predicateParser :: Parser DeepOnionPredicate
 predicateParser =
