@@ -11,6 +11,7 @@ import Control.Applicative
 import Control.Monad.Identity
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
+import Data.Monoid
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 import Text.Parsec.Pos
@@ -77,6 +78,7 @@ primitiveParser :: Parser DeepOnionPredicate
 primitiveParser =
       intParser
   </> charParser
+  </> emptyOnionParser
 
 intParser :: Parser DeepOnionPredicate
 intParser = demandPrim DeepPrimInt <$> require matchInt
@@ -91,6 +93,9 @@ charParser = demandPrim DeepPrimChar <$> require matchChar
     matchChar = \case
       TokLitChar c -> Just c
       _ -> Nothing
+  
+emptyOnionParser :: Parser DeepOnionPredicate
+emptyOnionParser = consume TokEmptyOnion *> return (const True)
   
 demandPrim :: (Eq a) => DeepPrimitiveType a -> a -> DeepOnionPredicate
 demandPrim dpt val onion = fromMaybe False $
