@@ -75,6 +75,7 @@ toploop opts = do
       where
         typeFromName dbname = case dbname of
           "simple" -> Just Simple
+          "" -> Just Simple -- default if none is specified
           _ -> Nothing
       
 -- |Executes the TinyBang interpreter.
