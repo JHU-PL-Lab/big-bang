@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell #-}
 
 {-|
   This module defines TinyBang's projection relation.
@@ -20,6 +20,7 @@ import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -27,6 +28,8 @@ import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Types
+
+$(loggingFunctions)
 
 -- |A data type describing errors projection.
 data ProjectionError db
@@ -48,7 +51,7 @@ type ProjM db m = FlowT (EitherT (ProjectionError db) m)
 --  The resulting list of types is in reverse order; the first element of the
 --  list is highest priority.
 project :: forall db m.
-           (Applicative m, ConstraintDatabase db, MonadCReader db m)
+           (Applicative m, ConstraintDatabase db, MonadCReader db m, Display db)
         => Projector
         -> FlowTVar
         -> ProjM db m ([Type db], Fibration db)
@@ -63,7 +66,8 @@ type OccursCheck = (Set FlowTVar, [FlowTVar])
 -- |Computes the possible single projections of a type variable and projector.
 --  See @project@ for more information.
 projectSingle :: forall db m.
-                 (Applicative m, ConstraintDatabase db, MonadCReader db m)
+                 ( Applicative m, ConstraintDatabase db, MonadCReader db m
+                 , Display db)
               => Projector
               -> FlowTVar
               -> ProjM db m (Maybe (Type db), Fibration db)
@@ -76,7 +80,7 @@ projectSingle proj a = do
 -- |Performs single projection.  This obtains a prepared projection result
 --  as well as the actual type.
 projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
-                       , Functor m, Applicative m )
+                       , Functor m, Applicative m, Display db )
                     => Projector -> FlowTVar
                     -> ProjM db m (Maybe (Type db), SingleProjectionResult db)
 projectSingleResult proj a = do
@@ -86,15 +90,22 @@ projectSingleResult proj a = do
 -- |The *real* projection function.  This function includes an occurs check for
 --  non-contractive onion types to prevent divergence.
 projectVar :: forall db m.
-              (Applicative m, ConstraintDatabase db, MonadCReader db m)
+              ( Applicative m, ConstraintDatabase db, MonadCReader db m
+              , Display db)
            => OccursCheck
            -> Projector
            -> FlowTVar
            -> ProjM db m ([Type db], Fibration db)
 projectVar check proj a = do
+  _debug $ "Checking projection of " ++ display proj ++ " from variable "
+              ++ display a
   TypeConstraint lowerBound _ <-
       flow $ lift $ getTypeConstraintsByUpperBound a <$> askDb
-  projectType lowerBound
+  (ts, fib) <- projectType lowerBound
+  _debug $ "Projection of " ++ display proj ++ " from variable "
+              ++ display a ++ " gives " ++ display ts ++ " at fibration "
+              ++ display fib
+  return (ts, fib)
   where
     projectType :: Type db -> ProjM db m ([Type db], Fibration db)
     projectType lowerBound =

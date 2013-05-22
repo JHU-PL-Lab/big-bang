@@ -192,7 +192,7 @@ closeTransitivity = do
 
 -- |Calculates integer operation closures in the constraint database.
 closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
-                            , Functor m, Applicative m )
+                            , Functor m, Applicative m, Display db )
                          => ClosureM db m db
 closeIntegerCalculations = do
   oc@(OperationConstraint a2 _ a3 a1) <-
@@ -206,7 +206,7 @@ closeIntegerCalculations = do
 -- |Calculates integer operation comparisons in the constraint database.  This
 --  does not include equality, which is more general.
 closeIntegerComparisons :: ( ConstraintDatabase db, MonadCReader db m
-                           , Functor m, Applicative m )
+                           , Functor m, Applicative m, Display db )
                         => ClosureM db m db
 closeIntegerComparisons = do
   oc@(OperationConstraint a2 _ a3 a1) <-

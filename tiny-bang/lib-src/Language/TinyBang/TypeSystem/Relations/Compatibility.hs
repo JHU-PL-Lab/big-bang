@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, ScopedTypeVariables #-} 
+{-# LANGUAGE TupleSections, ScopedTypeVariables, TemplateHaskell #-} 
 
 module Language.TinyBang.TypeSystem.Relations.Compatibility
 ( CompatibilityArgument(..)
@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 
 import Language.TinyBang.Ast as A
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -27,6 +28,8 @@ import Language.TinyBang.TypeSystem.Monad.Trans.Flow
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Relations.Projection
 import Language.TinyBang.TypeSystem.Types as T
+
+$(loggingFunctions)
 
 type CellSubstitutions = Map CellTVar CellTVar
 
@@ -38,37 +41,72 @@ checkApplicationCompatible :: forall db m.
                            => CompatibilityArgument
                            -> [Type db]
                            -> CompatM db m (Maybe (FlowTVar, db), Fibration db)
-checkApplicationCompatible arg = doCheck Unexpanded
+checkApplicationCompatible arg ts =
+  _debugI ("Checking application compatibility for " ++ display arg ++ " with "
+              ++ display ts) $
+  do
+    (result,fib) <- doCheck Unexpanded ts
+    _debug $ "Application compatibility for " ++ display arg ++ " with "
+        ++ display ts ++ " at fibration " ++ display fib ++
+          case result of
+            Nothing -> " can fail"
+            Just (a,cs) -> " can succeed with " ++ display a ++ "\\"
+                              ++ display cs
+    return (result,fib)
   where
     doCheck :: Fibration db
             -> [Type db]
             -> CompatM db m (Maybe (FlowTVar, db), Fibration db)
     doCheck fib scapes =
       case scapes of
-        [] -> return (Nothing, fib)
-        Scape tpat a cs : scapes' -> do
+        [] ->
+          _debugI ("Application compatibility check for argument "
+                      ++ display arg ++ " exhausted with fibration "
+                      ++ display fib) $
+          return (Nothing, fib)
+        scape@(Scape tpat a cs) : scapes' -> do
+          _debug $ "Checking application compatibility for " ++ display arg
+                      ++ " with " ++ display scape 
           (dat,fib') <- checkCompatible arg tpat
           case mergeFibrations fib fib' of
             Nothing -> mzero
-            Just fib'' -> case dat of
-              Nothing -> doCheck fib'' scapes'
-              Just (substs, cs0) ->
-                 let csOut = substituteCellVariables substs cs `union` cs0 in
-                 return (Just (a, csOut), fib'')
+            Just fib'' ->
+              let debugPfx = "Application compatibility for " ++ display arg
+                    ++ " with " ++ display scape ++ " at fibration "
+                    ++ display fib'' in
+              case dat of
+                Nothing ->
+                  _debugI (debugPfx ++ " can fail; moving on...") $
+                  doCheck fib'' scapes'
+                Just (substs, cs0) ->
+                  let csOut = substituteCellVariables substs cs `union` cs0 in
+                  _debugI (debugPfx ++ " succeeds")
+                  return (Just (a, csOut), fib'')
         t:_ -> error $ "Called checkApplicationCompatible with list "
                     ++ "containing non-scape type " ++ display t
 
 checkCompatible :: forall db m.
-                   (Applicative m, ConstraintDatabase db, MonadCReader db m)
+                   ( Applicative m, ConstraintDatabase db, MonadCReader db m
+                   , Display db)
                 => CompatibilityArgument
                 -> PatternType
                 -> CompatM db m (Maybe (CellSubstitutions, db), Fibration db)
-checkCompatible arg tpat =
-  case (arg,tpat) of
-    (ArgVal a, T.ValuePattern b tipat) -> patternMatch a b tipat
-    (ArgExn a, T.ExnPattern b tipat) -> patternMatch a b tipat
-    (ArgVal _, T.ExnPattern _ _) -> failure
-    (ArgExn _, T.ValuePattern _ _) -> failure
+checkCompatible arg tpat = do
+  _debug $ "Checking compatibility of " ++ display arg ++ " with "
+              ++ display tpat
+  (mdat, fib) <- 
+    case (arg,tpat) of
+      (ArgVal a, T.ValuePattern b tipat) -> patternMatch a b tipat
+      (ArgExn a, T.ExnPattern b tipat) -> patternMatch a b tipat
+      (ArgVal _, T.ExnPattern _ _) -> failure
+      (ArgExn _, T.ValuePattern _ _) -> failure
+  _debug $ "Compatibility of " ++ display arg ++ " with " ++ display tpat
+              ++ " at fibration " ++ display fib
+              ++ case mdat of
+                    Nothing -> " can fail"
+                    Just (substs, cs) -> " can succeed with substitutions "
+                        ++ display substs ++ " and constraints " ++ display cs
+  return (mdat, fib)
   where
     failure = return (Nothing, Unexpanded)
     patternMatch :: FlowTVar -> CellTVar -> InnerPatternType
@@ -89,7 +127,7 @@ checkCompatible arg tpat =
 --  compatible.  If so, a set of cell substitutions and a fibration are
 --  produced; otherwise, a @Nothing@ and a fibration are produced.
 checkInnerCompatible :: ( Applicative m, ConstraintDatabase db
-                        , MonadCReader db m)
+                        , MonadCReader db m, Display db)
                      => FlowTVar
                      -> InnerPatternType
                      -> CompatM db m (Maybe CellSubstitutions, Fibration db)
