@@ -73,8 +73,7 @@ loggingParser :: (Monad m, Display a)
 loggingParser desc p = do
   st <- getParserState
   _debug $ "Trying " ++ desc ++ " at "  ++ show (statePos st)
-  result <- p
-              <|> _debug ("Failed to parse " ++ desc ++ " at "
+  result <- p <|> _debug ("Failed to parse " ++ desc ++ " at "
                       ++ show (statePos st))
                   *> parserZero
   _debug $ "Parsed " ++ desc ++ " at " ++ show (statePos st) ++ ": "
