@@ -47,7 +47,7 @@ data ConstraintDatabaseType
   = Simple
   
 data DummyDatabase where
-  DummyDatabase :: forall db. (ConstraintDatabase db, Display db)
+  DummyDatabase :: forall db. (ConstraintDatabase db, Display db, Ord db)
                 => db -> DummyDatabase
   
 data InterpreterConfiguration
@@ -59,7 +59,7 @@ data InterpreterConfiguration
 -- |Interprets the provided String as a TinyBang expression.  This value will be
 --  lexed, parsed, typechecked, and executed.  This function takes a dummy
 --  constraint database to drive the database type used by type inference.
-interpretSource :: (ConstraintDatabase db, Display db)
+interpretSource :: (ConstraintDatabase db, Display db, Ord db)
                 => db -> InterpreterConfiguration
                 -> String -> Either (InterpreterError db) InterpreterResult
 interpretSource _ interpConf src = do

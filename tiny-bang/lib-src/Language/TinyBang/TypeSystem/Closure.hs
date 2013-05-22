@@ -42,7 +42,7 @@ instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
 --  transitive closure of a TinyBang database is only confluent up to
 --  equivalence of contour folding; this function will produce a representative
 --  of the appropriate equivalence class.
-calculateClosure :: (ConstraintDatabase db, Display db)
+calculateClosure :: (ConstraintDatabase db, Display db, Ord db)
                  => db -> Either (ClosureError db) db
 calculateClosure db =
   case calculateClosureStep db of
@@ -60,12 +60,12 @@ expandClosureM :: (ConstraintDatabase db)
 expandClosureM calc = runCReader (runEitherT $ runFlowT calc)
 
 -- |Calculates a single step of closure.
-calculateClosureStep :: forall db. (ConstraintDatabase db, Display db)
+calculateClosureStep :: forall db. (ConstraintDatabase db, Display db, Ord db)
                      => db -> Either (ClosureError db) db
 calculateClosureStep db =
   do -- Either (ClosureError db)
     dbss <- mapM (`expandClosureM` db) monotonicClosures
-    _debug $ "Monotonic closure rules gave: " ++ display dbss
+    _debug $ "Monotonic closure rules gave: " ++ display (debugFiltering dbss)
     let dbPlusMonotone = foldr (flip union) db $ concat dbss 
     answer <- if dbPlusMonotone /= db
                 then return dbPlusMonotone
@@ -83,6 +83,9 @@ calculateClosureStep db =
                         , closeCellPropagation
                         , closeExceptionPropagation
                         ]
+    debugFiltering :: [[db]] -> [Constraint db]
+    debugFiltering dbss = concat $ concat $ (`map` dbss) $ map $
+      Set.toList . (`Set.difference` getAllConstraints db) . getAllConstraints
 
 -- * Application closure
 

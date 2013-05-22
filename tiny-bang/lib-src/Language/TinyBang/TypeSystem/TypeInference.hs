@@ -35,7 +35,7 @@ data TypecheckingError db
 --  provide an expression over which to perform typechecking.  The result
 --  of this function will be a constraint database (if typechecking was
 --  successful) or an error containing as much information as was obtained.
-typecheck :: forall db. (ConstraintDatabase db, Display db)
+typecheck :: forall db. (ConstraintDatabase db, Display db, Ord db)
           => Expr -> Either (TypecheckingError db) db
 typecheck expr = do
   _debug $ "Typechecking expression: " ++ display expr
