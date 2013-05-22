@@ -95,8 +95,8 @@ calculateApplicationClosure :: forall db. (ConstraintDatabase db, Display db)
                             => db -> Either (ClosureError db) db
 calculateApplicationClosure db =
   do -- Either (ClosureError db)
-    effects <- concat <$> expandClosureM (sequence applicationClosures) db
-    return $ applyEffects effects
+    effects <- mapM (`expandClosureM` db) applicationClosures
+    return $ applyEffects $ concat effects
   where
     applicationClosures :: ( Display db, ConstraintDatabase db
                            , MonadCReader db m , Functor m, Applicative m)
