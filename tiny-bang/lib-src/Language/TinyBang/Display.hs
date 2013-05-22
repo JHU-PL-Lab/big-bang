@@ -93,7 +93,7 @@ delimFillSep l r delim xs =
           then []
           else (map (<> delim) $ init xs) ++ [last xs]
   in
-  l <> fillSep ds <> r
+  l <> nest (length $ render l) (fillSep ds <> r)
 
 -- |A binary version of @sepDoc@ which does makeDoc translation.
 binaryOpDoc :: (Display x, Display y, Display z) => x -> y -> z -> Doc
@@ -144,7 +144,7 @@ instance (Display a) => Display [a] where
     makeDoc = makeListDoc
 
 instance (Display a) => Display (Set a) where
-    makeDoc = delimSepDoc lbrace rbrace comma . map makeDoc . Set.toList
+    makeDoc = delimFillSep lbrace rbrace comma . map makeDoc . Set.toList
 
 instance (Display a) => Display (Maybe a) where
     makeDoc = maybe (text "Nothing") ((text "Just" <+>) . makeDoc)
