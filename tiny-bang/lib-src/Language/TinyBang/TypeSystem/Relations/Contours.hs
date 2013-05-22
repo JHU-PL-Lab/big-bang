@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, TemplateHaskell #-}
 
 module Language.TinyBang.TypeSystem.Relations.Contours
 ( cNew
@@ -15,12 +15,15 @@ import qualified Data.Set as Set
 
 import Language.TinyBang.Ast (FlowVar)
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable
 import Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable
 import Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable
 import Language.TinyBang.TypeSystem.Types
+
+$(loggingFunctions)
 
 -- |Defines contour creation as specified in the TinyBang language document.
 tMakeCntr :: FlowTVar -> Contour
@@ -44,8 +47,12 @@ tMakeCntr a =
 -- |Defines contour collapse as specified in the TinyBang language document.
 cCollapse :: Contour -> Contour
 cCollapse cn =
-  let strands = unContour cn in
-  contour $ Set.map strandCollapse strands
+  let answer = 
+        let strands = unContour cn in
+        contour $ Set.map strandCollapse strands
+  in
+  _debugI ("Contour collapse of " ++ display cn ++ " is " ++ display answer) $
+    answer
   where
     strandCollapse :: ContourStrand -> ContourStrand
     strandCollapse (ContourStrand parts) = ContourStrand $ partsCollapse parts
@@ -55,7 +62,7 @@ cCollapse cn =
         [] -> []
         el:els ->
           let indices = List.findIndices
-                (Set.null . Set.intersection (partElements el)) $
+                (not . Set.null . Set.intersection (partElements el)) $
                 map partElements els
           in
           if null indices
