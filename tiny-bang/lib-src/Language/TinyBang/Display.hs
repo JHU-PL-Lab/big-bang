@@ -129,6 +129,9 @@ denseDisplay etc elems =
 
 instance Display Doc where
     makeDoc = id
+    
+instance Display () where
+    makeDoc () = text "()"
 
 instance Display Bool where
     makeDoc = text . show

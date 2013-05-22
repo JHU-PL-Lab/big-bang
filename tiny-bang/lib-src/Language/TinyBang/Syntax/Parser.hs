@@ -66,7 +66,8 @@ clauseParser = "Clause" <@>
 
 evaluatedClauseParser :: Parser EvaluatedClause
 evaluatedClauseParser = "Evaluated Clause" <@>
-      argorig2 ValueDef <$> flowVarParser <* consume TokIs ?=> valueParser
+      argorig2 ValueDef <$> flowVarParser <* consume TokIs <*> valueParser
+        ?+> eps
   <|> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*
         consume TokDef ?=> flowVarParser
   <|> argorig3 Flow <$> flowVarParser <*> flowKindParser ?=> flowVarParser
@@ -228,7 +229,7 @@ requirex t f = do
 -- |This parser is a specialization of @requirex@ which produces a unit for all
 --  matched input.
 consume :: Token -> Parser ()
-consume t = requirex t $ const ()
+consume t = display t <@> requirex t (const ())
   
 -- |A mechanism to retrieve the parser context.
 parserContext :: Parser ParserContext
