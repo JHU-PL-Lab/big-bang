@@ -114,7 +114,7 @@ checkCompatible arg tpat = do
     patternMatch a b tipat = do
       (msubsts, fib) <- checkInnerCompatible a tipat
       case msubsts of
-        Nothing -> failure
+        Nothing -> return (Nothing, fib)
         Just substs ->
           let database = fromList
                    [ ( WrapCellCreationConstraint $ CellCreationConstraint a b
@@ -142,14 +142,14 @@ checkInnerCompatible a1 tipat =
       if null typs
         then return (Nothing, fib)
         else do
-          let (Label _ b3) = head typs
+          let typ@(Label _ b3) = head typs
           lbc <- flow $ lift $ getCellLowerBoundConstraints b3 <$> askDb
           let a4 = lowerBoundOf lbc
           (msubsts, fib1') <- checkInnerCompatible a4 tipat'
           case mergeFibrations fib1 fib1' of
             Nothing -> mzero
-            Just fib' ->
-              return (Map.insert b3 b2 <$> msubsts, fib')
+            Just fib1'' ->
+              return (Map.insert b3 b2 <$> msubsts, Fibration typ [fib1''])
     T.ConjunctivePattern tipat1 tipat2 -> do
       (msubsts1, fib1) <- checkInnerCompatible a1 tipat1
       (msubsts2, fib2) <- checkInnerCompatible a1 tipat2
