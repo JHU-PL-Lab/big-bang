@@ -10,7 +10,7 @@ x1 = y2self:() -> {
                     x10 = !y2self;
                     x11 = !y2self;
                     x12self = x10 x11;
-                    x13 = ();
+                    x13 = 1;
                     x13_val = !y5_1val;
                     x14arg = x13_val - x13;
                     x15 = x12self x14arg
@@ -23,4 +23,8 @@ x1 = y2self:() -> {
         }
     };
 x20 = 5;
-x21 = x1 x20
+y21 := x1;
+x22 = !y21;
+x23 = !y21;
+x24 = x22 x23;
+x25 = x24 x20
