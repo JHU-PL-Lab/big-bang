@@ -105,8 +105,8 @@ instance (ConstraintDatabase db, Display db)
       ClosureFailed (ClosureFailedProjection projErr) -> msgForProjErr projErr
       InconsistencyFailed projErr -> msgForProjErr projErr
       ClosureInconsistent incons db ->
-        text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies"
-        </> nest 2 (foldr1 (</>) $ map docForIncon incons)
+        text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
+        <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon incons))
     EvaluationFailure evalErr _ -> text "Evaluation error:" <+> case evalErr of
       I.IllFormedExpression ill -> text "Ill-formed expression:" <+> case ill of
         DuplicateFlowBinding x -> text "Duplicate flow variable binding:"
