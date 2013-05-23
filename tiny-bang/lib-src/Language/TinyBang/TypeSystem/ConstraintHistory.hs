@@ -8,11 +8,13 @@ module Language.TinyBang.TypeSystem.ConstraintHistory
 ) where
 
 import qualified Language.TinyBang.Ast as A
+import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Data.Compatibility
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.TypeSystem.Utils.DocumentContainer
 
 data ConstraintHistory db
   = DerivedFromSource SourceElement
@@ -93,4 +95,21 @@ data ApplicationCompatibilityResult db
       (Fibration db)
         -- ^ The fibration of the compatibility
   deriving (Eq, Ord, Show)
+  
+instance (Display db, DocumentContainer db)
+      => Display (SingleProjectionResult db) where
+  makeDoc (SingleProjectionResult proj a mt fib) =
+    text "SingleProjectionResult" <+> parens (makeDoc proj)
+      <+> parens (makeDoc a) <+> parens (makeDoc mt) <+> parens (makeDoc fib)
 
+instance (Display db, DocumentContainer db)
+      => Display (MultiProjectionResult db) where
+  makeDoc (MultiProjectionResult proj a ts fib) =
+    text "MultiProjectionResult" <+> parens (makeDoc proj)
+      <+> parens (makeDoc a) <+> parens (makeDoc ts) <+> parens (makeDoc fib)
+
+instance (Display db, DocumentContainer db)
+      => Display (ApplicationCompatibilityResult db) where
+  makeDoc (ApplicationCompatibilityResult ca ts mdat fib) =
+    text "ApplicationCompatibilityResult" <+> parens (makeDoc ca)
+      <+> parens (makeDoc ts) <+> parens (makeDoc mdat) <+> parens (makeDoc fib)

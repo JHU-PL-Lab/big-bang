@@ -29,7 +29,20 @@ data TypecheckingError db
   | ClosureFailed (ClosureError db)
   | InconsistencyFailed (ProjectionError db)
   | ClosureInconsistent [Inconsistency db] db
-  deriving (Eq, Ord, Show) 
+  deriving (Eq, Ord, Show)
+
+instance (ConstraintDatabase db, Display db)
+      => Display (TypecheckingError db) where
+  makeDoc err = case err of
+    InitialDerivationFailed err' ->
+      text "InitialDerivationFailed" <+> makeDoc err'
+    ClosureFailed err' ->
+      text "ClosureFailed" <+> makeDoc err'
+    InconsistencyFailed err' ->
+      text "InconsistencyFailed" <+> makeDoc err'
+    ClosureInconsistent incons db ->
+      text "ClosureInconsistent" <+> nest 2
+        (linebreak <> makeDoc incons <$$> makeDoc db)
 
 -- |A function which performs top-level typechecking.  The caller must
 --  provide an expression over which to perform typechecking.  The result

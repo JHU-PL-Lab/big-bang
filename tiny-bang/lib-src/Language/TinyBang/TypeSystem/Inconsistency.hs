@@ -39,6 +39,15 @@ data Inconsistency db
       (SingleProjectionResult db) -- ^ The projection result for the right side
   deriving (Eq, Ord, Show)
 
+instance (ConstraintDatabase db, Display db) => Display (Inconsistency db) where
+  makeDoc incon = case incon of
+    ApplicationFailure ac mpr acr ->
+      text "ApplicationFailure" <+> parens (makeDoc ac)
+        <+> parens (makeDoc mpr) <+> parens (makeDoc acr)
+    IntegerOperationFailure oc spr1 spr2 ->
+      text "ApplicationFailure" <+> parens (makeDoc oc)
+        <+> parens (makeDoc spr1) <+> parens (makeDoc spr2)
+
 determineInconsistencies :: forall db.
                             (ConstraintDatabase db, Display db)
                          => db -> Either (ProjectionError db) [Inconsistency db]

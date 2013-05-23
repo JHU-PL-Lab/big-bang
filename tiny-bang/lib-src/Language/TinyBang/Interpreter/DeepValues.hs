@@ -49,6 +49,9 @@ data ConversionFailure
   | UnboundCellVariable CellVar
   deriving (Eq, Ord, Show)
   
+instance Display ConversionFailure where
+  makeDoc = text . show
+  
 -- |A type for the deep onion conversion monad.
 type DeepOnionConversionM a = ReaderT (Map FlowVar Value, Map CellVar FlowVar)
                                 (Either ConversionFailure) a

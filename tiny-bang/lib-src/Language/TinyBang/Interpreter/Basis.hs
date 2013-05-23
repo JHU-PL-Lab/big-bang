@@ -26,6 +26,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 
 -- |A data structure containing an evaluation environment.
 data EvalEnv = EvalEnv
@@ -66,6 +67,9 @@ data EvalError
   | ProjectionFailure FlowVar Projector
   | ApplicationFailure FlowVar FlowVar
   deriving (Eq, Ord, Show)
+  
+instance Display EvalError where
+  makeDoc err = text $ show err
 
 -- |The monad in which small-step evaluation takes place.
 type EvalM a = EitherT EvalError (State EvalState) a
@@ -92,7 +96,7 @@ setClauses cls =
 -- |Replaces the first clause of the clause list with the provided clauses.
 replaceFirstClause :: [Clause] -> EvalM ()
 replaceFirstClause cls =
-  modify $ \s -> EvalState (evalEnv s) (cls ++ (drop 1 $ evalClauses s))
+  modify $ \s -> EvalState (evalEnv s) (cls ++ drop 1 (evalClauses s))
                            (evalUsedVars s)
                            
 -- |Modifies the @UsedVars@ state component.

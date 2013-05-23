@@ -96,27 +96,26 @@ sourceFileTests = do
           case (tcResult, result) of
             (Left err, _) ->
               assertString $ "Expected " ++ display predSrc
-                ++ " but type error occurred: " ++ show err
+                ++ " but type error occurred: " ++ display err
             (_, Left (err,_)) ->
               assertString $ "Expected " ++ display predSrc
-                ++ " but error occurred: " ++ show err
+                ++ " but error occurred: " ++ display err
             (_, Right (env,var)) ->
               let monion = deepOnion (flowVarMap env) (cellVarMap env) var in
               case monion of
                 Left failure ->
                   error $ "Evaluator produced a result which did not " ++ 
-                          "convert to an onion!  " ++ show failure
+                          "convert to an onion!  " ++ display failure
                 Right onion ->
                   assertBool ("Expected " ++ display predSrc
                       ++ " but evaluation produced: " ++ display onion) $
                     predicate onion
         TypeFailure -> TestLabel filepath $ TestCase $
-        
           case tcResult of
             Left _ -> assert True
             Right db ->
               assertString $ "Expected type failure but typechecking produced "
-                          ++ "a valid database: " ++ show db
+                          ++ "a valid database: " ++ display db
 
 data NoExpectation
   = NoExpectationFound
