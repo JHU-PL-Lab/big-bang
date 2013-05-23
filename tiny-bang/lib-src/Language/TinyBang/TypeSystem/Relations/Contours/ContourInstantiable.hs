@@ -120,9 +120,11 @@ instance (ConstraintDatabase db) => ContourInstantiable (Type db) where
     Label n b -> Label n $ instContours vs cn b
     Onion a a' -> Onion (instContours vs cn a) (instContours vs cn a')
     OnionFilter a op proj -> OnionFilter (instContours vs cn a) op proj
-    Scape tpat a db -> Scape tpat a $ instantiateContours
-      (vs `Set.union` Set.map SomeCellTVar (patVars tpat)
-          `Set.union` boundVariables db) cn db
+    Scape tpat a db ->
+      let vs' = (vs `Set.union` Set.map SomeCellTVar (patVars tpat)
+            `Set.union` boundVariables db) in
+      Scape (instContours vs cn tpat) (instContours vs cn a)
+            (instantiateContours vs' cn db)
     where
       patVars :: PatternType -> Set CellTVar
       patVars tpat = case tpat of
