@@ -16,8 +16,8 @@ import Test.TinyBang.SourceFile
 
 testsM :: IO [Test]
 testsM = sequence
-  [ --testGroup "source file tests" <$> hUnitTestToTests <$> sourceFileTests
-   return $ testGroup "NFA tests" $ hUnitTestToTests nfaTests
+  [ testGroup "source file tests" <$> hUnitTestToTests <$> sourceFileTests
+  , return $ testGroup "NFA tests" $ hUnitTestToTests nfaTests
   , return $ testGroup "Contour tests" $ hUnitTestToTests contourTests
   ]  
 
