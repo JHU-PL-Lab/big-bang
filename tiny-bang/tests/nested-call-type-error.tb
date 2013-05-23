@@ -1,4 +1,4 @@
-# EXPECT: 7
+# EXPECT: typefail
 x1 = y2:() -> {
     x3 = y4:() -> {
         x5 = !y2;
