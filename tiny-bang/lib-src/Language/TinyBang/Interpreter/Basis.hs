@@ -60,6 +60,7 @@ data UsedVars = UsedVars (Set String) Integer
 -- |A data structure representing evaluation errors.
 data EvalError
   = IllFormedExpression IllFormedness
+  | OpenExpression (Set AnyVar)
   | FlowVarNotClosed FlowVar
   | CellVarNotClosed CellVar
   | ProjectionFailure FlowVar Projector

@@ -24,6 +24,7 @@ import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.Compatibility
 import Language.TinyBang.Interpreter.Equality
 import Language.TinyBang.Interpreter.Projection
+import Language.TinyBang.Interpreter.Variables
 import Language.TinyBang.Logging
 
 $(loggingFunctions)
@@ -34,24 +35,29 @@ $(loggingFunctions)
 --  of unevaluated clauses when evaluation failed.
 eval :: Expr -> Either (EvalError, [Clause]) (EvalEnv, FlowVar)
 eval e@(Expr _ cls) =
-  case checkWellFormed e of
-    Left ill -> Left (IllFormedExpression ill, cls)
-    Right (VarCount fvs' fvs'' cvs) ->
-      let usedVars = Set.map unFlowVar (fvs' `Set.union` fvs'') `Set.union`
-                     Set.map unCellVar cvs in
-      let initialState = EvalState
-            ( EvalEnv Map.empty Map.empty Map.empty Nothing )
-            cls (UsedVars usedVars 1) in
-      let (merr, rstate) =
-            runState (runEitherT smallStepMany) initialState in
-      case merr of
-        Left err -> Left (err, evalClauses rstate)
-        Right () ->
-          case lastVar $ evalEnv rstate of
-            Just var -> Right (evalEnv rstate,var)
-            Nothing ->
-              let ill = IllFormedExpression $ InvalidExpressionEnd $ last cls in
-              Left (ill, evalClauses rstate)
+  let openVars = openVariables e in
+  if not $ Set.null openVars
+    then Left $ (OpenExpression openVars, cls)
+    else
+      case checkWellFormed e of
+        Left ill -> Left (IllFormedExpression ill, cls)
+        Right (VarCount fvs' fvs'' cvs) ->
+          let usedVars = Set.map unFlowVar (fvs' `Set.union` fvs'') `Set.union`
+                         Set.map unCellVar cvs in
+          let initialState = EvalState
+                ( EvalEnv Map.empty Map.empty Map.empty Nothing )
+                cls (UsedVars usedVars 1) in
+          let (merr, rstate) =
+                runState (runEitherT smallStepMany) initialState in
+          case merr of
+            Left err -> Left (err, evalClauses rstate)
+            Right () ->
+              case lastVar $ evalEnv rstate of
+                Just var -> Right (evalEnv rstate,var)
+                Nothing ->
+                  let ill = IllFormedExpression $ InvalidExpressionEnd $
+                                last cls in
+                  Left (ill, evalClauses rstate)
   where
     smallStepMany :: EvalM ()
     smallStepMany = do
@@ -208,21 +214,4 @@ smallStep = do
               right $ Evaluated $ ValueDef orig x v
             Just cl -> left $ IllFormedExpression $ InvalidExpressionEnd cl
             Nothing -> left $ IllFormedExpression EmptyExpression
-
--- |A routine to freshen every variable in the provided expression.
-freshen :: Expr -> EvalM Expr
-freshen e =
-  case checkWellFormed e of
-    Left ill -> left $ IllFormedExpression ill
-    Right (VarCount fvs' _ cvs') -> do
-      let fvs = Set.toList fvs'
-      let cvs = Set.toList cvs'
-      fvss <- mapM (makeSubst FlowSubstitution freshFlowVar) fvs
-      cvss <- mapM (makeSubst CellSubstitution freshCellVar) cvs
-      return $ substitute (collect $ fvss ++ cvss) e
-  where
-    makeSubst :: (a -> a -> Substitution)
-              -> (a -> EvalM a) -> a -> EvalM Substitution
-    makeSubst constr makeFreshVar var = flip constr var <$> makeFreshVar var
-
 

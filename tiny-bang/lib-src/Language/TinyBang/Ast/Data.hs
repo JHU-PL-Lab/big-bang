@@ -22,7 +22,7 @@ module Language.TinyBang.Ast.Data
 , LabelName(..)
 , FlowVar(..)
 , CellVar(..)
-, SomeVar(..)
+, AnyVar(..)
 , Origin(..)
 , unLabelName
 , unFlowVar
@@ -158,6 +158,9 @@ data CellVar
   = CellVar Origin String
   | GenCellVar Origin String Integer
   deriving (Show)
+
+-- AnyVar appears below the TemplateHaskell which creates the Eq and Ord
+-- instances below.
   
 -- |A data structure describing source origin.
 data Origin
@@ -316,7 +319,7 @@ instance Display FlowVar where
   
 instance Display CellVar where
   makeDoc y = text $ unCellVar y
-  
+
 flattenOrigins :: Origin -> [SourceRegion]
 flattenOrigins orig = case orig of
   SourceOrigin sr -> [sr]
@@ -352,11 +355,16 @@ $(concat <$> sequence
       ]
   ])
 
--- |A wrapper for variables in general.
-data SomeVar
+-- |A wrapper for all variables.
+data AnyVar
   = SomeFlowVar FlowVar
   | SomeCellVar CellVar
-  deriving (Eq,Ord,Show)
+  deriving (Eq, Ord, Show)
+
+instance Display AnyVar where
+  makeDoc v = case v of
+    SomeFlowVar x -> makeDoc x
+    SomeCellVar y -> makeDoc y
 
 -- A series of Regioned declarations for the AST types.
 -- TODO: metaprogram these
@@ -457,9 +465,9 @@ instance HasOrigin CellVar where
     GenCellVar orig _ _ -> orig
 
 class IsVar a where
-  someVar :: a -> SomeVar
+  someVar :: a -> AnyVar
 
-instance IsVar SomeVar where
+instance IsVar AnyVar where
   someVar = id
 
 instance IsVar FlowVar where

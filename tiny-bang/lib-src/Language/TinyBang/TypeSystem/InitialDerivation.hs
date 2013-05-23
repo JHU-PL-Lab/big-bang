@@ -9,6 +9,9 @@ module Language.TinyBang.TypeSystem.InitialDerivation
 , initialDerivation
 ) where
 
+import Data.Set (Set)
+import qualified Data.Set as Set
+
 import Language.TinyBang.Ast as A
 import Language.TinyBang.Display hiding (empty)
 import Language.TinyBang.TypeSystem.Constraints
@@ -20,15 +23,20 @@ import Language.TinyBang.TypeSystem.Types as T
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
   = IllFormedExpression IllFormedness
+  | OpenExpression (Set AnyVar)
   deriving (Eq, Ord, Show)
 instance Display InitialDerivationError where
-  makeDoc (IllFormedExpression ill) = text "IllFormedExpression" <+> makeDoc ill
+  makeDoc err = case err of
+    IllFormedExpression ill -> text "IllFormedExpression" <+> makeDoc ill
+    OpenExpression vs -> text "OpenExpression" <+> makeDoc vs
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
                   => Expr -> Either InitialDerivationError db
 initialDerivation expr = do
   _ <- either (Left . IllFormedExpression) Right $ checkWellFormed expr
+  let vs = openVariables expr
+  () <- if Set.null vs then return () else Left $ OpenExpression vs
   (_, db) <- expressionDerivation expr
   return db
 

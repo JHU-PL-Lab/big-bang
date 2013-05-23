@@ -138,7 +138,7 @@ instance VarCountable InnerPattern where
     EmptyOnionPattern _ -> mempty
 
 -- | Given an expression returns the set of open variables in it.
-openVariables :: Expr -> Set SomeVar
+openVariables :: Expr -> Set AnyVar
 openVariables arg = snd $ evalRWS (checkClosed arg) () Set.empty
 
 -- | Given an expression returns @True@ if and only if it has no open
@@ -151,7 +151,7 @@ class VarCloseable a where
 
 -- | CloseM is the monad used in determining whether or not an expression is
 --   closed.  It has three operations, which are described below.
-type CloseM = RWS () (Set SomeVar) (Set SomeVar)
+type CloseM = RWS () (Set AnyVar) (Set AnyVar)
 
 -- | Adds a variable to the set of variables bound in the current scope.
 addVar :: IsVar v => v -> CloseM ()

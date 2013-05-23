@@ -11,7 +11,6 @@ import Control.Applicative
 import Control.Monad.Identity
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
-import Data.Monoid
 import Text.Parsec.Combinator
 import Text.Parsec.Prim
 import Text.Parsec.Pos

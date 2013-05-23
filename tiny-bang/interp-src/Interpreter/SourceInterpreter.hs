@@ -102,6 +102,8 @@ instance (ConstraintDatabase db, Display db)
               text "Invalid clause terminating expression:" <+> makeDoc cl
             EmptyExpression ->
               text "Source contains an empty expression"
+        ID.OpenExpression vs -> text "Open variables in expression:" <+>
+          makeDoc vs
       ClosureFailed (ClosureFailedProjection projErr) -> msgForProjErr projErr
       InconsistencyFailed projErr -> msgForProjErr projErr
       ClosureInconsistent incons db ->
@@ -118,6 +120,7 @@ instance (ConstraintDatabase db, Display db)
         InvalidExpressionEnd cl -> text "Invalid ending clause for expression:"
                                    <+> makeDoc cl
         EmptyExpression -> text "Empty subexpression"
+      I.OpenExpression vs -> text "Open variables in expression:" <+> makeDoc vs
       FlowVarNotClosed x -> text "Flow variable not closed:" <+> makeDoc x
       CellVarNotClosed y -> text "Cell variable not closed:" <+> makeDoc y
       ProjectionFailure x proj -> text "Could not project" <+> makeDoc proj
