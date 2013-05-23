@@ -78,14 +78,40 @@ cCollapse cn =
       SinglePart e -> Set.singleton e
       SetPart es -> es
 
--- |Defines contour widening as specified in the TinyBang language document.
+-- |Defines contour widening.  This operation is equivalent to that specified
+--  in the TinyBang specification but includes an optimization: if any contour
+--  strand in the intersecting contours completely subsumes another, the latter
+--  contour strand is discarded.
 cWiden :: (ConstraintDatabase db) => Contour -> db -> Contour
 cWiden cn c =
   let otherContours = filter (overlap cn) $ Set.toList $ getAllContours c in
   if null otherContours
     then cn
-    else contour $ Set.foldr (Set.union . unContour) Set.empty $
-            Set.fromList $ cn : otherContours
+    else
+      -- Begin by collecting all of the strands
+      let strands = concatMap (Set.toList . unContour) $ cn:otherContours in
+      -- Now chew through them in order and eliminate the extras
+      let strands' = strandReduction [] strands in
+      -- And made a contour
+      contour $ Set.fromList strands'
+  where
+    strandSubsumedBy :: ContourStrand -> ContourStrand -> Bool
+    strandSubsumedBy a b =
+      contour (Set.singleton a) `subsumedBy` contour (Set.singleton b)
+    strandNotSubsumedByList :: ContourStrand -> [ContourStrand] -> Bool
+    strandNotSubsumedByList s = all $ not . (s `strandSubsumedBy`)
+    strandReduction :: [ContourStrand] -> [ContourStrand] -> [ContourStrand]
+    strandReduction knownGood toTest = case toTest of
+      [] -> knownGood
+      next:toTest' ->
+        let notSubsumedByKnownGoodStrand =
+              next `strandNotSubsumedByList` knownGood
+            notSubsumedByRemainingTestStrand =
+              next `strandNotSubsumedByList` toTest'
+            necessaryStrand = notSubsumedByKnownGoodStrand
+              && notSubsumedByRemainingTestStrand
+        in strandReduction
+              (if necessaryStrand then next:knownGood else knownGood) toTest'
             
 -- |Creates a new contour based on an existing type variable and constraint
 --  database.
