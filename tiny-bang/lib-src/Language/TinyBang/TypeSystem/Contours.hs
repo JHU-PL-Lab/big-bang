@@ -52,8 +52,13 @@ instance Show Contour where
   
 -- | Defines contour subsumption as specified in the TinyBang language document.
 subsumedBy :: Contour -> Contour -> Bool
-subsumedBy (Contour _ (ContourNfa nfa1)) (Contour _ (ContourNfa nfa2)) =
-  NFA.isEmpty $ NFA.subtract nfa1 nfa2
+subsumedBy cn1@(Contour _ (ContourNfa nfa1)) cn2@(Contour _ (ContourNfa nfa2)) =
+  let answer = 
+        NFA.isEmpty $ NFA.subtract nfa1 nfa2
+      message = "Contour subsumption check: " ++ display cn2 ++
+        (if answer then " subsumes " else " does not subsume ") ++ display cn1
+  in
+  _debugI message answer
 
 -- | Defines contour overlap as specified in the TinyBang language document.
 overlap :: Contour -> Contour -> Bool
