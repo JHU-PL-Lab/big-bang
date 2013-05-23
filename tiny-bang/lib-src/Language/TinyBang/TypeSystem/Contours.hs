@@ -92,7 +92,7 @@ unContour (Contour strands _) = strands
 -- | Builds an NFA from a contour strand.
 nfaFromContourStrand :: ContourStrand -> ContourNfa
 nfaFromContourStrand (ContourStrand parts) =
-  ContourNfa $ NFA.createFromDataWithEpsilon 0 edges [length edges]
+  ContourNfa $ NFA.createFromDataWithEpsilon 0 edges [length parts]
   where
     edges :: [(Int,Maybe ContourElement,Int)]
     edges = concatMap edgesFromPart (zip [0 ..] parts)
