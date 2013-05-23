@@ -166,5 +166,6 @@ executable tests
                    Test.TinyBang.ExpectDsl.Lexer,
                    Test.TinyBang.ExpectDsl,
                    Test.TinyBang.ExpectDsl.Data,
-                   Language.TinyBang.Interpreter.Variables
+                   Language.TinyBang.Interpreter.Variables,
+                   Test.Data.NFA
 

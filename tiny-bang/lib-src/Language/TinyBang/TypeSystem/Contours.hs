@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances, TemplateHaskell #-}
 
 module Language.TinyBang.TypeSystem.Contours
 ( ContourElement(..)
@@ -20,6 +20,9 @@ import qualified Data.Set as Set
 import qualified Data.NFA as NFA
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
+
+$(loggingFunctions)
 
 newtype ContourElement = ContourElement FlowVar
   deriving (Eq, Ord, Show)
@@ -38,8 +41,8 @@ newtype PossibleContour = PossibleContour (Maybe Contour)
   deriving (Eq, Ord, Show)
 
 data ContourNfa
-  = forall a. (Eq a, Ord a) => ContourNfa (NFA.Nfa a ContourElement)
-
+  = forall a. (Eq a, Ord a, Show a) => ContourNfa (NFA.Nfa a ContourElement)
+  
 instance Eq Contour where
   (Contour s _) == (Contour s' _) = s == s'
 instance Ord Contour where

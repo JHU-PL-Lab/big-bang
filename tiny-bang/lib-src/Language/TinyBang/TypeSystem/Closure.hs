@@ -71,6 +71,7 @@ calculateClosureStep db =
                 then return dbPlusMonotone
                 else calculateApplicationClosure db
     _debug $ "Closure step yields: " ++ display answer
+    _debug $ "Contours in current database: " ++ display (getAllContours answer)
     return answer
   where
     monotonicClosures :: ( ConstraintDatabase db, MonadCReader db m, Functor m
