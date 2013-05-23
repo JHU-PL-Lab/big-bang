@@ -2,7 +2,7 @@
 x1 = y2self:() -> {
         x3 = y4:() -> {
             x5val = !y4;
-            y5_1val = x5val;
+            y5_1val := x5val;
             x6true = y7:`True y7_1:() -> {
                     x8 = 0
                 };
