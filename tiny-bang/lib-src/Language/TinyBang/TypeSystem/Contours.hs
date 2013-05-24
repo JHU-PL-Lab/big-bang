@@ -7,6 +7,7 @@ module Language.TinyBang.TypeSystem.Contours
 , Contour
 , contour
 , unContour
+, unContourStrand
 , PossibleContour(..)
 , subsumedBy
 , overlap
@@ -88,6 +89,10 @@ contour strands = Contour strands $
 -- | Retrieves the strands from a type contour.
 unContour :: Contour -> Set ContourStrand
 unContour (Contour strands _) = strands
+
+-- | A convenience function for unwrapping a contour strand.
+unContourStrand :: ContourStrand -> [ContourPart]
+unContourStrand (ContourStrand parts) = parts
 
 -- | Builds an NFA from a contour strand.
 nfaFromContourStrand :: ContourStrand -> ContourNfa
