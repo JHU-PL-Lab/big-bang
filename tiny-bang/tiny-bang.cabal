@@ -65,7 +65,10 @@ library
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
                    Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
-                   Language.TinyBang.Interpreter.Variables
+                   Language.TinyBang.Interpreter.Variables,
+                   Utils.Toploop,
+                   Language.TinyBang.Toploop,
+                   Utils.Toploop.Logging
 
 executable tiny-bang
   hs-source-dirs:  
@@ -96,10 +99,8 @@ executable tiny-bang
                    Language.TinyBang.Display,
                    Data.Adj,
                    Language.TinyBang.Interpreter.DeepValues,
-                   Interpreter.SourceInterpreter,
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
-                   Logging,
                    Utils.Tuple,
                    Utils.TemplateHaskell,
                    Language.TinyBang.TypeSystem.Types,
@@ -122,7 +123,10 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
                    Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
                    Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
-                   Language.TinyBang.Interpreter.Variables
+                   Language.TinyBang.Interpreter.Variables,
+                   Utils.Toploop,
+                   Language.TinyBang.Toploop,
+                   Utils.Toploop.Logging
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -168,5 +172,8 @@ executable tests
                    Test.TinyBang.ExpectDsl.Data,
                    Language.TinyBang.Interpreter.Variables,
                    Test.Data.NFA,
-                   Test.TinyBang.Language.TypeSystem.Contours
+                   Test.TinyBang.Language.TypeSystem.Contours,
+                   Utils.Toploop,
+                   Language.TinyBang.Toploop,
+                   Utils.Toploop.Logging
 

@@ -5,7 +5,7 @@
   for the interpreter.
 -}
 
-module Logging
+module Utils.Toploop.Logging
 ( configureLogging
 , configureLoggingHandlers
 ) where

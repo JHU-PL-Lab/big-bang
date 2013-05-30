@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, GADTs #-}
 
-module Interpreter.SourceInterpreter
+module Language.TinyBang.Toploop
 ( stringyInterpretSource
 , interpretSource
 , InterpreterConfiguration(..)
