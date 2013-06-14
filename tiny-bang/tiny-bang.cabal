@@ -68,7 +68,8 @@ library
                    Language.TinyBang.Interpreter.Variables,
                    Utils.Toploop,
                    Language.TinyBang.Toploop,
-                   Utils.Toploop.Logging
+                   Utils.Toploop.Logging,
+                   Language.TinyBang.TypeSystem.Data.Projection
 
 executable tiny-bang
   hs-source-dirs:  
@@ -126,7 +127,8 @@ executable tiny-bang
                    Language.TinyBang.Interpreter.Variables,
                    Utils.Toploop,
                    Language.TinyBang.Toploop,
-                   Utils.Toploop.Logging
+                   Utils.Toploop.Logging,
+                   Language.TinyBang.TypeSystem.Data.Projection
 
 executable tests
   hs-source-dirs:  lib-src, test-src
@@ -175,5 +177,6 @@ executable tests
                    Test.TinyBang.Language.TypeSystem.Contours,
                    Utils.Toploop,
                    Language.TinyBang.Toploop,
-                   Utils.Toploop.Logging
+                   Utils.Toploop.Logging,
+                   Language.TinyBang.TypeSystem.Data.Projection
 

@@ -19,6 +19,7 @@ module Language.TinyBang.Ast.Data
 , CellQualifier(..)
 , AnyProjector(..)
 , Projector(..)
+, ProjectorTag(..)
 , PrimitiveType(..)
 , LabelName(..)
 , FlowVar(..)

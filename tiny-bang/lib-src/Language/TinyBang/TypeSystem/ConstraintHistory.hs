@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving, TypeFamilies #-}
+
 module Language.TinyBang.TypeSystem.ConstraintHistory
 ( ConstraintHistory(..)
 , SourceElement(..)
@@ -7,11 +9,14 @@ module Language.TinyBang.TypeSystem.ConstraintHistory
 , ApplicationCompatibilityResult(..)
 ) where
 
+import Data.Monoid
+
 import qualified Language.TinyBang.Ast as A
 import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Data.Compatibility
+import Language.TinyBang.TypeSystem.Data.Projection
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.TypeSystem.Utils.DocumentContainer
@@ -77,21 +82,33 @@ data ClosureRule db
       Contour -- ^ The contour generated for the application
   deriving (Eq, Ord, Show)
   
-data SingleProjectionResult db
-  = SingleProjectionResult
-      A.AnyProjector
-      FlowTVar
-      (Maybe (Type db))
-      (Fibration db)
-  deriving (Eq, Ord, Show)
+data ProjectionType = SingleProjectionType | MultiProjectionType
 
-data MultiProjectionResult db
-  = MultiProjectionResult
-      A.AnyProjector
-      FlowTVar
-      [Type db]
-      (Fibration db)
-  deriving (Eq, Ord, Show)
+type family ProjectionForm db (tag :: A.ProjectorTag) (typ :: ProjectionType)
+  :: *
+type instance ProjectionForm db tag SingleProjectionType
+  = SingleProjection db tag 
+type instance ProjectionForm db tag MultiProjectionType
+  = MultiProjection db tag 
+  
+data ProjectionResult db (typ :: ProjectionType) where
+  ProjectionResult :: forall (tag :: A.ProjectorTag)
+                      A.Projector tag
+                   -> FlowTVar
+                   -> ProjectionForm db tag typ
+                   -> ProjectionResult db typ
+type SingleProjectionResult db = ProjectionResult db SingleProjectionType
+type MultiProjectionResult db = ProjectionResult db MultiProjectionType
+
+instance Eq (ProjectionResult db typ) where
+  a == b = compare a b == EQ 
+instance Ord (ProjectionResult db typ) where
+  compare a b = case (a,b) of
+    (ProjectionResult proj a form, ProjectionResult proj' a' form') ->
+      compare proj proj' `mappend` compare a a' `mappend` form form'
+instance Show (ProjectionResult db typ) where
+  show (ProjectionResult proj a form) =
+    "ProjectionResult " ++ show (A.SomeProjector proj) ++ " " ++ show a ++ " " ++ show form 
 
 -- TODO: deep history on this?
 data ApplicationCompatibilityResult db
@@ -105,16 +122,10 @@ data ApplicationCompatibilityResult db
   deriving (Eq, Ord, Show)
   
 instance (Display db, DocumentContainer db)
-      => Display (SingleProjectionResult db) where
-  makeDoc (SingleProjectionResult proj a mt fib) =
-    text "SingleProjectionResult" <+> parens (makeDoc proj)
+      => Display (ProjectionResult db typ) where
+  makeDoc (ProjectionResult proj a mt fib) =
+    text "ProjectionResult" <+> parens (makeDoc proj)
       <+> parens (makeDoc a) <+> parens (makeDoc mt) <+> parens (makeDoc fib)
-
-instance (Display db, DocumentContainer db)
-      => Display (MultiProjectionResult db) where
-  makeDoc (MultiProjectionResult proj a ts fib) =
-    text "MultiProjectionResult" <+> parens (makeDoc proj)
-      <+> parens (makeDoc a) <+> parens (makeDoc ts) <+> parens (makeDoc fib)
 
 instance (Display db, DocumentContainer db)
       => Display (ApplicationCompatibilityResult db) where
