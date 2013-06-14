@@ -138,6 +138,9 @@ checkInnerCompatible a1 tipat =
     T.LabelPattern n b2 tipat' -> do
       -- Assumption: label projection only yields label types and fibrations
       -- with exactly one child fibration.
+      -- FIXME: This is wrong!  The unbound variable below might be an onion
+      --        type and we're throwing that information away.  This means
+      --        that the resulting fibration is incorrect.
       (typs,fib@(Fibration _ [fib1])) <- liftCompat $ project (projLabel n) a1
       if null typs
         then return (Nothing, fib)
