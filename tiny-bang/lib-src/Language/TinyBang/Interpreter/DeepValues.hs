@@ -106,7 +106,7 @@ deepOnionM x = do
   where
     subPrims proj dpm@(DeepPrimitiveMap m) =
       case proj of
-        ProjPrim _ t ->
+        SomeProjector (ProjPrim _ t) ->
           DeepPrimitiveMap $ flip Map.delete m $
             case t of
               PrimInt _ -> DeepPrimSInt
@@ -114,15 +114,15 @@ deepOnionM x = do
         _ -> dpm
     subLabels proj m =
       case proj of
-        ProjLabel _ n -> Map.delete n m
+        SomeProjector (ProjLabel _ n) -> Map.delete n m
         _ -> m
     subScapes proj ss =
       case proj of
-        ProjFun _ -> []
+        SomeProjector (ProjFun _) -> []
         _ -> ss
     projPrims proj m =
       case proj of
-        ProjPrim _ t ->
+        SomeProjector (ProjPrim _ t) ->
           case t of
             PrimInt _ -> singletonOver DeepPrimInt
             PrimChar _ -> singletonOver DeepPrimChar
@@ -135,12 +135,12 @@ deepOnionM x = do
             Nothing -> empty
     projLabels proj m =
       case proj of
-        ProjLabel _ n -> fromMaybe Map.empty $
+        SomeProjector (ProjLabel _ n) -> fromMaybe Map.empty $
                               Map.singleton n <$> Map.lookup n m
         _ -> Map.empty
     projScapes proj ss =
       case proj of
-        ProjFun _ -> ss
+        SomeProjector (ProjFun _) -> ss
         _ -> []
         
 instance Monoid DeepOnion where

@@ -39,7 +39,7 @@ data Type db
   | EmptyOnion
   | Label A.LabelName CellTVar
   | Onion FlowTVar FlowTVar
-  | OnionFilter FlowTVar A.OnionOp A.Projector
+  | OnionFilter FlowTVar A.OnionOp A.AnyProjector
   | Scape PatternType FlowTVar db 
   deriving (Eq, Ord, Show)
 

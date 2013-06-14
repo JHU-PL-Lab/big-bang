@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module Language.TinyBang.Interpreter.Equality
 ( flowVarValueEq
 ) where
@@ -59,17 +61,17 @@ flowVarFlatten x = do
         (if skeep then s else [])
     VScape _ _ _ -> return $ FlattenedOnion Map.empty Map.empty [v]
   where
-    primMatchProjector :: Projector -> PrimitiveType -> Bool
+    primMatchProjector :: AnyProjector -> PrimitiveType -> Bool
     primMatchProjector proj p = case proj of
-      ProjPrim _ p' -> p == p'
+      SomeProjector (ProjPrim _ p') -> p == p'
       _ -> False
-    labelMatchProjector :: Projector -> LabelName -> Bool
+    labelMatchProjector :: AnyProjector -> LabelName -> Bool
     labelMatchProjector proj n = case proj of
-      ProjLabel _ n' -> n == n'
+      SomeProjector (ProjLabel _ n') -> n == n'
       _ -> False
-    scapeMatchProjector :: Projector -> Bool
+    scapeMatchProjector :: AnyProjector -> Bool
     scapeMatchProjector proj = case proj of
-      ProjFun _ -> True
+      SomeProjector (ProjFun _) -> True
       _ -> False
     toss2nd :: (a -> b) -> a -> c -> b
     toss2nd f a _ = f a

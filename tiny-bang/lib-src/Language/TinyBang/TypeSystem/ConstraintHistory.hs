@@ -78,11 +78,19 @@ data ClosureRule db
   deriving (Eq, Ord, Show)
   
 data SingleProjectionResult db
-  = SingleProjectionResult A.Projector FlowTVar (Maybe (Type db)) (Fibration db)
+  = SingleProjectionResult
+      A.AnyProjector
+      FlowTVar
+      (Maybe (Type db))
+      (Fibration db)
   deriving (Eq, Ord, Show)
 
 data MultiProjectionResult db
-  = MultiProjectionResult A.Projector FlowTVar [Type db] (Fibration db)
+  = MultiProjectionResult
+      A.AnyProjector
+      FlowTVar
+      [Type db]
+      (Fibration db)
   deriving (Eq, Ord, Show)
 
 -- TODO: deep history on this?

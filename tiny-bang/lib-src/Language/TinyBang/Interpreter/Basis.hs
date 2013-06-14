@@ -64,7 +64,7 @@ data EvalError
   | OpenExpression (Set AnyVar)
   | FlowVarNotClosed FlowVar
   | CellVarNotClosed CellVar
-  | ProjectionFailure FlowVar Projector
+  | ProjectionFailure FlowVar AnyProjector
   | ApplicationFailure FlowVar FlowVar
   deriving (Eq, Ord, Show)
   

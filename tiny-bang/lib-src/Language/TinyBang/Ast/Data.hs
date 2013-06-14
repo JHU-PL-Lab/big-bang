@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ViewPatterns #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, DataKinds, GADTs, KindSignatures, StandaloneDeriving #-}
 
 {-|
   A module which defines the data structures which comprise the TinyBang ANF
@@ -17,6 +17,7 @@ module Language.TinyBang.Ast.Data
 , BinaryOperator(..)
 , FlowKind(..)
 , CellQualifier(..)
+, AnyProjector(..)
 , Projector(..)
 , PrimitiveType(..)
 , LabelName(..)
@@ -83,7 +84,7 @@ data Value
   | VEmptyOnion Origin
   | VLabel Origin LabelName CellVar
   | VOnion Origin FlowVar FlowVar
-  | VOnionFilter Origin FlowVar OnionOp Projector
+  | VOnionFilter Origin FlowVar OnionOp AnyProjector
   | VScape Origin Pattern Expr
   deriving (Show)
 
@@ -129,12 +130,25 @@ data CellQualifier
   | QualNone Origin
   deriving (Show)
 
--- |A data type for projectors.
-data Projector
-  = ProjPrim Origin PrimitiveType
-  | ProjLabel Origin LabelName
-  | ProjFun Origin
-  deriving (Show)
+-- |A constructor-tagging ADT for projectors.  This type is promoted to a data
+--  kind to allow different projector types to be tagged differently.
+data ProjectorTag
+  = ProjPrimTag
+  | ProjLabelTag
+  | ProjFunTag
+
+-- |A data type for projectors.  This type is type-tagged to permit projection
+--  to return a different type depending upon which kind of projector is used.
+data Projector (tag :: ProjectorTag) where
+  ProjPrim :: Origin -> PrimitiveType -> Projector ProjPrimTag
+  ProjLabel :: Origin -> LabelName -> Projector ProjLabelTag
+  ProjFun :: Origin -> Projector ProjFunTag
+deriving instance Show (Projector tag)
+  
+-- |A data type containing a projector with an unknown tag.
+data AnyProjector where
+  SomeProjector :: Projector (tag :: ProjectorTag) -> AnyProjector
+deriving instance Show AnyProjector
 
 -- |A representation of primitive types.
 data PrimitiveType
@@ -204,19 +218,19 @@ qualImmutable = QualImmutable generated
 qualNone :: CellQualifier
 qualNone = QualNone generated
 
-projPrim :: PrimitiveType -> Projector
-projPrim = ProjPrim generated
+projPrim :: PrimitiveType -> AnyProjector
+projPrim = SomeProjector . ProjPrim generated
 
-projLabel :: LabelName -> Projector
-projLabel = ProjLabel generated
+projLabel :: LabelName -> AnyProjector
+projLabel = SomeProjector . ProjLabel generated
 
-projFun :: Projector
-projFun = ProjFun generated
+projFun :: AnyProjector
+projFun = SomeProjector $ ProjFun generated
 
-projInt :: Projector
+projInt :: AnyProjector
 projInt = projPrim primInt
 
-projChar :: Projector
+projChar :: AnyProjector
 projChar = projPrim primChar
 
 primInt :: PrimitiveType
@@ -300,7 +314,10 @@ instance Display CellQualifier where
     QualImmutable _ -> text "immut"
     QualNone _ -> empty
     
-instance Display Projector where
+instance Display AnyProjector where
+  makeDoc (SomeProjector proj') = makeDoc proj'
+    
+instance Display (Projector tag) where
   makeDoc proj = case proj of
     ProjPrim _ p -> makeDoc p
     ProjLabel _ n -> makeDoc n
@@ -330,6 +347,24 @@ instance Display Origin where
     SourceOrigin sr -> makeDoc sr
     ComputedOrigin origs -> text "(" <> text "computed from" <+>
       makeDoc (concatMap flattenOrigins origs) <> text ")"
+      
+-- Manual Eq and Ord instances where necessary
+instance Eq AnyProjector where
+  a == b = (compare a b == EQ)
+instance Ord AnyProjector where
+  compare a b =
+    case (a,b) of
+      (SomeProjector (ProjPrim _ p), SomeProjector (ProjPrim _ p')) ->
+        compare p p'
+      (SomeProjector (ProjPrim _ _), SomeProjector (ProjLabel _ _)) -> LT
+      (SomeProjector (ProjPrim _ _), SomeProjector (ProjFun _)) -> LT
+      (SomeProjector (ProjLabel _ _), SomeProjector (ProjPrim _ _)) -> GT 
+      (SomeProjector (ProjLabel _ l), SomeProjector (ProjLabel _ l')) ->
+        compare l l'
+      (SomeProjector (ProjLabel _ _), SomeProjector (ProjFun _)) -> LT
+      (SomeProjector (ProjFun _), SomeProjector (ProjPrim _ _)) -> GT
+      (SomeProjector (ProjFun _), SomeProjector (ProjLabel _ _)) -> GT
+      (SomeProjector (ProjFun _), SomeProjector (ProjFun _)) -> EQ
 
 -- Derive appropriate Eq and Ord instances for these data types
 
@@ -347,7 +382,6 @@ $(concat <$> sequence
       , ''OnionOp
       , ''BinaryOperator
       , ''CellQualifier
-      , ''Projector
       , ''PrimitiveType
       , ''LabelName
       , ''FlowVar
@@ -438,8 +472,11 @@ instance HasOrigin CellQualifier where
     QualFinal orig -> orig
     QualImmutable orig -> orig
     QualNone orig -> orig
+    
+instance HasOrigin AnyProjector where
+  originOf (SomeProjector proj) = originOf proj
 
-instance HasOrigin Projector where
+instance HasOrigin (Projector tag) where
   originOf x = case x of
     ProjPrim orig _ -> orig
     ProjLabel orig _ -> orig

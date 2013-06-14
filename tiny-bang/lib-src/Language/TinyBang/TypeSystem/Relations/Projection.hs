@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables, TemplateHaskell, GADTs #-}
 
 {-|
   This module defines TinyBang's projection relation.
@@ -33,7 +33,7 @@ $(loggingFunctions)
 
 -- |A data type describing errors projection.
 data ProjectionError db
-  = NonContractiveType Projector (Type db) [FlowTVar]
+  = NonContractiveType AnyProjector (Type db) [FlowTVar]
   deriving (Eq, Ord, Show)
 instance (ConstraintDatabase db, Display db)
       => Display (ProjectionError db) where
@@ -52,7 +52,7 @@ type ProjM db m = FlowT (EitherT (ProjectionError db) m)
 --  list is highest priority.
 project :: forall db m.
            (Applicative m, ConstraintDatabase db, MonadCReader db m, Display db)
-        => Projector
+        => AnyProjector
         -> FlowTVar
         -> ProjM db m ([Type db], Fibration db)
 project = projectVar (Set.empty,[])
@@ -68,7 +68,7 @@ type OccursCheck = (Set FlowTVar, [FlowTVar])
 projectSingle :: forall db m.
                  ( Applicative m, ConstraintDatabase db, MonadCReader db m
                  , Display db)
-              => Projector
+              => AnyProjector
               -> FlowTVar
               -> ProjM db m (Maybe (Type db), Fibration db)
 projectSingle proj a = do  
@@ -81,7 +81,7 @@ projectSingle proj a = do
 --  as well as the actual type.
 projectSingleResult :: ( ConstraintDatabase db, MonadCReader db m
                        , Functor m, Applicative m, Display db )
-                    => Projector -> FlowTVar
+                    => AnyProjector -> FlowTVar
                     -> ProjM db m (Maybe (Type db), SingleProjectionResult db)
 projectSingleResult proj a = do
   (r,f) <- projectSingle proj a
@@ -93,7 +93,7 @@ projectVar :: forall db m.
               ( Applicative m, ConstraintDatabase db, MonadCReader db m
               , Display db)
            => OccursCheck
-           -> Projector
+           -> AnyProjector
            -> FlowTVar
            -> ProjM db m ([Type db], Fibration db)
 projectVar check proj a = do
@@ -110,11 +110,11 @@ projectVar check proj a = do
     projectType :: Type db -> ProjM db m ([Type db], Fibration db)
     projectType lowerBound =
       case (lowerBound, proj) of
-        (Primitive p, ProjPrim _ p') | p == p' ->
+        (Primitive p, SomeProjector (ProjPrim _ p')) | p == p' ->
           return ([lowerBound], Fibration lowerBound [])
-        (Label n _, ProjLabel _ n') | n == n' ->
+        (Label n _, SomeProjector (ProjLabel _ n')) | n == n' ->
           return ([lowerBound], Fibration lowerBound [Unexpanded])
-        (Scape _ _ _, ProjFun _) ->
+        (Scape _ _ _, SomeProjector (ProjFun _)) ->
           return ([lowerBound], Fibration lowerBound [])
         (Onion a1 a2, _) -> do
           (p1, fib1) <- projectRemembering a1

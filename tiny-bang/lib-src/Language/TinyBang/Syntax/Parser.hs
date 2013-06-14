@@ -142,11 +142,11 @@ cellQualifierParser =
   <|> requirex TokImmut QualImmutable
   <|> QualNone . SourceOrigin <$> (SourceRegion <$> parserLocation <*> parserLocation)
 
-projectorParser :: Parser Projector
+projectorParser :: Parser AnyProjector
 projectorParser =
-      argorig1 ProjPrim <$> primitiveTypeParser
-  <|> argorig1 ProjLabel <$> labelNameParser
-  <|> requirex TokFun ProjFun
+      SomeProjector <$> argorig1 ProjPrim <$> primitiveTypeParser
+  <|> SomeProjector <$> argorig1 ProjLabel <$> labelNameParser
+  <|> SomeProjector <$> requirex TokFun ProjFun
 
 primitiveTypeParser :: Parser PrimitiveType
 primitiveTypeParser =
