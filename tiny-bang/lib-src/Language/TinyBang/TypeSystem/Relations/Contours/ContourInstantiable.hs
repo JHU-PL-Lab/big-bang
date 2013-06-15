@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, GADTs #-}
 
 -- See notes/TypeConstraint-Overlapping.txt for explanation of
 -- OverlappingInstances 
@@ -185,16 +185,19 @@ instance (ConstraintDatabase db, ContourInstantiable db)
       rec = instContours vs cn
 
 instance (ConstraintDatabase db)
-      => ContourInstantiable (SingleProjectionResult db) where
-  instContours vs cn (SingleProjectionResult proj a mt fib) =
-    SingleProjectionResult proj (instContours vs cn a)
-        (instContours vs cn mt) (instContours vs cn fib)
+      => ContourInstantiable (ProjectionResult db) where
+  instContours vs cn (ProjectionResult proj a form) =
+    ProjectionResult proj (instContours vs cn a) (instContours vs cn form)
 
 instance (ConstraintDatabase db)
-      => ContourInstantiable (MultiProjectionResult db) where
-  instContours vs cn (MultiProjectionResult proj a ts fib) =
-    MultiProjectionResult proj (instContours vs cn a)
-        (instContours vs cn ts) (instContours vs cn fib)
+      => ContourInstantiable (ProjectionResultForm db tag) where
+  instContours vs cn form = case form of
+    ProjectionResultPrimForm x f ->
+      ProjectionResultPrimForm x (instContours vs cn f)
+    ProjectionResultLabelForm bs f ->
+      ProjectionResultLabelForm (instContours vs cn bs) (instContours vs cn f)
+    ProjectionResultFunForm ts f ->
+      ProjectionResultFunForm (instContours vs cn ts) (instContours vs cn f)
         
 instance (ConstraintDatabase db, ContourInstantiable db)
       => ContourInstantiable (ApplicationCompatibilityResult db) where

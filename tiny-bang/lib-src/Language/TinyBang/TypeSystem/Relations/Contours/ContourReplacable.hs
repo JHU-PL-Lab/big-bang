@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, GADTs #-}
 
 -- See notes/TypeConstraint-Overlapping.txt for explanation of
 -- OverlappingInstances 
@@ -175,16 +175,19 @@ instance (ConstraintDatabase db, ContourReplacable db)
       rec = replContours cn
 
 instance (ConstraintDatabase db)
-      => ContourReplacable (SingleProjectionResult db) where
-  replContours cn (SingleProjectionResult proj a mt fib) =
-    SingleProjectionResult proj (replContours cn a)
-        (replContours cn mt) (replContours cn fib)
+      => ContourReplacable (ProjectionResult db) where
+  replContours cn (ProjectionResult proj a form) =
+    ProjectionResult proj (replContours cn a) (replContours cn form)
 
 instance (ConstraintDatabase db)
-      => ContourReplacable (MultiProjectionResult db) where
-  replContours cn (MultiProjectionResult proj a ts fib) =
-    MultiProjectionResult proj (replContours cn a)
-        (replContours cn ts) (replContours cn fib)
+      => ContourReplacable (ProjectionResultForm db tag) where
+  replContours cn form = case form of
+    ProjectionResultPrimForm x f ->
+      ProjectionResultPrimForm x (replContours cn f)
+    ProjectionResultLabelForm bs f ->
+      ProjectionResultLabelForm (replContours cn bs) (replContours cn f)
+    ProjectionResultFunForm ts f ->
+      ProjectionResultFunForm (replContours cn ts) (replContours cn f)
         
 instance (ConstraintDatabase db, ContourReplacable db)
       => ContourReplacable (ApplicationCompatibilityResult db) where

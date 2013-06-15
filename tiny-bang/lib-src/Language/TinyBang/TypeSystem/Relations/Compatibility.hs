@@ -133,26 +133,19 @@ checkInnerCompatible :: ( Applicative m, ConstraintDatabase db
                      -> CompatM db m (Maybe CellSubstitutions, Fibration db)
 checkInnerCompatible a1 tipat =
   case tipat of
-    T.PrimitivePattern p -> first emptyIfNotNull <$>
-                                liftCompat (project (projPrim p) a1)
+    T.PrimitivePattern p -> do
+      (x,fib) <- liftCompat $ project (projPrim p) a1
+      return ((if x then Just Map.empty else Nothing), fib)
     T.LabelPattern n b2 tipat' -> do
-      -- Assumption: label projection only yields label types and fibrations
-      -- with exactly one child fibration.
-      -- FIXME: This is wrong!  The unbound variable below might be an onion
-      --        type and we're throwing that information away.  This means
-      --        that the resulting fibration is incorrect.
-      (typs,fib@(Fibration _ [fib1])) <- liftCompat $ project (projLabel n) a1
-      if null typs
-        then return (Nothing, fib)
+      (bs,fibfn) <- liftCompat $ project (projLabel n) a1
+      if null bs
+        then return (Nothing, fibfn [])
         else do
-          let typ@(Label _ b3) = head typs
+          let b3 = head bs
           lbc <- flow $ lift $ getCellLowerBoundConstraints b3 <$> askDb
           let a4 = lowerBoundOf lbc
           (msubsts, fib1') <- checkInnerCompatible a4 tipat'
-          case mergeFibrations fib1 fib1' of
-            Nothing -> mzero
-            Just fib1'' ->
-              return (Map.insert b3 b2 <$> msubsts, Fibration typ [fib1''])
+          return (Map.insert b3 b2 <$> msubsts, fibfn [fib1'])
     T.ConjunctivePattern tipat1 tipat2 -> do
       (msubsts1, fib1) <- checkInnerCompatible a1 tipat1
       (msubsts2, fib2) <- checkInnerCompatible a1 tipat2
@@ -164,11 +157,10 @@ checkInnerCompatible a1 tipat =
                 substs2 <- msubsts2
                 return $ Map.union substs1 substs2
           in return (msubsts,fib)
-    T.ScapePattern -> first emptyIfNotNull <$> liftCompat (project projFun a1)
+    T.ScapePattern -> do
+      (ts,fib) <- liftCompat $ project projFun a1
+      return ((if null ts then Nothing else Just Map.empty), fib)
     T.EmptyOnionPattern -> return (Just Map.empty, Unexpanded)
-  where
-    emptyIfNotNull :: [a] -> Maybe (Map k b)
-    emptyIfNotNull lst = if null lst then Nothing else Just Map.empty
 
 liftCompat :: ProjM db m a -> CompatM db m a
 liftCompat = id

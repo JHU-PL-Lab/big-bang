@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, GADTs #-}
 
 -- See notes/TypeConstraint-Overlapping.txt for explanation of
 -- OverlappingInstances 
@@ -170,16 +170,19 @@ instance (ConstraintDatabase db, CellSubstitutable db)
       rec = substCells m
 
 instance (ConstraintDatabase db)
-      => CellSubstitutable (SingleProjectionResult db) where
-  substCells m (SingleProjectionResult proj a mt fib) =
-    SingleProjectionResult proj (substCells m a)
-        (substCells m mt) (substCells m fib)
-
+      => CellSubstitutable (ProjectionResult db) where
+  substCells m (ProjectionResult proj a result) =
+    ProjectionResult proj (substCells m a) (substCells m result)
+    
 instance (ConstraintDatabase db)
-      => CellSubstitutable (MultiProjectionResult db) where
-  substCells m (MultiProjectionResult proj a ts fib) =
-    MultiProjectionResult proj (substCells m a)
-        (substCells m ts) (substCells m fib)
+      => CellSubstitutable (ProjectionResultForm db tag) where
+  substCells m form = case form of
+    ProjectionResultPrimForm x f ->
+      ProjectionResultPrimForm x (substCells m f)
+    ProjectionResultLabelForm bs f ->
+      ProjectionResultLabelForm (substCells m bs) (substCells m f)
+    ProjectionResultFunForm ts f ->
+      ProjectionResultFunForm (substCells m ts) (substCells m f)
         
 instance (ConstraintDatabase db, CellSubstitutable db)
       => CellSubstitutable (ApplicationCompatibilityResult db) where

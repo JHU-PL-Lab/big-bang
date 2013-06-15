@@ -16,7 +16,7 @@ import Language.TinyBang.TypeSystem.Types
 --  exponentially complex.
 type family MultiProjection db (tag :: ProjectorTag) :: *
 
--- |Primitive and scape projection can simply result in a @(Bool, Fibration db)@
+-- |Primitive projection can simply result in a @(Bool, Fibration db)@
 --  pair.  The @Bool@ just indicates whether or not the match was successful.
 type instance MultiProjection db ProjPrimTag =
   (Bool, Fibration db)
@@ -31,9 +31,11 @@ type instance MultiProjection db ProjPrimTag =
 --  projection.
 type instance MultiProjection db ProjLabelTag =
   ([CellTVar], [Fibration db] -> Fibration db)
--- |See the type instance for primitive projection.
+-- |Scape projection gets away with a @([Type db], Fibration db)@ where each
+--  type in the list is a scape.  Note that the leftmost type is the highest
+--  priority scape.
 type instance MultiProjection db ProjFunTag =
-  (Bool, Fibration db)
+  ([Type db], Fibration db)
   
 -- |A type family for single projection.  This type family degenerates its cases
 --  expecting that only the highest-priority element is produced.
@@ -42,5 +44,5 @@ type family SingleProjection db (tag :: ProjectorTag) :: *
 type instance SingleProjection db ProjPrimTag = (Bool, Fibration db)
 type instance SingleProjection db ProjLabelTag =
   (CellTVar, Fibration db -> Fibration db)
-type instance SingleProjection db ProjFunTag = (Bool, Fibration db)
+type instance SingleProjection db ProjFunTag = (Type db, Fibration db)
 

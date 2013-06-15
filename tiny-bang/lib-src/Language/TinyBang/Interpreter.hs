@@ -96,7 +96,7 @@ smallStep = do
                 toV (ComputedOrigin [oL,oR]) $ oper vL vR
               fromIntProj :: FlowVar -> EvalM (Origin, Integer)
               fromIntProj x = do
-                let proj = projPrim primInt
+                let proj = anyProjPrim primInt
                 mv <- project x proj
                 case mv of
                   Just v -> fromInt v
@@ -194,7 +194,7 @@ smallStep = do
                       --   before substituting the body).
           -> EvalM ()
     apply x1 x2 x3 constr failure success = do
-      scapes <- projectAll x2 projFun
+      scapes <- projectAll x2 anyProjFun
       mexpr <- applicationCompatibility (constr x3) scapes
       case mexpr of
         Just (Expr _ body) -> do

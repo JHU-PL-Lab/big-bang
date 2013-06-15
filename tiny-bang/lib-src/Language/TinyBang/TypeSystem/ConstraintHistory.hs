@@ -1,11 +1,12 @@
-{-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving, TypeFamilies #-}
+{-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving, ScopedTypeVariables #-}
 
 module Language.TinyBang.TypeSystem.ConstraintHistory
 ( ConstraintHistory(..)
 , SourceElement(..)
 , ClosureRule(..)
-, SingleProjectionResult(..)
-, MultiProjectionResult(..)
+, ProjectionResult(..)
+, ProjectionResultForm(..)
+, AnyProjectionResultForm(..)
 , ApplicationCompatibilityResult(..)
 ) where
 
@@ -16,7 +17,6 @@ import Language.TinyBang.Display
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Data.Compatibility
-import Language.TinyBang.TypeSystem.Data.Projection
 import Language.TinyBang.TypeSystem.Fibrations
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.TypeSystem.Utils.DocumentContainer
@@ -45,21 +45,21 @@ data ClosureRule db
       IntermediateConstraint -- ^ The intermediate transitivity constraint.
   | IntegerOperationRule
       OperationConstraint -- ^ The triggering constraint.
-      (SingleProjectionResult db)
+      (ProjectionResult db)
         -- ^ The proof of integer projection for the left.
-      (SingleProjectionResult db)
+      (ProjectionResult db)
         -- ^ The proof of integer projection for the right.
   | IntegerCalculationRule
       OperationConstraint -- ^ The triggering constraint.
-      (SingleProjectionResult db)
+      (ProjectionResult db)
         -- ^ The proof of integer projection for the left.
-      (SingleProjectionResult db)
+      (ProjectionResult db)
         -- ^ The proof of integer projection for the right.
   | EqualityRule
       OperationConstraint -- ^ The triggering constraint.
   | ApplicationRule
       ApplicationConstraint -- ^ The triggering constraint.
-      (MultiProjectionResult db) -- ^ The projection of scapes
+      (ProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility
       Contour -- ^ The contour generated for the application
   | CellPropagationRule
@@ -72,41 +72,86 @@ data ClosureRule db
   | ExceptionPassRule
       ApplicationConstraint -- ^ The triggering constraint.
       ExceptionConstraint -- ^ The exception constraint describing the argument
-      (MultiProjectionResult db) -- ^ The projection of scapes
+      (ProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility      
   | ExceptionCatchRule
       ApplicationConstraint -- ^ The triggering constraint.
       ExceptionConstraint -- ^ The exception constraint describing the argument
-      (MultiProjectionResult db) -- ^ The projection of scapes
+      (ProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db) -- ^ Argument compatibility
       Contour -- ^ The contour generated for the application
   deriving (Eq, Ord, Show)
   
-data ProjectionType = SingleProjectionType | MultiProjectionType
+-- |A data structure describing the approximate result of a projection.
+data ProjectionResultForm db (tag :: A.ProjectorTag) where
+  ProjectionResultPrimForm :: Bool
+                           -> Fibration db
+                           -> ProjectionResultForm db A.ProjPrimTag
+  ProjectionResultLabelForm :: [CellTVar]
+                            -> Fibration db
+                            -> ProjectionResultForm db A.ProjLabelTag
+  ProjectionResultFunForm :: [Type db]
+                          -> Fibration db
+                          -> ProjectionResultForm db A.ProjFunTag
+deriving instance (Eq db) => Eq (ProjectionResultForm db tag)
+deriving instance (Show db) => Show (ProjectionResultForm db tag)
+instance (Display db, DocumentContainer db)
+      => Display (ProjectionResultForm db tag) where
+  makeDoc form = case form of
+    ProjectionResultPrimForm a b ->
+      text "ProjectionResultPrimForm" <+> makeDoc a <+> makeDoc b
+    ProjectionResultLabelForm a b ->
+      text "ProjectionResultLabelForm" <+> makeDoc a <+> makeDoc b
+    ProjectionResultFunForm a b ->
+      text "ProjectionResultFunForm" <+> makeDoc a <+> makeDoc b
 
-type family ProjectionForm db (tag :: A.ProjectorTag) (typ :: ProjectionType)
-  :: *
-type instance ProjectionForm db tag SingleProjectionType
-  = SingleProjection db tag 
-type instance ProjectionForm db tag MultiProjectionType
-  = MultiProjection db tag 
+data AnyProjectionResultForm db =
+  forall (tag :: A.ProjectorTag).
+    SomeProjectionResultForm (ProjectionResultForm db tag)
+instance (Ord db) => Eq (AnyProjectionResultForm db) where
+  a == b = compare a b == EQ
+instance (Ord db) => Ord (AnyProjectionResultForm db) where
+  compare a b = case (a,b) of
+    (   SomeProjectionResultForm (ProjectionResultPrimForm x f)
+      , SomeProjectionResultForm (ProjectionResultPrimForm x' f')) ->
+      mconcat [compare x x', compare f f']
+    (   SomeProjectionResultForm (ProjectionResultPrimForm _ _)
+      , SomeProjectionResultForm (ProjectionResultLabelForm _ _)) -> LT
+    (   SomeProjectionResultForm (ProjectionResultPrimForm _ _)
+      , SomeProjectionResultForm (ProjectionResultFunForm _ _)) -> LT
+    (   SomeProjectionResultForm (ProjectionResultLabelForm _ _)
+      , SomeProjectionResultForm (ProjectionResultPrimForm _ _)) -> GT
+    (   SomeProjectionResultForm (ProjectionResultLabelForm bs f)
+      , SomeProjectionResultForm (ProjectionResultLabelForm bs' f')) ->
+      mconcat [compare bs bs', compare f f']
+    (   SomeProjectionResultForm (ProjectionResultLabelForm _ _)
+      , SomeProjectionResultForm (ProjectionResultFunForm _ _)) -> LT
+    (   SomeProjectionResultForm (ProjectionResultFunForm _ _)
+      , SomeProjectionResultForm (ProjectionResultPrimForm _ _)) -> GT
+    (   SomeProjectionResultForm (ProjectionResultFunForm _ _)
+      , SomeProjectionResultForm (ProjectionResultLabelForm _ _)) -> GT
+    (   SomeProjectionResultForm (ProjectionResultFunForm ts f)
+      , SomeProjectionResultForm (ProjectionResultFunForm ts' f')) ->
+      mconcat [compare ts ts', compare f f']
   
-data ProjectionResult db (typ :: ProjectionType) where
-  ProjectionResult :: forall (tag :: A.ProjectorTag)
+data ProjectionResult db where
+  ProjectionResult :: forall db' (tag :: A.ProjectorTag).
                       A.Projector tag
                    -> FlowTVar
-                   -> ProjectionForm db tag typ
-                   -> ProjectionResult db typ
-type SingleProjectionResult db = ProjectionResult db SingleProjectionType
-type MultiProjectionResult db = ProjectionResult db MultiProjectionType
+                   -> ProjectionResultForm db' tag
+                   -> ProjectionResult db'
 
-instance Eq (ProjectionResult db typ) where
+instance (Ord db) => Eq (ProjectionResult db) where
   a == b = compare a b == EQ 
-instance Ord (ProjectionResult db typ) where
-  compare a b = case (a,b) of
+instance (Ord db) => Ord (ProjectionResult db) where
+  compare x y = case (x,y) of
     (ProjectionResult proj a form, ProjectionResult proj' a' form') ->
-      compare proj proj' `mappend` compare a a' `mappend` form form'
-instance Show (ProjectionResult db typ) where
+      mconcat [ compare (A.SomeProjector proj) (A.SomeProjector proj')
+              , compare a a'
+              , compare (SomeProjectionResultForm form)
+                        (SomeProjectionResultForm form')
+              ]
+instance (Show db) => Show (ProjectionResult db) where
   show (ProjectionResult proj a form) =
     "ProjectionResult " ++ show (A.SomeProjector proj) ++ " " ++ show a ++ " " ++ show form 
 
@@ -122,10 +167,10 @@ data ApplicationCompatibilityResult db
   deriving (Eq, Ord, Show)
   
 instance (Display db, DocumentContainer db)
-      => Display (ProjectionResult db typ) where
-  makeDoc (ProjectionResult proj a mt fib) =
+      => Display (ProjectionResult db) where
+  makeDoc (ProjectionResult proj a result) =
     text "ProjectionResult" <+> parens (makeDoc proj)
-      <+> parens (makeDoc a) <+> parens (makeDoc mt) <+> parens (makeDoc fib)
+      <+> parens (makeDoc a) <+> parens (makeDoc result)
 
 instance (Display db, DocumentContainer db)
       => Display (ApplicationCompatibilityResult db) where

@@ -37,6 +37,11 @@ module Language.TinyBang.Ast.Data
 , projFun
 , projInt
 , projChar
+, anyProjPrim
+, anyProjLabel
+, anyProjFun
+, anyProjInt
+, anyProjChar
 , primInt
 , primChar
 , HasOrigin(..)
@@ -219,20 +224,35 @@ qualImmutable = QualImmutable generated
 qualNone :: CellQualifier
 qualNone = QualNone generated
 
-projPrim :: PrimitiveType -> AnyProjector
-projPrim = SomeProjector . ProjPrim generated
+projPrim :: PrimitiveType -> Projector ProjPrimTag
+projPrim = ProjPrim generated
 
-projLabel :: LabelName -> AnyProjector
-projLabel = SomeProjector . ProjLabel generated
+projLabel :: LabelName -> Projector ProjLabelTag
+projLabel = ProjLabel generated
 
-projFun :: AnyProjector
-projFun = SomeProjector $ ProjFun generated
+projFun :: Projector ProjFunTag
+projFun = ProjFun generated
 
-projInt :: AnyProjector
+projInt :: Projector ProjPrimTag
 projInt = projPrim primInt
 
-projChar :: AnyProjector
+projChar :: Projector ProjPrimTag
 projChar = projPrim primChar
+
+anyProjPrim :: PrimitiveType -> AnyProjector
+anyProjPrim = SomeProjector . projPrim
+
+anyProjLabel :: LabelName -> AnyProjector
+anyProjLabel = SomeProjector . projLabel
+
+anyProjFun :: AnyProjector
+anyProjFun = SomeProjector projFun
+
+anyProjInt :: AnyProjector
+anyProjInt = anyProjPrim primInt
+
+anyProjChar :: AnyProjector
+anyProjChar = anyProjPrim primChar
 
 primInt :: PrimitiveType
 primInt = PrimInt generated

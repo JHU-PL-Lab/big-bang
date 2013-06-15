@@ -30,13 +30,13 @@ $(loggingFunctions)
 data Inconsistency db
   = ApplicationFailure
       ApplicationConstraint -- ^ The triggering constraint
-      (MultiProjectionResult db) -- ^ The projection of scapes
+      (ProjectionResult db) -- ^ The projection of scapes
       (ApplicationCompatibilityResult db)
         -- ^ The result of application compatibility
   | IntegerOperationFailure
       OperationConstraint -- ^ The triggering constraint
-      (SingleProjectionResult db) -- ^ The projection result for the left side
-      (SingleProjectionResult db) -- ^ The projection result for the right side
+      (ProjectionResult db) -- ^ The projection result for the left side
+      (ProjectionResult db) -- ^ The projection result for the right side
   deriving (Eq, Ord, Show)
 
 instance (ConstraintDatabase db, Display db) => Display (Inconsistency db) where
@@ -79,7 +79,8 @@ findApplicationInconsistencies = do
   (scapes, pFib) <- liftProjToIncon $ project projFun a1
   let arg = ArgVal a2
   (Nothing, cFib) <- liftCompatToIncon $ checkApplicationCompatible arg scapes
-  let projRes = MultiProjectionResult projFun a1 scapes pFib
+  let projRes = ProjectionResult projFun a1 $
+                  ProjectionResultFunForm scapes pFib
   let appCRes = ApplicationCompatibilityResult arg scapes Nothing cFib
   return $ ApplicationFailure appc projRes appCRes
 
@@ -92,9 +93,9 @@ findIntegerOperationInconsistencies = do
       flow $ lift $ (++)
                       <$> (getIntegerOperationConstraints <$> askDb)
                       <*> (getIntegerCalculationConstraints <$> askDb)
-  (mt1, r1) <- liftProjToIncon $ projectSingleResult projInt a1
-  (mt2, r2) <- liftProjToIncon $ projectSingleResult projInt a2
-  guard $ isNothing mt1 || isNothing mt2
+  (x1, r1) <- liftProjToIncon $ projectSinglePrimResult projInt a1
+  (x2, r2) <- liftProjToIncon $ projectSinglePrimResult projInt a2
+  guard $ not x1 || not x2
   return $ IntegerOperationFailure oc r1 r2
 
 -- |Lifts a projection operation into the inconsistency monad.

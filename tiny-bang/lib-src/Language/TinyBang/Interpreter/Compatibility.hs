@@ -70,11 +70,11 @@ innerCompatibility :: FlowVar
 innerCompatibility x1 ipat =
   case ipat of
     PrimitivePattern _ p ->
-      ifM (isNothing <$> project x1 (projPrim p))
+      ifM (isNothing <$> project x1 (anyProjPrim p))
         (return Nothing)
         (return $ Just Set.empty)
     LabelPattern _ n y2 ipat' -> do
-      mv <- project x1 $ projLabel n
+      mv <- project x1 $ anyProjLabel n
       case mv of
         Just (VLabel _ n' y3) | n == n' -> do
           x4 <- cellLookup y3
@@ -87,7 +87,7 @@ innerCompatibility x1 ipat =
       liftM2 Set.union <$> innerCompatibility x1 ipat1
                        <*> innerCompatibility x1 ipat2
     ScapePattern _ ->
-      ifM (isNothing <$> project x1 projFun)
+      ifM (isNothing <$> project x1 anyProjFun)
         (return Nothing)
         (return $ Just Set.empty)
     EmptyOnionPattern _ -> return $ Just Set.empty

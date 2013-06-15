@@ -77,19 +77,21 @@ projectSingle proj a =
   case proj of
     ProjPrim _ _ -> project proj a
     ProjLabel _ _ -> do
-      (var:vars, fn) <- project proj a
+      (var:_, fn) <- project proj a
       return (var, \f -> fn [f])
-    ProjFun _ -> project proj a
+    ProjFun _ -> do
+      (typ:_, f) <- project proj a
+      return (typ, f)
 
 -- |Performs single projection.  This obtains a prepared projection result
 --  as well as the actual type.
 projectSinglePrimResult :: ( ConstraintDatabase db, MonadCReader db m
                        , Functor m, Applicative m, Display db )
                     => Projector ProjPrimTag -> FlowTVar
-                    -> ProjM db m (Bool, SingleProjectionResult db)
+                    -> ProjM db m (Bool, ProjectionResult db)
 projectSinglePrimResult proj a = do
   (r,f) <- projectSingle proj a
-  return (r, SingleProjectionResult (SomeProjector proj) a (r,f))
+  return (r, ProjectionResult proj a (ProjectionResultPrimForm r f))
 
 -- |The *real* projection function.  This function includes an occurs check for
 --  non-contractive onion types to prevent divergence.
@@ -122,17 +124,25 @@ projectVar check proj a = do
           r2 <- projectRemembering a2
           case proj of
             ProjPrim _ _ ->
-              let ((p1,fib1),(p2,fib2)) = (r1,r2) in
-              return (p2 && p1, Fibration lowerBound [fib1, fib2])
---          (p1, fib1) <- projectRemembering a1
---          (p2, fib2) <- projectRemembering a2
---          -- Reverse order: first element is highest priority
---          return (p2 ++ p1, Fibration lowerBound [fib1, fib2])
+              let ((x1,fib1),(x2,fib2)) = (r1,r2) in
+              return (x2 || x1, Fibration lowerBound [fib1, fib2])
+            ProjLabel _ _ ->
+              let ((bs1,fn1),(bs2,fn2)) = (r1,r2) in
+              -- Reverse order: first element is highest priority
+              let bs = bs2 ++ bs1 in
+              let fn fibs = Fibration lowerBound
+                              [ fn1 $ drop (length bs2) fibs , fn2 fibs ] in
+              return (bs, fn)
+            ProjFun _ ->
+              let ((ts1,fib1),(ts2,fib2)) = (r1,r2) in
+              return (ts2 ++ ts1, Fibration lowerBound [fib1, fib2])
         (OnionFilter a1 (OpOnionSub _) proj', _)
             | SomeProjector proj /= proj' ->
+            -- FIXME: incorrect; this doesn't remember the filter type
           projectRemembering a1
         (OnionFilter a1 (OpOnionProj _) proj', _)
             | SomeProjector proj == proj' ->
+            -- FIXME: incorrect; this doesn't remember the filter type
           projectRemembering a1
         (Primitive p, ProjPrim _ p') | p == p' ->
           return (True, Fibration lowerBound [])
@@ -146,9 +156,9 @@ projectVar check proj a = do
         (_, ProjLabel _ _) ->
           return ([], const $ blankFibrationFor lowerBound)
         (Scape _ _ _, ProjFun _) ->
-          return (True, Fibration lowerBound [])
+          return ([lowerBound], Fibration lowerBound [])
         (_, ProjFun _) ->
-          return (False, Fibration lowerBound [])
+          return ([], Fibration lowerBound [])
       where
         projectRemembering :: FlowTVar
                            -> ProjM db m (MultiProjection db tag)
