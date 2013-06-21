@@ -3,6 +3,7 @@
 	<name>little-bang</name>
 	<comment></comment>
 	<projects>
+		<project>tiny-bang</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
