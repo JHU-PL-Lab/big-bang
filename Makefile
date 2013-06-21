@@ -1,4 +1,4 @@
-PROJECTS=tiny-bang
+PROJECTS=tiny-bang little-bang
 
 .PHONY : all
 all: $(PROJECTS)
