@@ -13,7 +13,6 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
-import Data.Maybe
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Display

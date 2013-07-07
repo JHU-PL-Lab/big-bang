@@ -9,7 +9,6 @@ module Language.TinyBang.TypeSystem.Relations.Compatibility
 ) where
 
 import Control.Applicative
-import Control.Arrow (first)
 import Control.Monad
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Either
