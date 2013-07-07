@@ -30,6 +30,13 @@ import Language.TinyBang.TypeSystem.Types as T
 
 $(loggingFunctions)
 
+{- TODO: for performance, the compatibility and projection relations should
+         accept a fibration as input; this fibration should constrain the
+         choices those relations make.  The problem at the moment is that the
+         current implementation fans out a number of paths which will wind up
+         being discarded at a later mergeFibrations call.
+-}
+
 type CellSubstitutions = Map CellTVar CellTVar
 
 type CompatM db m = FlowT (EitherT (ProjectionError db) m)
