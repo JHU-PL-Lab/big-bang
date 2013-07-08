@@ -111,7 +111,7 @@ class VarCloseable a where
   checkClosed :: a -> CloseM ()
 
 -- | CloseM is the monad used in determining whether or not an expression is
---   closed.  It has three operations, which are described below.
+--   closed.  It has operations which are described below.
 type CloseM = RWS () (Set FlowVar) (Set FlowVar)
 
 -- | Adds a variable to the set of variables bound in the current scope.
@@ -145,11 +145,6 @@ checkVars v1 v2 = checkVar v1 >> checkVar v2
 checkAdd :: (VarCloseable c) => c -> FlowVar -> CloseM ()
 checkAdd v1 v2 = checkClosed v1 <* addVar v2
 
--- | Convenience function for checking if a term is closed and then adding a
---   variable to the set of bound variables.
-checkAdds :: (VarCloseable c) => c -> [FlowVar] -> CloseM ()
-checkAdds v1 vs2 = checkClosed v1 <* addVars vs2
-
 instance (VarCloseable a) => VarCloseable [a] where
   checkClosed = mapM_ checkClosed
 
@@ -177,9 +172,9 @@ instance VarCloseable Value where
     VEmptyOnion _ -> yes
     VLabel _ _ x -> checkVar x
     VOnion _ x x' -> checkVars x x'
-    VFunction _ (AstList _ xs) e -> checkAdds e xs
+    VFunction _ (AstList _ xs) e -> bracket $ addVars xs <* checkClosed e
     VPattern _ _ p -> checkClosed p
-    VScape _ pat e -> bracket $ checkClosed pat >> checkClosed e
+    VScape _ pat e -> checkClosed pat >> checkClosed e
     where yes = return ()
 
 instance VarCloseable PatternBody where
