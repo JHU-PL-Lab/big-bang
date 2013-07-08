@@ -52,7 +52,7 @@ programParser = expressionParser <* eof
 
 expressionParser :: Parser Expr
 expressionParser = "Expression" <@> do
-  cls <- sepBy1 clauseParser $ consume TokSemi
+  cls <- sepEndBy1 clauseParser $ consume TokSemi
   return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
 
 clauseParser :: Parser Clause
@@ -81,13 +81,22 @@ valueParser = "Value" <@>
   <|> argorig2 VOnion <$> flowVarParser <* consume TokAmp ?=> flowVarParser
   
 astListParser :: Parser a -> Parser (AstList a)
-astListParser p = do
-  start <- parserLocation
-  consume TokOpenParen
-  els <- p `sepBy` consume TokComma
-  consume TokCloseParen
-  stop <- parserLocation
-  return $ AstList (SourceOrigin $ SourceRegion start stop) els
+astListParser p =
+      normalParser
+  <|> emptyOnionAsListParser 
+  where
+    normalParser = do
+      start <- parserLocation
+      consume TokOpenParen
+      els <- p `sepBy` consume TokComma
+      consume TokCloseParen
+      stop <- parserLocation
+      return $ AstList (SourceOrigin $ SourceRegion start stop) els
+    emptyOnionAsListParser = do
+      start <- parserLocation
+      consume TokEmptyOnion
+      stop <- parserLocation
+      return $ AstList (SourceOrigin $ SourceRegion start stop) []
   
 {-
   Pattern parse order:
