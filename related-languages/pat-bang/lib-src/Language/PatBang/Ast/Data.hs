@@ -273,7 +273,7 @@ instance Display BinaryOperator where
   makeDoc op = case op of
     OpPlus _ -> text "+"
     OpMinus _ -> text "-"
-    OpEqual _ -> text "="
+    OpEqual _ -> text "=="
     OpGreater _ -> text ">"
     OpLess _ -> text "<"
 
