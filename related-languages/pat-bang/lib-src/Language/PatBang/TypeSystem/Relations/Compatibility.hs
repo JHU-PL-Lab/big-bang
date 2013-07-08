@@ -141,7 +141,7 @@ checkCompatible a1 tpat visits = case tpat of
   T.PFun -> primCompat projFun $ first ((> 0) . length)
   T.PPat -> primCompat projPat $ first ((> 0) . length)
   T.PScape -> primCompat projScape $
-                ((> 0).  length) *** (($ Unexpanded) . ($ Unexpanded))
+                ((> 0).  length) *** ($ zip unexpandeds unexpandeds)
   T.PConj tpat1 tpat2 -> do
     (pbs1, fib1) <- checkCompatible a1 tpat1 visits
     (pbs2, fib2) <- checkCompatible a1 tpat2 visits
@@ -165,7 +165,7 @@ checkCompatible a1 tpat visits = case tpat of
     let tpat'' = patternSubstitute (Map.singleton b tpat) tpat' in
     checkCompatible a1 tpat'' $ tpat `Set.insert` visits
   T.PVar b -> do
-    TypeConstraint typ _ <- flow $ getTypeConstraints <$> askDb
+    TypeConstraint typ _ <- flow $ getTypeConstraintsByUpperBound a1 <$> askDb
     return (Just $ Map.singleton b typ, blankFibrationFor typ)
   where
     -- |Takes a projector and a conversion function.  The conversion function

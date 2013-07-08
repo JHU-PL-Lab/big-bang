@@ -150,7 +150,7 @@ smallStep = do
                       --   before substituting the body).
           -> EvalM ()
     apply x1 x2 x3 failure success = do
-      scapes <- projectAll x2 anyProjFun
+      scapes <- projectAll x2 anyProjScape
       mexpr <- applicationCompatibility x3 scapes
       case mexpr of
         Just (Expr _ body) -> do

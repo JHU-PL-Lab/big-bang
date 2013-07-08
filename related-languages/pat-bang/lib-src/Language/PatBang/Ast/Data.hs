@@ -250,9 +250,9 @@ instance Display Value where
     VEmptyOnion _ -> text "()"
     VLabel _ n x -> makeDoc n <+> makeDoc x
     VOnion _ x x' -> makeDoc x <+> text "&" <+> makeDoc x'
-    VFunction _ xs e -> text "(" <+> makeDoc xs <+> text ")" <+> text "->"
+    VFunction _ xs e -> makeDoc xs <+> text "->"
                           <+> text "{" <+> makeDoc e <+> text "}"
-    VPattern _ ys p -> text "(" <+> makeDoc ys <+> text ")" <+> text "<-"
+    VPattern _ ys p -> makeDoc ys <+> text "<-"
                           <+> text "{" <+> makeDoc p <+> text "}"
     VScape _ x x' -> makeDoc x <+> text "><" <+> makeDoc x'
 

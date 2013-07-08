@@ -86,8 +86,8 @@ projectSingle proj a =
       (typ:_, f) <- project proj a
       return (typ, f)
     ProjScape _ -> do
-      (typ:_, f) <- project proj a
-      return (typ, f)
+      (typ:_, fn) <- project proj a
+      return (typ, \f -> fn [f])
 
 -- |Performs single projection.  This obtains a prepared projection result
 --  as well as the actual type.
@@ -129,29 +129,52 @@ projectVar check proj a = do
           r1 <- projectRemembering a1
           r2 <- projectRemembering a2
           case proj of
+            -- Reverse order in result lists: first element is highest priority
             ProjPrim _ _ ->
               let ((x1,fib1),(x2,fib2)) = (r1,r2) in
               return (x2 || x1, Fibration lowerBound [fib1, fib2])
             ProjLabel _ _ ->
               let ((bs1,fn1),(bs2,fn2)) = (r1,r2) in
-              -- Reverse order: first element is highest priority
-              let bs = bs2 ++ bs1 in
               let fn fibs = Fibration lowerBound
                               [ fn1 $ drop (length bs2) fibs , fn2 fibs ] in
-              return (bs, fn)
+              return (bs2 ++ bs1, fn)
             ProjFun _ ->
               let ((ts1,fib1),(ts2,fib2)) = (r1,r2) in
               return (ts2 ++ ts1, Fibration lowerBound [fib1, fib2])
+            ProjPat _ ->
+              let ((ts1,fib1),(ts2,fib2)) = (r1,r2) in
+              return (ts2 ++ ts1, Fibration lowerBound [fib1, fib2])
+            ProjScape _ ->
+              let ((bs1,fn1),(bs2,fn2)) = (r1,r2) in
+              let fn fibs = Fibration lowerBound
+                              [ fn1 $ drop (length bs2) fibs , fn2 fibs ] in
+              return (bs2 ++ bs1, fn)
         (Primitive p, ProjPrim _ p') | p == p' ->
-          return (True, Fibration lowerBound [])
+          return (True, blankFibrationFor lowerBound)
         (_, ProjPrim _ _) ->
-          return (False, Fibration lowerBound [])
-        (Label n b, ProjLabel _ n') | n == n' ->
+          return (False, blankFibrationFor lowerBound)
+        (Label n a', ProjLabel _ n') | n == n' ->
           let fibfn fibs =
                 Fibration lowerBound
                   [fromMaybe Unexpanded $ listToMaybe fibs]
-          in return ([b], fibfn)
+          in return ([a'], fibfn)
         (_, ProjLabel _ _) ->
+          return ([], const $ blankFibrationFor lowerBound)
+        (Function aa a' cs, ProjFun _) ->
+          return ([(aa,a',cs)], blankFibrationFor lowerBound)
+        (_, ProjFun _) ->
+          return ([], blankFibrationFor lowerBound)
+        (Pattern bs tpat, ProjPat _) ->
+          return ([(bs,tpat)], blankFibrationFor lowerBound)
+        (_, ProjPat _) ->
+          return ([], blankFibrationFor lowerBound)
+        (Scape a' a'', ProjScape _) ->
+          let fibfn fibps =
+                let (fib1,fib2) = fromMaybe (Unexpanded, Unexpanded) $
+                                      listToMaybe fibps in
+                Fibration lowerBound [fib1, fib2]
+          in return ([(a',a'')],fibfn)
+        (_, ProjScape _) ->
           return ([], const $ blankFibrationFor lowerBound)
       where
         projectRemembering :: FlowTVar

@@ -81,7 +81,8 @@ findApplicationInconsistencies = do
   let scapes = map (uncurry Scape) scapeVars
   (Nothing, cFib) <- liftCompatToIncon $ checkApplicationCompatible a2 scapes
   let projRes = ProjectionResult projFun a1 $
-                  ProjectionResultFunForm scapes (pFib Unexpanded Unexpanded)
+                  ProjectionResultFunForm scapes $ pFib $
+                    zip unexpandeds unexpandeds 
   let appCRes = ApplicationCompatibilityResult a2 scapes Nothing cFib
   return $ ApplicationFailure appc projRes appCRes
 

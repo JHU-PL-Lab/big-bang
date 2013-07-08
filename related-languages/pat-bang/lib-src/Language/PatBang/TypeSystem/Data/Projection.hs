@@ -39,11 +39,12 @@ type instance MultiProjection db ProjFunTag =
 --  fibration which generated it.
 type instance MultiProjection db ProjPatTag =
   ([([PatTVar],T.PatternBody)], Fibration db)
--- |Scape projection generates a pair between the scape variables and a function
+-- |Scape projection generates pairs between the scape variables and a function
 --  which, given fibrations for those variables, will generate the overall
---  fibration.
+--  fibration.  This function operates as in the label case but takes pairs
+--  (because there are two variables per scape).
 type instance MultiProjection db ProjScapeTag =
-  ([(FlowTVar, FlowTVar)], Fibration db -> Fibration db -> Fibration db)
+  ([(FlowTVar, FlowTVar)], [(Fibration db, Fibration db)] -> Fibration db)
   
 -- |A type family for single projection.  This type family degenerates its cases
 --  expecting that only the highest-priority element is produced.
@@ -57,5 +58,5 @@ type instance SingleProjection db ProjFunTag =
 type instance SingleProjection db ProjPatTag =
   (([PatTVar],T.PatternBody), Fibration db)
 type instance SingleProjection db ProjScapeTag =
-  ((FlowTVar, FlowTVar), Fibration db -> Fibration db -> Fibration db)
+  ((FlowTVar, FlowTVar), (Fibration db, Fibration db) -> Fibration db)
 

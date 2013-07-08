@@ -121,6 +121,7 @@ patternBody3Parser = "Pattern Body (3)"  <@>
   <|> requirex TokPat PPat
   <|> requirex TokScape PScape
   <|> argorig2 PSubst <$> flowVarParser <*> astListParser patternBodyParser
+        ?+> eps
   <|> argorig1 PVar <$> patVarParser
   <|> consume TokOpenParen *> patternBodyParser <* consume TokCloseParen
 
@@ -136,13 +137,13 @@ primitiveTypeParser :: Parser PrimitiveType
 primitiveTypeParser = requirex TokInt PrimInt
 
 labelNameParser :: Parser LabelName
-labelNameParser = LabelName <$&> require matchLabel
+labelNameParser = "Label Name" <@> LabelName <$&> require matchLabel
 
 flowVarParser :: Parser FlowVar
-flowVarParser = FlowVar <$&> require matchIdent
+flowVarParser = "Flow Variable" <@> FlowVar <$&> require matchIdent
 
 patVarParser :: Parser PatVar
-patVarParser = PatVar <$&> require matchIdent
+patVarParser = "Pattern Variable" <@> PatVar <$&> require matchIdent
 
 -- |A matching function for integer literals.
 matchIntLit :: Token -> Maybe Integer

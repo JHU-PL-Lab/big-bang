@@ -137,7 +137,8 @@ normalApplicationClosures = do
   let wiringConstraint = cwrap $ IntermediateConstraint a4 a3
       wiringHistory = DerivedFromClosure $ ApplicationRule appc
                         (ProjectionResult projScape a1 $
-                          ProjectionResultScapeForm scapes $ pFib Unexpanded Unexpanded)
+                          ProjectionResultScapeForm scapes $ pFib $
+                            zip unexpandeds unexpandeds)
                         (ApplicationCompatibilityResult a2 scapes mdata cFib)
                         cn
   let db'' = instantiateContours Set.empty cn $

@@ -73,7 +73,7 @@ library
                    Language.PatBang.TypeSystem.Relations.Patterns,
                    Language.PatBang.Interpreter.Patterns
 
-executable tiny-bang
+executable pat-bang
   hs-source-dirs:  
                    lib-src,
                    interp-src
