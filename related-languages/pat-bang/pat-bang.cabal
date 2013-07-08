@@ -1,0 +1,121 @@
+name:           pat-bang
+version:        0.2
+cabal-version:  >=1.2
+build-type:     Simple
+author:         Zachary Palmer
+
+library
+  hs-source-dirs:  lib-src
+  build-depends:   
+                   base >= 4,
+                   parsec,
+                   transformers,
+                   template-haskell,
+                   containers,
+                   either,
+                   mtl,
+                   cmdargs,
+                   split,
+                   wl-pprint,
+                   errors,
+                   hslogger
+  ghc-options:     -Wall
+  other-modules:   
+                   Data.Adj,
+                   Data.NFA,
+                   Language.PatBang.Ast,
+                   Language.PatBang.Ast.Data,
+                   Language.PatBang.Ast.Substitution,
+                   Language.PatBang.Ast.WellFormedness,
+                   Language.PatBang.Display,
+                   Language.PatBang.Interpreter,
+                   Language.PatBang.Interpreter.Basis,
+                   Language.PatBang.Interpreter.Compatibility,
+                   Language.PatBang.Interpreter.DeepValues,
+                   Language.PatBang.Interpreter.Equality,
+                   Language.PatBang.Interpreter.Projection,
+                   Language.PatBang.Interpreter.Variables,
+                   Language.PatBang.Logging,
+                   Language.PatBang.Syntax.Lexer,
+                   Language.PatBang.Syntax.Location,
+                   Language.PatBang.Syntax.Parser,
+                   Language.PatBang.Toploop,
+                   Language.PatBang.TypeSystem.Closure,
+                   Language.PatBang.TypeSystem.ConstraintDatabase,
+                   Language.PatBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.PatBang.TypeSystem.ConstraintHistory,
+                   Language.PatBang.TypeSystem.Constraints,
+                   Language.PatBang.TypeSystem.Contours,
+                   Language.PatBang.TypeSystem.Data,
+                   Language.PatBang.TypeSystem.Data.Projection,
+                   Language.PatBang.TypeSystem.Fibrations,
+                   Language.PatBang.TypeSystem.Inconsistency,
+                   Language.PatBang.TypeSystem.InitialDerivation,
+                   Language.PatBang.TypeSystem.Monad.Trans.CReader,
+                   Language.PatBang.TypeSystem.Monad.Trans.Flow,
+                   Language.PatBang.TypeSystem.Relations,
+                   Language.PatBang.TypeSystem.Relations.Compatibility,
+                   Language.PatBang.TypeSystem.Relations.Contours,
+                   Language.PatBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.PatBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.PatBang.TypeSystem.Relations.Contours.ContourReplacable,
+                   Language.PatBang.TypeSystem.Relations.Projection,
+                   Language.PatBang.TypeSystem.TypeInference,
+                   Language.PatBang.TypeSystem.Types,
+                   Language.PatBang.TypeSystem.Utils.DocumentContainer,
+                   Language.PatBang.Utils.Parsec,
+                   Utils.Meta.Deriving,
+                   Utils.Monad,
+                   Utils.TemplateHaskell,
+                   Utils.Toploop,
+                   Utils.Toploop.Logging,
+                   Utils.Tuple,
+                   Language.PatBang.TypeSystem.Relations.Patterns,
+                   Language.PatBang.Interpreter.Patterns
+
+executable tiny-bang
+  hs-source-dirs:  
+                   lib-src,
+                   interp-src
+  main-is:         Main.hs
+  build-depends:   
+                   base >= 4,
+                   containers,
+                   mtl,
+                   cmdargs
+  ghc-options:     -Wall
+  other-modules:   
+                   Utils.Meta.Deriving,
+                   Utils.Monad,
+                   Data.Adj,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell,
+                   Data.NFA,
+                   Utils.Toploop,
+                   Utils.Toploop.Logging,
+                   Language.PatBang.TypeSystem.Relations.Patterns,
+                   Language.PatBang.Interpreter.Patterns
+
+executable tests
+  hs-source-dirs:  lib-src, test-src
+  main-is:         Main.hs
+  build-depends:   
+                   base >= 4,
+                   HUnit >= 1.2 && < 2,
+                   QuickCheck >= 2.4,
+                   test-framework >= 0.4.1,
+                   test-framework-quickcheck2,
+                   test-framework-hunit,
+                   filepath,
+                   directory
+  ghc-options:     -Wall
+  other-modules:   
+                   Utils.Tuple,
+                   Utils.TemplateHaskell,
+                   Data.NFA,
+                   Test.Data.NFA,
+                   Utils.Toploop,
+                   Utils.Toploop.Logging,
+                   Language.PatBang.TypeSystem.Relations.Patterns,
+                   Language.PatBang.Interpreter.Patterns
+

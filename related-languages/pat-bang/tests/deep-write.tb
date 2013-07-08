@@ -1,0 +1,19 @@
+# EXPECT: `A `B 4
+
+# Build the scape
+x1 = y1:`A y2:(`B y3:()) ->
+        {
+            x2 = 4;
+            y3 <- x2;
+            x3 = !y1
+        };
+# Build the `B
+x4 = 0;
+y4 := x4;
+x5 = `B y4;
+# Build the `A
+y5 := x5;
+x6 = `A y5;
+# Do the call
+x7 = x1 x6
+
