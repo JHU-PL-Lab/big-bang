@@ -57,5 +57,5 @@ type instance SingleProjection db ProjFunTag =
 type instance SingleProjection db ProjPatTag =
   (([PatTVar],T.PatternBody), Fibration db)
 type instance SingleProjection db ProjScapeTag =
-  ((FlowTVar, FlowTVar), Fibration db)
+  ((FlowTVar, FlowTVar), Fibration db -> Fibration db -> Fibration db)
 

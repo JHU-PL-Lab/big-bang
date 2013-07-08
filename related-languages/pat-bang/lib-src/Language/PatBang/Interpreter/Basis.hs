@@ -6,6 +6,7 @@ module Language.PatBang.Interpreter.Basis
 , UsedVars(..)
 , EvalError(..)
 , EvalM
+, evalError
 , flowLookup
 , setClauses
 , replaceFirstClause
@@ -56,6 +57,7 @@ data EvalError
   = IllFormedExpression IllFormedness
   | OpenExpression (Set FlowVar)
   | FlowVarNotClosed FlowVar
+  | MismatchedPatternSubstitution [PatVar] [PatternBody]
   | ProjectionFailure FlowVar AnyProjector
   | ApplicationFailure FlowVar FlowVar
   deriving (Eq, Ord, Show)
@@ -65,6 +67,10 @@ instance Display EvalError where
 
 -- |The monad in which small-step evaluation takes place.
 type EvalM a = EitherT EvalError (State EvalState) a
+
+-- |Reports an evaluation error.
+evalError :: EvalError -> EvalM a
+evalError = left
 
 -- |Performs a value lookup on a given flow variable.
 flowLookup :: FlowVar -> EvalM Value

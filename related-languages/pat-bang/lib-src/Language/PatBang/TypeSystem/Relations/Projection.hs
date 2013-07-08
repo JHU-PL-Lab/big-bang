@@ -82,6 +82,12 @@ projectSingle proj a =
     ProjFun _ -> do
       (typ:_, f) <- project proj a
       return (typ, f)
+    ProjPat _ -> do
+      (typ:_, f) <- project proj a
+      return (typ, f)
+    ProjScape _ -> do
+      (typ:_, f) <- project proj a
+      return (typ, f)
 
 -- |Performs single projection.  This obtains a prepared projection result
 --  as well as the actual type.

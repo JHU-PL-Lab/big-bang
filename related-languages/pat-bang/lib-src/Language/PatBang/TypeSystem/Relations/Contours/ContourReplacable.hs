@@ -133,6 +133,10 @@ instance (ConstraintDatabase db)
       ProjectionResultLabelForm (replContours cn bs) (replContours cn f)
     ProjectionResultFunForm ts f ->
       ProjectionResultFunForm (replContours cn ts) (replContours cn f)
+    ProjectionResultPatForm ts f ->
+      ProjectionResultPatForm (replContours cn ts) (replContours cn f)
+    ProjectionResultScapeForm ts f ->
+      ProjectionResultScapeForm (replContours cn ts) (replContours cn f)
         
 instance (ConstraintDatabase db, ContourReplacable db)
       => ContourReplacable (ApplicationCompatibilityResult db) where

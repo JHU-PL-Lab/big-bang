@@ -76,29 +76,21 @@ labelParser = do
 primitiveParser :: Parser DeepOnionPredicate
 primitiveParser =
       intParser
-  </> charParser
   </> emptyOnionParser
 
 intParser :: Parser DeepOnionPredicate
-intParser = demandPrim DeepPrimInt <$> require matchInt
+intParser = demandPrim DeepBasicInt <$> require matchInt
   where
     matchInt = \case
       TokLitInt n -> Just n
       _ -> Nothing
       
-charParser :: Parser DeepOnionPredicate
-charParser = demandPrim DeepPrimChar <$> require matchChar
-  where
-    matchChar = \case
-      TokLitChar c -> Just c
-      _ -> Nothing
-  
 emptyOnionParser :: Parser DeepOnionPredicate
 emptyOnionParser = consume TokEmptyOnion *> return (const True)
   
-demandPrim :: (Eq a) => DeepPrimitiveType a -> a -> DeepOnionPredicate
+demandPrim :: (Eq a) => DeepBasicType a -> a -> DeepOnionPredicate
 demandPrim dpt val onion = fromMaybe False $
-  (==) val <$> lookup dpt (deepOnionPrimitives onion)
+  (==) val <$> lookup dpt (deepOnionBasics onion)
 
 -- |This parser is a specialization of the @token@ parser with the necessary
 --  pretty-printing and location-calculating routines embedded.

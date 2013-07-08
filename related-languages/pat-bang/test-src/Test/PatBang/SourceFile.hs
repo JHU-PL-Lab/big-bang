@@ -101,7 +101,7 @@ sourceFileTests = do
               assertString $ "Expected " ++ display predSrc
                 ++ " but error occurred: " ++ display err
             (_, Right (env,var)) ->
-              let monion = deepOnion (flowVarMap env) (cellVarMap env) var in
+              let monion = deepOnion (flowVarMap env) var in
               case monion of
                 Left failure ->
                   error $ "Evaluator produced a result which did not " ++ 

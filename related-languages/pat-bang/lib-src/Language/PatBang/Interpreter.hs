@@ -41,10 +41,10 @@ eval e@(Expr _ cls) =
     else
       case checkWellFormed e of
         Left ill -> Left (IllFormedExpression ill, cls)
-        Right (VarCount fvs' fvs'' cvs) ->
-          let usedVars = Set.map unFlowVar (fvs' `Set.union` fvs'') in
+        Right (VarCount fvs') ->
+          let usedVars = Set.map unFlowVar fvs' in
           let initialState = EvalState
-                ( EvalEnv Map.empty Map.empty Map.empty Nothing )
+                ( EvalEnv Map.empty Nothing )
                 cls (UsedVars usedVars 1) in
           let (merr, rstate) =
                 runState (runEitherT smallStepMany) initialState in
@@ -54,8 +54,7 @@ eval e@(Expr _ cls) =
               case lastVar $ evalEnv rstate of
                 Just var -> Right (evalEnv rstate,var)
                 Nothing ->
-                  let ill = IllFormedExpression $ InvalidExpressionEnd $
-                                last cls in
+                  let ill = IllFormedExpression EmptyExpression in
                   Left (ill, evalClauses rstate)
   where
     smallStepMany :: EvalM ()

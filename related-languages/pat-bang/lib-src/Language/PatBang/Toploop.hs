@@ -39,8 +39,6 @@ data InterpreterResult
       FlowVar
       -- |The mapping from flow variables to their values.
       (Map FlowVar Value)
-      -- |The mapping from cell variables to their contents.
-      (Map CellVar FlowVar)
   deriving (Eq, Ord, Show)
   
 data ConstraintDatabaseType
@@ -73,7 +71,7 @@ interpretSource _ interpConf src = do
   if evaluating interpConf
     then do
       (env,var) <- doStep evalFail $ eval ast
-      return $ InterpreterResult var (flowVarMap env) (cellVarMap env)
+      return $ InterpreterResult var (flowVarMap env)
     else
       Left EvaluationDisabled
   where
@@ -94,12 +92,6 @@ instance (ConstraintDatabase db, Display db)
           case ill of
             DuplicateFlowBinding x -> text "Duplicate variable definition:"
               <+> makeDoc x
-            DuplicateFlowUse x -> text "Duplicate variable use:"
-              <+> makeDoc x
-            DuplicateCellBinding y -> text "Duplicate variable definition:"
-              <+> makeDoc y
-            InvalidExpressionEnd cl ->
-              text "Invalid clause terminating expression:" <+> makeDoc cl
             EmptyExpression ->
               text "Source contains an empty expression"
         ID.OpenExpression vs -> text "Open variables in expression:" <+>
@@ -113,16 +105,12 @@ instance (ConstraintDatabase db, Display db)
       I.IllFormedExpression ill -> text "Ill-formed expression:" <+> case ill of
         DuplicateFlowBinding x -> text "Duplicate flow variable binding:"
                                   <+> makeDoc x
-        DuplicateFlowUse x -> text "Duplicate flow variable use:"
-                              <+> makeDoc x
-        DuplicateCellBinding y -> text "Duplicate cell variable binding:"
-                                  <+> makeDoc y
-        InvalidExpressionEnd cl -> text "Invalid ending clause for expression:"
-                                   <+> makeDoc cl
         EmptyExpression -> text "Empty subexpression"
       I.OpenExpression vs -> text "Open variables in expression:" <+> makeDoc vs
       FlowVarNotClosed x -> text "Flow variable not closed:" <+> makeDoc x
-      CellVarNotClosed y -> text "Cell variable not closed:" <+> makeDoc y
+      MismatchedPatternSubstitution ys pats ->
+        text "Mismatched pattern substitution:" <+> makeDoc ys <+> text "and"
+          <+> makeDoc pats
       ProjectionFailure x proj -> text "Could not project" <+> makeDoc proj
                                       <+> text "from" <+> makeDoc x
       I.ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
@@ -159,13 +147,11 @@ stringyInterpretSource interpConf exprSrc =
     DummyDatabase dummy ->
       case interpretSource dummy interpConf exprSrc of
         Left err -> display err
-        Right (InterpreterResult x fvs cvs) ->
-          case deepOnion fvs cvs x of
+        Right (InterpreterResult x fvs) ->
+          case deepOnion fvs x of
             Left failure -> case failure of
               UnboundFlowVariable ux ->
                 "Unbound flow variable " ++ display ux ++ " in result!"
-              UnboundCellVariable uy ->
-                "Unbound cell variable " ++ display uy ++ " in result!"
             Right value -> display value
 
 -- |Creates an empty database of a recognized type.

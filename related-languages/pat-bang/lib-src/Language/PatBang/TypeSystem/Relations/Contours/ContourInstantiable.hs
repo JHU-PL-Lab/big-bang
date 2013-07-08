@@ -129,6 +129,10 @@ instance (ConstraintDatabase db)
       ProjectionResultLabelForm (instContours vs cn bs) (instContours vs cn f)
     ProjectionResultFunForm ts f ->
       ProjectionResultFunForm (instContours vs cn ts) (instContours vs cn f)
+    ProjectionResultPatForm ts f ->
+      ProjectionResultPatForm (instContours vs cn ts) (instContours vs cn f)
+    ProjectionResultScapeForm ts f ->
+      ProjectionResultScapeForm (instContours vs cn ts) (instContours vs cn f)
         
 instance (ConstraintDatabase db, ContourInstantiable db)
       => ContourInstantiable (ApplicationCompatibilityResult db) where

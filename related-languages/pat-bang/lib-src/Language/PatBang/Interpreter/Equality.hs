@@ -21,7 +21,7 @@ flowVarValueEq x x' = do
   return $ (p1 == p2) && lequal && (s1 == s2)
   where
     mlequal :: Map LabelName FlowVar -> Map LabelName FlowVar -> EvalM Bool
-    mlequal m1 m2 = do
+    mlequal m1 m2 =
       if Map.keysSet m1 /= Map.keysSet m2
         then return False
         else
@@ -42,7 +42,7 @@ flowVarFlatten x = do
                           (Map.singleton BasicFunctionType v) Map.empty []
     VPattern _ _ _ -> return $ FlattenedOnion
                           (Map.singleton BasicPatternType v) Map.empty []
-    VScape _ x' x'' -> return $ FlattenedOnion Map.empty Map.empty [v]
+    VScape _ _ _ -> return $ FlattenedOnion Map.empty Map.empty [v]
 
 -- |A data type for flattened onions.
 data FlattenedOnion
