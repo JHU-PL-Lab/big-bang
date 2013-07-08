@@ -29,7 +29,7 @@ sourceFileTests :: IO Test
 sourceFileTests = do
   dirContents <- getDirectoryContents testsPath
   let paths = map ((testsPath ++ [pathSeparator]) ++) $
-                filter (isSuffixOf ".tb") dirContents
+                filter (isSuffixOf ".pb") dirContents
   mtests <- mapM makeTestFromPath paths
   return $
     case sequence mtests of
