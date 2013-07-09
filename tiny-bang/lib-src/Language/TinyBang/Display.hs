@@ -20,6 +20,7 @@ module Language.TinyBang.Display
 , delimFillSep
 , binaryOpDoc
 , denseDisplay
+, render
 ) where
 
 import Control.Monad (liftM)

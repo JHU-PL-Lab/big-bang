@@ -1,0 +1,58 @@
+{-
+  This module tests the TinyBangNested Parser.
+-}
+module Test.Language.TinyBangNested.Syntax.Parser
+( parserTests
+) where
+
+import Text.Parsec.Pos
+import Debug.Trace
+
+import Language.TinyBangNested.Syntax.Parser
+import Language.TinyBangNested.Syntax.Lexer
+import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Display
+import Language.TinyBangNested.Ast.Data
+
+import Test.HUnit
+
+-- | Utility functions for Lexer unit tests:
+
+
+-- | Function for automating calls to lexTinyBangNested and unwrapping result
+testContext = ParserContext UnknownDocument "UnitTestDoc"
+
+testOrigin :: Origin
+testOrigin = SourceOrigin (SourceRegion Unknown Unknown)
+
+getParserResult :: [PositionalToken] -> Expr
+getParserResult input =  extractExpr $ parseTinyBangNested testContext input
+
+-- Takes a label, input, expected ouput and generates a TestCase for these values
+genUnitTest :: String -> String -> String -> Test
+genUnitTest label input expected = TestCase $ assertBool label $ printExpr (getParserResult (extractRight $ lexTinyBangNested "Unit Test" input)) == expected
+
+extractExpr :: Either String Expr -> Expr
+extractExpr (Left x) = error ("parse failed: " ++ x)
+extractExpr (Right x) = x
+
+extractRight (Left _ ) = error "left error!"
+extractRight (Right x ) = x
+
+parserTests :: Test
+parserTests = TestList [testDef, testArithOpAssoc]
+
+-- | Test Def
+testDef :: Test
+testDef = genUnitTest "Parsing def expression" "def x = 1 in 1" "def x = (1) in (1)"make
+defInput = extractRight $ lexTinyBangNested "" "def x = 1 in 1"
+testdefExpected = "def x = (1) in (1)"
+
+-- | Test ArithOp Associativity
+testArithOpAssoc :: Test
+testArithOpAssoc = TestCase $ assertBool "Parsing ArithOp Assoc" (printExpr (getParserResult arithOpAssocInput) == testArithOpAssocExpected)
+arithOpAssocInput :: [PositionalToken]
+arithOpAssocInput = extractRight $ lexTinyBangNested "" "1 + 2 + 3"
+testArithOpAssocExpected :: String
+testArithOpAssocExpected = "((1)+(2))+(3)"
+

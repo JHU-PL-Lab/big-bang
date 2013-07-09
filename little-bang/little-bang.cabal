@@ -5,15 +5,57 @@ build-type:     Simple
 author:         Zachary Palmer
 
 library
-  hs-source-dirs:  src
+  hs-source-dirs:  lib-src
   build-depends:   
                    base >= 4,
-                   tiny-bang
+                   tiny-bang,
+                   containers,
+                   mtl,
+                   wl-pprint,
+                   transformers,
+                   hslogger,
+                   template-haskell,
+                   parsec
   ghc-options:     -Wall
+  exposed-modules:
+                   Language.TinyBangNested.Syntax.Lexer
+                   Language.TinyBangNested.Syntax.Parser
+                   Language.TinyBangNested.Ast
+
+
 
 executable little-bang
-  hs-source-dirs:  src
+  hs-source-dirs:  lib-src
   main-is:         Main.hs
-  build-depends:   base >= 4
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   containers,
+                   mtl,
+                   wl-pprint,
+                   transformers,
+                   hslogger,
+                   template-haskell,
+                   parsec
   ghc-options:     -Wall
+  other-modules:
+                   Language.TinyBangNested.Syntax.Lexer
+                   Language.TinyBangNested.Syntax.Parser
+                   Language.TinyBangNested.Ast
 
+executable test-tbn
+  hs-source-dirs:  
+                   test-src                   
+                   lib-src
+                   
+  main-is:         Main.hs
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   HUnit >= 1.2 && < 2,
+                   test-framework >= 0.4.1,
+                   test-framework-hunit,
+                   parsec
+  ghc-options:     -Wall
+  other-modules:
+                   Language.TinyBangNested.Syntax.Lexer
+                   Language.TinyBangNested.Syntax.Parser
+                   Language.TinyBangNested.Ast
