@@ -1,3 +1,4 @@
 * according to the spec, a pattern which binds too few arguments simply doesn't match instead of failing application compatibility; is this good?
 * specification of compatibility needs a failure case for when a pattern can't be projected from α2 and for when the argument list doesn't match the length of the parameter list
 * substitution notation for compatibility is a little odd since pattern variables can repeat themselves; what about shadowing/overlap?
+* need unit tests which recursively construct lists and recursively match them...
