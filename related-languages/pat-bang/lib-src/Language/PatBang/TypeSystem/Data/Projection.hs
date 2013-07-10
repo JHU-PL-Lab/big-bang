@@ -20,17 +20,25 @@ type family MultiProjection db (tag :: ProjectorTag) :: *
 --  pair.  The @Bool@ just indicates whether or not the match was successful.
 type instance MultiProjection db ProjPrimTag =
   (Bool, Fibration db)
--- |Given a source type variable and a label name, label projection produces a
---  @([FlowTVar], [Fibration db] -> Fibration db)@.  The list of cell variables
---  describes those cells found under labels of the given name in the onion
---  structure of the source type variable.  The function will, given a fibration
---  for each of those variables, produce a fibration for the projection.  The
---  input list of fibrations is permitted to be shorter or longer than
---  necessary; if it is shorter, it is padded with @Unexpanded@ values.  Note
---  that the leftmost value in the lists corresponds to the highest-priority
---  projection.
+{- |Given a source type variable and a label name, label projection produces a
+--  triple between:
+        * A list of variables which were found under labels of the given name
+          in the onion structure of the source type variable.  The leftmost
+          element in this list corresponds to the highest-priority projection.
+        * A function which will, given one fibration for each of those
+          variables, produce the overall fibration for that projection.  This
+          list may be shorter or longer than the number of fibrations necessary.
+          Longer lists are truncated while shorter lists are padded with
+          @Unexpanded@ values.
+        * A list of filtering fibrations for each of the variables.  These
+          values may be @Unexpanded@; they may also be the remnants of a
+          previously destructed filtering fibration used during the projection.
+          If these fibrations are not @Unexpanded@, they must be observed by
+          the caller.  (Callers which have no further refinement to do on the
+          fibration can safely pass this list to the function described above.)
+-}
 type instance MultiProjection db ProjLabelTag =
-  ([FlowTVar], [Fibration db] -> Fibration db)
+  ([FlowTVar], [Fibration db] -> Fibration db, [Fibration db])
 -- |Function projection produces the components of the function type and the
 --  fibration which generated it.
 type instance MultiProjection db ProjFunTag =
@@ -44,7 +52,9 @@ type instance MultiProjection db ProjPatTag =
 --  fibration.  This function operates as in the label case but takes pairs
 --  (because there are two variables per scape).
 type instance MultiProjection db ProjScapeTag =
-  ([(FlowTVar, FlowTVar)], [(Fibration db, Fibration db)] -> Fibration db)
+  ( [(FlowTVar, FlowTVar)]
+  , [(Fibration db, Fibration db)] -> Fibration db
+  , [(Fibration db, Fibration db)] )
   
 -- |A type family for single projection.  This type family degenerates its cases
 --  expecting that only the highest-priority element is produced.
@@ -52,11 +62,13 @@ type family SingleProjection db (tag :: ProjectorTag) :: *
 
 type instance SingleProjection db ProjPrimTag = (Bool, Fibration db)
 type instance SingleProjection db ProjLabelTag =
-  (FlowTVar, Fibration db -> Fibration db)
+  (FlowTVar, Fibration db -> Fibration db, Fibration db)
 type instance SingleProjection db ProjFunTag =
   (([FlowTVar],FlowTVar,db), Fibration db)
 type instance SingleProjection db ProjPatTag =
   (([PatTVar],T.PatternBody), Fibration db)
 type instance SingleProjection db ProjScapeTag =
-  ((FlowTVar, FlowTVar), (Fibration db, Fibration db) -> Fibration db)
+  ( (FlowTVar, FlowTVar)
+  , (Fibration db, Fibration db) -> Fibration db
+  , (Fibration db, Fibration db) )
 

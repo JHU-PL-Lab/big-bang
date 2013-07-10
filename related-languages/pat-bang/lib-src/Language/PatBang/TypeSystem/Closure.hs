@@ -132,7 +132,8 @@ normalApplicationClosures :: forall db m.
 normalApplicationClosures = do
   appc@(ApplicationConstraint a1 a2 a3) <-
       flow $ lift $ getApplicationConstraints <$> askDb
-  (scapeVars, pFib) <- liftProjToClosure $ project projScape a1
+  (scapeVars, pFib, ffibs) <-
+      liftProjToClosure $ project projScape a1 Unexpanded
   let scapes = map (uncurry Scape) scapeVars
   (mdata@(Just (a4, db')), cFib) <- liftCompatToClosure $
                   checkApplicationCompatible a2 scapes
@@ -140,8 +141,7 @@ normalApplicationClosures = do
   let wiringConstraint = cwrap $ IntermediateConstraint a4 a3
       wiringHistory = DerivedFromClosure $ ApplicationRule appc
                         (ProjectionResult projScape a1 $
-                          ProjectionResultScapeForm scapes $ pFib $
-                            zip unexpandeds unexpandeds)
+                          ProjectionResultScapeForm scapes $ pFib ffibs)
                         (ApplicationCompatibilityResult a2 scapes mdata cFib)
                         cn
   let db'' = instantiateContours Set.empty cn $
@@ -169,8 +169,8 @@ closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerCalculations = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerCalculationConstraints <$> askDb
-  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2
-  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3
+  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2 Unexpanded
+  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3 Unexpanded
   let history = DerivedFromClosure $ IntegerOperationRule oc r1 r2
   return $ singleton
     (WrapTypeConstraint $ TypeConstraint (Primitive primInt) a1) history
@@ -183,8 +183,8 @@ closeIntegerComparisons :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerComparisons = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerOperationConstraints <$> askDb
-  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2
-  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3
+  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2 Unexpanded
+  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3 Unexpanded
   doEqualityFor a1 oc $ DerivedFromClosure $ IntegerCalculationRule oc r1 r2
 
 -- |Calculates equality operations in the constraint database.

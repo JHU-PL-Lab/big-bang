@@ -89,12 +89,11 @@ findApplicationInconsistencies :: ( ConstraintDatabase db, Monad m, Functor m
 findApplicationInconsistencies = do
   appc@(ApplicationConstraint a1 a2 _) <-
       flow $ lift $ getApplicationConstraints <$> askDb
-  (scapeVars, pFib) <- liftProjToIncon $ project projScape a1
+  (scapeVars, pFib, ffibs) <- liftProjToIncon $ project projScape a1 Unexpanded
   let scapes = map (uncurry Scape) scapeVars
   (Nothing, cFib) <- liftCompatToIncon $ checkApplicationCompatible a2 scapes
   let projRes = ProjectionResult projFun a1 $
-                  ProjectionResultFunForm scapes $ pFib $
-                    zip unexpandeds unexpandeds 
+                  ProjectionResultFunForm scapes $ pFib ffibs
   let appCRes = ApplicationCompatibilityResult a2 scapes Nothing cFib
   return $ ApplicationFailure appc projRes appCRes
 
@@ -107,8 +106,8 @@ findIntegerOperationInconsistencies = do
       flow $ lift $ (++)
                       <$> (getIntegerOperationConstraints <$> askDb)
                       <*> (getIntegerCalculationConstraints <$> askDb)
-  (x1, r1) <- liftProjToIncon $ projectSinglePrimResult projInt a1
-  (x2, r2) <- liftProjToIncon $ projectSinglePrimResult projInt a2
+  (x1, r1) <- liftProjToIncon $ projectSinglePrimResult projInt a1 Unexpanded
+  (x2, r2) <- liftProjToIncon $ projectSinglePrimResult projInt a2 Unexpanded
   guard $ not x1 || not x2
   return $ IntegerOperationFailure oc r1 r2
 

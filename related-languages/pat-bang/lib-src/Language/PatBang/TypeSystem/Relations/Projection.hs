@@ -47,8 +47,9 @@ type ProjM db m = FlowT (EitherT (ProjectionError db) m)
 
 -- |Computes the possible projections of a type variable and projector.  This
 --  operation occurs in the context of a constraint database.  This
---  implementation differs from the specification in that non-contractive types
---  are prohibited.
+--  implementation differs from the specification in that
+--    (1) non-contractive types are prohibited
+--    (2) it accepts a /filtering/ fibration to control output
 --
 --  The resulting list of types is in reverse order; the first element of the
 --  list is highest priority.
@@ -56,6 +57,7 @@ project :: forall db m (tag :: ProjectorTag).
            (Applicative m, ConstraintDatabase db, MonadCReader db m, Display db)
         => Projector tag
         -> FlowTVar
+        -> Fibration db
         -> ProjM db m (MultiProjection db tag) 
 project = projectVar (Set.empty,[])
 
@@ -72,48 +74,56 @@ projectSingle :: forall db m (tag :: ProjectorTag).
                  , Display db)
               => Projector tag
               -> FlowTVar
+              -> Fibration db
               -> ProjM db m (SingleProjection db tag)
-projectSingle proj a =
+projectSingle proj a ffib =
   case proj of
-    ProjPrim _ _ -> project proj a
+    ProjPrim _ _ -> project proj a ffib
     ProjLabel _ _ -> do
-      (var:_, fn) <- project proj a
-      return (var, \f -> fn [f])
+      (var:_, fn, ff:ffs) <- project proj a ffib
+      return (var, \f -> fn (f:ffs), ff)
     ProjFun _ -> do
-      (typ:_, f) <- project proj a
+      (typ:_, f) <- project proj a ffib
       return (typ, f)
     ProjPat _ -> do
-      (typ:_, f) <- project proj a
+      (typ:_, f) <- project proj a ffib
       return (typ, f)
     ProjScape _ -> do
-      (typ:_, fn) <- project proj a
-      return (typ, \f -> fn [f])
+      (typ:_, fn, ffp:ffps) <- project proj a ffib
+      return (typ, \f -> fn (f:ffps), ffp)
 
 -- |Performs single projection.  This obtains a prepared projection result
 --  as well as the actual type.
 projectSinglePrimResult :: ( ConstraintDatabase db, MonadCReader db m
                        , Functor m, Applicative m, Display db )
-                    => Projector ProjPrimTag -> FlowTVar
+                    => Projector ProjPrimTag -> FlowTVar -> Fibration db
                     -> ProjM db m (Bool, ProjectionResult db)
-projectSinglePrimResult proj a = do
-  (r,f) <- projectSingle proj a
+projectSinglePrimResult proj a ffib = do
+  (r,f) <- projectSingle proj a ffib
   return (r, ProjectionResult proj a (ProjectionResultPrimForm r f))
 
 -- |The *real* projection function.  This function includes an occurs check for
---  non-contractive onion types to prevent divergence.
+--  non-contractive onion types to prevent divergence.  It accepts a filtering
+--  fibration which controls how projection expands.
 projectVar :: forall db m (tag :: ProjectorTag).
               ( Applicative m, ConstraintDatabase db, MonadCReader db m
               , Display db)
            => OccursCheck
            -> Projector tag
            -> FlowTVar
+           -> Fibration db
            -> ProjM db m (MultiProjection db tag)
-projectVar check proj a = do
+projectVar check proj a ffib = do
   _debug $ "Checking projection of " ++ display proj ++ " from variable "
-              ++ display a
-  TypeConstraint lowerBound _ <-
-      flow $ lift $ getTypeConstraintsByUpperBound a <$> askDb
-  answer <- projectType lowerBound
+              ++ display a ++ " under filter " ++ display ffib
+  answer <-
+    case ffib of
+      Unexpanded -> do
+        TypeConstraint lowerBound _ <-
+            flow $ lift $ getTypeConstraintsByUpperBound a <$> askDb
+        projectType lowerBound $ unexpandedFibrationListFor lowerBound
+      Fibration typ ffibs ->
+        projectType typ ffibs
   {- TODO: result debugging messages -}
   {-
   _debug $ "Projection of " ++ display proj ++ " from variable "
@@ -122,22 +132,27 @@ projectVar check proj a = do
   -}
   return answer
   where
-    projectType :: Type db -> ProjM db m (MultiProjection db tag)
-    projectType lowerBound =
+    -- |The function used for projection from specific lower-bounding types.
+    --  The input is the type from which to project and a list of appropriate
+    --  filtering fibrations: one for each variable on the type.
+    projectType :: Type db -> [Fibration db]
+                -> ProjM db m (MultiProjection db tag)
+    projectType lowerBound ffibs =
       case (lowerBound, proj) of
         (Onion a1 a2, _) -> do
-          r1 <- projectRemembering a1
-          r2 <- projectRemembering a2
+          let (ffib1, ffib2) = demand2F
+          r1 <- projectRemembering a1 ffib1
+          r2 <- projectRemembering a2 ffib2
           case proj of
             -- Reverse order in result lists: first element is highest priority
             ProjPrim _ _ ->
               let ((x1,fib1),(x2,fib2)) = (r1,r2) in
               return (x2 || x1, Fibration lowerBound [fib1, fib2])
             ProjLabel _ _ ->
-              let ((bs1,fn1),(bs2,fn2)) = (r1,r2) in
+              let ((bs1,fn1,ff1),(bs2,fn2,ff2)) = (r1,r2) in
               let fn fibs = Fibration lowerBound
                               [ fn1 $ drop (length bs2) fibs , fn2 fibs ] in
-              return (bs2 ++ bs1, fn)
+              return (bs2 ++ bs1, fn, ff2 ++ ff1)
             ProjFun _ ->
               let ((ts1,fib1),(ts2,fib2)) = (r1,r2) in
               return (ts2 ++ ts1, Fibration lowerBound [fib1, fib2])
@@ -145,44 +160,58 @@ projectVar check proj a = do
               let ((ts1,fib1),(ts2,fib2)) = (r1,r2) in
               return (ts2 ++ ts1, Fibration lowerBound [fib1, fib2])
             ProjScape _ ->
-              let ((bs1,fn1),(bs2,fn2)) = (r1,r2) in
+              let ((bs1,fn1,ff1),(bs2,fn2,ff2)) = (r1,r2) in
               let fn fibs = Fibration lowerBound
                               [ fn1 $ drop (length bs2) fibs , fn2 fibs ] in
-              return (bs2 ++ bs1, fn)
+              return (bs2 ++ bs1, fn, ff2 ++ ff1)
         (Primitive p, ProjPrim _ p') | p == p' ->
-          return (True, blankFibrationFor lowerBound)
+          demand0FM *> return (True, blankFibrationFor lowerBound)
         (_, ProjPrim _ _) ->
-          return (False, blankFibrationFor lowerBound)
+          demand0FM *> return (False, blankFibrationFor lowerBound)
         (Label n a', ProjLabel _ n') | n == n' ->
+          let ffib1 = demand1F in
           let fibfn fibs =
                 Fibration lowerBound
                   [fromMaybe Unexpanded $ listToMaybe fibs]
-          in return ([a'], fibfn)
+          in return ([a'], fibfn, [ffib1])
         (_, ProjLabel _ _) ->
-          return ([], const $ blankFibrationFor lowerBound)
+          return ([], const $ blankFibrationFor lowerBound, [])
         (Function aa a' cs, ProjFun _) ->
-          return ([(aa,a',cs)], blankFibrationFor lowerBound)
+          demand0FM *> return ([(aa,a',cs)], blankFibrationFor lowerBound)
         (_, ProjFun _) ->
-          return ([], blankFibrationFor lowerBound)
+          demand0FM *> return ([], blankFibrationFor lowerBound)
         (Pattern bs tpat, ProjPat _) ->
-          return ([(bs,tpat)], blankFibrationFor lowerBound)
+          demand0FM *> return ([(bs,tpat)], blankFibrationFor lowerBound)
         (_, ProjPat _) ->
-          return ([], blankFibrationFor lowerBound)
+          demand0FM *> return ([], blankFibrationFor lowerBound)
         (Scape a' a'', ProjScape _) ->
+          let (ffib1, ffib2) = demand2F in
           let fibfn fibps =
                 let (fib1,fib2) = fromMaybe (Unexpanded, Unexpanded) $
                                       listToMaybe fibps in
                 Fibration lowerBound [fib1, fib2]
-          in return ([(a',a'')],fibfn)
+          in return ([(a',a'')],fibfn,[(ffib1,ffib2)])
         (_, ProjScape _) ->
-          return ([], const $ blankFibrationFor lowerBound)
+          demand0FM *> return ([], const $ blankFibrationFor lowerBound, [])
       where
-        projectRemembering :: FlowTVar
+        projectRemembering :: FlowTVar -> Fibration db
                            -> ProjM db m (MultiProjection db tag)
-        projectRemembering a' =
+        projectRemembering a' ffib' =
           let (aset,alist) = check in
           if Set.member a' aset
             then lift $ left $
                     NonContractiveType (SomeProjector proj) lowerBound $
                       reverse alist
-            else projectVar ((Set.insert a' *** (a':)) check) proj a'
+            else projectVar ((Set.insert a' *** (a':)) check) proj a' ffib'
+        demandNF :: Int -> a -> a
+        demandNF n x =
+          if length ffibs /= n
+            then error $ "Invalid fibration list for type "
+                            ++ display lowerBound
+                            ++ ": " ++ display ffibs
+            else x
+        demand0F = demandNF 0 ()
+        demand0FM :: ProjM db m ()
+        demand0FM = return demand0F
+        demand1F = demandNF 1 $ ffibs !! 0
+        demand2F = demandNF 2 $ (ffibs !! 0, ffibs !! 1)
