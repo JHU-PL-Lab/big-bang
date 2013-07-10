@@ -9,6 +9,7 @@ module Language.PatBang.TypeSystem.InitialDerivation
 , initialDerivation
 ) where
 
+import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -36,7 +37,7 @@ initialDerivation :: (ConstraintDatabase db)
 initialDerivation expr = do
   _ <- either (Left . IllFormedExpression) Right $ checkWellFormed expr
   let vs = openVariables expr
-  () <- if Set.null vs then return () else Left $ OpenExpression vs
+  unless (Set.null vs) $ Left $ OpenExpression vs
   (_, db) <- expressionDerivation expr
   return db
 
@@ -122,10 +123,14 @@ patternDerivation pat = case pat of
   A.PScape _ -> T.PScape
   A.PConj _ pat1 pat2 ->
     T.PConj (patternDerivation pat1) (patternDerivation pat2)
+  A.PDisj _ pat1 pat2 ->
+    T.PDisj (patternDerivation pat1) (patternDerivation pat2)
   A.PSubst _ x (AstList _ pats) ->
     T.PSubst (derivFlowVar x) (map patternDerivation pats)
   A.PRec _ y pat' -> T.PRec (derivPatVar y) (patternDerivation pat')
+  A.PPatternOf _ x -> T.PPatternOf $ derivFlowVar x
   A.PVar _ y -> T.PVar $ derivPatVar y
+  A.PNone _ -> T.PNone
 
 -- |Creates a type variable for the specified flow variable.
 derivFlowVar :: FlowVar -> FlowTVar
@@ -133,4 +138,4 @@ derivFlowVar x = FlowTVar x noContour
 
 -- |Creates a type variable for the specified cell variable.
 derivPatVar :: PatVar -> PatTVar
-derivPatVar y = PatTVar y
+derivPatVar = PatTVar

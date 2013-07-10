@@ -51,9 +51,12 @@ data PatternBody
   | PPat
   | PScape
   | PConj PatternBody PatternBody
+  | PDisj PatternBody PatternBody
   | PSubst FlowTVar [PatternBody]
   | PRec PatTVar PatternBody
+  | PPatternOf FlowTVar
   | PVar PatTVar
+  | PNone
   deriving (Eq, Ord, Show)
 
 -- |Represents flow type variables.
@@ -76,10 +79,13 @@ instance Display PatternBody where
     PPat -> makeDoc "pat"
     PScape -> makeDoc "scape"
     PConj tpat' tpat'' -> recurse tpat' <+> char '&' <+> recurse tpat''
+    PDisj tpat' tpat'' -> recurse tpat' <+> char '|' <+> recurse tpat''
     PSubst a tpats -> makeDoc a <+> char '('
                         <> sepDoc (text ", ") (map makeDoc tpats) <> char ')'
     PRec b tpat' -> text "rec" <+> makeDoc b <> char ':' <+> recurse tpat'
+    PPatternOf a -> text "#" <> makeDoc a
     PVar b -> makeDoc b
+    PNone -> text "none"
     where
       precedence :: PatternBody -> Int
       precedence tpat' = case tpat' of
@@ -89,9 +95,12 @@ instance Display PatternBody where
         PPat -> atom
         PScape -> atom
         PConj _ _ -> 4
+        PDisj _ _ -> 2
         PSubst _ _ -> 15
         PRec _ _ -> 0
+        PPatternOf _ -> atom
         PVar _ -> atom
+        PNone -> atom
         where
           atom = -9999
       recurse :: PatternBody -> Doc

@@ -76,9 +76,12 @@ instance ContourExtractable PatternBody where
     PPat -> Set.empty
     PScape -> Set.empty
     PConj tpat tpat' -> extractContours tpat `Set.union` extractContours tpat'
+    PDisj tpat tpat' -> extractContours tpat `Set.union` extractContours tpat'
     PSubst a tpats -> Set.unions (extractContours a:map extractContours tpats)
     PRec _ tpat -> extractContours tpat
+    PPatternOf a -> extractContours a
     PVar _ -> Set.empty
+    PNone -> Set.empty
     
 instance ContourExtractable PossibleContour where
   extractContours (PossibleContour mcn) = extractContours mcn

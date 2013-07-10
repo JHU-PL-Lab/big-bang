@@ -96,6 +96,10 @@ compatibility x pat visits =
       case (mb1, mb2) of
         (Just binds1, Just binds2) -> return $ Just $ Map.union binds2 binds1
         (_, _) -> return Nothing
+    PDisj _ pat' pat'' ->
+      -- Try pat'' and, if that doesn't work, go with pat'
+      fromMaybe <$> compatibility x pat' visits <*>
+                      (Just <$> compatibility x pat'' visits)
     PSubst _ x' (AstList _ pats) -> do
       pattern <- project x' $ SomeProjector projPat
       case pattern of
@@ -114,7 +118,25 @@ compatibility x pat visits =
         else
           let pat'' = patternSubstitute (Map.singleton y pat) pat' in
           compatibility x pat'' $ Set.insert pat visits
+    PPatternOf _ x' -> do
+      scapes <- projectAll x' $ SomeProjector projScape
+      pat' <- foldl (PDisj generated) (PNone generated) <$>
+                    catMaybes <$> mapM patternFromScape scapes
+      -- Check compatibility with this pattern but toss any of its bindings
+      fmap (const Map.empty) <$> compatibility x pat' visits
+      where
+        patternFromScape :: Value -> EvalM (Maybe PatternBody)
+        patternFromScape v = case v of
+          VScape _ xp _ -> do
+            v' <- project xp $ SomeProjector projPat
+            case v' of
+              Just (VPattern _ _ pat'') -> return $ Just pat''
+              Just _ -> error $ "Pattern projected produced non-pattern value "
+                                  ++ display v'
+              Nothing -> return Nothing
+          _ -> error $ "Scape projection produced non-scape value " ++ display v
     PVar _ y -> Just . Map.singleton y <$> flowLookup x
+    PNone _ -> return Nothing
     where
       primCompat :: Projector tag -> EvalM PossibleBindings
       primCompat proj = do

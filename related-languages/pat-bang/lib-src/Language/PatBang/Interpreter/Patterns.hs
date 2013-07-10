@@ -17,11 +17,14 @@ patternSubstitute replacements pat = case pat of
   PPat orig -> PPat orig
   PScape orig -> PScape orig
   PConj orig pat' pat'' -> PConj orig (rec pat') (rec pat'')
+  PDisj orig pat' pat'' -> PDisj orig (rec pat') (rec pat'')
   PSubst orig x (AstList orig' pats) ->
     PSubst orig x $ AstList orig' $ map rec pats
-  PRec orig b pat' ->
-    PRec orig b $ patternSubstitute (Map.delete b replacements) pat'
-  PVar orig b -> fromMaybe (PVar orig b) (Map.lookup b replacements)
+  PRec orig y pat' ->
+    PRec orig y $ patternSubstitute (Map.delete y replacements) pat'
+  PPatternOf orig x -> PPatternOf orig x
+  PVar orig y -> fromMaybe (PVar orig y) (Map.lookup y replacements)
+  PNone orig -> PNone orig
   where
     rec :: PatternBody -> PatternBody
     rec = patternSubstitute replacements

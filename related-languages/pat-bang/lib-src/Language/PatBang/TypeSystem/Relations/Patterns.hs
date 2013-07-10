@@ -21,10 +21,13 @@ patternSubstitute replacements body =
     PPat -> PPat
     PScape -> PScape
     PConj tpat tpat' -> PConj (rec tpat) (rec tpat')
+    PDisj tpat tpat' -> PDisj (rec tpat) (rec tpat')
     PSubst a tpats -> PSubst a $ map rec tpats
     PRec b' tpat ->
       PRec b' $ patternSubstitute (Map.delete b' replacements) tpat
+    PPatternOf a -> PPatternOf a
     PVar b' -> fromMaybe (PVar b') (Map.lookup b' replacements)
+    PNone -> PNone
   where
     rec :: PatternBody -> PatternBody
     rec = patternSubstitute replacements

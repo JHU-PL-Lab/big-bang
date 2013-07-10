@@ -114,21 +114,29 @@ patternBodyParser = "Pattern Body" <@>
   
 patternBody1Parser :: Parser PatternBody
 patternBody1Parser = "Pattern Body (1)" <@>
-      argorig2 PConj <$> patternBody2Parser <* consume TokAmp
+      argorig2 PDisj <$> patternBody2Parser <* consume TokPipe
         ?=> patternBody1Parser
   <|> patternBody2Parser
   
 patternBody2Parser :: Parser PatternBody
 patternBody2Parser = "Pattern Body (2)" <@>
-      argorig2 PLabel <$> labelNameParser ?=> patternBody2Parser
+      argorig2 PConj <$> patternBody3Parser <* consume TokAmp
+        ?=> patternBody2Parser
   <|> patternBody3Parser
-
+  
 patternBody3Parser :: Parser PatternBody
-patternBody3Parser = "Pattern Body (3)"  <@>
+patternBody3Parser = "Pattern Body (3)" <@>
+      argorig2 PLabel <$> labelNameParser ?=> patternBody3Parser
+  <|> patternBody4Parser
+
+patternBody4Parser :: Parser PatternBody
+patternBody4Parser = "Pattern Body (4)"  <@>
       argorig1 PPrim <$> primitiveTypeParser ?+> eps
   <|> requirex TokFun PFun
   <|> requirex TokPat PPat
   <|> requirex TokScape PScape
+  <|> requirex TokNone PNone
+  <|> argorig1 PPatternOf <$ consume TokHash ?=> flowVarParser 
   <|> argorig2 PSubst <$> flowVarParser <*> astListParser patternBodyParser
         ?+> eps
   <|> argorig1 PVar <$> patVarParser

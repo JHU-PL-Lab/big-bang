@@ -79,9 +79,12 @@ instance ContourReplacable PatternBody where
     PPat -> PPat
     PScape -> PScape
     PConj tpat' tpat'' -> PConj (replContours cn tpat') (replContours cn tpat'')
+    PDisj tpat' tpat'' -> PDisj (replContours cn tpat') (replContours cn tpat'')
     PSubst a tpats -> PSubst (replContours cn a) (map (replContours cn) tpats)
     PRec bs tpat' -> PRec bs $ replContours cn tpat'
+    PPatternOf a -> PPatternOf $ replContours cn a
     PVar b -> PVar b
+    PNone -> PNone
 
 instance ContourReplacable FlowTVar where
   replContours cn a = case a of

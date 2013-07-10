@@ -185,7 +185,10 @@ instance VarCloseable PatternBody where
     PPat _ -> yes
     PScape _ -> yes
     PConj _ p1 p2 -> checkClosed p1 >> checkClosed p2
+    PDisj _ p1 p2 -> checkClosed p1 >> checkClosed p2
     PSubst _ x (AstList _ ps) -> checkClosed x >> checkClosed ps
     PRec _ _ p -> checkClosed p
+    PPatternOf _ x -> checkClosed x
     PVar _ _ -> yes
+    PNone _ -> yes
     where yes = return ()

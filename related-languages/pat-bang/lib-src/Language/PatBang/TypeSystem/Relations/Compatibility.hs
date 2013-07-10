@@ -16,6 +16,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -188,6 +189,13 @@ checkCompatible a1 tpat visits occurrences ffib = case tpat of
     case (pbs1, pbs2) of
       (Just bs1,Just bs2) -> return (Just $ Map.union bs2 bs1, fib'')
       (_, _) -> return (Nothing, fib'')
+  T.PDisj tpat1 tpat2 -> do
+    -- Explore the right side first.  If no bindings are produced, then explore
+    -- the left side, filtering by the fibration obtained from the right.
+    (pbs2, fib') <- checkCompatible a1 tpat2 visits occurrences ffib
+    case pbs2 of
+      Just _ -> return (pbs2, fib')
+      Nothing -> checkCompatible a1 tpat1 visits occurrences fib'
   T.PSubst a2 tpatsArg
     -- If we've already seen this pair before, we're going in circles.
     -- Step out.
@@ -216,6 +224,16 @@ checkCompatible a1 tpat visits occurrences ffib = case tpat of
         let visits' = tpat `Set.insert` visits in
         let occurrences' = (a1,tpat) `Set.insert` occurrences in
         checkCompatible a1 tpat'' visits' occurrences' ffib
+  T.PPatternOf a -> do
+    (scapes,_,_) <- liftCompat $ project projScape a Unexpanded
+    -- Get the pattern bodies from those scapes
+    patternBodies <- map snd <$> catMaybes <$> map (listToMaybe . fst)
+                          <$> mapM (\vs -> liftCompat $
+                                            project projPat (fst vs) Unexpanded)
+                                   scapes
+    -- Build and use the disjunction of all of those bodies
+    let tpat' = foldl T.PDisj T.PNone patternBodies
+    checkCompatible a1 tpat' visits occurrences ffib
   T.PVar b ->
     case ffib of
       Unexpanded -> do
@@ -224,6 +242,7 @@ checkCompatible a1 tpat visits occurrences ffib = case tpat of
         return (Just $ Map.singleton b typ, blankFibrationFor typ)
       Fibration typ _ ->
         return (Just $ Map.singleton b typ, ffib)
+  T.PNone -> return (Nothing, ffib)
 
 liftCompat :: (Functor m, Monad m) => ProjM db m a -> CompatM db m a
 liftCompat = flow . bimapEitherT CompatibilityProjectionError id . runFlowT

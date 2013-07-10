@@ -86,10 +86,15 @@ instance ContourInstantiable PatternBody where
     PScape -> PScape
     PConj tpat tpat' ->
       PConj (instContours vs cn tpat) (instContours vs cn tpat')
+    PDisj tpat tpat' ->
+      PDisj (instContours vs cn tpat) (instContours vs cn tpat')
     PSubst a tpats ->
-      PSubst (instContours vs cn a) (map (instContours vs cn) tpats) 
+      PSubst (instContours vs cn a) (map (instContours vs cn) tpats)
+    PPatternOf a ->
+      PPatternOf $ instContours vs cn a
     PRec bs tpat -> PRec bs $ instContours vs cn tpat
     PVar b -> PVar b
+    PNone -> PNone
 
 -- Instances for history
 

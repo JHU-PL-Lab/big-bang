@@ -33,10 +33,12 @@ data Token
   | TokScape -- ^@scape@
   | TokInt -- ^@int@
   | TokRec -- ^@rec@
+  | TokNone -- ^@none@ 
   | TokColon -- ^@:@
   | TokOpenParen -- ^@(@
   | TokCloseParen -- ^@)@
   | TokSemi -- ^@;@
+  | TokHash -- ^@#@
   | TokOpenBrace -- ^@{@
   | TokCloseBrace -- ^@}@
   | TokIdentifier String
@@ -119,6 +121,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("(", TokOpenParen)
     , (")", TokCloseParen)
     , (";", TokSemi)
+    , ("#", TokHash)
     , ("{", TokOpenBrace)
     , ("}", TokCloseBrace)
     ]
@@ -132,6 +135,7 @@ reservedWords =
     , ("scape" , TokScape)
     , ("int"   , TokInt)
     , ("rec"   , TokRec)
+    , ("none"  , TokNone)
     ]
 
 -- | This group of lexers matches parametric tokens.
@@ -172,10 +176,12 @@ instance Display Token where
     TokScape -> dquotes $ text "scape"
     TokInt -> dquotes $ text "int"
     TokRec -> dquotes $ text "rec"
+    TokNone -> dquotes $ text "none"
     TokColon -> dquotes $ text ":"
     TokOpenParen -> dquotes $ text "("
     TokCloseParen -> dquotes $ text ")"
     TokSemi -> dquotes $ text ";"
+    TokHash -> dquotes $ text "#"
     TokOpenBrace -> dquotes $ text "{"
     TokCloseBrace -> dquotes $ text "}"
     TokIdentifier s -> text "id#" <> dquotes (text s)

@@ -89,9 +89,12 @@ data PatternBody
   | PPat Origin
   | PScape Origin
   | PConj Origin PatternBody PatternBody
+  | PDisj Origin PatternBody PatternBody
   | PSubst Origin FlowVar (AstList PatternBody)
   | PRec Origin PatVar PatternBody
+  | PPatternOf Origin FlowVar
   | PVar Origin PatVar
+  | PNone Origin
   deriving (Show)
 
 -- |An enumeration of binary value operators.
@@ -264,9 +267,12 @@ instance Display PatternBody where
     PPat _ -> text "pat"
     PScape _ -> text "scape"
     PConj _ p1 p2 -> makeDoc p1 <+> text "&" <+> makeDoc p2
+    PDisj _ p1 p2 -> makeDoc p1 <+> text "|" <+> makeDoc p2
     PSubst _ x ps -> makeDoc x <+> text "(" <+> makeDoc ps  <+> text ")"
     PRec _ y p -> text "rec" <+> makeDoc y <> text ":" <+> makeDoc p
+    PPatternOf _ x -> text "#" <> makeDoc x
     PVar _ y -> makeDoc y
+    PNone _ -> text "none"
 -- TODO: correct to ensure proper parse priority
 
 instance Display BinaryOperator where
@@ -409,9 +415,12 @@ instance HasOrigin PatternBody where
     PPat orig -> orig
     PScape orig -> orig
     PConj orig _ _ -> orig
+    PDisj orig _ _ -> orig
     PSubst orig _ _ -> orig
     PRec orig _ _ -> orig
+    PPatternOf orig _ -> orig
     PVar orig _ -> orig
+    PNone orig -> orig
 
 instance HasOrigin BinaryOperator where
   originOf x = case x of

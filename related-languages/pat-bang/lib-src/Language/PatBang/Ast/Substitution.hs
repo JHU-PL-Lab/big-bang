@@ -87,9 +87,12 @@ instance Substitutable PatternBody where
     PPat orig -> PPat orig
     PScape orig -> PScape orig
     PConj orig p1 p2 -> PConj orig (subst ss p1) (subst ss p2)
+    PDisj orig p1 p2 -> PDisj orig (subst ss p1) (subst ss p2)
     PSubst orig x ps -> PSubst orig (subst ss x) (subst ss ps)
     PRec orig y p -> PRec orig (subst ss y) (subst ss p)
+    PPatternOf orig x -> PPatternOf orig $ subst ss x
     PVar orig y -> PVar orig (subst ss y)
+    PNone orig -> PNone orig
 
 instance Substitutable FlowVar where
   subst ss x = fromMaybe x $ Map.lookup x $ flowSubsts ss
