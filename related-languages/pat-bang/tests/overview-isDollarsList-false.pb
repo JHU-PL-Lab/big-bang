@@ -1,10 +1,10 @@
 # EXPECT: `False ()
 
-isListP = () <- { rec p: `Nil _ | (`Hd `Dollars _ & `Tl p) };
+listP = () <- { rec p: `Nil _ | (`Hd `Dollars _ & `Tl p) };
 anyP = () <- { z };
 trueF = () -> { xe1 = (); xr1 = `True xe1 };
 falseF = () -> { xe2 = (); xr2 = `False xe2 };
-trueS = isListP >< trueF;
+trueS = listP >< trueF;
 falseS = anyP >< falseF;
 cond = falseS & trueS;
 

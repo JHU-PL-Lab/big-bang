@@ -1,8 +1,8 @@
 # EXPECT: `True ()
 
-isListP = (x) <- { rec p: `Nil _ | (`Hd x & `Tl p) };
+listP = (x) <- { rec p: `Nil _ | (`Hd x & `Tl p) };
 dollarsP = () <- { `Dollars _ };
-isDollarsListP = () <- { isListP (dollarsP ()) };
+isDollarsListP = () <- { listP (dollarsP ()) };
 anyP = () <- { z };
 trueF = () -> { xe1 = (); xr1 = `True xe1 };
 falseF = () -> { xe2 = (); xr2 = `False xe2 };
