@@ -167,7 +167,7 @@ checkCompatible a1 tpat visits occurrences ffib = case tpat of
     case (contents, ffib's) of
       ([],[]) -> return (Nothing, fibfn ffib's)
       (innerFib:_,ffib':ffib's') -> do
-        (pbs, fib) <- checkCompatible innerFib tpat' visits occurrences ffib'
+        (pbs, fib) <- checkCompatible innerFib tpat' Set.empty occurrences ffib'
         return (pbs, fibfn (fib:ffib's'))
       (_,_) -> error $ "projection produced misaligned lists: "
                         ++ display contents ++ " and " ++ display ffib's
