@@ -7,18 +7,12 @@
   use of them or matches on them.  In this implementation, the @Unexpanded@
   constructor denotes a sort of fibration wildcard; as a result, it is
   compatible with any existing decision.
-  
-  The specification defines relations which, given a single correct fibration,
-  can define projection, compatibility, and so on.  In order to decide the
-  correct fibration, this implementation instead refines fibrations
-  incrementally; each stage calculates the decisions it requires and these
-  requirements are merged with those of its peers.  A merge failure indicates
-  that no fibration exists which will satisfy the relation.
 -}
 module Language.PatBang.TypeSystem.Fibrations
 ( Fibration(..)
 , mergeFibrations
 , blankFibrationFor
+, unexpandedFibrationListFor
 , unexpandeds
 ) where
 
@@ -56,14 +50,20 @@ mergeFibrations f1 f2 =
 -- |Given a lower-bounding type, this function will produce a "blank" fibration
 --  for it: one which does not indicate any exploration.
 blankFibrationFor :: Type db -> Fibration db
-blankFibrationFor t = Fibration t $ case t of
-  Primitive _ -> []
-  EmptyOnion -> []
-  Label _ _ -> [Unexpanded]
-  Onion _ _ -> [Unexpanded, Unexpanded]
-  Function _ _ _ -> []
-  Pattern _ _ -> []
-  Scape _ _ -> [Unexpanded, Unexpanded]
+blankFibrationFor t = Fibration t $ unexpandedFibrationListFor t
+  
+-- |Given a lower-bounding type, this function will produce an unexpanded
+--  fibration list for it of the appropriate size.
+unexpandedFibrationListFor :: Type db -> [Fibration db]
+unexpandedFibrationListFor t = take n unexpandeds
+  where n = case t of
+              Primitive _ -> 0
+              EmptyOnion -> 0
+              Label _ _ -> 1
+              Onion _ _ -> 2
+              Function _ _ _ -> 0
+              Pattern _ _ -> 0
+              Scape _ _ -> 2
   
 -- |A list of unexpanded values.
 unexpandeds :: [Fibration db]

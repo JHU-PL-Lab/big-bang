@@ -26,6 +26,7 @@ import Language.PatBang.Logging
 
 type Bindings = Map PatVar Value
 type PossibleBindings = Maybe Bindings
+type Visits = Set PatternBody
 
 $(loggingFunctions)
 
@@ -71,7 +72,7 @@ compatibilityTop x (ys, pat) = do
                   Nothing -> []
                   Just v -> v : gather ys'' binds
 
-compatibility :: FlowVar -> PatternBody -> Set PatternBody
+compatibility :: FlowVar -> PatternBody -> Visits
               -> EvalM PossibleBindings
 compatibility x pat visits =
   _debugI ("Checking compatibility for " ++ display x ++ " with "
@@ -95,26 +96,27 @@ compatibility x pat visits =
       case (mb1, mb2) of
         (Just binds1, Just binds2) -> return $ Just $ Map.union binds2 binds1
         (_, _) -> return Nothing
-    PSubst _ x' (AstList _ pats) -> checkVisits $ do
+    PSubst _ x' (AstList _ pats) -> do
       pattern <- project x' $ SomeProjector projPat
       case pattern of
-        Just (VPattern _ (AstList _ ys) pat') ->
-          if length ys /= length pats
-            then evalError $ MismatchedPatternSubstitution ys pats
-            else
+        Just (VPattern _ (AstList _ ys) pat')
+          | pat' `Set.member` visits -> return Nothing
+          | length ys /= length pats ->
+              evalError $ MismatchedPatternSubstitution ys pats
+          | otherwise ->
               let pat'' = patternSubstitute (Map.fromList $ zip ys pats) pat' in
-              compatibility x pat'' $ Set.insert pat visits
+              compatibility x pat'' $ Set.insert pat' visits
         Just _ -> error "Projection produced non-pattern for pattern projector"
         Nothing -> return Nothing
-    PRec _ y pat' -> checkVisits $
-      let pat'' = patternSubstitute (Map.singleton y pat) pat' in
-      compatibility x pat'' $ Set.insert pat visits
+    PRec _ y pat' ->
+      if pat `Set.member` visits
+        then return Nothing
+        else
+          let pat'' = patternSubstitute (Map.singleton y pat) pat' in
+          compatibility x pat'' $ Set.insert pat visits
     PVar _ y -> Just . Map.singleton y <$> flowLookup x
     where
       primCompat :: Projector tag -> EvalM PossibleBindings
       primCompat proj = do
         mv <- project x $ SomeProjector proj
         return $ if isNothing mv then Nothing else Just Map.empty
-      checkVisits :: EvalM PossibleBindings -> EvalM PossibleBindings
-      checkVisits ans = if pat `Set.member` visits
-                          then return $ Just Map.empty else ans

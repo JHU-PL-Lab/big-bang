@@ -34,10 +34,13 @@ $(loggingFunctions)
 
 -- |A data structure representing errors in constraint closure.
 data ClosureError db
-  = ClosureFailedProjection (ProjectionError db)
+  = ClosureCompatibilityFailure (CompatibilityError db)
+  | ClosureProjectionFailure (ProjectionError db)
   deriving (Eq, Ord, Show)
 instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
-  makeDoc (ClosureFailedProjection err) = makeDoc err
+  makeDoc err = case err of
+    ClosureCompatibilityFailure err' -> makeDoc err'
+    ClosureProjectionFailure err' -> makeDoc err'
 
 -- |Calculates the transitive closure of the provided constraint database.  The
 --  transitive closure of a PatBang database is only confluent up to
@@ -129,7 +132,8 @@ normalApplicationClosures :: forall db m.
 normalApplicationClosures = do
   appc@(ApplicationConstraint a1 a2 a3) <-
       flow $ lift $ getApplicationConstraints <$> askDb
-  (scapeVars, pFib) <- liftProjToClosure $ project projScape a1
+  (scapeVars, pFib, ffibs) <-
+      liftProjToClosure $ project projScape a1 Unexpanded
   let scapes = map (uncurry Scape) scapeVars
   (mdata@(Just (a4, db')), cFib) <- liftCompatToClosure $
                   checkApplicationCompatible a2 scapes
@@ -137,8 +141,7 @@ normalApplicationClosures = do
   let wiringConstraint = cwrap $ IntermediateConstraint a4 a3
       wiringHistory = DerivedFromClosure $ ApplicationRule appc
                         (ProjectionResult projScape a1 $
-                          ProjectionResultScapeForm scapes $ pFib $
-                            zip unexpandeds unexpandeds)
+                          ProjectionResultScapeForm scapes $ pFib ffibs)
                         (ApplicationCompatibilityResult a2 scapes mdata cFib)
                         cn
   let db'' = instantiateContours Set.empty cn $
@@ -166,8 +169,8 @@ closeIntegerCalculations :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerCalculations = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerCalculationConstraints <$> askDb
-  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2
-  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3
+  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2 Unexpanded
+  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3 Unexpanded
   let history = DerivedFromClosure $ IntegerOperationRule oc r1 r2
   return $ singleton
     (WrapTypeConstraint $ TypeConstraint (Primitive primInt) a1) history
@@ -180,8 +183,8 @@ closeIntegerComparisons :: ( ConstraintDatabase db, MonadCReader db m
 closeIntegerComparisons = do
   oc@(OperationConstraint a2 _ a3 a1) <-
       flow $ lift $ getIntegerOperationConstraints <$> askDb
-  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2
-  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3
+  (True,r1) <- liftProjToClosure $ projectSinglePrimResult projInt a2 Unexpanded
+  (True,r2) <- liftProjToClosure $ projectSinglePrimResult projInt a3 Unexpanded
   doEqualityFor a1 oc $ DerivedFromClosure $ IntegerCalculationRule oc r1 r2
 
 -- |Calculates equality operations in the constraint database.
@@ -197,11 +200,12 @@ closeEquality = do
 
 -- |Lifts a projection operation into the closure monad.
 liftProjToClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
-liftProjToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+liftProjToClosure = flow . bimapEitherT ClosureProjectionFailure id . runFlowT
 
 -- |Lifts a compatibility operation into the closure monad.
 liftCompatToClosure :: (Functor m, Monad m) => CompatM db m a -> ClosureM db m a
-liftCompatToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+liftCompatToClosure =
+  flow . bimapEitherT ClosureCompatibilityFailure id . runFlowT
 
 -- |Creates a database with equality constraints over the specified type
 --  variable.

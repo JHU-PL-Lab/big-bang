@@ -6,6 +6,7 @@
 -}
 module Language.PatBang.TypeSystem.Inconsistency
 ( Inconsistency(..)
+, InconsistencyError(..)
 , determineInconsistencies
 ) where
 
@@ -39,6 +40,17 @@ data Inconsistency db
       (ProjectionResult db) -- ^ The projection result for the left side
       (ProjectionResult db) -- ^ The projection result for the right side
   deriving (Eq, Ord, Show)
+  
+data InconsistencyError db
+  = InconsistencyCompatibilityFailure (CompatibilityError db)
+  | InconsistencyProjectionFailure (ProjectionError db)
+  deriving (Eq, Ord, Show)
+  
+instance (ConstraintDatabase db, Display db)
+      => Display (InconsistencyError db) where
+  makeDoc err = case err of
+    InconsistencyCompatibilityFailure err' -> makeDoc err'
+    InconsistencyProjectionFailure err' -> makeDoc err'
 
 instance (ConstraintDatabase db, Display db) => Display (Inconsistency db) where
   makeDoc incon = case incon of
@@ -51,7 +63,7 @@ instance (ConstraintDatabase db, Display db) => Display (Inconsistency db) where
 
 determineInconsistencies :: forall db.
                             (ConstraintDatabase db, Display db)
-                         => db -> Either (ProjectionError db) [Inconsistency db]
+                         => db -> Either (InconsistencyError db) [Inconsistency db]
 determineInconsistencies db = do -- Either (ProjectionError db)
   iss <- mapM (`expandInconM` db) inconsistencies
   return $ concat iss
@@ -62,12 +74,12 @@ determineInconsistencies db = do -- Either (ProjectionError db)
     inconsistencies = [ findApplicationInconsistencies
                       , findIntegerOperationInconsistencies ]
 
-type InconM db m = FlowT (EitherT (ProjectionError db) m)
+type InconM db m = FlowT (EitherT (InconsistencyError db) m)
 
 -- |A routine for expanding an @InconM@ monadic value.
 expandInconM :: (ConstraintDatabase db)
              => InconM db (CReader db) a -> db
-             -> Either (ProjectionError db) [a]
+             -> Either (InconsistencyError db) [a]
 expandInconM calc = runCReader (runEitherT $ runFlowT calc)
 
 findApplicationInconsistencies :: ( ConstraintDatabase db, Monad m, Functor m
@@ -77,12 +89,11 @@ findApplicationInconsistencies :: ( ConstraintDatabase db, Monad m, Functor m
 findApplicationInconsistencies = do
   appc@(ApplicationConstraint a1 a2 _) <-
       flow $ lift $ getApplicationConstraints <$> askDb
-  (scapeVars, pFib) <- liftProjToIncon $ project projScape a1
+  (scapeVars, pFib, ffibs) <- liftProjToIncon $ project projScape a1 Unexpanded
   let scapes = map (uncurry Scape) scapeVars
   (Nothing, cFib) <- liftCompatToIncon $ checkApplicationCompatible a2 scapes
   let projRes = ProjectionResult projFun a1 $
-                  ProjectionResultFunForm scapes $ pFib $
-                    zip unexpandeds unexpandeds 
+                  ProjectionResultFunForm scapes $ pFib ffibs
   let appCRes = ApplicationCompatibilityResult a2 scapes Nothing cFib
   return $ ApplicationFailure appc projRes appCRes
 
@@ -95,15 +106,16 @@ findIntegerOperationInconsistencies = do
       flow $ lift $ (++)
                       <$> (getIntegerOperationConstraints <$> askDb)
                       <*> (getIntegerCalculationConstraints <$> askDb)
-  (x1, r1) <- liftProjToIncon $ projectSinglePrimResult projInt a1
-  (x2, r2) <- liftProjToIncon $ projectSinglePrimResult projInt a2
+  (x1, r1) <- liftProjToIncon $ projectSinglePrimResult projInt a1 Unexpanded
+  (x2, r2) <- liftProjToIncon $ projectSinglePrimResult projInt a2 Unexpanded
   guard $ not x1 || not x2
   return $ IntegerOperationFailure oc r1 r2
 
--- |Lifts a projection operation into the inconsistency monad.
+-- |Lifts a projection operation into the closure monad.
 liftProjToIncon :: (Functor m, Monad m) => ProjM db m a -> InconM db m a
-liftProjToIncon = id
+liftProjToIncon = flow . bimapEitherT InconsistencyProjectionFailure id . runFlowT
 
--- |Lifts a compatibility operation into the inconsistency monad.
+-- |Lifts a compatibility operation into the closure monad.
 liftCompatToIncon :: (Functor m, Monad m) => CompatM db m a -> InconM db m a
-liftCompatToIncon = id
+liftCompatToIncon =
+  flow . bimapEitherT InconsistencyCompatibilityFailure id . runFlowT
