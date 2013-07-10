@@ -1,4 +1,4 @@
-# EXPECT: `True ()
+# EXPECT: `False ()
 
 isListP = (x) <- { rec p: `Nil _ | (`Hd x & `Tl p) };
 dollarsP = () <- { `Dollars _ };
