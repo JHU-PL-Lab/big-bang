@@ -11,6 +11,7 @@ import System.Directory
 import System.FilePath
 import Test.HUnit
 
+import Utils.ParserUtils
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
 import Language.TinyBang.Interpreter

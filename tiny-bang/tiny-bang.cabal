@@ -20,7 +20,7 @@ library
                    errors,
                    hslogger
   ghc-options:     -Wall
-  other-modules:   
+  exposed-modules:   
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -42,6 +42,7 @@ library
                    Language.TinyBang.Logging,
                    Utils.Tuple,
                    Utils.TemplateHaskell,
+                   Utils.ParserUtils
                    Language.TinyBang.TypeSystem.Types,
                    Language.TinyBang.TypeSystem.Contours,
                    Data.NFA,
