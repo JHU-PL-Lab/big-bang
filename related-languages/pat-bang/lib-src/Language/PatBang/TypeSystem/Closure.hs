@@ -34,10 +34,13 @@ $(loggingFunctions)
 
 -- |A data structure representing errors in constraint closure.
 data ClosureError db
-  = ClosureFailedProjection (ProjectionError db)
+  = ClosureCompatibilityFailure (CompatibilityError db)
+  | ClosureProjectionFailure (ProjectionError db)
   deriving (Eq, Ord, Show)
 instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
-  makeDoc (ClosureFailedProjection err) = makeDoc err
+  makeDoc err = case err of
+    ClosureCompatibilityFailure err' -> makeDoc err'
+    ClosureProjectionFailure err' -> makeDoc err'
 
 -- |Calculates the transitive closure of the provided constraint database.  The
 --  transitive closure of a PatBang database is only confluent up to
@@ -197,11 +200,12 @@ closeEquality = do
 
 -- |Lifts a projection operation into the closure monad.
 liftProjToClosure :: (Functor m, Monad m) => ProjM db m a -> ClosureM db m a
-liftProjToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+liftProjToClosure = flow . bimapEitherT ClosureProjectionFailure id . runFlowT
 
 -- |Lifts a compatibility operation into the closure monad.
 liftCompatToClosure :: (Functor m, Monad m) => CompatM db m a -> ClosureM db m a
-liftCompatToClosure = flow . bimapEitherT ClosureFailedProjection id . runFlowT
+liftCompatToClosure =
+  flow . bimapEitherT ClosureCompatibilityFailure id . runFlowT
 
 -- |Creates a database with equality constraints over the specified type
 --  variable.

@@ -96,8 +96,12 @@ instance (ConstraintDatabase db, Display db)
               text "Source contains an empty expression"
         ID.OpenExpression vs -> text "Open variables in expression:" <+>
           makeDoc vs
-      ClosureFailed (ClosureFailedProjection projErr) -> msgForProjErr projErr
-      InconsistencyFailed projErr -> msgForProjErr projErr
+      ClosureFailed err -> case err of
+        ClosureCompatibilityFailure err' -> msgForCompatErr err'
+        ClosureProjectionFailure err' -> msgForProjErr err'
+      InconsistencyFailed err -> case err of
+        InconsistencyCompatibilityFailure err' -> msgForCompatErr err'
+        InconsistencyProjectionFailure err' -> msgForProjErr err'
       ClosureInconsistent incons db ->
         text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
         <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon incons))
@@ -117,6 +121,10 @@ instance (ConstraintDatabase db, Display db)
                                       <+> text "to" <+> makeDoc x2
     EvaluationDisabled -> text "(evaluation disabled)"
     where
+      msgForCompatErr err = case err of
+        NonContractivePattern pat ->
+          text "Non-contractive pattern" <+> makeDoc pat
+        CompatibilityProjectionError err' -> msgForProjErr err'
       msgForProjErr (NonContractiveType proj typ vars) =
         text "Non-contractive type projecting" <+> makeDoc proj
           <+> text "with type" <+> makeDoc typ <+> text "through variables"

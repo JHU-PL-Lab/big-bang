@@ -2,6 +2,7 @@
 
 module Language.PatBang.TypeSystem.Relations.Compatibility
 ( CompatM
+, CompatibilityError(..)
 , checkApplicationCompatible
 , checkTopCompatible
 , checkCompatible
@@ -10,7 +11,7 @@ module Language.PatBang.TypeSystem.Relations.Compatibility
 ) where
 
 import Control.Applicative
-import Control.Arrow
+import Control.Arrow ((***),first)
 import Control.Monad
 import Control.Monad.Trans.Either
 import Data.Map (Map)
@@ -34,10 +35,22 @@ import Language.PatBang.TypeSystem.Types as T
 
 $(loggingFunctions)
 
-type CompatM db m = FlowT (EitherT (ProjectionError db) m)
+type CompatM db m = FlowT (EitherT (CompatibilityError db) m)
 type Bindings db = Map PatTVar (Type db)
 type PossibleBindings db = Maybe (Bindings db)
 type Visits = Set T.PatternBody
+
+data CompatibilityError db
+  = CompatibilityProjectionError (ProjectionError db)
+  | NonContractivePattern T.PatternBody
+  deriving (Eq, Ord, Show)
+  
+instance (ConstraintDatabase db, Display db)
+      => Display (CompatibilityError db) where
+  makeDoc err = case err of
+    CompatibilityProjectionError err' -> makeDoc err'
+    NonContractivePattern tpat ->
+      text "NonContractivePattern" <+> parens (makeDoc tpat)
 
 checkApplicationCompatible :: forall db m.
                               ( Applicative m, ConstraintDatabase db
@@ -182,5 +195,5 @@ checkCompatible a1 tpat visits = case tpat of
                         then return (Just Map.empty, Unexpanded)
                         else ans
 
-liftCompat :: ProjM db m a -> CompatM db m a
-liftCompat = id
+liftCompat :: (Functor m, Monad m) => ProjM db m a -> CompatM db m a
+liftCompat = flow . bimapEitherT CompatibilityProjectionError id . runFlowT

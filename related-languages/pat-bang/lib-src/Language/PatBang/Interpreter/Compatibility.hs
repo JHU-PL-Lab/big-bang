@@ -26,6 +26,7 @@ import Language.PatBang.Logging
 
 type Bindings = Map PatVar Value
 type PossibleBindings = Maybe Bindings
+type Visits = Set PatternBody
 
 $(loggingFunctions)
 
@@ -71,7 +72,7 @@ compatibilityTop x (ys, pat) = do
                   Nothing -> []
                   Just v -> v : gather ys'' binds
 
-compatibility :: FlowVar -> PatternBody -> Set PatternBody
+compatibility :: FlowVar -> PatternBody -> Visits
               -> EvalM PossibleBindings
 compatibility x pat visits =
   _debugI ("Checking compatibility for " ++ display x ++ " with "
@@ -117,4 +118,4 @@ compatibility x pat visits =
         return $ if isNothing mv then Nothing else Just Map.empty
       checkVisits :: EvalM PossibleBindings -> EvalM PossibleBindings
       checkVisits ans = if pat `Set.member` visits
-                          then return $ Just Map.empty else ans
+                          then return Nothing else ans

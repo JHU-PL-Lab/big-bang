@@ -19,7 +19,6 @@ import Language.PatBang.TypeSystem.Contours
 import Language.PatBang.TypeSystem.Closure
 import Language.PatBang.TypeSystem.Inconsistency
 import Language.PatBang.TypeSystem.InitialDerivation
-import Language.PatBang.TypeSystem.Relations
 
 $(loggingFunctions)
 
@@ -27,7 +26,7 @@ $(loggingFunctions)
 data TypecheckingError db
   = InitialDerivationFailed InitialDerivationError
   | ClosureFailed (ClosureError db)
-  | InconsistencyFailed (ProjectionError db)
+  | InconsistencyFailed (InconsistencyError db)
   | ClosureInconsistent [Inconsistency db] db
   deriving (Eq, Ord, Show)
 
