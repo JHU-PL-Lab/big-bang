@@ -137,7 +137,7 @@ patternBody4Parser = "Pattern Body (4)"  <@>
   <|> requirex TokPat PPat
   <|> requirex TokScape PScape
   <|> requirex TokNone PNone
-  <|> argorig1 PPatternOf <$ consume TokHash ?=> flowVarParser 
+  <|> argorig1 PPatternOf <$ consume TokDollar ?=> flowVarParser 
   <|> argorig2 PSubst <$> flowVarParser <*> astListParser patternBodyParser
         ?+> eps
   <|> argorig1 PVar <$> patVarParser

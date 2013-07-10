@@ -38,7 +38,7 @@ data Token
   | TokOpenParen -- ^@(@
   | TokCloseParen -- ^@)@
   | TokSemi -- ^@;@
-  | TokHash -- ^@#@
+  | TokDollar -- ^@^@
   | TokOpenBrace -- ^@{@
   | TokCloseBrace -- ^@}@
   | TokIdentifier String
@@ -121,7 +121,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("(", TokOpenParen)
     , (")", TokCloseParen)
     , (";", TokSemi)
-    , ("#", TokHash)
+    , ("$", TokDollar)
     , ("{", TokOpenBrace)
     , ("}", TokCloseBrace)
     ]
@@ -181,7 +181,7 @@ instance Display Token where
     TokOpenParen -> dquotes $ text "("
     TokCloseParen -> dquotes $ text ")"
     TokSemi -> dquotes $ text ";"
-    TokHash -> dquotes $ text "#"
+    TokDollar -> dquotes $ text "$"
     TokOpenBrace -> dquotes $ text "{"
     TokCloseBrace -> dquotes $ text "}"
     TokIdentifier s -> text "id#" <> dquotes (text s)
