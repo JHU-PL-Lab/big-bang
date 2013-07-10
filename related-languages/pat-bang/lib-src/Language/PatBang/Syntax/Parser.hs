@@ -102,6 +102,7 @@ astListParser p =
   Pattern parse order:
     * recursive patterns
     * conjunctive patterns
+    * disjunctive patterns
     * label patterns
     * everything else (including parentheticals)
 -}
