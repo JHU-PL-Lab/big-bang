@@ -156,93 +156,106 @@ checkCompatible :: forall db m.
                 -> ContractiveOccurrenceCheck
                 -> Fibration db
                 -> CompatM db m (PossibleBindings db, Fibration db)
-checkCompatible a1 tpat visits occurrences ffib = case tpat of
-  T.PPrim p -> do
-    result <- liftCompat $ project (projPrim p) a1 ffib
-    return $ first (\x -> if not x then Nothing else Just Map.empty) result
-  T.PLabel n tpat' -> do
-    -- Using full projection in case there is a nullary result
-    -- TODO: implement a sort of "doesn't project" for efficiency
-    (contents, fibfn, ffib's) <- liftCompat $ project (projLabel n) a1 ffib
-    case (contents, ffib's) of
-      ([],[]) -> return (Nothing, fibfn ffib's)
-      (innerFib:_,ffib':ffib's') -> do
-        (pbs, fib) <- checkCompatible innerFib tpat' Set.empty occurrences ffib'
-        return (pbs, fibfn (fib:ffib's'))
-      (_,_) -> error $ "projection produced misaligned lists: "
-                        ++ display contents ++ " and " ++ display ffib's
-  T.PFun -> do
-    result <- liftCompat $ project projFun a1 ffib
-    return $ first (\x -> if null x then Nothing else Just Map.empty) result
-  T.PPat -> do
-    result <- liftCompat $ project projPat a1 ffib
-    return $ first (\x -> if null x then Nothing else Just Map.empty) result
-  T.PScape -> do
-    (contents, fibfn, ffibp's) <- liftCompat $ project projScape a1 ffib
-    let pbs = if null contents then Nothing else Just Map.empty
-    return (pbs, fibfn ffibp's)
-  T.PConj tpat1 tpat2 -> do
-    -- Explore the right side first and then use the resulting fibration to
-    -- filter the left side
-    (pbs2, fib') <- checkCompatible a1 tpat2 visits occurrences ffib
-    (pbs1, fib'') <- checkCompatible a1 tpat1 visits occurrences fib'
-    case (pbs1, pbs2) of
-      (Just bs1,Just bs2) -> return (Just $ Map.union bs2 bs1, fib'')
-      (_, _) -> return (Nothing, fib'')
-  T.PDisj tpat1 tpat2 -> do
-    -- Explore the right side first.  If no bindings are produced, then explore
-    -- the left side, filtering by the fibration obtained from the right.
-    (pbs2, fib') <- checkCompatible a1 tpat2 visits occurrences ffib
-    case pbs2 of
-      Just _ -> return (pbs2, fib')
-      Nothing -> checkCompatible a1 tpat1 visits occurrences fib'
-  T.PSubst a2 tpatsArg
-    -- If we've already seen this pair before, we're going in circles.
-    -- Step out.
-    | (a1,tpat) `Set.member` occurrences -> return (Nothing, ffib)
-    | otherwise -> do
+checkCompatible a1 tpat visits occurrences ffib = do
+  _debug $ "Checking compatibility for " ++ display a1 ++ " with pattern " ++
+              display tpat ++ " with visits " ++ display visits ++
+              " and occurrences " ++ display occurrences ++ " and filter " ++
+              display ffib
+  answer <- case tpat of
+    T.PPrim p -> do
+      result <- liftCompat $ project (projPrim p) a1 ffib
+      return $ first (\x -> if not x then Nothing else Just Map.empty) result
+    T.PLabel n tpat' -> do
       -- Using full projection in case there is a nullary result
       -- TODO: implement a sort of "doesn't project" for efficiency
-      (tpatsAppl, _) <- liftCompat $ project projPat a2 Unexpanded
-      case tpatsAppl of
-        [] -> return (Nothing, ffib)
-        (pvars, tpat'):_
-          | length pvars /= length tpatsArg ->
-              return (Nothing, ffib)
-          | tpat' `Set.member` visits ->
-              lift $ left $ NonContractivePattern tpat'
-          | otherwise ->
-              let tpat'' = patternSubstitute
-                              (Map.fromList $ zip pvars tpatsArg) tpat' in
-              let visits' = tpat' `Set.insert` visits in
-              let occurrences' = (a1,tpat) `Set.insert` occurrences in
-              checkCompatible a1 tpat'' visits' occurrences' ffib
-  T.PRec b tpat'
-    | tpat `Set.member` visits -> lift $ left $ NonContractivePattern tpat
-    | otherwise ->
-        let tpat'' = patternSubstitute (Map.singleton b tpat) tpat' in
-        let visits' = tpat `Set.insert` visits in
-        let occurrences' = (a1,tpat) `Set.insert` occurrences in
-        checkCompatible a1 tpat'' visits' occurrences' ffib
-  T.PPatternOf a -> do
-    (scapes,_,_) <- liftCompat $ project projScape a Unexpanded
-    -- Get the pattern bodies from those scapes
-    patternBodies <- map snd <$> catMaybes <$> map (listToMaybe . fst)
-                          <$> mapM (\vs -> liftCompat $
+      (contents, fibfn, ffib's) <- liftCompat $ project (projLabel n) a1 ffib
+      case (contents, ffib's) of
+        ([],[]) -> return (Nothing, fibfn ffib's)
+        (innerFib:_,ffib':ffib's') -> do
+          (pbs, fib) <- checkCompatible
+                          innerFib tpat' Set.empty occurrences ffib'
+          return (pbs, fibfn (fib:ffib's'))
+        (_,_) -> error $ "projection produced misaligned lists: "
+                          ++ display contents ++ " and " ++ display ffib's
+    T.PFun -> do
+      result <- liftCompat $ project projFun a1 ffib
+      return $ first (\x -> if null x then Nothing else Just Map.empty) result
+    T.PPat -> do
+      result <- liftCompat $ project projPat a1 ffib
+      return $ first (\x -> if null x then Nothing else Just Map.empty) result
+    T.PScape -> do
+      (contents, fibfn, ffibp's) <- liftCompat $ project projScape a1 ffib
+      let pbs = if null contents then Nothing else Just Map.empty
+      return (pbs, fibfn ffibp's)
+    T.PConj tpat1 tpat2 -> do
+      -- Explore the right side first and then use the resulting fibration to
+      -- filter the left side
+      (pbs2, fib') <- checkCompatible a1 tpat2 visits occurrences ffib
+      (pbs1, fib'') <- checkCompatible a1 tpat1 visits occurrences fib'
+      case (pbs1, pbs2) of
+        (Just bs1,Just bs2) -> return (Just $ Map.union bs2 bs1, fib'')
+        (_, _) -> return (Nothing, fib'')
+    T.PDisj tpat1 tpat2 -> do
+      -- Explore the right side first.  If no bindings are produced, then
+      -- explore the left side, filtering by the fibration obtained from the
+      -- right.
+      (pbs2, fib') <- checkCompatible a1 tpat2 visits occurrences ffib
+      case pbs2 of
+        Just _ -> return (pbs2, fib')
+        Nothing -> checkCompatible a1 tpat1 visits occurrences fib'
+    T.PSubst a2 tpatsArg
+      -- If we've already seen this pair before, we're going in circles.
+      -- Step out.
+      | (a1,tpat) `Set.member` occurrences -> return (Nothing, ffib)
+      | otherwise -> do
+        -- Using full projection in case there is a nullary result
+        -- TODO: implement a sort of "doesn't project" for efficiency
+        (tpatsAppl, _) <- liftCompat $ project projPat a2 Unexpanded
+        case tpatsAppl of
+          [] -> return (Nothing, ffib)
+          (pvars, tpat'):_
+            | length pvars /= length tpatsArg ->
+                return (Nothing, ffib)
+            | tpat' `Set.member` visits ->
+                lift $ left $ NonContractivePattern tpat'
+            | otherwise ->
+                let tpat'' = patternSubstitute
+                                (Map.fromList $ zip pvars tpatsArg) tpat' in
+                let visits' = tpat' `Set.insert` visits in
+                let occurrences' = (a1,tpat) `Set.insert` occurrences in
+                checkCompatible a1 tpat'' visits' occurrences' ffib
+    T.PRec b tpat'
+      | tpat `Set.member` visits -> lift $ left $ NonContractivePattern tpat
+      | (a1,tpat) `Set.member` occurrences -> return (Nothing, ffib)
+      | otherwise ->
+          let tpat'' = patternSubstitute (Map.singleton b tpat) tpat' in
+          let visits' = tpat `Set.insert` visits in
+          let occurrences' = (a1,tpat) `Set.insert` occurrences in
+          checkCompatible a1 tpat'' visits' occurrences' ffib
+    T.PPatternOf a -> do
+      (scapes,_,_) <- liftCompat $ project projScape a Unexpanded
+      -- Get the pattern bodies from those scapes
+      patternBodies <- map snd <$> catMaybes <$> map (listToMaybe . fst)
+                            <$> mapM (\vs -> liftCompat $
                                             project projPat (fst vs) Unexpanded)
-                                   scapes
-    -- Build and use the disjunction of all of those bodies
-    let tpat' = foldl T.PDisj T.PNone patternBodies
-    checkCompatible a1 tpat' visits occurrences ffib
-  T.PVar b ->
-    case ffib of
-      Unexpanded -> do
-        let constraints = getTypeConstraintsByUpperBound a1 <$> askDb
-        TypeConstraint typ _ <- flow constraints
-        return (Just $ Map.singleton b typ, blankFibrationFor typ)
-      Fibration typ _ ->
-        return (Just $ Map.singleton b typ, ffib)
-  T.PNone -> return (Nothing, ffib)
+                                     scapes
+      -- Build and use the disjunction of all of those bodies
+      let tpat' = foldl T.PDisj T.PNone patternBodies
+      checkCompatible a1 tpat' visits occurrences ffib
+    T.PVar b ->
+      case ffib of
+        Unexpanded -> do
+          let constraints = getTypeConstraintsByUpperBound a1 <$> askDb
+          TypeConstraint typ _ <- flow constraints
+          return (Just $ Map.singleton b typ, blankFibrationFor typ)
+        Fibration typ _ ->
+          return (Just $ Map.singleton b typ, ffib)
+    T.PNone -> return (Nothing, ffib)
+  _debug $ "Checked compatibility for " ++ display a1 ++ " with pattern " ++
+              display tpat ++ " and got " ++ display answer ++
+              " with visits " ++ display visits ++ " and occurrences " ++
+              display occurrences ++ " and filter " ++ display ffib
+  return answer
 
 liftCompat :: (Functor m, Monad m) => ProjM db m a -> CompatM db m a
 liftCompat = flow . bimapEitherT CompatibilityProjectionError id . runFlowT
