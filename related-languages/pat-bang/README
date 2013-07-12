@@ -1,0 +1,9 @@
+This directory contains the sources for the PatBang interpreter and typechecker.  It should work correctly on any machine with ghc 7.6.1 or newer and a recent version of cabal-dev.  Once cabal-dev is installed, the Makefile will trigger the download and compilation of all dependencies from Hackage.
+
+Once compilation is complete, the interpreter/typechecker can be found at
+
+    dist/build/pat-bang/pat-bang
+    
+Similarly, the binary which executes the PatBang unit tests can be found at
+
+    dist/build/tests/tests
