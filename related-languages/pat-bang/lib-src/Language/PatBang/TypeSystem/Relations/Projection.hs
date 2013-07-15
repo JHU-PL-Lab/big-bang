@@ -124,12 +124,8 @@ projectVar check proj a ffib = do
         projectType lowerBound $ unexpandedFibrationListFor lowerBound
       Fibration typ ffibs ->
         projectType typ ffibs
-  {- TODO: result debugging messages -}
-  {-
   _debug $ "Projection of " ++ display proj ++ " from variable "
-              ++ display a ++ " gives " ++ display ts ++ " at fibration "
-              ++ display fib
-  -}
+              ++ display a ++ " gives " ++ projectionResultToString answer
   return answer
   where
     -- |The function used for projection from specific lower-bounding types.
@@ -137,8 +133,10 @@ projectVar check proj a ffib = do
     --  filtering fibrations: one for each variable on the type.
     projectType :: Type db -> [Fibration db]
                 -> ProjM db m (MultiProjection db tag)
-    projectType lowerBound ffibs =
-      case (lowerBound, proj) of
+    projectType lowerBound ffibs = do
+      _debug $ "Checking projection of " ++ display proj ++ " from type "
+                  ++ display lowerBound ++ " under filters " ++ display ffibs
+      answer <- case (lowerBound, proj) of
         (Onion a1 a2, _) -> do
           let (ffib1, ffib2) = demand2F
           r1 <- projectRemembering a1 ffib1
@@ -193,6 +191,11 @@ projectVar check proj a ffib = do
           in return ([(a',a'')],fibfn,[(ffib1,ffib2)])
         (_, ProjScape _) ->
           demand0FM *> return ([], const $ blankFibrationFor lowerBound, [])
+      _debug $ "Checked projection of " ++ display proj ++ " from type "
+                ++ display lowerBound ++ " under filters " ++ display ffibs
+                ++ " and received " ++ projectionResultToString answer
+      {- TODO: result debugging messages -}
+      return answer
       where
         projectRemembering :: FlowTVar -> Fibration db
                            -> ProjM db m (MultiProjection db tag)
@@ -215,3 +218,11 @@ projectVar check proj a ffib = do
         demand0FM = return demand0F
         demand1F = demandNF 1 $ ffibs !! 0
         demand2F = demandNF 2 $ (ffibs !! 0, ffibs !! 1)
+    projectionResultToString res =
+      case (proj,res) of
+        (ProjPrim _ _, p) -> display p
+        (ProjLabel _ _, (x1,x2,x3)) -> display (x1, x2 x3)
+        (ProjFun _, p) -> display p
+        (ProjPat _, p) -> display p
+        (ProjScape _, (x1,x2,x3)) -> display (x1, x2 x3)
+        

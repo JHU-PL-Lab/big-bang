@@ -47,6 +47,8 @@ library
                    Language.TinyBang.TypeSystem.Contours,
                    Data.NFA,
                    Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.InitialDerivation
+                   Language.TinyBang.TypeSystem.Inconsistency,
                    Language.TinyBang.TypeSystem.Relations.Contours,
                    Language.TinyBang.TypeSystem.TypeInference,
                    Language.TinyBang.TypeSystem.Fibrations,

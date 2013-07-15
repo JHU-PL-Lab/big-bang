@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, DataKinds, KindSignatures #-}
+{-# LANGUAGE TypeFamilies, DataKinds, KindSignatures, MultiParamTypeClasses, FunctionalDependencies, TypeSynonymInstances, FlexibleInstances, UndecidableInstances #-}
 
 module Language.PatBang.TypeSystem.Data.Projection
 ( MultiProjection
@@ -71,4 +71,3 @@ type instance SingleProjection db ProjScapeTag =
   ( (FlowTVar, FlowTVar)
   , (Fibration db, Fibration db) -> Fibration db
   , (Fibration db, Fibration db) )
-

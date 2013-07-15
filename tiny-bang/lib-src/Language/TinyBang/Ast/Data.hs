@@ -323,7 +323,7 @@ instance Display BinaryOperator where
     OpPlus _ -> text "+"
     OpMinus _ -> text "-"
     OpMult _ -> text "*"
-    OpEqual _ -> text "="
+    OpEqual _ -> text "=="
     OpLess _ -> text "<"
     OpGreater _ -> text ">"
 

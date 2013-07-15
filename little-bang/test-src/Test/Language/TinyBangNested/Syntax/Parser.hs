@@ -5,7 +5,6 @@ module Test.Language.TinyBangNested.Syntax.Parser
 ( parserTests
 ) where
 
-
 import Debug.Trace
 
 import Language.TinyBangNested.Syntax.Parser
@@ -34,17 +33,19 @@ getParserResult input =  extractExpr $ parseTinyBangNested testContext input
 -- | Prints a token stream
 printTokenStream :: [PositionalToken] -> String
 printTokenStream tkst = concat $ map printTok tkst
-			 where
-		          printTok :: PositionalToken -> String 
-			  printTok (PositionalToken _ _ posTok) = show posTok  ++ " "
+  where
+    printTok :: PositionalToken -> String 
+    printTok (PositionalToken _ _ posTok) = show posTok  ++ " "
 
 -- | Takes a label, input, expected ouput and generates a TestCase for these values
 genUnitTest :: String -> String -> String -> Test
-genUnitTest label input expected = if verbose then trace ( result ++ "\n" ++ ( printTokenStream tokenStream )) $ testCase else testCase 
-                                    where
-					tokenStream = extractRight $ lexTinyBangNested ("Testing " ++ label) input
-					result = render $ makeDoc $ getParserResult tokenStream
-                                        testCase = TestCase $ assertBool label $ result == expected
+genUnitTest label input expected =
+  if verbose then trace ( result ++ "\n" ++ ( printTokenStream tokenStream )) $ testCase
+             else testCase 
+  where
+    tokenStream = extractRight $ lexTinyBangNested ("Testing " ++ label) input
+    result = render $ makeDoc $ getParserResult tokenStream
+    testCase = TestCase $ assertBool label $ result == expected
 
 extractExpr :: Either String Expr -> Expr
 extractExpr (Left x) = error ("parse failed: " ++ x)
@@ -56,7 +57,19 @@ extractRight (Right x ) = x
 
 parserTests :: Test
 
-parserTests = TestList [testDef, testArithOpAssoc, testOnionAssoc, testApplAssoc, testApplPrec, testLabelNested, testOnionOp, testScape, testScapeNested, testNestedPattern, testComplex1]
+parserTests = TestList
+  [ testDef
+  , testArithOpAssoc
+  , testOnionAssoc
+  , testApplAssoc
+  , testApplPrec
+  , testLabelNested
+  , testOnionOp
+  , testScape
+  , testScapeNested
+  , testNestedPattern
+  , testComplex1
+  ]
 
 -- | Test def expressions
 testDef :: Test
