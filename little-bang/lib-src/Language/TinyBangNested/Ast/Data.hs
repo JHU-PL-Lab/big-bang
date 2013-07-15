@@ -2,8 +2,8 @@ module Language.TinyBangNested.Ast.Data
 ( Expr(..)
 , Var (..)
 , Label (..)
-, OnionOp (..)
-, ArithOp(..)
+, OnionOperator(..)
+, BinaryOperator(..)
 , OuterPattern(..)
 , Pattern(..)
 , Projector(..)
@@ -21,8 +21,8 @@ data Expr =
    ExprDef Origin Var Expr Expr
  | ExprVarIn Origin Var Expr Expr
  | ExprScape Origin OuterPattern Expr
- | ExprArithOp Origin Expr ArithOp Expr
- | ExprOnionOp Origin Expr OnionOp Projector
+ | ExprBinaryOp Origin Expr BinaryOperator Expr
+ | ExprOnionOp Origin Expr OnionOperator Projector
  | ExprOnion Origin Expr Expr
  | ExprAppl Origin Expr Expr
  | ExprLabelExp Origin Label Expr
@@ -30,6 +30,34 @@ data Expr =
  | ExprValInt Origin Integer
  | ExprValChar Origin Char
  | ExprValUnit Origin
+  deriving (Eq,Ord,Show)
+
+data OnionOperator =
+   OnionOpSub Origin 
+ | OnionOpDot Origin 
+  deriving (Eq,Ord,Show)
+
+data BinaryOperator =
+   OpPlus Origin
+ | OpMinus Origin
+ | OpEqual Origin 
+ | OpGreater Origin 
+ | OpGreaterEq Origin
+ | OpLesser Origin 
+ | OpLesserEq Origin
+  deriving (Eq,Ord,Show)
+
+data OuterPattern =
+   OuterPatternLabel Origin Var Pattern
+ | OuterPatternNoLabel Origin Pattern
+  deriving (Eq,Ord,Show)
+
+data Pattern =
+   OnionPattern Origin Pattern Pattern
+ | LabelPattern Origin Label Var Pattern
+ | ProjectorPattern Origin Primitive
+ | FunPattern Origin 
+ | VariablePattern Origin Var
   deriving (Eq,Ord,Show)
 
 data Var =
@@ -40,38 +68,10 @@ data Label =
    LabelDef Origin String
   deriving (Eq,Ord,Show)
 
-data OnionOp =
-   OnionSub Origin 
- | OnionDot Origin 
-  deriving (Eq,Ord,Show)
-
-data ArithOp =
-   Add Origin
- | Sub Origin
- | CompEq Origin 
- | Gt Origin 
- | GTE Origin
- | Lt Origin 
- | LTE Origin
-  deriving (Eq,Ord,Show)
-
-data OuterPattern =
-   PatLabel Origin Var Pattern
- | OuterPat Origin Pattern
-  deriving (Eq,Ord,Show)
-
-data Pattern =
-   OnionPat Origin Pattern Pattern
- | LabelPat Origin Label Var Pattern
- | PatProj Origin Primitive
- | PatFun Origin 
- | PatVar Origin Var
-  deriving (Eq,Ord,Show)
-
 data Projector =
-   PrimProj Origin Primitive
- | LabelProj Origin Label
- | FunProj Origin 
+   PrimitiveProjector Origin Primitive
+ | LabelProjector Origin Label
+ | FunProjector Origin 
   deriving (Eq,Ord,Show)
 
 data Primitive =
@@ -87,7 +87,7 @@ instance HasOrigin Expr where
     ExprDef orig _ _ _ -> orig
     ExprVarIn orig _ _ _ -> orig
     ExprScape orig _ _ -> orig
-    ExprArithOp orig _ _ _ -> orig
+    ExprBinaryOp orig _ _ _ -> orig
     ExprOnionOp orig _ _ _ -> orig
     ExprOnion orig _ _ -> orig
     ExprAppl orig _ _ -> orig
@@ -103,16 +103,16 @@ instance HasOrigin Var where
 
 instance HasOrigin OuterPattern where
   originOf x = case x of
-   PatLabel orig _ _ -> orig
-   OuterPat orig _ -> orig
+   OuterPatternLabel orig _ _ -> orig
+   OuterPatternNoLabel orig _ -> orig
 
 instance HasOrigin Pattern where
   originOf x = case x of
-   OnionPat orig _ _ -> orig
-   LabelPat orig _ _ _ -> orig
-   PatProj orig _ -> orig
-   PatFun orig -> orig
-   PatVar orig _ -> orig
+   OnionPattern orig _ _ -> orig
+   LabelPattern orig _ _ _ -> orig
+   ProjectorPattern orig _ -> orig
+   FunPattern orig -> orig
+   VariablePattern orig _ -> orig
 
 instance HasOrigin Primitive where
   originOf x = case x of
@@ -122,9 +122,9 @@ instance HasOrigin Primitive where
 
 instance HasOrigin Projector where
   originOf x = case x of
-   PrimProj orig _ -> orig
-   LabelProj orig _ -> orig
-   FunProj orig -> orig 
+   PrimitiveProjector orig _ -> orig
+   LabelProjector orig _ -> orig
+   FunProjector orig -> orig
 
 instance HasOrigin Label where
   originOf x = case x of
@@ -138,7 +138,7 @@ instance Display Expr where
    ExprDef _ v e1 e2 -> text "def " <> makeDoc v <> text " = (" <> makeDoc e1 <> text ") in (" <> makeDoc e2 <> text ")"
    ExprVarIn _ v e1 e2 -> makeDoc v <> text " = (" <> makeDoc e1 <> text ") in (" <> makeDoc e2 <> text ")"
    ExprScape _ op e -> text "(" <> makeDoc op <> text ") -> (" <> makeDoc e <> text ")"
-   ExprArithOp _ e1 ao e2 -> text "(" <> makeDoc e1 <> text ") " <> makeDoc ao <> text " (" <> makeDoc e2 <> text ")" 
+   ExprBinaryOp _ e1 ao e2 -> text "(" <> makeDoc e1 <> text ") " <> makeDoc ao <> text " (" <> makeDoc e2 <> text ")"
    ExprOnionOp _ e oo p -> text "(" <> makeDoc e <+> makeDoc oo <+> makeDoc p <> text ")"
    ExprOnion _ e1 e2 -> text "(" <> makeDoc e1 <> text ") & (" <> makeDoc e2 <> text ")"
    ExprAppl _ e1 e2 -> text "(" <> makeDoc e1 <> text ") apply (" <> makeDoc e2 <> text ")"
@@ -148,6 +148,34 @@ instance Display Expr where
    ExprValChar _ c -> text $ show c
    ExprValUnit _ -> text "()"
 
+instance Display OnionOperator where
+ makeDoc x = case x of
+   OnionOpSub _ -> text "&-"
+   OnionOpDot _ -> text "&."
+
+instance Display BinaryOperator where
+  makeDoc x = case x of
+   OpPlus _ -> text "+"
+   OpMinus _ -> text "-"
+   OpEqual _ -> text "=="
+   OpGreater _ -> text ">"
+   OpLesser _ -> text "<"
+   OpGreaterEq _ -> text ">="
+   OpLesserEq _ -> text "<="
+
+instance Display OuterPattern where
+  makeDoc x = case x of
+   OuterPatternLabel _ var pat -> makeDoc var <> text ":" <> makeDoc pat
+   OuterPatternNoLabel _ pat -> makeDoc pat
+
+instance Display Pattern where
+  makeDoc x = case x of
+   OnionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
+   LabelPattern _ l v p -> text "(" <> makeDoc l <+> makeDoc v <> text ":" <> makeDoc p <> text ")" 
+   ProjectorPattern _ prim -> makeDoc prim
+   FunPattern _ -> text "fun"
+   VariablePattern _ v -> makeDoc v
+
 instance Display Var where
   makeDoc x = case x of
     VarDef _ i -> text i
@@ -155,34 +183,6 @@ instance Display Var where
 instance Display Label where
   makeDoc x = case x of
     LabelDef _ l -> text $ "`" ++ l
-
-instance Display OnionOp where
- makeDoc x = case x of
-   OnionSub _ -> text "&-"
-   OnionDot _ -> text "&."
-
-instance Display ArithOp where
-  makeDoc x = case x of
-   Add _ -> text "+"
-   Sub _ -> text "-"
-   CompEq _ -> text "=="
-   Gt _ -> text ">"
-   Lt _ -> text "<"
-   GTE _ -> text ">="
-   LTE _ -> text "<="
-
-instance Display OuterPattern where
-  makeDoc x = case x of
-   PatLabel _ var pat -> makeDoc var <> text ":" <> makeDoc pat
-   OuterPat _ pat -> makeDoc pat
-
-instance Display Pattern where
-  makeDoc x = case x of
-   OnionPat _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
-   LabelPat _ l v p -> text "(" <> makeDoc l <+> makeDoc v <> text ":" <> makeDoc p <> text ")" 
-   PatProj _ prim -> makeDoc prim
-   PatFun _ -> text "fun"
-   PatVar _ v -> makeDoc v
 
 instance Display Primitive where
   makeDoc p = case p of
@@ -192,6 +192,6 @@ instance Display Primitive where
 
 instance Display Projector where
   makeDoc x = case x of
-   PrimProj _ p -> makeDoc p
-   LabelProj _ l -> makeDoc l
-   FunProj _ -> text "fun" 
+   PrimitiveProjector _ p -> makeDoc p
+   LabelProjector _ l -> makeDoc l
+   FunProjector _ -> text "fun" 

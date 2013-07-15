@@ -88,8 +88,8 @@ arithOpExprParser =
   <|> onionOpExprParser
   <?> "arithOp expression"
          where
-           buildExpr :: ArithOp -> Expr -> Expr -> Expr
-           buildExpr a e1 e2 = argorig3 ExprArithOp e1 a e2
+           buildExpr :: BinaryOperator -> Expr -> Expr -> Expr
+           buildExpr a e1 e2 = argorig3 ExprBinaryOp e1 a e2
                     
 -- Expr3 ::= Expr4 (OnionOp Projector)*
 -- Expr3 ::= Expr4
@@ -103,13 +103,13 @@ onionOpExprParser =
   <|> onionExprParser
   <?> "onionop expression"
         where
-          parseOpProjPair :: Parser (OnionOp, Projector)
+          parseOpProjPair :: Parser (OnionOperator, Projector)
           parseOpProjPair = try ( do { op <- onionOpParser
                                      ; proj <- projectorParser
                                      ; return (op, proj)
                                      }
                                 )
-          combinePairs :: Expr -> (OnionOp, Projector) -> Expr
+          combinePairs :: Expr -> (OnionOperator, Projector) -> Expr
           combinePairs e (o, p)= argorig3 ExprOnionOp e o p
 
 -- Expr4 ::= Expr4 & Expr5
@@ -160,8 +160,8 @@ valExprParser =
 -- OuterPattern ::= Pattern
 outerPatternParser :: Parser OuterPattern
 outerPatternParser = 
-      argorig2 PatLabel <$> varParser <* consume TokColon <*> patternOnionParser
-  <|> argorig1 OuterPat <$> patternOnionParser      
+      argorig2 OuterPatternLabel <$> varParser <* consume TokColon <*> patternOnionParser
+  <|> argorig1 OuterPatternNoLabel <$> patternOnionParser      
   <?> "outer pattern"
 
 -- Pattern ::= Pattern & Pattern1
@@ -173,13 +173,13 @@ patternOnionParser =
   <?> "onion pattern"
         where
           buildExpr :: Pattern -> Pattern -> Pattern
-          buildExpr p1 p2 = argorig2 OnionPat p1 p2
+          buildExpr p1 p2 = argorig2 OnionPattern p1 p2
                   
 -- Pattern1 ::= Label Var : Pattern1
 -- Pattern1 ::= Pattern2
 patternLabelParser :: Parser Pattern
 patternLabelParser = 
-      argorig3 LabelPat <$> labelParser <*> varParser <* consume TokColon <*> patternPrimParser 
+      argorig3 LabelPattern <$> labelParser <*> varParser <* consume TokColon <*> patternPrimParser 
   <|> patternPrimParser
   <?> "label pattern"
 
@@ -189,9 +189,9 @@ patternLabelParser =
 -- Pattern2 ::= (Pattern)
 patternPrimParser :: Parser Pattern
 patternPrimParser = 
-      argorig1 PatProj <$> primitiveParser
-  <|> requirex TokFun PatFun
-  <|> argorig1 PatVar <$> varParser 
+      argorig1 ProjectorPattern <$> primitiveParser
+  <|> requirex TokFun FunPattern
+  <|> argorig1 VariablePattern <$> varParser 
   <|> consume TokOpenParen *> patternOnionParser <* consume TokCloseParen
   <?> "primtive pattern"
 
@@ -202,21 +202,21 @@ primitiveParser =
   <|> requirex TokEmptyOnion TUnit
   <?> "primitive"
 
-arithOpParser :: Parser ArithOp
+arithOpParser :: Parser BinaryOperator
 arithOpParser = 
-      requirex TokPlus Add
-  <|> requirex TokMinus Sub 
-  <|> requirex TokEq CompEq 
-  <|> requirex TokGT Gt 
-  <|> requirex TokLT Lt
-  <|> requirex TokGTE GTE 
-  <|> requirex TokLTE LTE
+      requirex TokPlus OpPlus
+  <|> requirex TokMinus OpMinus 
+  <|> requirex TokEq OpEqual
+  <|> requirex TokGT OpGreater 
+  <|> requirex TokLT OpLesser
+  <|> requirex TokGTE OpGreaterEq 
+  <|> requirex TokLTE OpLesserEq
   <?> "arithmetic op"
 
-onionOpParser :: Parser OnionOp
+onionOpParser :: Parser OnionOperator
 onionOpParser = 
-      requirex TokOnionSub OnionSub
-  <|> requirex TokOnionProj OnionDot
+      requirex TokOnionSub OnionOpSub
+  <|> requirex TokOnionProj OnionOpDot
   <?> "onion operator"
 
 varParser :: Parser Var
@@ -231,9 +231,9 @@ labelParser =
 
 projectorParser :: Parser Projector
 projectorParser = 
-      requirex TokFun FunProj
-  <|> argorig1 LabelProj <$> labelParser
-  <|> argorig1 PrimProj <$> primitiveParser
+      requirex TokFun FunProjector
+  <|> argorig1 LabelProjector <$> labelParser
+  <|> argorig1 PrimitiveProjector <$> primitiveParser
   <?> "projector: int, char, (), fun or label"
 
 -- |A matching function for integer literals.

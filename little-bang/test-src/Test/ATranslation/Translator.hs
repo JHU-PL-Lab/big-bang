@@ -40,8 +40,10 @@ genUnitTest label input expected = TestCase $ assertBool label (runTest input ex
 -- | then compares the translated output to an expected string. Returns true if the strings
 -- | match.
 runTest :: String -> String -> Bool
-runTest input expected = if (verbose && not boolAnswer) then trace result $ boolAnswer else boolAnswer 
-                         where
+runTest input expected = if (verbose && not boolAnswer) 
+                          then trace result $ boolAnswer 
+                          else boolAnswer 
+                           where
                            result = (render $ makeDoc $ performTransformation $ getParserResult $ getLexerResult input)
                            boolAnswer = (filterWhiteSpace result) == (filterWhiteSpace expected)  
 
@@ -56,7 +58,13 @@ testContext :: ParserContext
 testContext = ParserContext UnknownDocument "UnitTestDoc"
 
 aTranslationTests :: Test
-aTranslationTests = TestList [testArithmetic, testLabel, testNestedLabel, testDef, testVarIn, testOnion]
+aTranslationTests = TestList 
+  [ testArithmetic
+  , testLabel
+  , testNestedLabel
+  , testDef
+  , testVarIn
+  , testOnion ]
 
 -- | Test simple addition
 testArithmetic :: Test
@@ -81,3 +89,6 @@ testVarIn = genUnitTest "Translating var in expression" "def x = 3 in x = x + 4 
 -- | Test the onion operator (TODO: eval is wrong?)
 testOnion :: Test
 testOnion = genUnitTest "Translating onion expression" "`A 1 & `B 2 & 6" "x0 = 1; y0 := x0; x1 = `A y0; x2 = 2; y1 := x2; x3 = `B y1; x4 = x1 & x3; x5 = 6; x6 = x4 & x5"
+
+ -- operatorTest :: Test
+-- operatorTest = genUnitTest "Translating onion expression" "def x = 1 in def y = 2 in x > y" ""

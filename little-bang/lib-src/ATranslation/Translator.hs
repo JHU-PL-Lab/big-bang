@@ -56,7 +56,7 @@ aTransform expr =
          ; (exprValueCls, _) <- aTransform e2 -- do e2
          ; return (varValueCls ++ varSetCls ++ exprValueCls, varClsFlow)
          }
-    TBN.ExprArithOp org e1 op e2 -> 
+    TBN.ExprBinaryOp org e1 op e2 -> 
       do { (leftCls, leftFlow) <- aTransform e1 
          ; (rightCls, rightFlow) <- aTransform e2
          ; freshFlow <- getFreshFlowVar
@@ -93,14 +93,14 @@ aTransform expr =
 
 -- | Generators for clause types for use in aTransform
     
-genClauseBinOp :: TBA.Origin -> TBA.FlowVar -> TBA.FlowVar -> TBN.ArithOp-> TBA.FlowVar -> TBA.Clause
+genClauseBinOp :: TBA.Origin -> TBA.FlowVar -> TBA.FlowVar -> TBN.BinaryOperator-> TBA.FlowVar -> TBA.Clause
 genClauseBinOp org flow left op right = TBA.RedexDef org flow (TBA.BinOp org left binop right)
                                          where binop = case op of      
-                                                         TBN.Add o -> TBA.OpPlus o
-                                                         TBN.Sub o -> TBA.OpMinus o
-                                                         TBN.CompEq o -> TBA.OpEqual o
-                                                         TBN.Lt o -> TBA.OpLess o  
-                                                         TBN.Gt o -> TBA.OpGreater o
+                                                         TBN.OpPlus o -> TBA.OpPlus o
+                                                         TBN.OpMinus o -> TBA.OpMinus o
+                                                         TBN.OpEqual o -> TBA.OpEqual o
+                                                         TBN.OpLesser o -> TBA.OpLess o  
+                                                         TBN.OpGreater o -> TBA.OpGreater o
                                                          _ -> error "Interpreter does not support >= or <="
 getVarName :: TBN.Var -> String
 getVarName (TBN.VarDef _ s) = s
