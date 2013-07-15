@@ -21,8 +21,7 @@ library
                    Language.TinyBangNested.Syntax.Lexer
                    Language.TinyBangNested.Syntax.Parser
                    Language.TinyBangNested.Ast
-
-
+                   ATranslation.Translator
 
 executable little-bang
   hs-source-dirs:  lib-src
@@ -41,8 +40,9 @@ executable little-bang
                    Language.TinyBangNested.Syntax.Lexer
                    Language.TinyBangNested.Syntax.Parser
                    Language.TinyBangNested.Ast
+                   ATranslation.Translator
 
-executable test-tbn
+executable testlb
   hs-source-dirs:  
                    test-src                   
                    lib-src
@@ -59,3 +59,4 @@ executable test-tbn
                    Language.TinyBangNested.Syntax.Lexer
                    Language.TinyBangNested.Syntax.Parser
                    Language.TinyBangNested.Ast
+                   ATranslation.Translator
