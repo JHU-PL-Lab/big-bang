@@ -125,6 +125,7 @@ smallStep = do
           case op of
             OpPlus _ -> binArithIntOp (+)
             OpMinus _ -> binArithIntOp (-)
+            OpMult _ -> binArithIntOp (*)
             OpLess _ -> binCompareIntOp (<)
             OpGreater _ -> binCompareIntOp (>)
             OpEqual _ -> do

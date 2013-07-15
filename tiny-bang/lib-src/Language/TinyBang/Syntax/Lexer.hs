@@ -21,6 +21,7 @@ data Token
   | TokFlows Char -- ^@<~X@
   | TokBang -- ^@!@
   | TokPlus -- ^@+@
+  | TokMult -- ^@*@
   | TokMinus -- ^@-@
   | TokLT -- ^@<@
   | TokGT -- ^@>@
@@ -118,6 +119,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("()", TokEmptyOnion)
     , ("!", TokBang)
     , ("+", TokPlus)
+    , ("*", TokMult)
     , ("-", TokMinus)
     , ("<", TokLT)
     , (">", TokGT)
@@ -176,6 +178,7 @@ instance Display Token where
     TokFlows k -> dquotes $ text $ "<~" ++ [k]
     TokBang -> dquotes $ text "!"
     TokPlus -> dquotes $ text "+"
+    TokMult -> dquotes $ text "*"
     TokMinus -> dquotes $ text "-"
     TokLT -> dquotes $ text "<"
     TokGT -> dquotes $ text ">"

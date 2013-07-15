@@ -119,6 +119,7 @@ data OnionOp
 data BinaryOperator
   = OpPlus Origin
   | OpMinus Origin
+  | OpMult Origin
   | OpEqual Origin
   | OpLess Origin
   | OpGreater Origin
@@ -321,6 +322,7 @@ instance Display BinaryOperator where
   makeDoc op = case op of
     OpPlus _ -> text "+"
     OpMinus _ -> text "-"
+    OpMult _ -> text "*"
     OpEqual _ -> text "="
     OpLess _ -> text "<"
     OpGreater _ -> text ">"
@@ -484,6 +486,7 @@ instance HasOrigin BinaryOperator where
   originOf x = case x of
     OpPlus orig -> orig
     OpMinus orig -> orig
+    OpMult orig -> orig
     OpEqual orig -> orig
     OpLess orig -> orig
     OpGreater orig -> orig

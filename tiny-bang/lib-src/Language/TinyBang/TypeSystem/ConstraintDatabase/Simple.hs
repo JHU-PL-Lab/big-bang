@@ -43,7 +43,7 @@ instance ConstraintDatabase SimpleConstraintDatabase where
   getTypeConstraints = cfilter $ \case
       { WrapTypeConstraint c -> Just c; _ -> Nothing }
   getIntegerCalculationConstraints = opfilter $ \case
-      { OpPlus _ -> True; OpMinus _ -> True; _ -> False }
+      { OpPlus _ -> True; OpMinus _ -> True; OpMult _ -> True; _ -> False }
   getIntegerOperationConstraints = opfilter $ \case
       { OpGreater _ -> True; OpLess _ -> True; _ -> False }
   getEqualityConstraints = opfilter $ \case

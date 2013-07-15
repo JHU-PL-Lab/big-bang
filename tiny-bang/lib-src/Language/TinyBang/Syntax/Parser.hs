@@ -132,6 +132,7 @@ binaryOperatorParser :: Parser BinaryOperator
 binaryOperatorParser =
       requirex TokPlus OpPlus
   <|> requirex TokMinus OpMinus
+  <|> requirex TokMult OpMult
   <|> requirex TokEq OpEqual
   <|> requirex TokLT OpLess
   <|> requirex TokGT OpGreater
