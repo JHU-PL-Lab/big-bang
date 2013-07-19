@@ -121,7 +121,7 @@ onionExprParser =
   <?> "onion expression"
         where
           buildExpr :: Expr -> Expr -> Expr
-          buildExpr e1 e2 = argorig2 ExprOnion e1 e2         
+          buildExpr e1 e2 = argorig2 ExprOnion e1 e2
 
 -- Expr5 ::= Expr5 Expr6
 -- Expr5 ::= Expr6
@@ -157,12 +157,11 @@ valExprParser =
   <?> "value expression - int/char literal, (), variable or use parens"
             
 -- OuterPattern ::= Var : Pattern
--- OuterPattern ::= Pattern
+-- OuterPattern ::= Pattern (removed)
 outerPatternParser :: Parser OuterPattern
 outerPatternParser = 
-      argorig2 OuterPatternLabel <$> varParser <* consume TokColon <*> patternOnionParser
-  <|> argorig1 OuterPatternNoLabel <$> patternOnionParser      
-  <?> "outer pattern"
+      argorig2 OuterPatternLabel <$> varParser <* consume TokColon ?=> patternOnionParser
+  <?> "outer pattern - \"Var : Pattern\""
 
 -- Pattern ::= Pattern & Pattern1
 -- Pattern ::= Pattern1
@@ -173,7 +172,7 @@ patternOnionParser =
   <?> "onion pattern"
         where
           buildExpr :: Pattern -> Pattern -> Pattern
-          buildExpr p1 p2 = argorig2 OnionPattern p1 p2
+          buildExpr p1 p2 = argorig2 ConjunctionPattern p1 p2
                   
 -- Pattern1 ::= Label Var : Pattern1
 -- Pattern1 ::= Pattern2
@@ -183,23 +182,23 @@ patternLabelParser =
   <|> patternPrimParser
   <?> "label pattern"
 
+
 -- Pattern2 ::= Primitive
 -- Pattern2 ::= fun
--- Pattern2 ::= Var
+-- Pattern2 ::= Var (removed)
 -- Pattern2 ::= (Pattern)
 patternPrimParser :: Parser Pattern
 patternPrimParser = 
-      argorig1 ProjectorPattern <$> primitiveParser
-  <|> requirex TokFun FunPattern
-  <|> argorig1 VariablePattern <$> varParser 
+      argorig1 PrimitivePattern <$> primitiveParser
+  <|> requirex TokFun ScapePattern
+  <|> requirex TokEmptyOnion EmptyOnionPattern
   <|> consume TokOpenParen *> patternOnionParser <* consume TokCloseParen
-  <?> "primtive pattern"
+  <?> "primitive pattern"
 
 primitiveParser :: Parser Primitive
 primitiveParser = 
       requirex TokInt TInt
   <|> requirex TokChar TChar
-  <|> requirex TokEmptyOnion TUnit
   <?> "primitive"
 
 arithOpParser :: Parser BinaryOperator
@@ -215,13 +214,13 @@ arithOpParser =
 
 onionOpParser :: Parser OnionOperator
 onionOpParser = 
-      requirex TokOnionSub OnionOpSub
-  <|> requirex TokOnionProj OnionOpDot
+      requirex TokOnionSub OpOnionSub
+  <|> requirex TokOnionProj OpOnionProj
   <?> "onion operator"
 
 varParser :: Parser Var
 varParser = 
-      VarDef <$&> require matchIdent
+      Var <$&> require matchIdent
   <?> "variable identifier"
 
 labelParser :: Parser Label

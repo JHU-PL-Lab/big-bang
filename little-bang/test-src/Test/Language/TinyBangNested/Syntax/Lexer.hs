@@ -15,8 +15,8 @@ import Test.HUnit
 --   tests for equality.
 compareTokenStreams :: [Token] -> [PositionalToken] -> Bool
 compareTokenStreams tokens posTokens =  tokens == map convertToToken posTokens
-					where
-					convertToToken p =  posToken p
+                                        where
+                                          convertToToken p = posToken p
 
 -- | Function for automating calls to lexTinyBangNested and unwrapping result
 getLexerResult :: String -> [PositionalToken]
