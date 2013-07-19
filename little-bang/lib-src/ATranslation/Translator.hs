@@ -19,96 +19,118 @@ type TransM = State TranslationState
 
 type TExprValue = ([TBA.Clause], TBA.FlowVar)
 
--- TODO: origins     
+-- | Utility methods for ATranslation
+
 getFreshFlowVar :: TransM TBA.FlowVar
 getFreshFlowVar = 
-  do  myState <- get
+   do myState <- get
       modify incrementFlowVarCount
-      return (TBA.FlowVar testOrigin ('x' : (show $ flowVarCount myState)))
+      return (TBA.FlowVar testOrigin ('x' : show (flowVarCount myState)))
      
 getFreshCellVar :: TransM TBA.CellVar
 getFreshCellVar = 
-  do  myState <- get
+   do myState <- get
       modify incrementCellVarCount
-      return (TBA.CellVar testOrigin ('y' : (show $ cellVarCount myState)))
+      return (TBA.CellVar testOrigin ('y' : show (cellVarCount myState)))
      
 -- TODO Use Maybe TBA.CellVar, move error message into aTransform for context specific messages
 cellVarLookup :: String -> TransM TBA.CellVar
 cellVarLookup varName = 
-  do  myState <- get
-      if isNothing $ lookUp $ varMap myState
-         then error $ "Variable undefined: " ++ show varName
-         else return $ fromJust $ lookUp $ varMap myState
-     
-        where lookUp = Data.Map.lookup varName
+  do myState <- get
+     if isNothing $ lookUp $ varMap myState
+       then error $ "Variable undefined: " ++ show varName
+       else return $ fromJust $ lookUp $ varMap myState
+         where lookUp = Data.Map.lookup varName
 
 
+-- | Translation for expressions
+               
 -- TODO fix origins
-
 -- | aTransformExpr recurses over a TBN.Expr, updating the TransM state monad as it goes
--- | and outputs a resulting [Clause]
+-- | with the resulting [clause] in the state representing the TBA.Expr translation.
 aTransformExpr :: TBN.Expr -> TransM TExprValue
 aTransformExpr expr =
   case expr of
     TBN.ExprDef org (TBN.Var _ varName) e1 e2 ->
       do (varValueCls, varClsFlow) <- aTransformExpr e1
          cellForDefVar <- getFreshCellVar
-         varDefCls <- return [genClauseCellDef org cellForDefVar varClsFlow]
+         let varDefCls =  [genClauseCellDef org cellForDefVar varClsFlow]
          modify $ insertVar varName cellForDefVar
          (exprValueCls, _) <- aTransformExpr e2
          return (varValueCls ++ varDefCls ++ exprValueCls, varClsFlow)
+         
     TBN.ExprVarIn org (TBN.Var _ varName) e1 e2 ->
       do (varValueCls, varClsFlow) <- aTransformExpr e1
          cellForSetVar <- cellVarLookup varName
-         varSetCls <- return [genClauseCellSet org cellForSetVar varClsFlow]
+         let varSetCls = [genClauseCellSet org cellForSetVar varClsFlow]
          (exprValueCls, _) <- aTransformExpr e2
          return (varValueCls ++ varSetCls ++ exprValueCls, varClsFlow)
+         
     TBN.ExprScape org pattern e ->
       do p <-  aTransformOuterPattern pattern
          (cls, _) <- aTransformExpr e
          freshFlow <- getFreshFlowVar
-         scapeExpr <- return $ TBA.Expr org cls 
-         scapeClause <- return [genClauseScape org freshFlow p scapeExpr]
+         let scapeExpr = TBA.Expr org cls 
+         let scapeClause = [genClauseScape org freshFlow p scapeExpr]
          return (scapeClause, freshFlow)
+         
     TBN.ExprBinaryOp org e1 op e2 -> 
       do (leftCls, leftFlow) <- aTransformExpr e1 
          (rightCls, rightFlow) <- aTransformExpr e2
          freshFlow <- getFreshFlowVar
-         return (leftCls ++ rightCls ++ [genClauseBinOp org freshFlow leftFlow op rightFlow], freshFlow)
+         return (leftCls ++ rightCls ++ [genClauseBinOp org freshFlow leftFlow op rightFlow]
+                , freshFlow)
+           
     TBN.ExprOnionOp org e op proj -> 
       do (cls, v) <- aTransformExpr e
          freshFlow <- getFreshFlowVar
-         return (cls ++ [genClauseValueDef org freshFlow (genOnionFilterValue org v op proj)], freshFlow)
+         return (cls ++ [genClauseValueDef org freshFlow (genOnionFilterValue org v op proj)]
+                , freshFlow)
+           
     TBN.ExprOnion org e1 e2 -> 
       do (leftCls, leftFlow) <- aTransformExpr e1 
          (rightCls, rightFlow) <- aTransformExpr e2
          freshFlow <- getFreshFlowVar
-         return (leftCls ++ rightCls ++ [genClauseOnion org freshFlow leftFlow rightFlow], freshFlow)
+         return (leftCls ++ rightCls ++ [genClauseOnion org freshFlow leftFlow rightFlow]
+                , freshFlow)
+           
     TBN.ExprAppl org e1 e2 -> 
       do (leftCls, leftFlow) <- aTransformExpr e1
          (rightCls, rightFlow) <- aTransformExpr e2
          freshFlow <- getFreshFlowVar
-         return (leftCls ++ rightCls ++ [genClauseAppl org freshFlow leftFlow rightFlow], freshFlow)
+         return (leftCls ++ rightCls ++ [genClauseAppl org freshFlow leftFlow rightFlow]
+                , freshFlow)
+           
     TBN.ExprLabelExp org l e1 ->
       do (cls, v) <- aTransformExpr e1
          freshFlow <- getFreshFlowVar
          freshCell <- getFreshCellVar
-         return (cls ++ [genClauseCellDef org freshCell v, genClauseValueDef org freshFlow (genLabelValue l freshCell)], freshFlow)
+         return (cls ++ [ genClauseCellDef org freshCell v
+                        , genClauseValueDef org freshFlow (genLabelValue l freshCell)
+                        ]
+                , freshFlow)
+  
     TBN.ExprVar org (TBN.Var _ varName) -> 
       do freshFlow <- getFreshFlowVar
          cellVar <- cellVarLookup varName
          return ([genClauseCellGet org freshFlow cellVar], freshFlow)
+         
     TBN.ExprValInt org i ->
       do freshFlow <- getFreshFlowVar
          return ([genClauseValueDef org freshFlow (TBA.VInt org i)], freshFlow)
+         
     TBN.ExprValChar org c ->
       do freshFlow <- getFreshFlowVar
          return ([genClauseValueDef org freshFlow (TBA.VChar org c)], freshFlow)
+  
     TBN.ExprValUnit org ->
       do freshFlow <- getFreshFlowVar
          return ([genClauseValueDef org freshFlow (TBA.VEmptyOnion org)], freshFlow)
 
 
+
+-- | Translation for patterns
+         
 -- OuterPattern ::= Var : Pattern
 aTransformOuterPattern :: TBN.OuterPattern -> TransM TBA.Pattern
 aTransformOuterPattern pat =
@@ -138,7 +160,7 @@ aTransformInnerPattern pat =
       do { cellVar <- getFreshCellVar
          ; modify $ insertVar varName cellVar
          ; innerPat <- aTransformInnerPattern pattern
-         ; return $ TBA.LabelPattern org (TBA.LabelName labelOrg str) cellVar $ innerPat
+         ; return $ TBA.LabelPattern org (TBA.LabelName labelOrg str) cellVar innerPat
          }
       
     TBN.PrimitivePattern org prim -> 
@@ -148,22 +170,29 @@ aTransformInnerPattern pat =
                 case p of
                   TBN.TInt o -> TBA.PrimInt o
                   TBN.TChar o -> TBA.PrimChar o
+
     TBN.ScapePattern org ->
       return (TBA.ScapePattern org)
       
     TBN.EmptyOnionPattern org ->
       return (TBA.EmptyOnionPattern org)
 
--- | Generators for clause types for use in aTransform    
-genClauseBinOp :: TBA.Origin -> TBA.FlowVar -> TBA.FlowVar -> TBN.BinaryOperator-> TBA.FlowVar -> TBA.Clause
-genClauseBinOp org flow left op right = TBA.RedexDef org flow (TBA.BinOp org left binop right)
-                                          where binop = case op of      
-                                                 TBN.OpPlus o -> TBA.OpPlus o
-                                                 TBN.OpMinus o -> TBA.OpMinus o
-                                                 TBN.OpEqual o -> TBA.OpEqual o
-                                                 TBN.OpLesser o -> TBA.OpLess o  
-                                                 TBN.OpGreater o -> TBA.OpGreater o
-                                                 _ -> error "Interpreter does not support >= or <="
+
+
+-- | Generators for TBA Clause types
+        
+genClauseBinOp :: TBA.Origin -> TBA.FlowVar -> TBA.FlowVar 
+               -> TBN.BinaryOperator -> TBA.FlowVar  -> TBA.Clause
+genClauseBinOp org flow left op right = 
+  TBA.RedexDef org flow (TBA.BinOp org left binop right)
+    where binop = 
+           case op of
+             TBN.OpPlus o -> TBA.OpPlus o
+             TBN.OpMinus o -> TBA.OpMinus o
+             TBN.OpEqual o -> TBA.OpEqual o
+             TBN.OpLesser o -> TBA.OpLess o  
+             TBN.OpGreater o -> TBA.OpGreater o
+             _ -> error "Interpreter does not support >= or <="
 
 genClauseValueDef :: TBA.Origin -> TBA.FlowVar -> TBA.Value -> TBA.Clause
 genClauseValueDef org flow value = TBA.Evaluated (TBA.ValueDef org flow value)
@@ -197,10 +226,13 @@ genOnionFilterValue org v op proj =
          convertOp = case op of 
            TBN.OpOnionSub o -> TBA.OpOnionSub o
            TBN.OpOnionProj o -> TBA.OpOnionProj o
+         convertProj :: TBA.AnyProjector
          convertProj = case proj of
            TBN.PrimitiveProjector o p -> TBA.SomeProjector $ TBA.ProjPrim o (convertPrim p)
-           TBN.LabelProjector o (TBN.LabelDef labelOrg s) -> TBA.SomeProjector $ TBA.ProjLabel o (TBA.LabelName labelOrg s)
+           TBN.LabelProjector o (TBN.LabelDef labelOrg s) -> 
+             TBA.SomeProjector $ TBA.ProjLabel o (TBA.LabelName labelOrg s)
            TBN.FunProjector o -> TBA.SomeProjector $ TBA.ProjFun o
+         convertPrim :: TBN.Primitive -> TBA.PrimitiveType
          convertPrim p = case p of
            TBN.TInt o -> TBA.PrimInt o
            TBN.TChar o -> TBA.PrimChar o        
