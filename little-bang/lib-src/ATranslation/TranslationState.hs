@@ -15,10 +15,10 @@ import Data.Map
 
 -- | ATranslation state: counter for variables and variable map                        
 data TranslationState = TranslationState {
-               flowVarCount :: Integer,
-               cellVarCount :: Integer,
-               varMap :: Map String TBA.CellVar
-               }
+   flowVarCount :: Integer,
+   cellVarCount :: Integer,
+   varMap :: Map String TBA.CellVar
+}
 
 -- | Methods that operate on TranslationState
 incrementFlowVarCount :: TranslationState -> TranslationState
@@ -28,6 +28,9 @@ incrementCellVarCount :: TranslationState -> TranslationState
 incrementCellVarCount (TranslationState f c m) = TranslationState f (c + 1) m
 
 insertVar :: String -> TBA.CellVar -> TranslationState -> TranslationState
-insertVar varName cellVar (TranslationState f c m) = 
-     TranslationState f c newMap
-       where newMap = insert varName cellVar m
+insertVar varName cell (TranslationState f c m) = 
+     if alreadyDefined 
+      then error $  "variable " ++ varName ++ " already defined." 
+      else TranslationState f c newMap
+        where newMap = insert varName cell m
+              alreadyDefined = member varName m

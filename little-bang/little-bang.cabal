@@ -6,26 +6,6 @@ author:         Zachary Palmer
 
 library
   hs-source-dirs:  lib-src
-  build-depends:   
-                   base >= 4,
-                   tiny-bang,
-                   containers,
-                   mtl,
-                   wl-pprint,
-                   transformers,
-                   hslogger,
-                   template-haskell,
-                   parsec
-  ghc-options:     -Wall
-  exposed-modules:
-                   Language.TinyBangNested.Syntax.Lexer
-                   Language.TinyBangNested.Syntax.Parser
-                   Language.TinyBangNested.Ast
-                   ATranslation.Translator
-
-executable little-bang
-  hs-source-dirs:  lib-src
-  main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
                    containers,
@@ -34,6 +14,27 @@ executable little-bang
                    transformers,
                    hslogger,
                    template-haskell,
+                   split,
+                   parsec
+  ghc-options:     -Wall
+  exposed-modules:
+                   Language.TinyBangNested.Syntax.Lexer
+                   Language.TinyBangNested.Syntax.Parser
+                   Language.TinyBangNested.Ast
+                   ATranslation.Translator
+
+executable tiny-bang-nested
+  hs-source-dirs:  lib-src
+  main-is:         ATranslation/Main.hs
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   containers,
+                   mtl,
+                   wl-pprint,
+                   transformers,
+                   hslogger,
+                   template-haskell,
+                   split,
                    parsec
   ghc-options:     -Wall
   other-modules:
@@ -53,6 +54,7 @@ executable testlb
                    HUnit >= 1.2 && < 2,
                    test-framework >= 0.4.1,
                    test-framework-hunit,
+                   split,
                    parsec
   ghc-options:     -Wall
   other-modules:

@@ -55,7 +55,7 @@ runTest input expected = if (verbose && not boolAnswer)
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           result = (render $ makeDoc $ performTransformation $ getParserResult $ getLexerResult input)
+                           result = (render $ makeDoc $ performTranslation $ getParserResult $ getLexerResult input)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 
@@ -77,10 +77,14 @@ aTranslationTests = TestList
   , testDef
   , testVarIn
   , testOnion 
-  , testScape
+  , testScape1
+  , testScape2
   , testPattern1
   , testPattern2
-  , testProjector
+  , testProjector1
+  , testProjector2
+  , testDoubleDefError
+  , tempTest
   ]
 
 
@@ -99,15 +103,27 @@ testVarIn = genUnitTest "Translating var in expression" "def x = 3 in x = x + 4 
 testOnion :: Test
 testOnion = genUnitTest "Translating onion expression" "`A 1 & `B 2" "`A 1 & `B 2"
 
-testScape :: Test
-testScape = genUnitTest "Translating scape" "(p1:int -> p1 + 3) 8" "11"
+testScape1 :: Test
+testScape1 = genUnitTest "Translating scape1" "(p1:int -> p1 + 3) 8" "11"
 
-testProjector :: Test
-testProjector = genUnitTest "Translating projector" "(`A 1 & `B 2 & `C 3) &- `B" "`A 1 & `C 3"
+testScape2 :: Test
+testScape2 = genUnitTest "Translating scape2" "(p1:int -> p1 + (p2:int -> p2 + 3) p1) 5" "13"
+
+testProjector1 :: Test
+testProjector1 = genUnitTest "Translating projector1" "(`A 1 & `B 2 & `C 3) &- `B" "`A 1 & `C 3"
+
+testProjector2 :: Test
+testProjector2 = genUnitTest "Translating projector2" "((v:int -> v + 1) & 6 &. fun) 3" "4"
 
 testPattern1 :: Test
 testPattern1 = genUnitTest "Translating patterns1" "(v1: `A v2:(`B v3:int & `C v4:int) -> v3 + v4) (`A `B 23 & `C 19)" "42"
 
 testPattern2 :: Test
-testPattern2 = genUnitTest "Translating patterns2" "(v: `A x:int & (`B y:int & (`C z:int & `D w:int)) -> x + y + z + w) (`A 1 & (`B 2 & (`C 3 & `D 4)))" "10"
+testPattern2 = genUnitTest "Translating patterns2" "(v: `A x:char & (`B y:int & (`C z:int & `D w:int)) -> y + z + w) (`A 'c' & (`B 2 & (`C 3 & `D 4)))" "9"
+
+testDoubleDefError :: Test
+testDoubleDefError = genUnitTest "Translating scape1" "def x = 1 in def x = 3 in x" "11"
+
+tempTest :: Test
+tempTest = genUnitTest "Translating temp" "def x = 1 in y" "11"
 

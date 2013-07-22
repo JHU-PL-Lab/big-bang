@@ -3,7 +3,7 @@
 -} 
 
 module ATranslation.Translator
-(performTransformation)
+(performTranslation)
 where
 
 import qualified Language.TinyBang.Ast.Data as TBA
@@ -248,5 +248,5 @@ testOrigin = TBA.SourceOrigin testLocation
 startState :: TranslationState
 startState = TranslationState 0 0 empty
 
-performTransformation :: TBN.Expr -> TBA.Expr
-performTransformation expr = TBA.Expr testOrigin $ fst $ evalState (aTransformExpr expr) startState
+performTranslation :: TBN.Expr -> TBA.Expr
+performTranslation expr = TBA.Expr testOrigin $ fst $ evalState (aTransformExpr expr) startState
