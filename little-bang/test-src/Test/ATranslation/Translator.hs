@@ -22,40 +22,21 @@ verbose = True
 
 -- | Utility functions for ATranslation unit tests:
 
--- | Function for automating calls to lexTinyBangNested and unwrapping result
-getLexerResult :: String -> [PositionalToken]
-getLexerResult input =  extractRight $ lexTinyBangNested "" input
-
--- | Function for automating calls to parseTinyBangNested and displaying result
-getParserResult :: [PositionalToken] -> TBN.Expr
-getParserResult input =  extractRight $ parseTinyBangNested testContext input
-
-
 -- | Wrapper for evaluation
 getEvaluatedResult :: String -> String
 getEvaluatedResult input = stringyInterpretSource testConfig input
-
-testConfig :: InterpreterConfiguration
-testConfig = InterpreterConfiguration True True Simple
-
-
-
-extractRight :: Either String b -> b
-extractRight (Left l) = error l
-extractRight (Right r) = r
 
 genUnitTest :: String -> String -> String -> Test
 genUnitTest label input expected = TestCase $ assertBool label (runTest input expected)
 
 -- | runTest takes an input string, lexes and parses it to an Expr, runs the translator on it, 
 -- | evaluates the translated expression then compares the output to an expected value.
--- | match.
 runTest :: String -> String -> Bool
 runTest input expected = if (verbose && not boolAnswer) 
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           result = (render $ makeDoc $ performTranslation $ getParserResult $ getLexerResult input)
+                           result = (render $ makeDoc $ performTranslation =<< parseTinyBangNested testContext =<< lexTinyBangNested "" input)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 
@@ -66,6 +47,9 @@ filterWhiteSpace s = filter keepChar s
                          keepChar ' ' = False
                          keepChar '\n' = False
                          keepChar _ = True
+
+testConfig :: InterpreterConfiguration
+testConfig = InterpreterConfiguration True True Simple
 
 testContext :: ParserContext
 testContext = ParserContext UnknownDocument "ATranslationUnitTests"
@@ -86,7 +70,6 @@ aTranslationTests = TestList
   , testVarShadow
   , testNestedDef
   ]
-
 
 testArithmetic :: Test
 testArithmetic =  genUnitTest "Translating arithmetic" "8 + 5 -3 + 20" "30"

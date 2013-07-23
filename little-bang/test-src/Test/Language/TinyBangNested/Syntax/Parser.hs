@@ -20,43 +20,24 @@ import Test.HUnit
 
 -- | Display unit tests?
 verbose :: Bool
-verbose = False
+verbose = True
 
 -- | Function for automating calls to lexTinyBangNested and unwrapping result
 testContext :: ParserContext
 testContext = ParserContext UnknownDocument "UnitTestDoc"
 
--- | Runs the parser on a stream of PositiontalTokens, producing an Expr or failing
-getParserResult :: [PositionalToken] -> Expr
-getParserResult input =  extractExpr $ parseTinyBangNested testContext input
-
--- | Prints a token stream
-printTokenStream :: [PositionalToken] -> String
-printTokenStream tkst = concat $ map printTok tkst
-  where
-    printTok :: PositionalToken -> String 
-    printTok (PositionalToken _ _ posTok) = show posTok  ++ " "
-
 -- | Takes a label, input, expected ouput and generates a TestCase for these values
 genUnitTest :: String -> String -> String -> Test
-genUnitTest label input expected =
-  if verbose then trace ( "\n" ++ result ++ "\n" ++ ( printTokenStream tokenStream )) $ testCase
-             else testCase 
-  where
-    tokenStream = extractRight $ lexTinyBangNested ("Testing " ++ label) input
-    result = render $ makeDoc $ getParserResult tokenStream
-    testCase = TestCase $ assertBool label $ result == expected
-
-extractExpr :: Either String Expr -> Expr
-extractExpr (Left x) = error ("parse failed: " ++ x)
-extractExpr (Right x) = x
-
-extractRight :: Either a b -> b
-extractRight (Left _ ) = error "left error!"
-extractRight (Right x ) = x
+genUnitTest label input expected = 
+  if verbose && (not boolAnswer) 
+    then trace ("Test " ++ label ++ " parsed\n" ++ result ++ "\nInstead of\n" ++ expected ++ "\n") $ testCase
+    else testCase
+      where
+       result = render $ makeDoc $ parseTinyBangNested testContext =<< lexTinyBangNested "" input
+       boolAnswer = result == expected
+       testCase = TestCase $ assertBool label boolAnswer
 
 parserTests :: Test
-
 parserTests = TestList
   [ testDef
   , testArithOpAssoc
