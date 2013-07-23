@@ -6,7 +6,8 @@ module ATranslation.TranslationState
 ( TranslationState (..)
 , incrementFlowVarCount
 , incrementCellVarCount
-, insertVar)
+, updateMap
+)
 
 where
 
@@ -27,10 +28,5 @@ incrementFlowVarCount (TranslationState f c m) = TranslationState (f + 1) c m
 incrementCellVarCount :: TranslationState -> TranslationState
 incrementCellVarCount (TranslationState f c m) = TranslationState f (c + 1) m
 
-insertVar :: String -> TBA.CellVar -> TranslationState -> TranslationState
-insertVar varName cell (TranslationState f c m) = 
-     if alreadyDefined 
-      then error $  "variable " ++ varName ++ " already defined." 
-      else TranslationState f c newMap
-        where newMap = insert varName cell m
-              alreadyDefined = member varName m
+updateMap :: Map String TBA.CellVar -> TranslationState ->TranslationState
+updateMap m (TranslationState f c _) = TranslationState f c m

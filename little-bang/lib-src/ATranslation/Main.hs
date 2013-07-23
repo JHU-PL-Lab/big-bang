@@ -5,6 +5,7 @@ import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBang.Syntax.Location
 import Language.TinyBangNested.Ast.Data
 import Language.TinyBang.Display
+import Control.Applicative ((<$>))
 import ATranslation.Translator
 import Language.TinyBang.Toploop
 import Data.List.Split
@@ -24,10 +25,6 @@ main = do
       putStrLn "###"
       hFlush stdout
 
-extractRight :: Either a b -> b
-extractRight (Left _) = error "left error!"
-extractRight (Right x ) = x
-
 testConfig :: InterpreterConfiguration
 testConfig = InterpreterConfiguration True True Simple
 
@@ -37,17 +34,11 @@ interpName = "Interpreter"
 interpContext :: ParserContext
 interpContext = ParserContext UnknownDocument "Interpreter"
 
-
--- | Function for automating calls to lexTinyBangNested and unwrapping result
-getLexerResult :: String -> [PositionalToken]
-getLexerResult input =  extractRight $ lexTinyBangNested "" input
-
--- | Function for automating calls to parseTinyBangNested and displaying result
-getParserResult :: [PositionalToken] -> Expr
-getParserResult input =  extractRight $ parseTinyBangNested interpContext input
-
-
 -- | Wrapper for evaluation
 eval :: String -> IO String
-eval input = return $ stringyInterpretSource testConfig (render $ makeDoc $ performTranslation $ getParserResult $ getLexerResult input)
-
+eval input = 
+  do 
+    let transResult = performTranslation =<< parseTinyBangNested interpContext =<< lexTinyBangNested "" input
+    case transResult of 
+      Left x -> return x
+      Right expr -> return $ stringyInterpretSource testConfig (render $ makeDoc transResult)

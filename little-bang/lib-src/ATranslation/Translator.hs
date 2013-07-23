@@ -13,11 +13,16 @@ import Language.TinyBang.Syntax.Location
 import Control.Monad.State
 import Data.Map 
 import Data.Maybe
+import Control.Applicative ((<$>))
+import Control.Monad.Trans
+import Control.Monad.Trans.Either
+
 
 -- | Translation State Monad
-type TransM = State TranslationState
+type TransM = EitherT TransError (State TranslationState)
 
-type TExprValue = ([TBA.Clause], TBA.FlowVar)
+-- | Error type for translation
+type TransError = String
 
 -- | Utility methods for ATranslation
 
@@ -33,31 +38,45 @@ getFreshCellVar =
       modify incrementCellVarCount
       return (TBA.CellVar testOrigin ('y' : show (cellVarCount myState)))
      
--- TODO Use Maybe TBA.CellVar, move error message into aTransform for context specific messages
+
 cellVarLookup :: String -> TransM TBA.CellVar
 cellVarLookup varName = 
   do myState <- get
      if isNothing $ lookUp $ varMap myState
-       then error $ "Variable undefined: " ++ show varName
+       then transformError $ "variable " ++ varName ++ " undefined."
        else return $ fromJust $ lookUp $ varMap myState
          where lookUp = Data.Map.lookup varName
-
-
--- | Translation for expressions
                
--- TODO fix origins
+insertVar :: String -> TBA.CellVar -> TransM ()
+insertVar varName cell =
+  do (TranslationState _ _ m) <- get
+     let newMap = insert varName cell m
+     modify $ updateMap newMap
+       
+transformError :: TransError -> TransM a
+transformError transError = left $ "Translation error: " ++  transError
+
+
+-- | Translation for expressions:
+
+-- | Computed type for expression evaluation
+type TExprValue = ([TBA.Clause], TBA.FlowVar)
+
 -- | aTransformExpr recurses over a TBN.Expr, updating the TransM state monad as it goes
--- | with the resulting [clause] in the state representing the TBA.Expr translation.
+-- | with the resulting [Clause] in the state representing the final TBA.Expr translation.
 aTransformExpr :: TBN.Expr -> TransM TExprValue
 aTransformExpr expr =
   case expr of
     TBN.ExprDef org (TBN.Var _ varName) e1 e2 ->
-      do (varValueCls, varClsFlow) <- aTransformExpr e1
+      do (TranslationState _ _ savedMapState) <- get
+         (varValueCls, varClsFlow) <- aTransformExpr e1
          cellForDefVar <- getFreshCellVar
-         let varDefCls =  [genClauseCellDef org cellForDefVar varClsFlow]
-         modify $ insertVar varName cellForDefVar
-         (exprValueCls, _) <- aTransformExpr e2
-         return (varValueCls ++ varDefCls ++ exprValueCls, varClsFlow)
+         let varDefCls = [genClauseCellDef org cellForDefVar varClsFlow]
+         insertVar varName cellForDefVar
+         (exprValueCls, resultFlow) <- aTransformExpr e2
+         (TranslationState x y _) <- get         
+         put (TranslationState x y savedMapState)         
+         return (varValueCls ++ varDefCls ++ exprValueCls, resultFlow)
          
     TBN.ExprVarIn org (TBN.Var _ varName) e1 e2 ->
       do (varValueCls, varClsFlow) <- aTransformExpr e1
@@ -136,12 +155,11 @@ aTransformOuterPattern :: TBN.OuterPattern -> TransM TBA.Pattern
 aTransformOuterPattern pat =
   case pat of
     TBN.OuterPatternLabel org (TBN.Var _ varName) innerpat -> 
-      do { cellVar <- getFreshCellVar
-         ; modify $ insertVar varName cellVar                   
-         ; transformedPat <- aTransformInnerPattern innerpat
-         ; return (TBA.ValuePattern org cellVar transformedPat)
-         }
-
+      do cellVar <- getFreshCellVar
+         insertVar varName cellVar
+         transformedPat <- aTransformInnerPattern innerpat
+         return (TBA.ValuePattern org cellVar transformedPat)
+         
 -- Pattern ::= Pattern & Pattern
 -- Pattern ::= Label Var : Pattern
 -- Pattern ::= Primitive
@@ -151,18 +169,17 @@ aTransformInnerPattern :: TBN.Pattern -> TransM TBA.InnerPattern
 aTransformInnerPattern pat =
   case pat of
     TBN.ConjunctionPattern org p1 p2 ->
-      do { innerPat1 <- aTransformInnerPattern p1
-         ; innerPat2 <- aTransformInnerPattern p2
-         ; return $ TBA.ConjunctionPattern org innerPat1 innerPat2
-         }    
+      do innerPat1 <- aTransformInnerPattern p1
+         innerPat2 <- aTransformInnerPattern p2
+         return $ TBA.ConjunctionPattern org innerPat1 innerPat2
+            
       
     TBN.LabelPattern org (TBN.LabelDef labelOrg str) (TBN.Var _ varName) pattern ->
-      do { cellVar <- getFreshCellVar
-         ; modify $ insertVar varName cellVar
-         ; innerPat <- aTransformInnerPattern pattern
-         ; return $ TBA.LabelPattern org (TBA.LabelName labelOrg str) cellVar innerPat
-         }
-      
+      do cellVar <- getFreshCellVar
+         insertVar varName cellVar
+         innerPat <- aTransformInnerPattern pattern
+         return $ TBA.LabelPattern org (TBA.LabelName labelOrg str) cellVar innerPat
+         
     TBN.PrimitivePattern org prim -> 
       return (TBA.PrimitivePattern org $ primType prim)
         where primType ::TBN.Primitive -> TBA.PrimitiveType
@@ -176,7 +193,6 @@ aTransformInnerPattern pat =
       
     TBN.EmptyOnionPattern org ->
       return (TBA.EmptyOnionPattern org)
-
 
 
 -- | Generators for TBA Clause types
@@ -238,7 +254,7 @@ genOnionFilterValue org v op proj =
            TBN.TChar o -> TBA.PrimChar o        
 
 -- | Setup state for performTransformation:
-
+           
 testLocation :: SourceRegion
 testLocation = SourceRegion Unknown Unknown
 
@@ -248,5 +264,5 @@ testOrigin = TBA.SourceOrigin testLocation
 startState :: TranslationState
 startState = TranslationState 0 0 empty
 
-performTranslation :: TBN.Expr -> TBA.Expr
-performTranslation expr = TBA.Expr testOrigin $ fst $ evalState (aTransformExpr expr) startState
+performTranslation :: TBN.Expr -> Either TransError TBA.Expr
+performTranslation expr = TBA.Expr testOrigin <$> fst <$> evalState (runEitherT $ aTransformExpr expr) startState

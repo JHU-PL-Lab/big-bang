@@ -15,6 +15,7 @@ library
                    hslogger,
                    template-haskell,
                    split,
+                   either,
                    parsec
   ghc-options:     -Wall
   exposed-modules:
@@ -35,6 +36,7 @@ executable tiny-bang-nested
                    hslogger,
                    template-haskell,
                    split,
+                   either,
                    parsec
   ghc-options:     -Wall
   other-modules:
@@ -55,6 +57,7 @@ executable testlb
                    test-framework >= 0.4.1,
                    test-framework-hunit,
                    split,
+                   either,
                    parsec
   ghc-options:     -Wall
   other-modules:

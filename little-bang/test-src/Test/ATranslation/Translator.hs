@@ -83,8 +83,8 @@ aTranslationTests = TestList
   , testPattern2
   , testProjector1
   , testProjector2
-  , testDoubleDefError
-  , tempTest
+  , testVarShadow
+  , testNestedDef
   ]
 
 
@@ -121,9 +121,9 @@ testPattern1 = genUnitTest "Translating patterns1" "(v1: `A v2:(`B v3:int & `C v
 testPattern2 :: Test
 testPattern2 = genUnitTest "Translating patterns2" "(v: `A x:char & (`B y:int & (`C z:int & `D w:int)) -> y + z + w) (`A 'c' & (`B 2 & (`C 3 & `D 4)))" "9"
 
-testDoubleDefError :: Test
-testDoubleDefError = genUnitTest "Translating scape1" "def x = 1 in def x = 3 in x" "11"
+testVarShadow :: Test
+testVarShadow = genUnitTest "Translating variable shadow" "def x = 1 in def x = 2 in x" "2"
 
-tempTest :: Test
-tempTest = genUnitTest "Translating temp" "def x = 1 in y" "11"
+testNestedDef :: Test
+testNestedDef = genUnitTest "Translating nested def" "def x = 1 in (def x = 2 in x) + x" "3"
 
