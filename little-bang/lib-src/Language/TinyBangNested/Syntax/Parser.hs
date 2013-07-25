@@ -60,7 +60,7 @@ parserDocument = lift (contextDocument <$> ask)
 
 -- |A program is parsed as a single expression
 programParser :: Parser Expr
-programParser = expressionParser
+programParser = expressionParser <* eof
 
 -- Expr ::= def Var = Expr in Expr
 -- Expr ::= Var = Expr in Expr
