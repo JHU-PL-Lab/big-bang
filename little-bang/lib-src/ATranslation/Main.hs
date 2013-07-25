@@ -9,7 +9,6 @@ import Language.TinyBang.Toploop
 import Data.List.Split
 import System.IO
 
-
 main :: IO ()
 main = do
   putStrLn "###"
@@ -39,4 +38,6 @@ eval input =
     let transResult = performTranslation =<< parseTinyBangNested interpContext =<< lexTinyBangNested "" input
     case transResult of 
       Left x -> return x
-      Right _ -> return $ stringyInterpretSource testConfig (render $ makeDoc transResult)
+      Right _ -> do  
+                   let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
+                   return $ "\nTranslation:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult

@@ -278,7 +278,7 @@ instance Display Clause where
 instance Display EvaluatedClause where
   makeDoc ecl = case ecl of
     ValueDef _ x v -> makeDoc x <+> text "=" <+> makeDoc v
-    CellDef _ q y x -> makeDoc q <+> makeDoc y <+> text ":=" <+> makeDoc x
+    CellDef _ q y x -> makeDoc q <> makeDoc y <+> text ":=" <+> makeDoc x
     Flow _ x k x' -> makeDoc x <+> text "<~" <> makeDoc k <+> makeDoc x'
 
 instance Display Redex where
