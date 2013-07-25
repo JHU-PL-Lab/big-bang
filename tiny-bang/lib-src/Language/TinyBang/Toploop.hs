@@ -10,7 +10,6 @@ module Language.TinyBang.Toploop
 import Control.Monad
 import Data.Map (Map)
 
-import Utils.ParserUtils
 import Language.TinyBang.Ast
 import Language.TinyBang.Display
 import Language.TinyBang.Interpreter as I

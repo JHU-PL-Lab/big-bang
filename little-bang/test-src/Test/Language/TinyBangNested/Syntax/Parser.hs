@@ -10,10 +10,7 @@ import Debug.Trace
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
-import Language.TinyBangNested.Ast.Data
 import Language.TinyBang.Display (render, makeDoc)
-import Language.TinyBang.Ast.Data hiding (Expr)
-
 import Test.HUnit
 
 -- | Utility functions for Lexer unit tests:

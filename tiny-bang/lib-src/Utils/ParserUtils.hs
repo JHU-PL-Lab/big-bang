@@ -17,14 +17,6 @@ startLoc,
 stopLoc,
 ) where
 
-
-import Control.Applicative ((<$>))
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader
-
-import Text.Parsec.Prim
-import Text.Parsec.Pos
-import Language.TinyBang.Utils.Parsec
 import Language.TinyBang.Ast.Data
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Display

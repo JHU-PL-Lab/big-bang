@@ -3,9 +3,7 @@ module Main where
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBang.Syntax.Location
-import Language.TinyBangNested.Ast.Data
 import Language.TinyBang.Display
-import Control.Applicative ((<$>))
 import ATranslation.Translator
 import Language.TinyBang.Toploop
 import Data.List.Split

@@ -14,7 +14,6 @@ import Control.Monad.State
 import Data.Map 
 import Data.Maybe
 import Control.Applicative ((<$>))
-import Control.Monad.Trans
 import Control.Monad.Trans.Either
 
 
