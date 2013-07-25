@@ -39,4 +39,4 @@ eval input =
     let transResult = performTranslation =<< parseTinyBangNested interpContext =<< lexTinyBangNested "" input
     case transResult of 
       Left x -> return x
-      Right expr -> return $ stringyInterpretSource testConfig (render $ makeDoc transResult)
+      Right _ -> return $ stringyInterpretSource testConfig (render $ makeDoc transResult)

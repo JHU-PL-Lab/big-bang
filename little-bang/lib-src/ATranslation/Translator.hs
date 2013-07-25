@@ -198,8 +198,8 @@ aTransformInnerPattern pat =
         
 genClauseBinOp :: TBA.Origin -> TBA.FlowVar -> TBA.FlowVar 
                -> TBN.BinaryOperator -> TBA.FlowVar  -> TBA.Clause
-genClauseBinOp org flow left op right = 
-  TBA.RedexDef org flow (TBA.BinOp org left binop right)
+genClauseBinOp org flow leftFlow op rightFlow = 
+  TBA.RedexDef org flow (TBA.BinOp org leftFlow binop rightFlow)
     where binop = 
            case op of
              TBN.OpPlus o -> TBA.OpPlus o
