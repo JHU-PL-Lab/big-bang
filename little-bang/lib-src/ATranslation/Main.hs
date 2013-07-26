@@ -5,13 +5,17 @@ import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display
 import ATranslation.Translator
+
 import Language.TinyBang.Toploop
 import Data.List.Split
 import System.IO
 
+import Paths_little_bang (version)
+import Data.Version (showVersion)
+
 main :: IO ()
 main = do
-  putStrLn "TinyBangNested interpreter version 0.1"
+  putStrLn $ "TinyBangNested interpreter version " ++ showVersion version
   putStrLn ""
   putStrLn "###"
   inp <- getContents
@@ -23,6 +27,8 @@ main = do
       putStrLn =<< eval exprSrc
       putStrLn "###"
       hFlush stdout
+
+-- | Configuration
 
 testConfig :: InterpreterConfiguration
 testConfig = InterpreterConfiguration True True Simple
