@@ -11,6 +11,8 @@ import System.IO
 
 main :: IO ()
 main = do
+  putStrLn "TinyBangNested interpreter version 0.1"
+  putStrLn ""
   putStrLn "###"
   inp <- getContents
   let exprSrcs = filter (not . null) $ splitOn ";;" inp

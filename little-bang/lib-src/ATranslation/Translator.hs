@@ -85,8 +85,11 @@ aTransformExpr expr =
          return (varValueCls ++ varSetCls ++ exprValueCls, varClsFlow)
          
     TBN.ExprScape org pattern e ->
-      do p <-  aTransformOuterPattern pattern
+      do (TranslationState _ _ savedMapState) <- get
+         p <-  aTransformOuterPattern pattern
          (cls, _) <- aTransformExpr e
+         (TranslationState x y _ ) <- get
+         put (TranslationState x y savedMapState)
          freshFlow <- getFreshFlowVar
          let scapeExpr = TBA.Expr org cls 
          let scapeClause = [genClauseScape org freshFlow p scapeExpr]
