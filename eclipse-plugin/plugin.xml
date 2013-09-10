@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+	<extension
+    	point = "org.eclipse.ui.editors">
+		<editor
+  	   		id = "bigbang.editors.Editor"
+  	   		name="BigBang Editor"
+      		icon="icons/sample.gif"
+      		class="bigbang.editors.Editor"
+	   		extensions="tb"
+           	contributorClass="org.eclipse.ui.texteditor.BasicTextEditorActionContributor">
+		</editor>
+	</extension>
+
+	<extension point="org.eclipse.ui.views">
+      	<category name="BigBang" id="BigBang">
+      	</category>
+      	<view
+        	name="TopLoop View"
+            icon="icons/sample.gif"
+            category="BigBang"
+            class="bigbang.toploop.TopLoopView"
+            id="bigbang.toploop.TopLoopView">
+      	</view>
+	</extension>
+   
+	<extension point="org.eclipse.ui.newWizards">
+		<category name="BigBang" id="bigbang.wizard.Category">
+		</category>
+		<wizard category="bigbang.wizard.Category"
+			icon="icons/sample.gif"
+			class="bigbang.wizard.NewFileWizard"
+			name="BigBang File"
+			id="bigbang.wizard.NewFileWizard">
+			<description> Create a new BigBang file </description>
+		</wizard>		
+		<wizard category="bigbang.wizard.Category"
+		    icon="icons/sample.gif"
+			class="bigbang.wizard.EmptyProjectWizard"
+			id="bigbang.wizard.EmptyProjectWizard"
+			name="BigBang Empty Project"
+			project="true">
+			<selection class="org.eclipse.core.resources.IResource"/>
+			<description> Create a new empty BigBang project </description>
+		</wizard>
+	</extension>
+
+	<extension point="org.eclipse.ui.actionSets">
+		<actionSet description="Actions on Bigbang source code"
+			id="Bigbang_sourceActionSet" label="Bigbang Source Actions"
+			visible="true">
+			<menu id="Bigbang_sourceMenu" label="Bigbang">
+				<separator name="slot1"/>
+			</menu>
+			<action class="bigbang.actions.TopLoopEvalLinesAction"
+				definitionId="Bigbang.TopLoopEvalLinesAction"
+				id="Bigbang_sourceActions_TopLoopEvalLinesAction"
+				label="Eval selected lines" menubarPath="Bigbang_sourceMenu/slot1"
+				style="push"/>
+			<action class="bigbang.actions.TopLoopEvalFileAction"
+				definitionId="Bigbang.TopLoopEvalFileAction"
+				id="Bigbang_sourceActions_TopLoopEvalFileAction"
+				label="Eval the file" menubarPath="Bigbang_sourceMenu/slot1"
+				style="push"/>
+		</actionSet>
+	</extension>
+	
+	<extension point="org.eclipse.ui.commands">
+			<command id="Bigbang.TopLoopEvalLinesAction" name="Eval selected lines"/>
+			<command id="Bigbang.TopLoopEvalFileAction" name="Eval the file"/>
+	</extension>
+	
+	<extension point="org.eclipse.ui.bindings">
+			<key commandId="Bigbang.TopLoopEvalLinesAction"
+			contextId="org.eclipse.ui.contexts.window"
+			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+			sequence="F6"/>
+			<key commandId="Bigbang.TopLoopEvalFileAction"
+			contextId="org.eclipse.ui.contexts.window"
+			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+			sequence="F7"/>
+	</extension>
+
+	<extension point="org.eclipse.debug.core.launchConfigurationTypes">
+		<launchConfigurationType
+			delegate="bigbang.launching.LaunchConfigDelegate"
+			id="bigbang.launching.LaunchConfigDelegate" modes="run,debug"
+			name="Bigbang Executable" public="true"/>
+	</extension>
+
+	<extension point="org.eclipse.debug.ui.launchConfigurationTabGroups">
+		<launchConfigurationTabGroup
+			class="bigbang.launching.LaunchConfigurationTabGroup"
+			description="Configure Bigbang executable launching"
+			id="bigbang.launching.LaunchConfigurationTabGroup"
+			type="bigbang.launching.LaunchConfigDelegate"/>
+	</extension>
+
+	<extension point="org.eclipse.ui.perspectiveExtensions">
+		<perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
+        	<view
+            	ratio="0.5"
+              	relative="org.eclipse.ui.views.TaskList"
+               	relationship="right"
+               	id="bigbang.toploop.TopLoopView">
+         	</view>
+		</perspectiveExtension>
+	</extension>
+  
+	<extension point="org.eclipse.help.contexts">
+    	<contexts file="contexts.xml"> </contexts>
+   	</extension>
+
+</plugin>
