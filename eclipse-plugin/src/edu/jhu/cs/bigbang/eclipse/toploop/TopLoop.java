@@ -31,7 +31,7 @@ import edu.jhu.cs.bigbang.eclipse.syntax.TestParser;
  */
 public class TopLoop extends Observable implements Runnable {
 
-	public static final String INPUT_SIGNAL = "# ";
+	public static final String OUTPUT_PREFIX = "# ";
 
 	private static TopLoop instance;
 
@@ -74,7 +74,7 @@ public class TopLoop extends Observable implements Runnable {
 	public void eval(String s) {
 		// We append the line to the returnBuffer first.
 		// This will show the users what they typed.
-		returnBuffer.append(INPUT_SIGNAL + s);
+		returnBuffer.append(s + "\n");
 		try {
 			writer.write(s);
 			writer.flush();

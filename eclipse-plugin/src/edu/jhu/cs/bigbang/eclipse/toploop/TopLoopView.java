@@ -34,7 +34,7 @@ import edu.jhu.cs.bigbang.eclipse.Activator;
  */
 public class TopLoopView extends ViewPart implements Observer {
 
-	public static final String ID = "bigbang.toploop.TopLoopView";
+	public static final String ID = "edu.jhu.cs.bigbang.eclipse.toploop.TopLoopView";
 	
 	private static final int BOUND_OFFSET = 3;
 	private static final double INPUT_RATIO_HEIGHT = 0.8;

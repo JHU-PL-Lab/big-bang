@@ -16,8 +16,8 @@ public class ProcessManager {
 	// I just left it this way for now.
 	//
 	//
-	public static final String BIGBANG_PATH = "/Users/GeE/BigBang/tiny-bang-interpreter/dist/build/interpreter";
-	public static final String[] BIGBANG_CMD = new String[] { "./interpreter"};
+	public static final String BIGBANG_PATH = "/Users/GeE/BigBang/tiny-bang/dist/build/tiny-bang/";
+	public static final String[] BIGBANG_CMD = new String[] { "./tiny-bang"};
 
 	/**
 	 * Create and return a new process

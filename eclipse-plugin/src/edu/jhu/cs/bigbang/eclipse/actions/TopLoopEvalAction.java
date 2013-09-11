@@ -72,7 +72,6 @@ public abstract class TopLoopEvalAction implements
 					strSelected = strSelected.trim();
 					String[] eval = strSelected.split("\n+");
 					for (String s : eval) {
-						s = s.trim() + "\n\n";
 						TopLoop.getInstance().eval(s);
 					}
 				}
