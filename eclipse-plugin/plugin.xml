@@ -2,6 +2,12 @@
 <?eclipse version="3.4"?>
 <plugin>
 
+	<extension point="org.eclipse.ui.preferencePages">
+		<page name="Bigbang" class="edu.jhu.cs.bigbang.eclipse.preferences.MainPreferencePage"
+			id="edu.jhu.cs.bigbang.eclipse.preferences.MainPreferencePage">
+		</page>
+	</extension>
+
 	<extension
     	point = "org.eclipse.ui.editors">
 		<editor
@@ -15,7 +21,7 @@
 	</extension>
 
 	<extension point="org.eclipse.ui.views">
-      	<category name="edu.jhu.cs.bigbang.eclipse" id="edu.jhu.cs.bigbang.eclipse">
+      	<category name="BigBang" id="edu.jhu.cs.bigbang.eclipse">
       	</category>
       	<view
         	name="TopLoop View"
@@ -27,12 +33,12 @@
 	</extension>
    
 	<extension point="org.eclipse.ui.newWizards">
-		<category name="edu.jhu.cs.bigbang.eclipse" id="edu.jhu.cs.bigbang.eclipse.wizard.Category">
+		<category name="BigBang" id="edu.jhu.cs.bigbang.eclipse.wizard.Category">
 		</category>
 		<wizard category="edu.jhu.cs.bigbang.eclipse.wizard.Category"
 			icon="icons/sample.gif"
 			class="edu.jhu.cs.bigbang.eclipse.wizard.NewFileWizard"
-			name="edu.jhu.cs.bigbang.eclipse File"
+			name="BigBang File"
 			id="edu.jhu.cs.bigbang.eclipse.wizard.NewFileWizard">
 			<description> Create a new BigBang file </description>
 		</wizard>		
@@ -40,7 +46,7 @@
 		    icon="icons/sample.gif"
 			class="edu.jhu.cs.bigbang.eclipse.wizard.EmptyProjectWizard"
 			id="edu.jhu.cs.bigbang.eclipse.wizard.EmptyProjectWizard"
-			name="edu.jhu.cs.bigbang.eclipse Empty Project"
+			name="BigBang Empty Project"
 			project="true">
 			<selection class="org.eclipse.core.resources.IResource"/>
 			<description> Create a new empty BigBang project </description>
@@ -49,9 +55,9 @@
 
 	<extension point="org.eclipse.ui.actionSets">
 		<actionSet description="Actions on Bigbang source code"
-			id="edu.jhu.cs.bigbang.eclipse_sourceActionSet" label="edu.jhu.cs.bigbang.eclipse Source Actions"
+			id="edu.jhu.cs.bigbang.eclipse_sourceActionSet" label="BigBang Source Actions"
 			visible="true">
-			<menu id="edu.jhu.cs.bigbang.eclipse_sourceMenu" label="edu.jhu.cs.bigbang.eclipse">
+			<menu id="edu.jhu.cs.bigbang.eclipse_sourceMenu" label="BigBang">
 				<separator name="slot1"/>
 			</menu>
 			<action class="edu.jhu.cs.bigbang.eclipse.actions.TopLoopEvalLinesAction"

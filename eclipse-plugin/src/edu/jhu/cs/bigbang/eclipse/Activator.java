@@ -6,6 +6,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import edu.jhu.cs.bigbang.eclipse.preferences.Preference;
 import edu.jhu.cs.bigbang.eclipse.toploop.TopLoopView;
 
 
@@ -56,6 +57,10 @@ public class Activator extends AbstractUIPlugin {
 		return plugin;
 	}
 	
+	public String getInterpreterPath() {
+		return this.getPreferenceStore().getString(Preference.INTERPRETER_PATH);
+	}
+	
 	/**
 	 * Return the shared top loop view
 	 * @return The shared top loop view
@@ -87,7 +92,7 @@ public class Activator extends AbstractUIPlugin {
 	public URL getInstallURL() {
 		return plugin.getBundle().getEntry("/");
 	}
-
+	
 	/**
 	 * Returns an image descriptor for the image file at the given
 	 * plug-in relative path

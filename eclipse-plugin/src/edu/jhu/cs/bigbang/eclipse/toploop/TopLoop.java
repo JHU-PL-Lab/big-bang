@@ -7,15 +7,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Observable;
 
-import org.antlr.runtime.ANTLRStringStream;
-import org.antlr.runtime.RecognitionException;
-import org.antlr.runtime.TokenRewriteStream;
-import org.antlr.runtime.tree.CommonTree;
-
+import edu.jhu.cs.bigbang.eclipse.Activator;
 import edu.jhu.cs.bigbang.eclipse.process.ProcessManager;
-import edu.jhu.cs.bigbang.eclipse.syntax.TestLexer;
-import edu.jhu.cs.bigbang.eclipse.syntax.TestParser;
-
 
 /**
  * A single TopLoop that can be accessed by the whole system.
@@ -53,20 +46,32 @@ public class TopLoop extends Observable implements Runnable {
 		return instance;
 	}
 
+	public static TopLoop getNewInstace() {
+		instance = new TopLoop();
+		return instance;
+	}
+	
 	// A private constructor to create a TopLoop instance
 	private TopLoop() {
 		returnBuffer = new StringBuffer();
 		processManager = new ProcessManager();
 		currentProcess = processManager.startNewProcess();
-		reader = new BufferedReader(new InputStreamReader(
-				currentProcess.getInputStream()));
-		writer = new BufferedWriter(new OutputStreamWriter(
-				currentProcess.getOutputStream()));
+		returnBuffer.append("Current Interpreter: " + Activator.getDefault().getInterpreterPath());
+		try{
+			reader = new BufferedReader(new InputStreamReader(
+					currentProcess.getInputStream()));
+			writer = new BufferedWriter(new OutputStreamWriter(
+					currentProcess.getOutputStream()));
+		} catch (Exception e) {
+			System.err.println("TopLoop can't communicate with the process.");
+		}
 		// Start it self
 		Thread readerThread = new Thread(this);
 		readerThread.start();
 	}
 
+	
+	
 	/**
 	 * Evaluate the given line
 	 * @param s A line to be evaluated.
@@ -80,7 +85,6 @@ public class TopLoop extends Observable implements Runnable {
 			writer.flush();
 		} catch (IOException e) {
 			System.err.print("Error while writing to BigBang");
-			e.printStackTrace();
 		}
 	}
 
@@ -102,9 +106,8 @@ public class TopLoop extends Observable implements Runnable {
 				setChanged();
 				notifyObservers();
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			System.err.println("Error while reading from BigBang!");
-			e.printStackTrace();
 		}
 	}
 

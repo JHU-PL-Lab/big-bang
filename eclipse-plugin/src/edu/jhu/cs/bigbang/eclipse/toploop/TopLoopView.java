@@ -87,6 +87,10 @@ public class TopLoopView extends ViewPart implements Observer {
 		Activator.getDefault().setTopLoopView(this);
 	}
 
+	public void bindToTopLoop(TopLoop toploop) {
+		TopLoop.getInstance().addObserver(this);
+	}
+	
 	protected void layout() {
 		Rectangle parentArea = this.container.getClientArea();
 		int width = parentArea.width;

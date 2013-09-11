@@ -3,6 +3,8 @@ package edu.jhu.cs.bigbang.eclipse.process;
 import java.io.File;
 import java.io.IOException;
 
+import edu.jhu.cs.bigbang.eclipse.Activator;
+
 /**
  * A process manager to create and control processes
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu>
@@ -10,23 +12,20 @@ import java.io.IOException;
  */
 public class ProcessManager {
 
-	//
-	//
-	// The path to the interpreter. Since we haven't defined the protocol yet. 
-	// I just left it this way for now.
-	//
-	//
-	public static final String BIGBANG_PATH = "/Users/GeE/BigBang/tiny-bang/dist/build/tiny-bang/";
-	public static final String[] BIGBANG_CMD = new String[] { "./tiny-bang"};
-
 	/**
 	 * Create and return a new process
 	 * @return A new process object
 	 */
 	public Process startNewProcess() {
+		
+		String fullPath = Activator.getDefault().getInterpreterPath();
+		int lastSlash = fullPath.lastIndexOf("/");
+		String dir = fullPath.substring(0, lastSlash);
+		String bin = "./"  + fullPath.substring(lastSlash + 1);
+		
 		ProcessBuilder builder = new ProcessBuilder();
-		builder.directory(new File(BIGBANG_PATH));
-		builder.command(BIGBANG_CMD);
+		builder.directory(new File(dir));
+		builder.command(bin);
 		builder.redirectErrorStream(true);
 		try {
 			return builder.start();
