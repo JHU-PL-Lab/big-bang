@@ -42,9 +42,9 @@ public class MainPreferencePage extends FieldEditorPreferencePage implements
 	@Override
 	public boolean performOk() {
 		boolean ok = super.performOk();
-		if (Activator.getDefault().getTopLoopView() != null)
-		{
-			Activator.getDefault().getTopLoopView().bindToTopLoop(TopLoop.getNewInstace());
+		if (Activator.getDefault().getTopLoopView() != null) {
+			Activator.getDefault().getTopLoopView()
+					.bindToTopLoop(TopLoop.getNewInstace());
 		}
 		return ok;
 	}

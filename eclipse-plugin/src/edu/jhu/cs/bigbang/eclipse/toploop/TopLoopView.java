@@ -3,6 +3,9 @@ package edu.jhu.cs.bigbang.eclipse.toploop;
 import java.util.Observable;
 import java.util.Observer;
 
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlAdapter;
@@ -16,9 +19,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Sash;
 import org.eclipse.swt.SWT;
+import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.part.ViewPart;
 
 import edu.jhu.cs.bigbang.eclipse.Activator;
+import edu.jhu.cs.bigbang.eclipse.util.ImageConstant;
 
 
 
@@ -48,6 +53,7 @@ public class TopLoopView extends ViewPart implements Observer {
 
 	public void createPartControl(Composite parent) {
 		this.setPartName(DISPLAYED_NAME);
+		
 		// The main containner
 		container = new Composite(parent, SWT.BORDER);
 		container.addControlListener(new ControlAdapter() {
@@ -56,6 +62,7 @@ public class TopLoopView extends ViewPart implements Observer {
 				resized();
 			}
 		});
+		
 		// Initialize the input panel
 		inputPanel = new StyledText(this.container, SWT.V_SCROLL);
 		inputPanel.setWordWrap(true);
@@ -70,11 +77,13 @@ public class TopLoopView extends ViewPart implements Observer {
 				}
 			}
 		});
+		
 		// Initialize the output panel
 		outputPanel = new StyledText(this.container, SWT.V_SCROLL);
 		outputPanel.setWordWrap(true);
 		outputPanel.setFont(JFaceResources.getTextFont());
 		outputPanel.setEditable(false);
+		
 		// Initialize a sash be tween input & output panel
 		inputOutputSash = new Sash(container, SWT.HORIZONTAL | SWT.SMOOTH);
 		inputOutputSash.addSelectionListener(new SelectionAdapter() {
@@ -85,6 +94,19 @@ public class TopLoopView extends ViewPart implements Observer {
 		});
 		TopLoop.getInstance().addObserver(this);
 		Activator.getDefault().setTopLoopView(this);
+		
+		// Initailze buttons
+		IActionBars actionBars = this.getViewSite().getActionBars();
+		IToolBarManager toolBarManager = actionBars.getToolBarManager();
+		
+		ImageDescriptor iconClear  = ImageConstant.getImageDescriptor(ImageConstant.CLEAR_ICON);
+		Action actionClear = new Action("Clear", iconClear) {
+			@Override
+			public void run() {
+				TopLoop.getInstance().clear();
+			}
+		};
+		toolBarManager.add(actionClear);
 	}
 
 	public void bindToTopLoop(TopLoop toploop) {

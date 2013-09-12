@@ -61,6 +61,10 @@ public class Activator extends AbstractUIPlugin {
 		return this.getPreferenceStore().getString(Preference.INTERPRETER_PATH);
 	}
 	
+	public URL getInstalledURL(){
+		return getBundle().getEntry("/");
+	}
+	
 	/**
 	 * Return the shared top loop view
 	 * @return The shared top loop view

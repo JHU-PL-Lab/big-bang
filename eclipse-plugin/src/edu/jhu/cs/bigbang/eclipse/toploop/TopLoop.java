@@ -41,7 +41,7 @@ public class TopLoop extends Observable implements Runnable {
 	 * @return A TopLoop instance
 	 */
 	public static TopLoop getInstance() {
-		if (instance == null) 
+		if (instance == null)
 			instance = new TopLoop();
 		return instance;
 	}
@@ -50,14 +50,15 @@ public class TopLoop extends Observable implements Runnable {
 		instance = new TopLoop();
 		return instance;
 	}
-	
+
 	// A private constructor to create a TopLoop instance
 	private TopLoop() {
 		returnBuffer = new StringBuffer();
 		processManager = new ProcessManager();
 		currentProcess = processManager.startNewProcess();
-		returnBuffer.append("Current Interpreter: " + Activator.getDefault().getInterpreterPath());
-		try{
+		returnBuffer.append("Current Interpreter: "
+				+ Activator.getDefault().getInterpreterPath());
+		try {
 			reader = new BufferedReader(new InputStreamReader(
 					currentProcess.getInputStream()));
 			writer = new BufferedWriter(new OutputStreamWriter(
@@ -70,8 +71,6 @@ public class TopLoop extends Observable implements Runnable {
 		readerThread.start();
 	}
 
-	
-	
 	/**
 	 * Evaluate the given line
 	 * @param s A line to be evaluated.
@@ -86,6 +85,15 @@ public class TopLoop extends Observable implements Runnable {
 		} catch (IOException e) {
 			System.err.print("Error while writing to BigBang");
 		}
+	}
+
+	public void clear() {
+		returnBuffer.setLength(0);
+		returnBuffer.append("Current Interpreter: "
+				+ Activator.getDefault().getInterpreterPath());
+		returnBuffer.append("\n");
+		setChanged();
+		notifyObservers();
 	}
 
 	/**
