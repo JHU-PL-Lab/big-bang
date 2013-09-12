@@ -11,9 +11,6 @@ import org.eclipse.ui.wizards.newresource.BasicNewProjectResourceWizard;
 
 import edu.jhu.cs.bigbang.eclipse.Activator;
 
-
-
-
 /**
  * A wizard for creating a new empty Bigbang Project
  * @author Keeratipong Ukahcoke <kukacho1@jhu.edu>
@@ -21,6 +18,8 @@ import edu.jhu.cs.bigbang.eclipse.Activator;
  */
 public class EmptyProjectWizard extends BasicNewProjectResourceWizard {
 
+	public static String ID = "edu.jhu.cs.bigbang.eclipse.wizard.EmptyProjectWizard";
+	
 	@Override
 	public void addPages() {
 		super.addPages();

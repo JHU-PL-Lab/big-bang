@@ -14,10 +14,6 @@ import org.eclipse.ui.dialogs.WizardNewFileCreationPage;
 import org.eclipse.ui.ide.IDE;
 
 import edu.jhu.cs.bigbang.eclipse.Activator;
-
-
-
-
 /**
  * A wizard for creating a new Bigbang file.
  * @author Keeratipong Ukahcoke <kukacho1@jhu.edu>
@@ -25,6 +21,8 @@ import edu.jhu.cs.bigbang.eclipse.Activator;
  */
 public class NewFileWizard extends BasicNewFileResourceWizard {
 
+	public static String ID = "edu.jhu.cs.bigbang.eclipse.wizard.NewFileWizard";
+	
 	private WizardNewFileCreationPage mainPage;
 
 	@Override

@@ -8,6 +8,14 @@
 		</page>
 	</extension>
 
+	<extension point="org.eclipse.ui.perspectives">
+		<perspective name="BigBang" icon="icons/sample.gif"
+			class="edu.jhu.cs.bigbang.eclipse.perspective.BigbangPerspective"
+			id="edu.jhu.cs.bigbang.eclipse.perspective.BigbangPerspective">
+		</perspective>
+	</extension>
+
+
 	<extension
     	point = "org.eclipse.ui.editors">
 		<editor
@@ -102,17 +110,6 @@
 			description="Configure Bigbang executable launching"
 			id="edu.jhu.cs.bigbang.eclipse.launching.LaunchConfigurationTabGroup"
 			type="edu.jhu.cs.bigbang.eclipse.launching.LaunchConfigDelegate"/>
-	</extension>
-
-	<extension point="org.eclipse.ui.perspectiveExtensions">
-		<perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
-        	<view
-            	ratio="0.5"
-              	relative="org.eclipse.ui.views.TaskList"
-               	relationship="right"
-               	id="edu.jhu.cs.bigbang.eclipse.toploop.TopLoopView">
-         	</view>
-		</perspectiveExtension>
 	</extension>
   
 	<extension point="org.eclipse.help.contexts">
