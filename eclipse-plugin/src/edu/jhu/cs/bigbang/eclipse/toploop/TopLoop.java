@@ -76,6 +76,7 @@ public class TopLoop extends Observable implements Runnable {
 	 * @param s A line to be evaluated.
 	 */
 	public void eval(String s) {
+
 		// We append the line to the returnBuffer first.
 		// This will show the users what they typed.
 		returnBuffer.append(s + "\n");
