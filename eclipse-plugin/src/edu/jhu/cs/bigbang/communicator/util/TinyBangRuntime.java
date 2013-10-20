@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -17,7 +18,13 @@ public class TinyBangRuntime {
 	public TinyBangRuntime() {
 		// Generate process builder
 		cmdLst.add("runhaskell");
-		cmdLst.add("/home/chao/work/big_bang/sampleCommunicator/v4/mimic_interpreter.hs");
+		String haskellPath = null;
+		try {
+			haskellPath = new File("../tiny-bang/lib-src/Language/TinyBang/Communicator/").getCanonicalPath();
+		} catch (IOException e) {			
+			System.out.println("Path processing error!");
+		}
+		cmdLst.add(haskellPath + "/mimic_interpreter.hs");
 		pb = new ProcessBuilder(cmdLst);
 		File f = new File("/home/chao/work/big_bang/sampleCommunicator/v4/");
 		pb.directory(f);
