@@ -22,9 +22,10 @@ library
                    bytestring,
                    aeson
   ghc-options:     -Wall
-  exposed-modules: 
-                   Language.TinyBang.ToploopBM,
-                   Language.TinyBang.Communicator,
+  exposed-modules:   
+                   Language.TinyBang.Communicator,  
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -62,6 +63,8 @@ library
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
                    Language.TinyBang.TypeSystem.Data,
@@ -88,6 +91,9 @@ executable tiny-bang
                    cmdargs
   ghc-options:     -Wall
   other-modules:  
+                   Language.TinyBang.Communicator, 
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -149,6 +155,9 @@ executable tests
                    directory
   ghc-options:     -Wall
   other-modules:  
+                   Language.TinyBang.Communicator,   
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
                    Language.TinyBang.Utils.Parsec,
                    Test.TinyBang.SourceFile,
                    Language.TinyBang.Logging,

@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import FromHaskellObject
-import ToHaskellObject
+import Language.TinyBang.Communicator.FromHaskellObject
 
 import Control.Monad
 import Data.Char(toUpper)
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BL
-import FromHaskellObject as FHO
-import ToHaskellObject as TKO
 
 {--
    1. Get jsonStr from java

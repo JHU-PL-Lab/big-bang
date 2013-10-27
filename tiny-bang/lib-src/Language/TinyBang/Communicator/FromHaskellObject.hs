@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lanugage.TinyBang.Communicator.FromHaskellObject where 
+module Language.TinyBang.Communicator.FromHaskellObject where 
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
@@ -57,3 +57,8 @@ main = do
   let reply = encode obj2
   BL.putStrLn reply    
 --}
+
+data ResultObject = RO {id :: Int, result :: String}
+
+instance ToJSON ResultObject where 
+  toJSON (RO i resultStr) = object ["id" .= i, "result" .= resultStr]
