@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FromHaskellObject where 
+module Language.TinyBang.Communicator.FromHaskellObject where 
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
