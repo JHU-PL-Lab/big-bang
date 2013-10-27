@@ -13,11 +13,17 @@ import Language.TinyBang.Toploop
 import Utils.Toploop
 import Utils.Toploop.Logging
 
+--import Lanugage.TinyBang.ToploopBM
+--import Language.TinyBang.Communicator
+--import Language.TinyBang.Communnicator.FromHaskellObject
+import Data.List.Split
+
 data Options = Options
   { noTypecheck :: Bool
   , noEval :: Bool
   , loggingInstructions :: [String]
   , databaseName :: String
+  , batchMode :: Bool  
   } deriving (Data, Typeable, Show, Eq)
   
 defOpts :: Options
@@ -43,6 +49,10 @@ defOpts = Options { noTypecheck = def
                         &= help ("Selects the closure database.  This "
                               ++ "must be one of the following: "
                               ++ "simple")
+                  , batchMode = def
+                        &= name "batch-mode"
+                        &= explicit
+                        &= help "Performs batch mode operations."
                   }
           &= program "interpreter"
           &= summary versionStr
@@ -78,11 +88,26 @@ main = do
   unless configurationSuccessful $
     ioError $ userError "Logging configuration failed."
   configureLoggingHandlers
+
+  if batchMode opts     
+    then do 
+      
+      inp <- getContents
+      -- |Method for batchMode
   
-  putStrLn versionStr
-  putStrLn ""
-  putStrLn "###"
-  hFlush stdout
+      let exprSrcs = filter (not . null) $ splitOn ";;" inp
+          config = InterpreterConfiguration
+                     { typechecking = not $ noTypecheck opts
+                     , evaluating = not $ noEval opts
+                     , databaseType = Simple }                
+      mapM_ putStrLn $ map (stringyInterpretSource config) exprSrcs      
+      
+    else do 
+      putStrLn versionStr
+      putStrLn ""
+      putStrLn "###"
+      hFlush stdout
   
-  eval <- makeEval opts
-  toploop eval
+      eval <- makeEval opts
+      toploop eval
+

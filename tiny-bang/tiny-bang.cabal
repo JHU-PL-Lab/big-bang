@@ -18,9 +18,13 @@ library
                    split,
                    wl-pprint,
                    errors,
-                   hslogger
+                   hslogger,
+                   bytestring,
+                   aeson
   ghc-options:     -Wall
-  exposed-modules:   
+  exposed-modules: 
+                   Language.TinyBang.ToploopBM,
+                   Language.TinyBang.Communicator,
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -58,8 +62,6 @@ library
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
-                   Language.TinyBang.TypeSystem.Constraints,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
                    Language.TinyBang.TypeSystem.Data,
@@ -85,7 +87,7 @@ executable tiny-bang
                    mtl,
                    cmdargs
   ghc-options:     -Wall
-  other-modules:   
+  other-modules:  
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -146,7 +148,7 @@ executable tests
                    filepath,
                    directory
   ghc-options:     -Wall
-  other-modules:   
+  other-modules:  
                    Language.TinyBang.Utils.Parsec,
                    Test.TinyBang.SourceFile,
                    Language.TinyBang.Logging,
