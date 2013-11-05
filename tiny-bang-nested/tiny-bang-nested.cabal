@@ -1,4 +1,4 @@
-name:           little-bang
+name:           tiny-bang-nested
 version:        0.1
 cabal-version:  >=1.2
 build-type:     Simple
@@ -8,7 +8,6 @@ library
   hs-source-dirs:  lib-src
   build-depends:   base >= 4,
                    tiny-bang,
-                   tiny-bang-nested,
                    containers,
                    mtl,
                    wl-pprint,
@@ -31,7 +30,6 @@ executable tiny-bang-nested
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
-                   tiny-bang-nested,
                    containers,
                    mtl,
                    wl-pprint,
@@ -56,7 +54,6 @@ executable testlb
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
-                   tiny-bang-nested,
                    HUnit >= 1.2 && < 2,
                    test-framework >= 0.4.1,
                    test-framework-hunit,
