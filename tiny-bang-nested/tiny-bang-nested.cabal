@@ -19,10 +19,12 @@ library
                    parsec
   ghc-options:     -Wall
   exposed-modules:
-                   Language.TinyBangNested.Syntax.Lexer,
-                   Language.TinyBangNested.Syntax.Parser,
+                   Language.TinyBangNested.ATranslation.TranslationState,
+                   Language.TinyBangNested.ATranslation.Translator,
                    Language.TinyBangNested.Ast,
-                   Language.TinyBangNested.ATranslation.Translator
+                   Language.TinyBangNested.Ast.Data,
+                   Language.TinyBangNested.Syntax.Lexer,
+                   Language.TinyBangNested.Syntax.Parser
 
 executable tiny-bang-nested
   hs-source-dirs:  interp-src

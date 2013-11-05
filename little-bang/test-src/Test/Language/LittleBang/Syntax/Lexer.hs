@@ -1,11 +1,11 @@
 {-
   This module tests the TinyBangNested Lexer.
 -}
-module Test.Language.TinyBangNested.Syntax.Lexer
+module Test.Language.LittleBang.Syntax.Lexer
 ( lexerTests
 ) where
 
-import Language.TinyBangNested.Syntax.Lexer
+import Language.LittleBang.Syntax.Lexer
 import Test.HUnit
 
 -- | Utility functions for Lexer unit tests:
@@ -23,7 +23,7 @@ createLexerTest name input expected =
   TestCase $ assertBool name $ boolResult
     where boolResult = compareTokenStreams expected lexerResult
           lexerResult = 
-            case (lexTinyBangNested "" input) of
+            case (lexLittleBang "" input) of
               Left s -> error $ "Lexer unit test fail: " ++ s
               Right x -> x                     
 

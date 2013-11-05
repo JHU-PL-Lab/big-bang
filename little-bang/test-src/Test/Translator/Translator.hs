@@ -1,13 +1,13 @@
 {-
   This module tests the TinyBangNested to TinyBangANormal translation process.
 -}
-module Test.ATranslation.Translator
+module Test.Translator.Translator
 ( aTranslationTests
 ) where
 
 import Debug.Trace
-import qualified Language.TinyBangNested.Ast.Data as TBN
-import qualified Language.TinyBang.Ast.Data as TBA
+import qualified Language.TinyBangNested.Ast as TBN
+import qualified Language.LittleBang.Ast as LB
 import Language.TinyBang.Display
 import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location
@@ -15,6 +15,8 @@ import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.ATranslation.Translator
 import Test.HUnit
+
+-- TODO: rewrite these unit tests for LittleBang
 
 -- | Display unit tests?
 verbose :: Bool

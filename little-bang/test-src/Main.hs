@@ -1,5 +1,5 @@
 {-|
-  The primary test module for TinyBangNested.
+  The primary test module for LittleBang.
 -}
 
 module Main 
@@ -10,16 +10,18 @@ module Main
 import Test.Framework (defaultMain, testGroup, Test)
 import Test.Framework.Providers.HUnit
 
-import Test.Language.TinyBangNested.Syntax.Lexer
-import Test.Language.TinyBangNested.Syntax.Parser
-import Test.ATranslation.Translator
+import Test.Language.LittleBang.Syntax.Lexer
+import Test.Language.LittleBang.Syntax.Parser
+import Test.Translator.Translator
+
+-- TODO: rework all of these tests for LittleBang
 
 tbnLexerTestGroup :: Test
-tbnLexerTestGroup = testGroup "TinyBangNested lexer tests" $ hUnitTestToTests $ lexerTests
+tbnLexerTestGroup = testGroup "LittleBang lexer tests" $ hUnitTestToTests $ lexerTests
 tbnParserTestGroup :: Test
-tbnParserTestGroup = testGroup "TinyBangNested parser tests" $ hUnitTestToTests $ parserTests
+tbnParserTestGroup = testGroup "LittleBang parser tests" $ hUnitTestToTests $ parserTests
 aTranslationTestGroup :: Test
-aTranslationTestGroup = testGroup "ATranslation tests" $ hUnitTestToTests $ aTranslationTests
+aTranslationTestGroup = testGroup "Translator tests" $ hUnitTestToTests $ aTranslationTests
 
 testsM :: IO [Test]
 testsM = sequence

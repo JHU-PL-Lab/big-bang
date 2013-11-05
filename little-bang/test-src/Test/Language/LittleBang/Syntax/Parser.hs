@@ -1,14 +1,14 @@
 {-
   This module tests the TinyBangNested Parser.
 -}
-module Test.Language.TinyBangNested.Syntax.Parser
+module Test.Language.LittleBang.Syntax.Parser
 ( parserTests
 ) where
 
 import Debug.Trace
 
-import Language.TinyBangNested.Syntax.Parser
-import Language.TinyBangNested.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display (render, makeDoc)
 import Test.HUnit
@@ -30,7 +30,7 @@ genUnitTest label input expected =
     then trace ("Test " ++ label ++ " parsed\n" ++ result ++ "\nInstead of\n" ++ expected ++ "\n") $ testCase
     else testCase
       where
-       result = render $ makeDoc $ parseTinyBangNested testContext =<< lexTinyBangNested "" input
+       result = render $ makeDoc $ parseLittleBang testContext =<< lexLittleBang "" input
        boolAnswer = result == expected
        testCase = TestCase $ assertBool label boolAnswer
 

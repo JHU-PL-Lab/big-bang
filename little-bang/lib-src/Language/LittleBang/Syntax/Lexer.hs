@@ -1,5 +1,5 @@
-module Language.TinyBangNested.Syntax.Lexer
-( lexTinyBangNested
+module Language.LittleBang.Syntax.Lexer
+( lexLittleBang
 , Token(..)
 , PositionalToken(..)
 , SourceLocation(..)
@@ -55,11 +55,11 @@ data PositionalToken
 -- |The Lexer type.
 type Lexer a = Parsec String () a
 
--- | A function to lex a @String@ containing TinyBangNested code.  On error, the
+-- | A function to lex a @String@ containing LittleBang code.  On error, the
 --   result is a left error string; otherwise, it is a right positional token
 --   list.
-lexTinyBangNested :: String -> String -> Either String [PositionalToken]
-lexTinyBangNested resourceName src =
+lexLittleBang :: String -> String -> Either String [PositionalToken]
+lexLittleBang resourceName src =
   case parse lexer resourceName src of
     Left x -> Left $ show x
     Right x -> Right x

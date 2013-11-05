@@ -1,4 +1,4 @@
-module Language.TinyBangNested.Ast.Data
+module Language.LittleBang.Ast.Data
 ( Expr(..)
 , Var (..)
 , Label (..)
@@ -15,7 +15,7 @@ module Language.TinyBangNested.Ast.Data
 import Language.TinyBang.Display
 import Language.TinyBang.Ast.Data (Origin, HasOrigin, originOf)
 
--- | AST structure for TinyBangNested
+-- | AST structure for LittleBang
 
 data Expr =
    ExprDef Origin Var Expr Expr

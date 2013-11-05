@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns,
              TemplateHaskell #-}
 
-module Language.TinyBangNested.Syntax.Parser
-( parseTinyBangNested
+module Language.LittleBang.Syntax.Parser
+( parseLittleBang
 , ParserContext(..)
 ) where
 
@@ -19,14 +19,14 @@ import Language.TinyBang.Ast.Data (Origin (..))
 import Language.TinyBang.Display
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Parsec
-import Language.TinyBangNested.Syntax.Lexer
-import Language.TinyBangNested.Ast.Data
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Ast.Data
 
--- |A function to parse TinyBangNested code tokens into an @Expr@.  If this is
+-- |A function to parse LittleBang code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
 --  error message.
-parseTinyBangNested :: ParserContext -> [PositionalToken] -> Either String Expr
-parseTinyBangNested context ts =
+parseLittleBang :: ParserContext -> [PositionalToken] -> Either String Expr
+parseLittleBang context ts =
   let parseResult =
         runParserT programParser () (contextDocumentName context) ts
   in
