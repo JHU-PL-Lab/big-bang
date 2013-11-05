@@ -7,8 +7,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-{-- class define --}
-
+{-
 data FromHaskellObject = ResponseC { fho :: Int, sub_r :: Response }
                        | ProtocolErrorC { fho :: Int, sub_p :: ProtocolError }
                        deriving Show
@@ -26,7 +25,6 @@ data ParseResponse = ParseResponse { pr :: Int }
 data ProtocolError = ProtocolError { pe :: Int}
                    deriving (Show) 
 
-{-- instance define --}
 {-- expected parse structure: {"objectType":"ParseResponse", "fho": 1, "r": 2, "pr": 5} --}
 instance FromJSON FromHaskellObject where
   parseJSON (Object obj) =
@@ -46,19 +44,11 @@ instance ToJSON FromHaskellObject where
   toJSON (ResponseC fho (RunCodeResponseC r (RunCodeResponse rcr))) = object [ "fho" .= fho, "r" .= r, "rcr" .= rcr, "objectType" .= ("RunCodeResponse" :: String)]
   toJSON (ResponseC fho (ParseResponseC r (ParseResponse pr))) = object [ "fho" .= fho, "r" .= r, "pr" .= pr, "objectType" .= ("ParseResponse" :: String)]
   toJSON (ProtocolErrorC fho (ProtocolError pe)) = object [ "fho" .= fho, "pe" .= pe, "objectType" .= ("ProtocolError" :: String)]
+-}
 
-{-- main function for debug
-main :: IO()
-main = do  
-  jsonStr <- getLine
-  let obj = decode $ BL.pack jsonStr :: Maybe FromHaskellObject
-  print obj
-  let obj2 = ResponseC {fho = 1, sub_r = RunCodeResponseC {r = 2, sub_rcr = RunCodeResponse {rcr = 5}}}
-  let reply = encode obj2
-  BL.putStrLn reply    
---}
+data FromHaskellObject = Response {id :: Int, result :: String}
+                       | ProtocolError {id :: Int, errMsg :: String}
 
-data ResultObject = RO {id :: Int, result :: String}
-
-instance ToJSON ResultObject where 
-  toJSON (RO i resultStr) = object ["id" .= i, "result" .= resultStr]
+instance ToJSON FromHaskellObject where 
+  toJSON (Response i resultStr) = object ["id" .= i, "result" .= resultStr]
+  toJSON (ProtocolError i errStr) = object ["id" .= i, "errMsg" .= errStr]

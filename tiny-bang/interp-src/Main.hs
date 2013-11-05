@@ -92,23 +92,13 @@ main = do
   if batchMode opts     
     then do 
 
-      putStrLn versionStr ++ "--Batch mode"
+      putStrLn $ versionStr ++ " --Batch mode"
       putStrLn ""
       putStrLn "###"
-      hFlush stdout
-      
-      inp <- getContents
-      -- |Method for batchMode
-       
-      let exprSrcs = filter (not . null) $ splitOn ";;" inp
-          config = InterpreterConfiguration
-                     { typechecking = not $ noTypecheck opts
-                     , evaluating = not $ noEval opts
-                     , databaseType = Simple }                
-          resultStr = concat $ map (stringyInterpretSource config) exprSrcs 
-          jsonStr = genJsonStr . genHSObj $ resultStr    
-      BL.putStrLn jsonStr
+      hFlush stdout            
 
+      getLine >>= (\inp -> putStrLn (messageHandler inp))
+      
       putStrLn "###"
       hFlush stdout
       

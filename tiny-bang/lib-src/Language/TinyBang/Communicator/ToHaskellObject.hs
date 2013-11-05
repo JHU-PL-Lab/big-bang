@@ -2,12 +2,13 @@
 
 module Language.TinyBang.Communicator.ToHaskellObject where
 
+import Control.Monad (mzero)
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-{-- class define --}
+{-
 data ToHaskellObject = CommandC {tho :: Int, sub_c :: Command }
                       deriving Show
 
@@ -21,7 +22,6 @@ data RunCodeCommand = RunCodeCommand {rcc :: Int}
 data ParseCommand = ParseCommand {pc :: Int}
                   deriving Show
                            
-{-- instance define --}
 {-- expected json format {"objectType":"RunCodeCommand", "c":1, "rcc":2} --}
 
 instance FromJSON ToHaskellObject where
@@ -42,4 +42,19 @@ instance ToJSON ToHaskellObject where
     object [ "tho" .= tho, "c" .= c, "rcc" .= rcc, "objectType" .= ("RunCodeCommand" :: String)]
   toJSON (CommandC tho (ParseCommandC c (ParseCommand pc))) =
     object [ "tho" .= tho, "c" .= c, "pc" .= pc, "objectType" .= ("ParseCommand" :: String)]
+
+-}
+
+data ToHaskellObject = CommandC {cmdId :: Int, usrInpStr :: String}
+                  deriving Show
+
+instance FromJSON ToHaskellObject where
+  parseJSON (Object obj) = CommandC <$>
+                           obj .: "cmdId" <*>
+                           obj .: "usrInpStr"
+  parseJSON _            = mzero
+
+getInpStr :: ToHaskellObject -> String
+getInpStr (CommandC i inpStr) = inpStr  
+
 
