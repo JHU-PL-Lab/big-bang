@@ -2,7 +2,7 @@
   This module performs ATranslation to create a TinyBang Expr from a TinyBangNested Expr
 -} 
 
-module ATranslation.Translator
+module Language.TinyBangNested.ATranslation.Translator
 (performTranslation)
 where
 
@@ -10,13 +10,13 @@ import qualified Language.TinyBang.Ast.Data as TBA
 import qualified Language.TinyBangNested.Ast.Data as TBN
 import Language.TinyBang.Syntax.Location
 
-import Control.Monad.State
-import ATranslation.TranslationState
+import Language.TinyBangNested.ATranslation.TranslationState
 
 import Data.Map 
 import Data.Maybe
 
 import Control.Applicative ((<$>))
+import Control.Monad.State
 import Control.Monad.Trans.Either
 
 

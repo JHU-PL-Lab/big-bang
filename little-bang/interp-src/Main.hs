@@ -4,7 +4,7 @@ import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display
-import ATranslation.Translator
+import Language.TinyBangNested.ATranslation.Translator
 
 import Language.TinyBang.Toploop
 import Data.List.Split

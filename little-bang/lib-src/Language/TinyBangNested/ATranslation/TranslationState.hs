@@ -2,7 +2,7 @@
   This module defines the state of the ATranslation process
 -}
 
-module ATranslation.TranslationState
+module Language.TinyBangNested.ATranslation.TranslationState
 ( TranslationState (..)
 , incrementFlowVarCount
 , incrementCellVarCount

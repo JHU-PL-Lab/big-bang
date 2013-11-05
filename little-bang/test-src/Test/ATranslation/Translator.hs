@@ -13,7 +13,7 @@ import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Syntax.Lexer
-import ATranslation.Translator
+import Language.TinyBangNested.ATranslation.Translator
 import Test.HUnit
 
 -- | Display unit tests?

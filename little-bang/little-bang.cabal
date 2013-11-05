@@ -19,14 +19,15 @@ library
                    parsec
   ghc-options:     -Wall
   exposed-modules:
-                   Language.TinyBangNested.Syntax.Lexer
-                   Language.TinyBangNested.Syntax.Parser
-                   Language.TinyBangNested.Ast
-                   ATranslation.Translator
+                   Language.TinyBangNested.Syntax.Lexer,
+                   Language.TinyBangNested.Syntax.Parser,
+                   Language.TinyBangNested.Ast,
+                   Language.TinyBangNested.ATranslation.Translator
 
 executable tiny-bang-nested
-  hs-source-dirs:  lib-src
-  main-is:         ATranslation/Main.hs
+  hs-source-dirs:  interp-src
+                   lib-src
+  main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
                    containers,
@@ -43,7 +44,7 @@ executable tiny-bang-nested
                    Language.TinyBangNested.Syntax.Lexer
                    Language.TinyBangNested.Syntax.Parser
                    Language.TinyBangNested.Ast
-                   ATranslation.Translator
+                   Language.TinyBangNested.ATranslation.Translator
 
 executable testlb
   hs-source-dirs:  
@@ -61,7 +62,7 @@ executable testlb
                    parsec
   ghc-options:     -Wall
   other-modules:
-                   Language.TinyBangNested.Syntax.Lexer
-                   Language.TinyBangNested.Syntax.Parser
-                   Language.TinyBangNested.Ast
-                   ATranslation.Translator
+                   Language.TinyBangNested.Syntax.Lexer,
+                   Language.TinyBangNested.Syntax.Parser,
+                   Language.TinyBangNested.Ast,
+                   Language.TinyBangNested.ATranslation.Translator
