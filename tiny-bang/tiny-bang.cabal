@@ -1,6 +1,6 @@
 name:           tiny-bang
 version:        0.2
-cabal-version:  >=1.2
+cabal-version:  >=1.8
 build-type:     Simple
 author:         Zachary Palmer
 
@@ -79,111 +79,43 @@ library
                    Language.TinyBang.TypeSystem.Data.Projection
 
 executable tiny-bang
-  hs-source-dirs:  
-                   lib-src,
-                   interp-src
+  hs-source-dirs:  interp-src
   main-is:         Main.hs
   build-depends:   
                    base >= 4,
+                   tiny-bang,
                    containers,
                    mtl,
-                   cmdargs
+                   cmdargs,
+                   parsec,
+                   split,
+                   wl-pprint,
+                   errors,
+                   hslogger,
+                   bytestring,
+                   aeson
   ghc-options:     -Wall
-  other-modules:  
-                   Language.TinyBang.Syntax.Lexer,
-                   Language.TinyBang.Syntax.Parser,
-                   Language.TinyBang.Ast,
-                   Language.TinyBang.Syntax.Location,
-                   Utils.Meta.Deriving,
-                   Language.TinyBang.Interpreter,
-                   Language.TinyBang.Ast.Data,
-                   Language.TinyBang.Ast.WellFormedness,
-                   Language.TinyBang.Interpreter.Compatibility,
-                   Language.TinyBang.Interpreter.Basis,
-                   Language.TinyBang.Interpreter.Equality,
-                   Language.TinyBang.Interpreter.Projection,
-                   Utils.Monad,
-                   Language.TinyBang.Ast.Substitution,
-                   Language.TinyBang.Display,
-                   Data.Adj,
-                   Language.TinyBang.Interpreter.DeepValues,
-                   Language.TinyBang.Utils.Parsec,
-                   Language.TinyBang.Logging,
-                   Utils.Tuple,
-                   Utils.TemplateHaskell,
-                   Language.TinyBang.TypeSystem.Types,
-                   Language.TinyBang.TypeSystem.Contours,
-                   Data.NFA,
-                   Language.TinyBang.TypeSystem.Relations,
-                   Language.TinyBang.TypeSystem.Relations.Contours,
-                   Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.Fibrations,
-                   Language.TinyBang.TypeSystem.Relations.Projection,
-                   Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
-                   Language.TinyBang.TypeSystem.Relations.Compatibility,
-                   Language.TinyBang.TypeSystem.Constraints,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase,
-                   Language.TinyBang.TypeSystem.Data.Compatibility,
-                   Language.TinyBang.TypeSystem.Data,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
-                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
-                   Language.TinyBang.Interpreter.Variables,
-                   Utils.Toploop,
-                   Language.TinyBang.Toploop,
-                   Utils.Toploop.Logging,
-                   Language.TinyBang.TypeSystem.Data.Projection
 
 executable tests
-  hs-source-dirs:  lib-src, test-src
+  hs-source-dirs:  test-src
   main-is:         Main.hs
-  build-depends:   
-                   base >= 4,
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   containers,
                    HUnit >= 1.2 && < 2,
                    QuickCheck >= 2.4,
                    test-framework >= 0.4.1,
                    test-framework-quickcheck2,
                    test-framework-hunit,
+                   mtl,
                    filepath,
-                   directory
+                   directory,
+                   cmdargs,
+                   parsec,
+                   split,
+                   wl-pprint,
+                   errors,
+                   hslogger,
+                   bytestring,
+                   aeson
   ghc-options:     -Wall
-  other-modules:  
-                   Language.TinyBang.Utils.Parsec,
-                   Test.TinyBang.SourceFile,
-                   Language.TinyBang.Logging,
-                   Utils.Tuple,
-                   Utils.TemplateHaskell,
-                   Language.TinyBang.TypeSystem.Types,
-                   Language.TinyBang.TypeSystem.Contours,
-                   Data.NFA,
-                   Language.TinyBang.TypeSystem.Relations,
-                   Language.TinyBang.TypeSystem.Relations.Contours,
-                   Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.Fibrations,
-                   Language.TinyBang.TypeSystem.Relations.Projection,
-                   Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
-                   Language.TinyBang.TypeSystem.Relations.Compatibility,
-                   Language.TinyBang.TypeSystem.Constraints,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase,
-                   Language.TinyBang.TypeSystem.Data.Compatibility,
-                   Language.TinyBang.TypeSystem.Data,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
-                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
-                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
-                   Test.TinyBang.ExpectDsl.Lexer,
-                   Test.TinyBang.ExpectDsl,
-                   Test.TinyBang.ExpectDsl.Data,
-                   Language.TinyBang.Interpreter.Variables,
-                   Test.Data.NFA,
-                   Test.TinyBang.Language.TypeSystem.Contours,
-                   Utils.Toploop,
-                   Language.TinyBang.Toploop,
-                   Utils.Toploop.Logging,
-                   Language.TinyBang.TypeSystem.Data.Projection
-

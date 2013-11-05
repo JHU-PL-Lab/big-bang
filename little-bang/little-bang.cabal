@@ -1,6 +1,6 @@
 name:           little-bang
 version:        0.1
-cabal-version:  >=1.2
+cabal-version:  >=1.8
 build-type:     Simple
 author:         Zachary Palmer
 
@@ -19,15 +19,20 @@ library
                    either,
                    parsec
   ghc-options:     -Wall
-  other-modules:   Language.LittleBang.Translator
+  exposed-modules: 
+                   Language.LittleBang.Ast,
+                   Language.LittleBang.Ast.Data,
+                   Language.LittleBang.Syntax.Lexer,
+                   Language.LittleBang.Syntax.Parser,
+                   Language.LittleBang.Translator
 
-executable tiny-bang-nested
+executable little-bang
   hs-source-dirs:  interp-src
-                   lib-src
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
                    tiny-bang-nested,
+                   little-bang,
                    containers,
                    mtl,
                    wl-pprint,
@@ -38,17 +43,15 @@ executable tiny-bang-nested
                    either,
                    parsec
   ghc-options:     -Wall
-  other-modules:   Language.LittleBang.Translator
 
 executable testlb
-  hs-source-dirs:  
-                   test-src                   
-                   lib-src
+  hs-source-dirs:  test-src                   
                    
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
                    tiny-bang-nested,
+                   little-bang,
                    HUnit >= 1.2 && < 2,
                    test-framework >= 0.4.1,
                    test-framework-hunit,
@@ -56,4 +59,3 @@ executable testlb
                    either,
                    parsec
   ghc-options:     -Wall
-  other-modules:   Language.LittleBang.Translator

@@ -1,6 +1,6 @@
 name:           tiny-bang-nested
 version:        0.1
-cabal-version:  >=1.2
+cabal-version:  >=1.8
 build-type:     Simple
 author:         Zachary Palmer
 
@@ -28,10 +28,10 @@ library
 
 executable tiny-bang-nested
   hs-source-dirs:  interp-src
-                   lib-src
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
+                   tiny-bang-nested,
                    containers,
                    mtl,
                    wl-pprint,
@@ -42,20 +42,14 @@ executable tiny-bang-nested
                    either,
                    parsec
   ghc-options:     -Wall
-  other-modules:
-                   Language.TinyBangNested.Syntax.Lexer
-                   Language.TinyBangNested.Syntax.Parser
-                   Language.TinyBangNested.Ast
-                   Language.TinyBangNested.ATranslation.Translator
 
-executable testlb
-  hs-source-dirs:  
-                   test-src                   
-                   lib-src
+executable testtbn
+  hs-source-dirs:  test-src                   
                    
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
+                   tiny-bang-nested,
                    HUnit >= 1.2 && < 2,
                    test-framework >= 0.4.1,
                    test-framework-hunit,
@@ -63,8 +57,3 @@ executable testlb
                    either,
                    parsec
   ghc-options:     -Wall
-  other-modules:
-                   Language.TinyBangNested.Syntax.Lexer,
-                   Language.TinyBangNested.Syntax.Parser,
-                   Language.TinyBangNested.Ast,
-                   Language.TinyBangNested.ATranslation.Translator
