@@ -58,6 +58,8 @@ library
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
+                   Language.TinyBang.TypeSystem.Constraints,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
