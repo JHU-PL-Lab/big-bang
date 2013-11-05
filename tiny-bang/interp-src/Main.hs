@@ -91,10 +91,15 @@ main = do
 
   if batchMode opts     
     then do 
+
+      putStrLn versionStr ++ "--Batch mode"
+      putStrLn ""
+      putStrLn "###"
+      hFlush stdout
       
       inp <- getContents
       -- |Method for batchMode
-  
+       
       let exprSrcs = filter (not . null) $ splitOn ";;" inp
           config = InterpreterConfiguration
                      { typechecking = not $ noTypecheck opts
@@ -104,6 +109,9 @@ main = do
           jsonStr = genJsonStr . genHSObj $ resultStr    
       BL.putStrLn jsonStr
 
+      putStrLn "###"
+      hFlush stdout
+      
     else do 
       putStrLn versionStr
       putStrLn ""
