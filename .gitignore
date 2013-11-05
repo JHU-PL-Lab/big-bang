@@ -6,6 +6,7 @@
 dist
 cabal-dev-sandbox
 .metadata
+RemoteSystemsTempFiles
 
 *.backup
 *.bak
