@@ -172,3 +172,4 @@ stringyInterpretSource interpConf exprSrc =
 emptyDatabaseFromType :: ConstraintDatabaseType -> DummyDatabase
 emptyDatabaseFromType dbt = case dbt of
   Simple -> DummyDatabase (CDb.empty :: SimpleConstraintDatabase)
+

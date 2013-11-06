@@ -8,59 +8,52 @@ module Language.TinyBang.ToploopTest where
 import Data.Aeson
 import Language.TinyBang.Communicator.ToHaskellObject as THO
 import Language.TinyBang.Communicator.FromHaskellObject as FHO
-import Language.TinyBang.Toploop as TL
+import Language.TinyBang.Ast
+import Language.TinyBang.Interpreter.DeepValues
+import Language.TinyBang.Syntax.Lexer
+import Language.TinyBang.Syntax.Parser
+import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Interpreter
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-{-
-genHSObj :: String -> ResultObject
-genHSObj resultStr = FHO.RO 1 resultStr
-
-genJsonStr :: ResultObject -> BL.ByteString
-genJsonStr ro = encode ro
--}
-
+-- | Interface open to interpreter
 messageHandler :: String -> String
 messageHandler inpJsonStr = case (decode . BL.pack $ inpJsonStr) of
-  Nothing -> BL.unpack (encode (FHO.ProtocolError 2 "Invalid Input"))   
-  Just obj -> BL.unpack (encode (commandHandler obj))
-                                         
-                     
+  Nothing -> BL.unpack . encode $ BatchModeErrorC . BMInterpreterFailure $ "Invalid Input"
+  Just obj -> BL.unpack . encode . commandHandler $ obj
+
+-- | Bridge function               
 commandHandler :: ToHaskellObject -> FromHaskellObject
-commandHandler cmdObj = FHO.Response 1 resultStr
+commandHandler cmdObj =
+  case runCodeCommand usrInpSrc of
+    Left err ->
+      case err of
+        BMLexFailure errMsg -> BatchModeErrorC $ BMLexFailure errMsg
+        BMParserFailure errMsg -> BatchModeErrorC $ BMParserFailure errMsg 
+        _ -> BatchModeErrorC err   
+    Right ans -> BatchModeResultC ans
   where usrInpSrc = getInpStr cmdObj
-        resultStr = runCodeCommand usrInpSrc
+        
+-- | core function lex, parse and eval the user input
+runCodeCommand :: String -> Either BatchModeError BatchModeResult
+runCodeCommand inpSrc = do
+  tokens <- doStep BMLexFailure $ lexTinyBang "<stdin>" inpSrc
+  ast <- doStep BMParserFailure $ parseTinyBang
+              ParserContext { contextDocument = UnknownDocument
+                            , contextDocumentName = "<stdin>" }
+              tokens
+  (env, var) <- doStep BMEvalFailure $ evalTest ast            
+  return $ BatchModeResult var (flowVarMap env) (cellVarMap env)
+  where
+    doStep errConstr computation =
+      case computation of
+        Left err -> Left $ errConstr err
+        Right ans -> Right ans
+        
+    -- | tmp function for BMEvalFailure without [Clause]
+    evalTest :: Expr -> Either EvalError (EvalEnv, FlowVar)    
+    evalTest expr =
+      case eval expr of
+        Left (evalerr, clauseLst) -> Left evalerr
+        Right resultTuple -> Right resultTuple
 
-runCodeCommand :: String -> String
-runCodeCommand inpSrc = TL.stringyInterpretSource config inpSrc
-  where config = InterpreterConfiguration
-                   { typechecking = False
-                   , evaluating = True
-                   , databaseType = Simple }
-                   
-{-
-messageHandler :: String -> String
-messageHandler inp =
-    case fromJSON str of
-        Nothing -> toJSON $ ErrorC $ ProtocolErrorC $ UnrecognizedCommand str
-        Just obj -> toJSON $ commandHandler obj
-
-    case cmdObj of
-        RunCodeCommandC (RunCodeCommand { c = requestId, sub_rcc = RunCodeCommand { code = src, filename = filename }}) ->
-            case runCodeCommand filename src of
-                Left runCodeError ->
-                    case runCodeError of
-                        RunCodeLexError msg -> ErrorResponseC $ ErrorResponse { err = runCodeError }
-                Right (env,var) -> RunCodeResponseC ...
-    
-runCodeCommand :: String -> String -> Either RunCodeError (EvalEnv, FlowVar)
-runCodeCommand filename src = do
-    tokens <- doStep RunCodeLexError $ lexTinyBang filename src
-    ast <- doStep RunCodeParseError $ parseTinyBang tokens
-    doStep RunCodeEvalError $ eval ast
-    where
-        doStep :: (a -> RunCodeError) -> Either a b -> Either RunCodeError b
-        doStep convert value =
-            case value of
-                Left v -> convert v
-                Right v -> Right v
--}
