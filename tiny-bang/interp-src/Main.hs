@@ -97,8 +97,12 @@ main = do
       putStrLn "###"
       hFlush stdout            
 
+      -- | TODO change getLine to getContent
       getLine >>= \inp -> putStrLn . messageHandler $ inp
-            
+
+      putStrLn "###"
+      hFlush stdout
+      
     else do 
       putStrLn versionStr
       putStrLn ""

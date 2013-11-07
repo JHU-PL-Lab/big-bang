@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 -- | Interface open to interpreter
 messageHandler :: String -> String
 messageHandler inpJsonStr = case (decode . BL.pack $ inpJsonStr) of
-  Nothing -> BL.unpack . encode $ BatchModeErrorC . BMInterpreterFailure $ "Invalid Input"
+  Nothing -> BL.unpack . encode $ BatchModeErrorC . BMProtocolFailure $ "Invalid Input"
   Just obj -> BL.unpack . encode . commandHandler $ obj
 
 -- | Bridge function               
