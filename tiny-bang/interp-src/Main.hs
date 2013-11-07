@@ -92,15 +92,15 @@ main = do
   if batchMode opts     
     then do 
 
-      putStrLn $ versionStr ++ " --Batch mode"
-      putStrLn ""
-      putStrLn "###"
-      hFlush stdout            
+      --putStrLn $ versionStr ++ " --Batch mode"
+      --putStrLn ""
+      --putStrLn "###"
+      --hFlush stdout            
 
       -- | TODO change getLine to getContent
       getLine >>= \inp -> putStrLn . messageHandler $ inp
 
-      putStrLn "###"
+      --putStrLn "###"
       hFlush stdout
       
     else do 
