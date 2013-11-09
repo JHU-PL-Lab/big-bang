@@ -1,10 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DataKinds, KindSignatures, GADTs #-}
 
 module Language.TinyBang.Communicator.FromHaskellObject where 
 
 import Control.Applicative ((<$>), (<*>), empty)
 import Data.Set
-import Data.Map
+import Data.Map as DM
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -13,137 +13,16 @@ import Language.TinyBang.Ast as AST
 import Language.TinyBang.Interpreter as I
 import Language.TinyBang.Syntax.Location 
 
-{-
-
-data EvalError
-  = IllFormedExpression IllFormedness
-  | OpenExpression (Set AnyVar)
-  | FlowVarNotClosed FlowVar
-  | CellVarNotClosed CellVar
-  --| ProjectionFailure FlowVar AnyProjector
-  | ApplicationFailure FlowVar FlowVar
-  deriving (Eq, Ord, Show)
-
-/Ast/WellFormedness.hs
-data IllFormedness
-  = DuplicateFlowBinding FlowVar
-  | DuplicateFlowUse FlowVar
-  | DuplicateCellBinding CellVar
-  --| InvalidExpressionEnd Clause
-  | EmptyExpression
-  deriving (Eq, Ord, Show)
-
-/Ast/Data.hs
-data AnyVar
-  = SomeFlowVar FlowVar
-  | SomeCellVar CellVar
-  deriving (Eq, Ord, Show)
-
-data FlowVar
-  = FlowVar Origin String
-  | GenFlowVar Origin String Integer
-  deriving (Show)
-
-data CellVar
-  = CellVar Origin String
-  | GenCellVar Origin String Integer
-  deriving (Show)
-
-data Origin
-  = SourceOrigin SourceRegion
-    -- ^ Signifies an AST node which originates from source code.
-
-| ComputedOrigin [Origin]
-    -- ^ Signifies an AST node which originates from the computation of other
-    --   nodes.  The list contains the origins of the nodes involved in the
-    --   computation.
-  deriving (Eq, Ord, Show)
-
--- |A data type representing general clauses.
-data Clause
-  = RedexDef Origin FlowVar Redex
-  | CellSet Origin CellVar FlowVar
-  | CellGet Origin FlowVar CellVar
-  | Throws Origin FlowVar FlowVar
-  | Evaluated EvaluatedClause
-  deriving (Show)
-
--- |A data type representing evaluated clauses.
-data EvaluatedClause
-  = ValueDef Origin FlowVar Value
-  | CellDef Origin CellQualifier CellVar FlowVar
-  | Flow Origin FlowVar FlowKind FlowVar
-  deriving (Show)
-
--- |A data type representing reducible expressions.
-data Redex
-  = Define Origin FlowVar
-  | Appl Origin FlowVar FlowVar
-  | BinOp Origin FlowVar BinaryOperator FlowVar
-  deriving (Show)
-
--- |A data type representing value forms.
-data Value
-  = VInt Origin Integer
-  | VChar Origin Char
-  | VEmptyOnion Origin
-  | VLabel Origin LabelName CellVar
-  | VOnion Origin FlowVar FlowVar
-  | VOnionFilter Origin FlowVar OnionOp AnyProjector
-  | VScape Origin Pattern Expr
-
--- |A data type describing patterns.
-data Pattern
-  = ValuePattern Origin CellVar InnerPattern
-  | ExnPattern Origin CellVar InnerPattern
-  deriving (Show)
-
--- |An enumeration of binary value operators.
-data BinaryOperator
-  = OpPlus Origin
-  | OpMinus Origin
-  | OpMult Origin
-  | OpEqual Origin
-  | OpLess Origin
-  | OpGreater Origin
-  deriving (Show)
-
-/syntax/location.hs
--- |Defines a region of source code.
-data SourceRegion
-  = SourceRegion -- ^ Signifies a source region over known locations
-      SourceLocation -- ^ The start position
-      SourceLocation -- ^ The end position
-  deriving (Eq, Ord, Show)
-  
--- |Defines a data type for text positions.  The @lineNo@ is one-based; the
---  @colNo@ is zero-based.
-data SourceLocation
-  = TextSource
-      { textSourceDocument :: SourceDocument
-      , textSourceLineNo :: Int
-      , textSourceColNo :: Int }
-  | Unknown
-  deriving (Eq, Ord, Show)
-  
--- |Defines a data type describing source code documents.  A source document is
---  some resource which contains the source code in textual form.
-data SourceDocument
-  = UnknownDocument
-  deriving (Eq, Ord, Show)
-  
--}
-  
 data FromHaskellObject  
   = BatchModeErrorC BatchModeError
-  | BatchModeResultC BatchModeResult
+  | BatchModeResultC BatchModeResult--BMResultForJSON
     
 data BatchModeError
   = BMProtocolFailure String
   | BMLexFailure String
   | BMParserFailure String
   -- | BMTypecheckFailure (TypecheckingError db)
-  | BMEvalFailure EvalError -- | [Clause]
+  | BMEvalFailure EvalError [Clause]
 
 data BatchModeResult
   = BatchModeResult
@@ -154,6 +33,17 @@ data BatchModeResult
       -- |The mapping from cell variables to their contents.
       (Map CellVar FlowVar)
   deriving (Eq, Ord, Show)
+
+{-data BMResultForJSON
+  = BMResultForJSON
+      FlowVar
+      (FlowVar, AST.Value)
+      --(CellVar, FlowVar)
+  deriving (Eq, Ord, Show)    
+-}
+-- | convert BatchModeResult to aeson readable format
+--convertResultMapToTuple :: BatchModeResult -> BMResultForJSON
+--convertResultMapToTuple (BatchModeResult flowVar mapFV mapCF) = BMResultForJSON flowVar (head . DM.toList $ mapFV) 
 
 {-  TODO implement toJSON for Clause
 -}
@@ -200,7 +90,7 @@ instance ToJSON LabelName where
   toJSON (LabelName origin str) = object ["type" .= ("LabelName" :: String), "origin" .= (toJSON origin), "nameStr" .= (toJSON str)]
   
 instance ToJSON OnionOp where
-  toJSON (OpOnionSubOrigin origin) = object ["type" .= ("OpOnionSubOrigin" :: String), "origin" .= (toJSON origin)]
+  toJSON (OpOnionSub origin) = object ["type" .= ("OpOnionSub" :: String), "origin" .= (toJSON origin)]
   toJSON (OpOnionProj origin) = object ["type" .= ("OpOnionProj" :: String), "origin" .= (toJSON origin)]
 
 instance ToJSON PrimitiveType where 
@@ -210,7 +100,7 @@ instance ToJSON PrimitiveType where
 instance ToJSON InnerPattern where
   toJSON (PrimitivePattern origin primitiveType) = object ["type" .= ("PrimitivePattern" :: String), "origin" .= (toJSON origin), "primitiveType" .= (toJSON primitiveType)]
   toJSON (LabelPattern origin labelName cellVar innerPattern) = object ["type" .= ("LabelPattern" :: String), "origin" .= (toJSON origin), "labelName" .= (toJSON labelName), "cellVar" .= (toJSON cellVar), "innerPattern" .= (toJSON innerPattern)]
-  toJSON (ConjunctionPattern origin innerPattern innerPattern2) = object ["type" .= ("ConjunctionPattern" :: String), "origin" .= (toJSON origin), "innerPattern" .= (toJSOn innerPattern), "innerPattern2" .= (toJSON innerPattern2)]
+  toJSON (ConjunctionPattern origin innerPattern innerPattern2) = object ["type" .= ("ConjunctionPattern" :: String), "origin" .= (toJSON origin), "innerPattern" .= (toJSON innerPattern), "innerPattern2" .= (toJSON innerPattern2)]
   toJSON (ScapePattern origin) = object ["type" .= ("ScapePattern" :: String), "origin" .= (toJSON origin)]
   toJSON (EmptyOnionPattern origin) = object ["type" .= ("EmptyOnionPattern" :: String), "origin" .= (toJSON origin)]
 
@@ -219,7 +109,7 @@ instance ToJSON ProjectorTag where
   toJSON ProjLabelTag = object ["type" .= ("ProjLabelTag" :: String)]
   toJSON ProjFunTag = object ["type" .= ("ProjFunTag" :: String)]
   
-instance ToJSON Projector where
+instance ToJSON (Projector tag ) where
   toJSON (ProjPrim origin primitiveType) = object ["type" .= ("ProjPrim" :: String), "origin" .= (toJSON origin), "primitiveType" .= (toJSON primitiveType)]
   toJSON (ProjLabel origin labelName) = object ["type" .= ("ProjLabel" :: String), "origin" .= (toJSON origin), "labelName" .= (toJSON labelName)]
   toJSON (ProjFun origin ) = object ["type" .= ("ProjFun" :: String), "origin" .= (toJSON origin)]
@@ -229,24 +119,24 @@ instance ToJSON AnyProjector where
   
 instance ToJSON Pattern where
   toJSON (ValuePattern origin cellVar innerPattern) = object ["type" .= ("ValuePattern" :: String), "origin" .= (toJSON origin), "cellVar" .= (toJSON cellVar), "innerPattern" .= (toJSON innerPattern)]
-  toJSOn (ExnPattern origin cellvar innerPattern) = object ["type" .= ("ExnPattern" :: String), "origin" .= (toJSON origin), "cellVar" .= (toJSON cellVar), "innerPattern" .= (toJSON innerPattern)]
+  toJSON (ExnPattern origin cellVar innerPattern) = object ["type" .= ("ExnPattern" :: String), "origin" .= (toJSON origin), "cellVar" .= (toJSON cellVar), "innerPattern" .= (toJSON innerPattern)]
   
 instance ToJSON Expr where 
-  toJSON (Expr origin clauseLst) = object ["type" .= ("Expr" :: String), "origin" .= (toJSON orign), "clauseLst" .= (toJSON clauseLst)]
+  toJSON (Expr origin clauseLst) = object ["type" .= ("Expr" :: String), "origin" .= (toJSON origin), "clauseLst" .= (toJSON clauseLst)]
   
-instance ToJSON Value where
+instance ToJSON AST.Value where
   toJSON (VInt origin i) = object ["type" .= ("VInt" :: String), "origin" .= (toJSON origin), "intVar" .= i]
   toJSON (VChar origin ch) = object ["type" .= ("VChar" :: String), "origin" .= (toJSON origin), "charVar" .= ch]
   toJSON (VEmptyOnion origin) = object ["type" .= ("VEmptyOnion" :: String), "origin" .= (toJSON origin)]
   toJSON (VLabel origin labelName cellVar) = object ["type" .= ("VLabel" :: String), "origin" .= (toJSON origin), "labelName" .= (toJSON labelName), "cellVar" .= (toJSON cellVar)]
   toJSON (VOnion origin flowVar flowVar2) = object ["type" .= ("Vonion" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "flowVar2" .= (toJSON flowVar2)]
-  toJSON (VOnionFilter origin flowVar onionOp anyProjector) = object ["type" .= ("VonionFilter" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "onionOp" .= (toJSON onionOP), "anyProjector" .= (toJSON anyProjector)]
+  toJSON (VOnionFilter origin flowVar onionOp anyProjector) = object ["type" .= ("VonionFilter" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "onionOp" .= (toJSON onionOp), "anyProjector" .= (toJSON anyProjector)]
   toJSON (VScape origin pattern expr) = object ["type" .= ("VScape" :: String), "origin" .= (toJSON origin), "pattern" .= (toJSON pattern), "expr" .= (toJSON expr)]
 
 instance ToJSON CellQualifier where
   toJSON (QualFinal origin) = object ["type" .= ("QualFinal" :: String), "origin" .= (toJSON origin)]
   toJSON (QualImmutable origin) = object ["type" .= ("QualImmutable" :: String), "origin" .= (toJSON origin)]
-  toJSOn (QualNone origin) = object ["type" .= ("QualNone" :: String), "origin" .= (toJSON origin)]
+  toJSON (QualNone origin) = object ["type" .= ("QualNone" :: String), "origin" .= (toJSON origin)]
 
 instance ToJSON FlowKind where
   toJSON FlowExn = object ["type" .= ("FlowExn" :: String)]
@@ -257,9 +147,9 @@ instance ToJSON EvaluatedClause where
   toJSON (Flow origin flowVar flowKind flowVar2) = object ["type" .= ("Flow" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "flowKind" .= (toJSON flowKind), "flowVar2" .= (toJSON flowVar2)]
   
 instance ToJSON Clause where
-  toJSON (RedexDef origin flowVar redex) = object ["type" .= ("RedexDef" :: String), "origin" .= (toJSON orign), "flowVar" .= (toJSON flowVar), "redex" .= (toJSON redex)]
+  toJSON (RedexDef origin flowVar redex) = object ["type" .= ("RedexDef" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "redex" .= (toJSON redex)]
   toJSON (CellSet origin flowVar cellVar) = object ["type" .= ("Cellset" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "cellVar" .= (toJSON cellVar)]
-  toJSON (CellGet origin flowVar cellVar) = object ["type" .= ("CellGet" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSOn flowVar) , "cellVar" .= (toJSON cellVar)]
+  toJSON (CellGet origin flowVar cellVar) = object ["type" .= ("CellGet" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar) , "cellVar" .= (toJSON cellVar)]
   toJSON (Throws origin flowVar flowVar2) = object ["type" .= ("Throws" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "flowVar2" .= (toJSON flowVar2)]
   toJSON (Evaluated evalClause) = object ["type" .= ("Evaluated" :: String), "evalClause" .= (toJSON evalClause)]
 
@@ -270,7 +160,7 @@ instance ToJSON IllFormedness where
   toJSON (InvalidExpressionEnd clause) = object [ "type" .= ("InvalidExpressionEnd" :: String), "Clause" .= (toJSON clause)]
   toJSON (EmptyExpression) = object [ "type" .= ("EmptyExpression" :: String)]
 
--- | Main toJSON instance for evalError
+-- | ToJSON instance for evalError
 instance ToJSON EvalError where
   toJSON (OpenExpression varSet) = object ["type" .= ("OpenExpression" :: String), "VarSet" .= (toJSON varSet)]
   toJSON (FlowVarNotClosed flowVar) = object [ "type" .= ("FlowVarNotClosedError" :: String), "FlowVar" .= (toJSON flowVar) ]
@@ -282,5 +172,6 @@ instance ToJSON FromHaskellObject where
   toJSON (BatchModeErrorC (BMLexFailure errStr)) = object  [ "type" .= ("LexerFailure" :: String),  "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
   toJSON (BatchModeErrorC (BMParserFailure errStr)) = object  ["type" .= ("ParserError" :: String),  "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
   toJSON (BatchModeErrorC (BMProtocolFailure errStr)) = object  ["type" .= ("ProtocolError" :: String), "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
-  toJSON (BatchModeErrorC (BMEvalFailure err)) = object ["type" .= ("EvaluationFailure" :: String), "err" .= (toJSON err)]
-
+  toJSON (BatchModeErrorC (BMEvalFailure err clauseLst)) = object ["type" .= ("EvaluationFailure" :: String), "err" .= (toJSON err), "caluseLst" .= (toJSON clauseLst)]
+  toJSON (BatchModeResultC (BatchModeResult flowVar flowMap cellMap)) = object ["type" .= ("BMResult" :: String), "flowVar" .= flowVar, "flowToValueMap" .= (toJSON $ DM.toList flowMap), "cellToFlowMap" .= (toJSON $ DM.toList cellMap)]
+ -- toJSON (BatchModeResultC (BMResultForJSON flowVar (keyFlowVar, value))) = object ["type" .= ("BMResult" :: String), "flowVar" .= flowVar, "flowToValueMap" .= (toJSON (keyFlowVar, value))]  
