@@ -3,18 +3,21 @@ package edu.jhu.cs.bigbang.communicator.fromHS;
 import edu.jhu.cs.bigbang.communicator.util.CommunicatorSerializable;
 
 public class FromHaskellObject implements CommunicatorSerializable{
-	private int fho;
+	private int cmdId;
 
-	public int getFho() {
-		return fho;
+	public int getCmdId() {
+		return cmdId;
 	}
 
-	public void setFho(int fho) {
-		this.fho = fho;
+	public void setCmdId(int cmdId) {
+		this.cmdId = cmdId;
 	}
 
-	public FromHaskellObject(int fho) {
-		super();
-		this.fho = fho;
+	public FromHaskellObject(int cmdId) {
+		this.cmdId = cmdId;
 	}
+	
+	
+
+
 }

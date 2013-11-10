@@ -17,17 +17,8 @@ public class Main {
 
 	public static void main(String[] args) throws TinyBangProtocolException, TinyBangInternalErrorException {		
 		TinyBangRuntime tbr = new TinyBangRuntime();
-		tbr.runSubProcess();		
-	}
-	/*public static void main(String args[]) {
-		String workingDir = null;
-		try {
-			workingDir = new File("../tiny-bang/lib-src/Language/TinyBang/Communicator/").getCanonicalPath();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println("Current working directory : " + workingDir);
-	}*/
+		String test = tbr.runSubProcess(); 
+		System.out.println(test);
+	}	
 	
 }

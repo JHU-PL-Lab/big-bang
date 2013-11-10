@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
+
 import edu.jhu.cs.bigbang.communicator.exception.*;
 import edu.jhu.cs.bigbang.communicator.fromHS.*;
 import edu.jhu.cs.bigbang.communicator.toHS.*;
@@ -38,11 +39,12 @@ public class TinyBangProcess {
 		printf(tho.getClass().getSimpleName());
 		printf("Json String which will be sent to haskell: " + inputStr);
 		
-		try {			
-			stToHaskell.write(inputStr.getBytes());			
+		try {
+			
+			stToHaskell.write(inputStr.getBytes());
 			stToHaskell.close();
 			
-			// if there is error message, print them out
+			// if there is an error message, print it out
 			BufferedReader br_err = new BufferedReader(new InputStreamReader(stderr));			
 			String errMsg = null;
 			
@@ -55,7 +57,19 @@ public class TinyBangProcess {
 		}			
 	}
 	
-	public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) throws TinyBangProtocolException, TinyBangInternalErrorException {
+	// method for test
+	public String readObject() {
+		BufferedReader br = new BufferedReader(new InputStreamReader(stFromHaskell));				
+		String resultStr = null;
+		try {
+			resultStr = br.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return resultStr;
+	}
+	
+	/*public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) {
 				
 		BufferedReader br = new BufferedReader(new InputStreamReader(stFromHaskell));				
 		String resultStr = null;
@@ -67,14 +81,14 @@ public class TinyBangProcess {
 			printf("Json string received from haskell: " + resultStr);			
 			
 			GsonBuilder gb = new GsonBuilder();
-	 		gb.registerTypeHierarchyAdapter(FromHaskellObject.class, new FromHaskellObjectAdapter());
+	 		//gb.registerTypeHierarchyAdapter(FromHaskellObject.class, new FromHaskellObjectAdapter());
 	 		Gson g = gb.create();	 		
 			fko = g.fromJson(resultStr, FromHaskellObject.class);						
 			
 		} catch (IOException e2) {
 			printf("Encount IOException when trying to read stdout.");
-		}		
-		
+		}	
+		`
 		if (fko instanceof ProtocolError) {
 			throw new TinyBangProtocolException("Encount a protocol error.");
 		} else if (fko instanceof FromHaskellObject) {			
@@ -85,8 +99,8 @@ public class TinyBangProcess {
         } else {            
         	throw new TinyBangInternalErrorException("Encount an internal error.");									            
         }
-				
-	}
+	
+	}*/
 	
 	public void destroySubProcess() {
 		p.destroy();
