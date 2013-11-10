@@ -42,18 +42,11 @@ runCodeCommand inpSrc = do
               ParserContext { contextDocument = UnknownDocument
                             , contextDocumentName = "<stdin>" }
               tokens
-  (env, var) <- doStep BMEvalFailure $ evalTest ast            
-  return $ BatchModeResult var (flowVarMap env) (cellVarMap env)
+  (env, var) <- doStep evalFail $ eval ast            
+  return (BatchModeResult var (flowVarMap env) (cellVarMap env)) 
   where
     doStep errConstr computation =
       case computation of
         Left err -> Left $ errConstr err
         Right ans -> Right ans
-        
-    -- | tmp function for BMEvalFailure without [Clause]
-    evalTest :: Expr -> Either EvalError (EvalEnv, FlowVar)    
-    evalTest expr =
-      case eval expr of
-        Left (evalerr, clauseLst) -> Left evalerr
-        Right resultTuple -> Right resultTuple
-
+    evalFail (err,cls) = BMEvalFailure err cls

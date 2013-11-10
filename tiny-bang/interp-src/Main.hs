@@ -92,15 +92,9 @@ main = do
   if batchMode opts     
     then do 
 
-      --putStrLn $ versionStr ++ " --Batch mode"
-      --putStrLn ""
-      --putStrLn "###"
-      --hFlush stdout            
-
-      -- | TODO change getLine to getContent
-      getLine >>= \inp -> putStrLn . messageHandler $ inp
-
-      --putStrLn "###"
+      inp <- getContents
+      let exprSrcs = filter (not . null) $ splitOn ";;" inp
+      mapM_ (putStrLn . messageHandler) exprSrcs
       hFlush stdout
       
     else do 
