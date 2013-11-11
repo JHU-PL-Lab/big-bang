@@ -48,4 +48,4 @@ eval input =
       Left x -> return x
       Right _ -> do  
                    let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
-                   return $ "\nTranslation:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult
+                   return $ "\nTranslationn:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult
