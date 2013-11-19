@@ -2,22 +2,8 @@ package edu.jhu.cs.bigbang.communicator.fromHS;
 
 import edu.jhu.cs.bigbang.communicator.util.CommunicatorSerializable;
 
-public class FromHaskellObject implements CommunicatorSerializable{
-	private int cmdId;
-
-	public int getCmdId() {
-		return cmdId;
-	}
-
-	public void setCmdId(int cmdId) {
-		this.cmdId = cmdId;
-	}
-
-	public FromHaskellObject(int cmdId) {
-		this.cmdId = cmdId;
-	}
-	
-	
-
-
+//TODO make it into an interface
+// two implementations : 1. Result(abstract class) which should have the cmdId
+//                       2. FHError(abstract class) which should also have the cmdId and extends exception   
+public interface FromHaskellObject extends CommunicatorSerializable{
 }

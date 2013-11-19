@@ -93,10 +93,10 @@ main = do
     then do 
 
       inp <- getContents
-      let exprSrcs = filter (not . null) $ splitOn ";;" inp
+      let exprSrcs = filter (not . null) $ splitOn "\n" inp
       mapM_ (putStrLn . messageHandler) exprSrcs
       hFlush stdout
-      
+ 
     else do 
       putStrLn versionStr
       putStrLn ""

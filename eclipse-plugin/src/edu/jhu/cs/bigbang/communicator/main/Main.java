@@ -11,7 +11,7 @@ import edu.jhu.cs.bigbang.communicator.exception.TinyBangInternalErrorException;
 import edu.jhu.cs.bigbang.communicator.exception.TinyBangProtocolException;
 import edu.jhu.cs.bigbang.communicator.toHS.*;
 import edu.jhu.cs.bigbang.communicator.util.TinyBangRuntime;
-import edu.jhu.cs.bigbang.communicator.util.ToHaskellObjectAdapter;
+import edu.jhu.cs.bigbang.communicator.util.adapter.ToHaskellObjectAdapter;
 
 public class Main {
 

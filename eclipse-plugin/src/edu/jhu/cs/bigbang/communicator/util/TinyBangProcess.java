@@ -6,10 +6,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
-
 import edu.jhu.cs.bigbang.communicator.exception.*;
 import edu.jhu.cs.bigbang.communicator.fromHS.*;
 import edu.jhu.cs.bigbang.communicator.toHS.*;
+import edu.jhu.cs.bigbang.communicator.util.adapter.ToHaskellObjectAdapter;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -20,12 +20,14 @@ public class TinyBangProcess {
 	private OutputStream stToHaskell = null;
 	private InputStream stFromHaskell = null;
 	private InputStream stderr = null;			
+	private BufferedReader br = null;
 	
 	public TinyBangProcess(ProcessBuilder pb) {
 		try {
 			p = pb.start();
 			stToHaskell = p.getOutputStream();
 			stFromHaskell = p.getInputStream();
+			br = new BufferedReader(new InputStreamReader(stFromHaskell));
 			stderr = p.getErrorStream();
 		} catch (IOException e) {		
 			printf("Encount IOException, when tring to get stdin, stdout or stderr from subprocess");
@@ -38,19 +40,21 @@ public class TinyBangProcess {
 		String inputStr = g.toJson(tho);
 		printf(tho.getClass().getSimpleName());
 		printf("Json String which will be sent to haskell: " + inputStr);
+		BufferedReader br = new BufferedReader(new InputStreamReader(stFromHaskell));				
 		
 		try {
 			
-			stToHaskell.write(inputStr.getBytes());
-			stToHaskell.close();
+			stToHaskell.write((inputStr.trim() + "\n").getBytes());
+			stToHaskell.flush();
 			
-			// if there is an error message, print it out
+			// TODO: something with the error stream
+	/*		// if there is an error message, print it out
 			BufferedReader br_err = new BufferedReader(new InputStreamReader(stderr));			
 			String errMsg = null;
 			
 			while ((errMsg=br_err.readLine()) != null) {
 				System.out.println(errMsg);
-			}
+			}*/
 			
 		} catch (IOException e) {		
 			printf("Encount IOException, when tring to write json string to interpreter stdin");
@@ -59,7 +63,7 @@ public class TinyBangProcess {
 	
 	// method for test
 	public String readObject() {
-		BufferedReader br = new BufferedReader(new InputStreamReader(stFromHaskell));				
+		
 		String resultStr = null;
 		try {
 			resultStr = br.readLine();
@@ -71,7 +75,7 @@ public class TinyBangProcess {
 	
 	/*public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) {
 				
-		BufferedReader br = new BufferedReader(new InputStreamReader(stFromHaskell));				
+		
 		String resultStr = null;
 		FromHaskellObject fko = null;				
 		
