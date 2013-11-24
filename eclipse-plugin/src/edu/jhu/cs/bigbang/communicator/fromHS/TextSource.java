@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class TextSource extends SourceLocation{
+	
 	private SourceDocument textSourceDocument;
 	private int textSourceLineNo;
 	private int textSourceCoNo;
@@ -31,7 +32,6 @@ public class TextSource extends SourceLocation{
 
 	public TextSource(SourceDocument sourceDoc, int textSourceLineNo,
 			int textSourceCoNo) {
-		super();
 		this.textSourceDocument = sourceDoc;
 		this.textSourceLineNo = textSourceLineNo;
 		this.textSourceCoNo = textSourceCoNo;

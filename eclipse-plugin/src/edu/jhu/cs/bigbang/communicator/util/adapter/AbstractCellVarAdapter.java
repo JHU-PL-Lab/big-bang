@@ -28,7 +28,7 @@ public class AbstractCellVarAdapter implements JsonDeserializer<AbstractCellVar>
 		Gson g = gb.create();
 		Origin origin = g.fromJson(jo.get("origin").getAsJsonObject(),Origin.class);
 		String cellContents = jo.get("cellContents").getAsString();
-		if (type == "CellVar") {
+		if (type.equals("CellVar")) {
 			aCellVar = new CellVar(origin, cellContents);
 		}else {
 			int cellNum = jo.get("cellNum").getAsInt();

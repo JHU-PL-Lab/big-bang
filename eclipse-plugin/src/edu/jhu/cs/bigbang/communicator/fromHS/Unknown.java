@@ -13,7 +13,6 @@ public class Unknown extends SourceLocation{
 	}
 
 	public Unknown(String type) {
-		super();
 		this.type = type;
 	}
 	

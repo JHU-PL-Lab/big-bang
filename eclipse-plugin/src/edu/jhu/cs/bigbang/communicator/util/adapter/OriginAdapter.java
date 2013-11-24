@@ -28,12 +28,13 @@ public class OriginAdapter implements JsonDeserializer<Origin>{
         String type = jo.get("type").getAsString();
         Origin origin = null;
         
-        if(type == "SourceOrigin") {
+        if(type.equals("SourceOrigin")) {
         	
         	// deserialize json string for SourceOrigin
-        	GsonBuilder gb = new GsonBuilder();
-        	Gson g = gb.create();
-        	origin = new SourceOrigin(g.fromJson(jo.get("SourceOrigin").getAsJsonObject(), SourceRegion.class));
+        	GsonBuilder sourceRegionGb = new GsonBuilder();
+        	sourceRegionGb.registerTypeHierarchyAdapter(SourceRegion.class, new SourceRegionAdapter());
+        	Gson sourceRegionG = sourceRegionGb.create();
+        	origin = new SourceOrigin(sourceRegionG.fromJson(jo.get("SourceOrigin").getAsJsonObject(), SourceRegion.class));
         	
         } else {
         	

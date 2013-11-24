@@ -32,11 +32,11 @@ public class CellQualifierAdapter implements JsonDeserializer<CellQualifier>{
 		
 		CellQualifier cq = null;
 		
-		if(type == "QualFinal") {
+		if(type.equals("QualFinal")) {
 			
 			cq = new QualFinal(origin);
 			
-		} else if (type == "QualImmutable") {
+		} else if (type.equals("QualImmutable")) {
 			
 			cq = new QualImmutable(origin);
 			

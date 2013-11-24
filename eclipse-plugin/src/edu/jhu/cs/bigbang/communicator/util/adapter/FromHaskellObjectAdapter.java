@@ -28,7 +28,9 @@ public class FromHaskellObjectAdapter implements
 		
 		String type = jo.get("type").getAsString();
 		
-		FromHaskellObject fho;
+System.out.println("type is: " + type);
+		
+		FromHaskellObject fho = null;
 		
 		GsonBuilder flowVarGb = new GsonBuilder();
         flowVarGb.registerTypeHierarchyAdapter(AbstractFlowVar.class, new AbstractFlowVarAdapter());
@@ -41,16 +43,15 @@ public class FromHaskellObjectAdapter implements
         GsonBuilder cellVarGb = new GsonBuilder();
         cellVarGb.registerTypeHierarchyAdapter(AbstractCellVar.class, new AbstractCellVarAdapter());
         Gson cellVarG = cellVarGb.create();
-        
-		
-		if(type == "BatchModeError") {
+        			
+		if(type.equals("BatchModeError")) {
 			
 			//TODO implement error generator
 			
 			fho = new BatchModeError(1);
 			
-		} else if (type == "BatchModeResult") {
-			
+		} else if (type.equals("BatchModeResult")) {
+
 			AbstractFlowVar flowVar =  flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
 			
 			HashMap<AbstractFlowVar, Value> flowToValueMap = new HashMap<AbstractFlowVar, Value>();
@@ -64,6 +65,7 @@ public class FromHaskellObjectAdapter implements
 				
 				JsonArray eleOfMap = (JsonArray) outerI.next();
 				
+				// The format is known in advanced, the key is flowVar and the value is Value object
 				JsonElement flowVarJe = eleOfMap.get(0);
 				AbstractFlowVar flowVar1 = flowVarG.fromJson(flowVarJe, AbstractFlowVar.class);
 				
@@ -81,6 +83,7 @@ public class FromHaskellObjectAdapter implements
 				
 				JsonArray eleOfMap = (JsonArray) cellToFlowOuterI.next();
 				
+				// The format is known in advanced, the key is the cellVar and the value is flowVar
 				JsonElement cellVarJe = eleOfMap.get(0);
 				AbstractCellVar cellVar = cellVarG.fromJson(cellVarJe, AbstractCellVar.class);
 				

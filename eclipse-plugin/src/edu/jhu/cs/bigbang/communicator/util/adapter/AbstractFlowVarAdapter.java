@@ -28,7 +28,7 @@ public class AbstractFlowVarAdapter implements JsonDeserializer<AbstractFlowVar>
 		Gson g = gb.create();
 		Origin origin = g.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 		String flowContents = jo.get("flowContents").getAsString();
-		if(type=="FlowVar") {						
+		if(type.equals("FlowVar")) {						
 			aFlowVar = new FlowVar(origin, flowContents);
 		} else {
 			int flowNum = jo.get("flowNum").getAsInt();

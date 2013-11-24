@@ -31,7 +31,7 @@ public class PrimitiveTypeAdapter implements JsonDeserializer<PrimitiveType>{
 		
 		PrimitiveType pt = null;
 		
-		if(type == "PrimInt") {
+		if(type.equals("PrimInt")) {
 			pt = new PrimInt(origin);
 		}else {
 			pt = new PrimChar(origin);

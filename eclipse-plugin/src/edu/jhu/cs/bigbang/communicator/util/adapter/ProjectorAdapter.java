@@ -33,7 +33,7 @@ public class ProjectorAdapter implements JsonDeserializer<Projector>{
         Projector projector = null;
         
         String type = jo.get("type").getAsString();
-        if(type == "ProjPrim") {
+        if(type.equals("ProjPrim")) {
         	
         	GsonBuilder primitiveTypeGb = new GsonBuilder();
         	primitiveTypeGb.registerTypeHierarchyAdapter(PrimitiveType.class, new PrimitiveTypeAdapter());
@@ -43,7 +43,7 @@ public class ProjectorAdapter implements JsonDeserializer<Projector>{
         	
         	projector = new ProjPrim(origin, primitiveType);
         	
-        }else if (type == "ProjLabel") {
+        }else if (type.equals("ProjLabel")) {
         	
         	GsonBuilder labelNameGb = new GsonBuilder();
         	labelNameGb.registerTypeHierarchyAdapter(LabelName.class, new LabelNameAdapter());

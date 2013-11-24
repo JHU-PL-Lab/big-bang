@@ -30,7 +30,7 @@ public class OnionOpAdapter implements JsonDeserializer<OnionOp>{
 		
 		OnionOp oo = null;
 		
-		if (type == "OpOnionSub") {
+		if (type.equals("OpOnionSub")) {
 			oo = new OpOnionSub(origin);
 		} else {
 			oo = new OpOnionProj(origin);

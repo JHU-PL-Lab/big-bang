@@ -46,7 +46,7 @@ public class PatternAdapter implements JsonDeserializer<Pattern>{
 		
 		Pattern pattern= null;
 		
-		if (type == "ValuePattern") {
+		if (type.equals("ValuePattern")) {
 			pattern = new ValuePattern(origin, cellVar, innerPattern);
 		} else {
 			pattern = new ExnPattern(origin, cellVar, innerPattern);

@@ -6,9 +6,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
-import edu.jhu.cs.bigbang.communicator.exception.*;
-import edu.jhu.cs.bigbang.communicator.fromHS.*;
+import edu.jhu.cs.bigbang.communicator.fromHS.FromHaskellObject;
 import edu.jhu.cs.bigbang.communicator.toHS.*;
+import edu.jhu.cs.bigbang.communicator.util.adapter.FromHaskellObjectAdapter;
 import edu.jhu.cs.bigbang.communicator.util.adapter.ToHaskellObjectAdapter;
 
 import com.google.gson.Gson;
@@ -35,6 +35,7 @@ public class TinyBangProcess {
 	}
 	
 	public void sendObj(ToHaskellObject tho) {
+		
 		GsonBuilder gb = new GsonBuilder();
 		Gson g = gb.registerTypeHierarchyAdapter(ToHaskellObject.class, new ToHaskellObjectAdapter()).create(); 		
 		String inputStr = g.toJson(tho);
@@ -45,35 +46,44 @@ public class TinyBangProcess {
 		try {
 			
 			stToHaskell.write((inputStr.trim() + "\n").getBytes());
-			stToHaskell.flush();
+			stToHaskell.close();
 			
-			// TODO: something with the error stream
-	/*		// if there is an error message, print it out
+		   // TODO: something with the error stream
+	       
 			BufferedReader br_err = new BufferedReader(new InputStreamReader(stderr));			
 			String errMsg = null;
 			
 			while ((errMsg=br_err.readLine()) != null) {
 				System.out.println(errMsg);
-			}*/
-			
+			}
+		    			
 		} catch (IOException e) {		
 			printf("Encount IOException, when tring to write json string to interpreter stdin");
 		}			
 	}
 	
 	// method for test
-	public String readObject() {
+	public FromHaskellObject readObject() {
 		
 		String resultStr = null;
+		FromHaskellObject fho = null;
+		
 		try {
 			resultStr = br.readLine();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return resultStr;
+		
+		GsonBuilder fhoGb = new GsonBuilder();
+		fhoGb.registerTypeHierarchyAdapter(FromHaskellObject.class, new FromHaskellObjectAdapter());
+		Gson fhoG = fhoGb.create();
+		fho = fhoG.fromJson(resultStr, FromHaskellObject.class);		
+		
+		return fho;
+		
 	}
 	
-	/*public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) {
+/*	public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) {
 				
 		
 		String resultStr = null;
@@ -92,7 +102,8 @@ public class TinyBangProcess {
 		} catch (IOException e2) {
 			printf("Encount IOException when trying to read stdout.");
 		}	
-		`
+		
+
 		if (fko instanceof ProtocolError) {
 			throw new TinyBangProtocolException("Encount a protocol error.");
 		} else if (fko instanceof FromHaskellObject) {			
@@ -105,6 +116,8 @@ public class TinyBangProcess {
         }
 	
 	}*/
+	
+	
 	
 	public void destroySubProcess() {
 		p.destroy();

@@ -38,7 +38,7 @@ public class InnerPatternAdapter implements JsonDeserializer<InnerPattern>{
 		
 		Origin origin = originG.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 		
-		if (type == "PrimitivePattern") {
+		if (type.equals("PrimitivePattern")) {
 			
 			GsonBuilder primitiveTypeGb = new GsonBuilder();
 			primitiveTypeGb.registerTypeHierarchyAdapter(PrimitiveType.class, new PrimitiveTypeAdapter());
@@ -48,7 +48,7 @@ public class InnerPatternAdapter implements JsonDeserializer<InnerPattern>{
 			
 			innerPattern = new PrimitivePattern(origin, primitiveTyep);
 						
-		} else if (type == "LabelPattern") {
+		} else if (type.equals("LabelPattern")) {
 			
 			GsonBuilder labelNameGb= new GsonBuilder();
 			labelNameGb.registerTypeHierarchyAdapter(LabelName.class, new LabelNameAdapter());
@@ -70,7 +70,7 @@ public class InnerPatternAdapter implements JsonDeserializer<InnerPattern>{
 			
 			innerPattern = new LabelPattern(origin, labelName, cellVar, innerPatternVar);
 			
-		} else if (type == "ConjunctionPattern") {
+		} else if (type.equals("ConjunctionPattern")) {
 			
 			GsonBuilder innerPatternGb = new GsonBuilder();
 			innerPatternGb.registerTypeHierarchyAdapter(InnerPattern.class, new InnerPatternAdapter());
@@ -80,7 +80,7 @@ public class InnerPatternAdapter implements JsonDeserializer<InnerPattern>{
 			InnerPattern innerPattern2 = innerPatternG.fromJson(jo.get("innerPattern2").getAsJsonObject(), InnerPattern.class);
 			
 			innerPattern = new ConjunctionPattern(origin, innerPattern1, innerPattern2);
-		} else if (type == "ScapePattern") {
+		} else if (type.equals("ScapePattern")) {
 			
 			innerPattern = new ScapePattern(origin);
 			

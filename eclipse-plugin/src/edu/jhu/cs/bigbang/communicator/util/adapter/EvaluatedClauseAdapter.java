@@ -48,7 +48,7 @@ public class EvaluatedClauseAdapter implements JsonDeserializer<EvaluatedClause>
 		
 		EvaluatedClause ec = null;
 		
-		if (type == "ValueDef") {
+		if (type.equals("ValueDef")) {
 			
 			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
 			
@@ -60,7 +60,7 @@ public class EvaluatedClauseAdapter implements JsonDeserializer<EvaluatedClause>
 			
 			ec = new ValueDef(origin, flowVar, value);
 			
-		} else if (type == "CellDef") {
+		} else if (type.equals("CellDef")) {
 			
 			GsonBuilder cellQualifierGb = new GsonBuilder();
 			cellQualifierGb.registerTypeHierarchyAdapter(CellQualifier.class, new CellQualifierAdapter());

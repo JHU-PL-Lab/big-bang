@@ -44,22 +44,22 @@ public class ValueAdapter implements JsonDeserializer<Value> {
 		
 		Value value = null;
 		
-		if (type == "VInt"){
+		if (type.equals("VInt")){
 			
 			int intVar = jo.get("intVar").getAsInt();
 			value = new VInt(origin, intVar);
 			
 			
-		}else if (type == "VChar") {
+		}else if (type.equals("VChar")) {
 			
 			char charVar = jo.get("charVar").getAsCharacter();
 			value = new VChar(origin, charVar);
 			
-		}else if (type == "VEmptyOnion") {
+		}else if (type.equals("VEmptyOnion")) {
 			
 			value = new VEmptyOnion(origin);
 			
-		}else if (type == "VLabel") {
+		}else if (type.equals("VLabel")) {
 			
 			GsonBuilder labelNameGb = new GsonBuilder();
 			labelNameGb.registerTypeHierarchyAdapter(LabelName.class, new LabelNameAdapter());
@@ -75,7 +75,7 @@ public class ValueAdapter implements JsonDeserializer<Value> {
 			
 			value = new VLabel(origin, labelName, abstractCellVar);
 			
-		}else if (type == "VOnion") {
+		}else if (type.equals("VOnion")) {
 			
 			GsonBuilder flowVarGb = new GsonBuilder();
 			flowVarGb.registerTypeHierarchyAdapter(AbstractFlowVar.class, new AbstractFlowVarAdapter());
@@ -86,7 +86,7 @@ public class ValueAdapter implements JsonDeserializer<Value> {
 									
 			value = new VOnion(origin, aFlowVar_1, aFlowVar_2);
 			
-		}else if (type == "VOnionFilter") {
+		}else if (type.equals("VOnionFilter")) {
 			
 			GsonBuilder flowVarGb = new GsonBuilder();
 			flowVarGb.registerTypeHierarchyAdapter(AbstractFlowVar.class, new AbstractFlowVarAdapter());

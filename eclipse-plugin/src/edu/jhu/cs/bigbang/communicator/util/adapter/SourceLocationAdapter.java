@@ -27,7 +27,7 @@ public class SourceLocationAdapter implements JsonDeserializer<SourceLocation>{
 		GsonBuilder gb = new GsonBuilder();
 		Gson g = gb.create();
 		
-		if(type == "TextSource") {
+		if(type.equals("TextSource")) {
 			
 			SourceDocument srcDoc = g.fromJson(jo.get("textSourceDocument").getAsJsonObject(), SourceDocument.class);
 			int textSourceLineNo = jo.get("textSourceLineNo").getAsInt();

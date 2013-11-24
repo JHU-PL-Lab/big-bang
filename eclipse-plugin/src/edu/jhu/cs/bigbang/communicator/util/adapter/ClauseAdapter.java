@@ -54,7 +54,7 @@ public class ClauseAdapter implements JsonDeserializer<Clause>{
 		
 		Clause clause = null;
 		
-		if(type == "RedexDef") {
+		if(type.equals("RedexDef")) {
 			
 			Origin origin = originG.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
@@ -62,7 +62,7 @@ public class ClauseAdapter implements JsonDeserializer<Clause>{
 			
 			clause = new RedexDef(origin, flowVar, redex);
 			
-		} else if (type == "CellSet") {
+		} else if (type.equals("CellSet")) {
 			
 			Origin origin = originG.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
@@ -70,7 +70,7 @@ public class ClauseAdapter implements JsonDeserializer<Clause>{
 			
 			clause = new CellSet(origin, cellVar, flowVar);
 			
-		} else if (type == "CellGet") {
+		} else if (type.equals("CellGet")) {
 			
 			Origin origin = originG.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
@@ -78,7 +78,7 @@ public class ClauseAdapter implements JsonDeserializer<Clause>{
 			
 			clause = new CellGet(origin, flowVar, cellVar);
 			
-		} else if (type == "Throws") {
+		} else if (type.equals("Throws")) {
 			
 			Origin origin = originG.fromJson(jo.get("origin").getAsJsonObject(), Origin.class);
 			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);

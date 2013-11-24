@@ -42,11 +42,11 @@ public class RedexAdapter implements JsonDeserializer<Redex>{
 		
 		Redex redex = null;
 		
-		if (type == "Define") {
+		if (type.equals("Define")) {
 			
 			redex = new Define(origin, flowVar);
 			
-		} else if (type == "Appl") {
+		} else if (type.equals("Appl")) {
 			
 			AbstractFlowVar flowVar2 = flowVarG.fromJson(jo.get("flowVar2").getAsJsonObject(), AbstractFlowVar.class);
 			redex = new Appl(origin, flowVar, flowVar2);

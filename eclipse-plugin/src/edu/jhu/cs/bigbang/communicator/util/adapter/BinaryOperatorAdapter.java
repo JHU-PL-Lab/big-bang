@@ -38,27 +38,27 @@ public class BinaryOperatorAdapter implements JsonDeserializer<BinaryOperator>{
 		
 		// TODO enum
 		
-		if (type == "OpPlus") {
+		if (type.equals("OpPlus")) {
 			
 			bo = new OpPlus(origin);
 			
-		} else if (type == "OpMinus") {
+		} else if (type.equals("OpMinus")) {
 			
 			bo = new OpMinus(origin);
 			
-		} else if (type == "OpMult") {
+		} else if (type.equals("OpMult")) {
 			
 			bo = new OpMult(origin);
 			
-		} else if (type == "OpEqual") {
+		} else if (type.equals("OpEqual")) {
 			
 			bo = new OpEqual(origin);
 			
-		} else if (type == "OpLess") {
+		} else if (type.equals("OpLess")) {
 			
 			bo = new OpLess(origin);
 			
-		} else if (type == "OpGreater") {
+		} else if (type.equals("OpGreater")) {
 			
 			bo = new OpGreater(origin);
 			
