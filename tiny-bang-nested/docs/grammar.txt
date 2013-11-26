@@ -1,0 +1,28 @@
+Expr ::= def Var = Expr in Expr
+Expr ::= Var = Expr in Expr
+Expr ::= Expr1
+Expr1 ::= OuterPattern -> Expr1
+Expr1 ::= Expr2
+Expr2 ::= Expr3 ArithOp Expr2
+Expr2 ::= Expr3
+Expr3 ::= Expr3 OnionOp Projector
+Expr3 ::= Expr4
+Expr4 ::= Expr4 & Expr5
+Expr4 ::= Expr5
+Expr5 ::= Expr5 Expr6
+Expr5 ::= Expr6
+Expr6 ::= Label Expr6
+Expr6 ::= Expr7
+Expr7 ::= Var
+Expr7 ::= Integer
+Expr7 ::= Char
+Expr7 ::= Unit
+Expr7 ::= ( Expr )
+OuterPattern ::= Var : Pattern
+Pattern ::= Pattern & Pattern1
+Pattern ::= Pattern1
+Pattern1 ::= Label Var : Pattern1
+Pattern1 ::= Pattern2
+Pattern2 ::= Primitive
+Pattern2 ::= fun
+Pattern2 ::= ( Pattern )
