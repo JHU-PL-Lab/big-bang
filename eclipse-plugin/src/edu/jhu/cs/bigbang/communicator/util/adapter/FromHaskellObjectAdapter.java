@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.util.adapter;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -27,9 +28,7 @@ public class FromHaskellObjectAdapter implements
 		JsonObject jo = (JsonObject) je;
 		
 		String type = jo.get("type").getAsString();
-		
-System.out.println("type is: " + type);
-		
+
 		FromHaskellObject fho = null;
 		
 		GsonBuilder flowVarGb = new GsonBuilder();
@@ -44,11 +43,37 @@ System.out.println("type is: " + type);
         cellVarGb.registerTypeHierarchyAdapter(AbstractCellVar.class, new AbstractCellVarAdapter());
         Gson cellVarG = cellVarGb.create();
         			
-		if(type.equals("BatchModeError")) {
+        GsonBuilder evalErrorGb = new GsonBuilder();
+        evalErrorGb.registerTypeHierarchyAdapter(EvalError.class, new EvalErrorAdapter());
+        Gson evalErrorG = evalErrorGb.create();
+        
+        GsonBuilder clauseGb = new GsonBuilder();
+        clauseGb.registerTypeHierarchyAdapter(Clause.class, new ClauseAdapter());
+        Gson clauseG = clauseGb.create();
+        
+		if (type.equals("LexerFailure")) {
+		    	
+			String errMsg = jo.get("errMsg").getAsString();
+			fho = new BMLexFailure(1, errMsg);
 			
-			//TODO implement error generator
+		} else if (type.equals("ParserError")) {
 			
-			fho = new BatchModeError(1);
+			String errMsg = jo.get("errMsg").getAsString();
+			fho = new BMParserFailure(1, errMsg);
+			
+		} else if (type.equals("EvaluationFailure")) {
+			
+			EvalError evalError = evalErrorG.fromJson(jo.get("evalError").getAsJsonObject(), EvalError.class);
+			JsonArray clauseJsonArr = jo.get("clauseLst").getAsJsonArray();
+			Iterator<JsonElement> i = clauseJsonArr.iterator();
+			ArrayList<Clause> clauseLst = new ArrayList<Clause>();
+			
+			while (i.hasNext()) {
+				Clause clause = clauseG.fromJson(i.next(), Clause.class);
+				clauseLst.add(clause);
+			}
+		
+			fho = new BMEvalFailure(1, evalError, clauseLst);
 			
 		} else if (type.equals("BatchModeResult")) {
 

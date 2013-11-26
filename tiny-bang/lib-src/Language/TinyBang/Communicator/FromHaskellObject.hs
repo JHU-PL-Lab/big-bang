@@ -155,15 +155,17 @@ instance ToJSON IllFormedness where
 
 -- | ToJSON instance for evalError
 instance ToJSON EvalError where
+  toJSON (IllFormedExpression illFormedness) = object ["type" .= ("IllFormedExpression" :: String), "illFormedness" .= (toJSON illFormedness)]
   toJSON (OpenExpression varSet) = object ["type" .= ("OpenExpression" :: String), "VarSet" .= (toJSON varSet)]
   toJSON (FlowVarNotClosed flowVar) = object [ "type" .= ("FlowVarNotClosedError" :: String), "flowVar" .= (toJSON flowVar) ]
   toJSON (CellVarNotClosed cellVar) = object [ "type" .= ("CellVarNotClosedError" :: String), "cellVar" .= (toJSON cellVar) ]
+  toJSON (ProjectionFailure flowVar anyProjector) = object [ "type" .= ("ProjectionFailure" :: String), "flowVar" .= (toJSON flowVar), "anyProjector" .= (toJSON anyProjector)]
   toJSON (ApplicationFailure flowVar1 flowVar2) = object [ "type" .= ("ApplicationFailure" :: String), "flowVar1" .= (toJSON flowVar1), "flowVar2" .= (toJSON flowVar2) ]
 
 -- | toJSON instance for FromHaskellObject
 instance ToJSON FromHaskellObject where
-  toJSON (BatchModeErrorC (BMLexFailure errStr)) = object  [ "type" .= ("LexerFailure" :: String),  "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
+  toJSON (BatchModeErrorC (BMLexFailure errStr)) = object  ["type" .= ("LexerFailure" :: String),  "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
   toJSON (BatchModeErrorC (BMParserFailure errStr)) = object  ["type" .= ("ParserError" :: String),  "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
-  toJSON (BatchModeErrorC (BMProtocolFailure errStr)) = object  ["type" .= ("ProtocolError" :: String), "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
-  toJSON (BatchModeErrorC (BMEvalFailure err clauseLst)) = object ["type" .= ("EvaluationFailure" :: String), "err" .= (toJSON err), "caluseLst" .= (toJSON clauseLst)]
+  --toJSON (BatchModeErrorC (BMProtocolFailure errStr)) = object  ["type" .= ("ProtocolError" :: String), "errMsg" .= errStr, "superType" .= (object ["type" .= ("BatchModeError" :: String)]) ]
+  toJSON (BatchModeErrorC (BMEvalFailure err clauseLst)) = object ["type" .= ("EvaluationFailure" :: String), "evalError" .= (toJSON err), "clauseLst" .= (toJSON clauseLst)]
   toJSON (BatchModeResultC (BatchModeResult flowVar flowMap cellMap)) = object ["type" .= ("BatchModeResult" :: String), "flowVar" .= flowVar, "flowToValueMap" .= (toJSON $ DM.toList flowMap), "cellToFlowMap" .= (toJSON $ DM.toList cellMap)]

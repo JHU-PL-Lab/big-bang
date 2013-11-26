@@ -84,8 +84,7 @@ public class TinyBangProcess {
 	}
 	
 /*	public <T extends CommunicatorSerializable> T readObject(Class<T> clazz) {
-				
-		
+
 		String resultStr = null;
 		FromHaskellObject fko = null;				
 		
@@ -103,7 +102,7 @@ public class TinyBangProcess {
 			printf("Encount IOException when trying to read stdout.");
 		}	
 		
-
+    
 		if (fko instanceof ProtocolError) {
 			throw new TinyBangProtocolException("Encount a protocol error.");
 		} else if (fko instanceof FromHaskellObject) {			
@@ -114,8 +113,8 @@ public class TinyBangProcess {
         } else {            
         	throw new TinyBangInternalErrorException("Encount an internal error.");									            
         }
-	
-	}*/
+	}
+*/
 	
 	
 	
