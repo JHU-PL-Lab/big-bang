@@ -9,7 +9,7 @@ import qualified Language.LittleBang.Ast as LB
 import qualified Language.TinyBangNested.Ast as TBN
 import Control.Applicative   
 
--- | Do nothing for now
+-- | Desugar LittleBang. Do nothing for now
 desugarLittleBang :: LB.Expr -> Either String LB.Expr
 desugarLittleBang expr = Right expr
 
