@@ -77,11 +77,21 @@ expressionParser =
 scapeExprParser :: Parser Expr
 scapeExprParser = 
       argorig2 ExprScape <$> outerPatternParser <* consume TokArrow ?=> scapeExprParser
-  <|> arithOpExprParser
+  <|> conditionParser
   <?> "scape expression"
           
--- Expr2 ::= Expr3 ArithOp Expr2
--- Expr2 ::= Expr3
+-- Expr2 ::= if Expr2 then Expr1 else Expr1
+-- Expr2 ::= Expr3          
+conditionParser :: Parser Expr
+conditionParser = 
+      argorig3 ExprCondition <$ consume TokIf <*> conditionParser 
+                <* consume TokThen <*> conditionParser <* consume TokElse <*> conditionParser 
+  <|> arithOpExprParser  
+  <?> "condition expression"        
+          
+          
+-- Expr3 ::= Expr4 ArithOp Expr3
+-- Expr3 ::= Expr4
 arithOpExprParser :: Parser Expr
 arithOpExprParser = 
       chainl1 onionOpExprParser (buildExpr <$> arithOpParser)
@@ -91,8 +101,8 @@ arithOpExprParser =
            buildExpr :: BinaryOperator -> Expr -> Expr -> Expr
            buildExpr a e1 e2 = argorig3 ExprBinaryOp e1 a e2
                     
--- Expr3 ::= Expr4 (OnionOp Projector)*
--- Expr3 ::= Expr4
+-- Expr4 ::= Expr5 (OnionOp Projector)*
+-- Expr4 ::= Expr5
 onionOpExprParser :: Parser Expr
 onionOpExprParser = 
       try ( do { e <-  onionExprParser  -- get Expr4
@@ -112,8 +122,8 @@ onionOpExprParser =
           combinePairs :: Expr -> (OnionOperator, Projector) -> Expr
           combinePairs e (o, p)= argorig3 ExprOnionOp e o p
 
--- Expr4 ::= Expr4 & Expr5
--- Expr4 ::= Expr5
+-- Expr5 ::= Expr5 & Expr6
+-- Expr5 ::= Expr6
 onionExprParser :: Parser Expr
 onionExprParser = 
       chainl1 applExprParser (buildExpr <$ (consume TokOnion))
@@ -123,8 +133,8 @@ onionExprParser =
           buildExpr :: Expr -> Expr -> Expr
           buildExpr e1 e2 = argorig2 ExprOnion e1 e2
 
--- Expr5 ::= Expr5 Expr6
--- Expr5 ::= Expr6
+-- Expr6 ::= Expr6 Expr7
+-- Expr6 ::= Expr7
 applExprParser :: Parser Expr
 applExprParser = 
       chainl1 labelExprParser (return buildExpr)
@@ -134,19 +144,19 @@ applExprParser =
           buildExpr :: Expr -> Expr -> Expr
           buildExpr e1 e2 = argorig2 ExprAppl e1 e2
                        
--- Expr6 ::= Label Expr6
--- Expr6 ::= Expr7
+-- Expr7 ::= Label Expr7
+-- Expr7 ::= Expr8
 labelExprParser :: Parser Expr
 labelExprParser = 
       argorig2 ExprLabelExp <$> labelParser ?=> labelExprParser
   <|> valExprParser
   <?> "label expression"
               
--- Expr7 ::= Var
--- Expr7 ::= Integer
--- Expr7 ::= Char
--- Expr7 ::= Unit
--- Expr7 ::= ( Expr )
+-- Expr8 ::= Var
+-- Expr8 ::= Integer
+-- Expr8 ::= Char
+-- Expr8 ::= Unit
+-- Expr8 ::= ( Expr )
 valExprParser :: Parser Expr
 valExprParser = 
       ExprValInt <$&> require matchIntLit

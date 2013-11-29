@@ -18,8 +18,7 @@ import org.eclipse.ui.editors.text.TextEditor;
 public class TopLoopEvalLinesAction extends TopLoopEvalAction {
 
 	@Override
-	protected String getTargetString(TextEditor editor, TextSelection selection) {
-		
+	protected String getTargetString(TextEditor editor, TextSelection selection) {	
 		IEditorInput input = editor.getEditorInput();
 		IDocument document = editor.getDocumentProvider().getDocument(input);
 		String strSelected = "";

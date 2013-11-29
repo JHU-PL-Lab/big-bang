@@ -15,8 +15,6 @@ import org.eclipse.ui.editors.text.TextEditor;
 import edu.jhu.cs.bigbang.eclipse.toploop.TopLoop;
 import edu.jhu.cs.bigbang.eclipse.toploop.TopLoopView;
 
-
-
 /**
  * The base class for a quick evaluation in the top loop.
  * The children must define how they want to grab text
@@ -39,23 +37,24 @@ public abstract class TopLoopEvalAction implements
 	protected abstract String getTargetString(TextEditor editor,
 			TextSelection selection);
 
+	public void tellTopLoopToEvalString(String lines) {
+		// We split them in to an array of lines
+		// and pass them one by one to the TopLoop
+		lines = lines.trim();
+		String[] eval = lines.split("\n+");
+		for (String s : eval) 
+			TopLoop.getInstance().eval(s);
+	}
+	
 	@Override
-	public void run(IAction action) {
+	public final void run(IAction action) {
 		IWorkbenchPage page = window.getActivePage();
 		// We only do the job if there is a page exists.
 		if (page != null) {
 			IEditorPart editorPart = page.getActiveEditor();
 			// There must be a source editor in the page too.
 			if (editorPart != null) {
-				// Invoke the TopLoopView instance
-				IWorkbenchPage activePage = PlatformUI.getWorkbench()
-						.getActiveWorkbenchWindow().getActivePage();
-				try {
-					activePage.showView(TopLoopView.ID);
-				} catch (PartInitException e) {
-					System.err
-							.println("Error while displaying the top loop window.");
-				}
+				TopLoopView.forceShowTopLoopView();
 				// Get the selection part of the editor
 				TextEditor editor = (TextEditor) editorPart;
 				ISelection sel = editor.getSelectionProvider().getSelection();
@@ -63,17 +62,8 @@ public abstract class TopLoopEvalAction implements
 					String strSelected = getTargetString(editor,
 							(TextSelection) sel);
 					// Nothing to be done
-					if(strSelected.equals("")){
-						return;
-					}	
-					// The final selected string.
-					// We split them in to an array of lines
-					// and pass them one by one to the TopLoop
-					strSelected = strSelected.trim();
-					String[] eval = strSelected.split("\n+");
-					for (String s : eval) {
-						TopLoop.getInstance().eval(s);
-					}
+					if(!strSelected.equals(""))
+						tellTopLoopToEvalString(strSelected);
 				}
 			} else {
 				MessageDialog.openInformation(window.getShell(),

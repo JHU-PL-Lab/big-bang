@@ -7,6 +7,8 @@ import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display
 import Language.TinyBang.Toploop
 
+import Language.TinyBangNested.ATranslation.Translator
+
 import Data.List.Split
 import System.IO
 
@@ -43,11 +45,18 @@ interpContext = ParserContext UnknownDocument "Interpreter"
 eval :: String -> IO String
 eval input = 
   do
-    let transResult = return . translateLittleBangToTinyBangNested =<<
-                      parseLittleBang interpContext =<<
-                      lexLittleBang "" input
+    let transResult = performTranslation =<< convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang interpContext =<< lexLittleBang "" input
     case transResult of 
       Left x -> return x
       Right _ -> do  
                    let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
-                   return $ "\nTranslation:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult
+                   return $ "\nTranslation::\n" ++  display transResult ++ "\n\nEvaluation::\n" ++ interpretResult
+      
+      
+      
+      
+      
+      
+      
+      
+      

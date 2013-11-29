@@ -1,17 +1,24 @@
 package edu.jhu.cs.bigbang.eclipse.editors;
 
+import org.eclipse.jface.text.source.SourceViewerConfiguration;
 import org.eclipse.ui.editors.text.TextEditor;
 
 /**
- * A BigBang editor
+ * A BigBang file editor
+ * 
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu>
  *
  */
 public class Editor extends TextEditor {
 
+	/** A configuration of this editor */
+	private SourceViewerConfiguration configuration;
+
 	public Editor() {
 		super();
-		setSourceViewerConfiguration(new Configuration());
+		
+		configuration = new Configuration();
+		setSourceViewerConfiguration(configuration);
 	}
 
 }

@@ -30,6 +30,8 @@ data Expr =
  | ExprValInt Origin Integer
  | ExprValChar Origin Char
  | ExprValUnit Origin
+  -- For Little Bang
+ | ExprCondition Origin Expr Expr Expr
   deriving (Eq,Ord,Show)
 
 data OnionOperator =
@@ -94,6 +96,8 @@ instance HasOrigin Expr where
     ExprValInt orig _ -> orig
     ExprValChar orig _ -> orig
     ExprValUnit orig -> orig
+    -- For Little Bang
+    ExprCondition orig _ _ _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of
@@ -143,6 +147,8 @@ instance Display Expr where
    ExprValInt _ i -> text $ show i
    ExprValChar _ c -> text $ show c
    ExprValUnit _ -> text "()"
+   -- For Little Bang
+   ExprCondition _ e1 e2 e3 -> text "if " <> makeDoc e1 <> text " then " <> makeDoc e2 <> text " else " <> makeDoc e3
 
 instance Display OnionOperator where
  makeDoc x = case x of

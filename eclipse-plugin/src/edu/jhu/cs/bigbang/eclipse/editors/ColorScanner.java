@@ -13,7 +13,7 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
 
 /**
- * A scanner for syntax coloring
+ * A basic scanner for syntax coloring
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu>
  *
  */
@@ -29,10 +29,8 @@ class ColorScanner extends RuleBasedScanner {
 
 		Color onionColor = new Color(Display.getCurrent(), ONION_RGB);
 		Color numberColor = new Color(Display.getCurrent(), NUMBER_RGB);
-
 		Token onion = new Token(new TextAttribute(onionColor, null, SWT.BOLD));
 		Token number = new Token(new TextAttribute(numberColor));
-
 		setRules(new IRule[] {
 				new NumberRule(number),
 				new SingleLineRule(ONION_START_SYMBOL, ONION_STOP_SYMBOL, onion) });

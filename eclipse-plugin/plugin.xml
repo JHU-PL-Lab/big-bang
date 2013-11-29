@@ -68,15 +68,20 @@
 			<menu id="edu.jhu.cs.bigbang.eclipse_sourceMenu" label="BigBang">
 				<separator name="slot1"/>
 			</menu>
-			<action class="edu.jhu.cs.bigbang.eclipse.actions.TopLoopEvalLinesAction"
-				definitionId="edu.jhu.cs.bigbang.eclipse.TopLoopEvalLinesAction"
-				id="edu.jhu.cs.bigbang.eclipse_sourceActions_TopLoopEvalLinesAction"
-				label="Eval selected lines" menubarPath="edu.jhu.cs.bigbang.eclipse_sourceMenu/slot1"
+			<action class="edu.jhu.cs.bigbang.eclipse.actions.CodeFormatAction"
+				definitionId="edu.jhu.cs.bigbang.eclipse.CodeFormatAction"
+				id="edu.jhu.cs.bigbang.eclipse_sourceActions_CodeFormatAction"
+				label="Format Source" menubarPath="edu.jhu.cs.bigbang.eclipse_sourceMenu/slot1"
 				style="push"/>
 			<action class="edu.jhu.cs.bigbang.eclipse.actions.TopLoopEvalFileAction"
 				definitionId="edu.jhu.cs.bigbang.eclipse.TopLoopEvalFileAction"
 				id="edu.jhu.cs.bigbang.eclipse_sourceActions_TopLoopEvalFileAction"
 				label="Eval the file" menubarPath="edu.jhu.cs.bigbang.eclipse_sourceMenu/slot1"
+				style="push"/>
+			<action class="edu.jhu.cs.bigbang.eclipse.actions.TopLoopEvalLinesAction"
+				definitionId="edu.jhu.cs.bigbang.eclipse.TopLoopEvalLinesAction"
+				id="edu.jhu.cs.bigbang.eclipse_sourceActions_TopLoopEvalLinesAction"
+				label="Eval selected lines" menubarPath="edu.jhu.cs.bigbang.eclipse_sourceMenu/slot1"
 				style="push"/>
 		</actionSet>
 	</extension>
@@ -84,6 +89,7 @@
 	<extension point="org.eclipse.ui.commands">
 			<command id="edu.jhu.cs.bigbang.eclipse.TopLoopEvalLinesAction" name="Eval selected lines"/>
 			<command id="edu.jhu.cs.bigbang.eclipse.TopLoopEvalFileAction" name="Eval the file"/>
+			<command id="edu.jhu.cs.bigbang.eclipse.CodeFormatAction" name="Format Source"/>
 	</extension>
 	
 	<extension point="org.eclipse.ui.bindings">
@@ -95,6 +101,10 @@
 			contextId="org.eclipse.ui.contexts.window"
 			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
 			sequence="F7"/>
+			<key commandId="edu.jhu.cs.bigbang.eclipse.CodeFormatAction"
+			contextId="org.eclipse.ui.contexts.window"
+			schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+			sequence="F8"/>
 	</extension>
 
 	<extension point="org.eclipse.debug.core.launchConfigurationTypes">

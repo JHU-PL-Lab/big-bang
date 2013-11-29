@@ -48,7 +48,7 @@ type ParserMonad = Reader ParserContext
 type Parser a = ParsecT [PositionalToken] () ParserMonad a
 
 programParser :: Parser Expr
-programParser = expressionParser <* eof
+programParser =  "ProgramParser" <@> expressionParser <* eof
 
 expressionParser :: Parser Expr
 expressionParser = "Expression" <@> do
@@ -56,11 +56,10 @@ expressionParser = "Expression" <@> do
   return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
 
 clauseParser :: Parser Clause
-clauseParser = "Clause" <@>
+clauseParser = "Clausess" <@> 
       Evaluated <$> evaluatedClauseParser
   <|> argorig2 CellSet <$> cellVarParser <* consume TokGets ?=> flowVarParser
-  <|> argorig2 CellGet <$> flowVarParser <*
-        consume TokIs <* consume TokBang ?=> cellVarParser
+  <|> argorig2 CellGet <$> flowVarParser <* consume TokIs <* consume TokBang ?=> cellVarParser
   <|> argorig2 Throws <$> flowVarParser <* consume TokThrows ?=> flowVarParser
   <|> argorig2 RedexDef <$> flowVarParser <* consume TokIs ?=> redexParser
 
@@ -91,7 +90,7 @@ valueParser = "Value" <@>
   <|> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser ?=> projectorParser
         
 flowKindParser :: Parser FlowKind
-flowKindParser = snd <$> require matchFlows
+flowKindParser = "FlowKind" <@> snd <$> require matchFlows
   where
     matchFlows :: Token -> Maybe FlowKind
     matchFlows tok = case tok of

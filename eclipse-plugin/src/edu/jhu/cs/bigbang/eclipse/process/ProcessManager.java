@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import edu.jhu.cs.bigbang.eclipse.Activator;
-import edu.jhu.cs.bigbang.eclipse.error.ErrorDialog;
+import edu.jhu.cs.bigbang.eclipse.error.ErrorDialogHandler;
 
 /**
  * A process manager to create and control processes
@@ -31,7 +31,7 @@ public class ProcessManager {
 		try {
 			return builder.start();
 		} catch (IOException e) {
-			ErrorDialog.showIntepreterNotFoundError();
+			ErrorDialogHandler.showIntepreterNotFoundError();
 		}
 		return null;
 	}

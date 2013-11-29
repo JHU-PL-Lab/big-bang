@@ -79,7 +79,7 @@ scapeExprParser =
       argorig2 ExprScape <$> outerPatternParser <* consume TokArrow ?=> scapeExprParser
   <|> arithOpExprParser
   <?> "scape expression"
-          
+            
 -- Expr2 ::= Expr3 ArithOp Expr2
 -- Expr2 ::= Expr3
 arithOpExprParser :: Parser Expr

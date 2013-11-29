@@ -2,7 +2,13 @@ package edu.jhu.cs.bigbang.eclipse.error;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 
-public class ErrorDialog {
+/**
+ * This class is responsible for showing an error message diable.
+ * 
+ * @author Keeratipong Ukachoke <geeskeiup@gmail.com>
+ *
+ */
+public class ErrorDialogHandler {
 
 	public static void showIntepreterNotFoundError() {
 		MessageDialog

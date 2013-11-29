@@ -43,6 +43,10 @@ data Token
   | TokLitInt Integer
   | TokLitChar Char
   | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
+    -- For Little Bang
+  | TokIf -- ^@if@
+  | TokThen -- ^@then@
+  | TokElse -- ^@else@
   deriving (Eq, Ord, Show)
   
 -- |An annotation for tokens which describes their Parsec source position.
@@ -119,6 +123,10 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("=" , TokIs)
     , ("(" , TokOpenParen)
     , (")" , TokCloseParen)
+    -- For Little Bang
+    , ("if", TokIf)
+    , ("then", TokThen)
+    , ("else", TokElse)
     ]
 
 -- | This group of lexers matches all reserved words.
@@ -187,3 +195,7 @@ instance Display Token where
     TokLitInt n -> text "int#" <> dquotes (text $ show n)
     TokLitChar c -> text "char#" <> dquotes (text [c])
     TokLabel n -> text "label#" <> dquotes (text n)
+    -- For Little Bang
+    TokIf -> dquotes $ text "if"
+    TokThen -> dquotes $ text "then"
+    TokElse -> dquotes $ text "else"
