@@ -24,7 +24,8 @@ library
                    Language.LittleBang.Ast.Data,
                    Language.LittleBang.Syntax.Lexer,
                    Language.LittleBang.Syntax.Parser,
-                   Language.LittleBang.Translator
+                   Language.LittleBang.Translator,
+                   Language.LittleBang.TBNConversion
 
 executable little-bang
   hs-source-dirs:  interp-src

@@ -2,6 +2,7 @@ module Main where
 
 import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display

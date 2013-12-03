@@ -85,7 +85,7 @@ scapeExprParser =
 conditionParser :: Parser Expr
 conditionParser = 
       argorig3 ExprCondition <$ consume TokIf <*> conditionParser 
-                <* consume TokThen <*> conditionParser <* consume TokElse <*> conditionParser 
+                <* consume TokThen <*> scapeExprParser <* consume TokElse <*> scapeExprParser 
   <|> arithOpExprParser  
   <?> "condition expression"        
           
