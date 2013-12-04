@@ -25,7 +25,8 @@ public class TinyBangRuntime {
 		
 		TinyBangProcess tbp = new TinyBangProcess(pb);		
 		String usrInpStr = "x1=1;x2=2;x3=x1+x2";
-		ToHaskellObject tho = new RunCodeCommand(1, usrInpStr);
+		String evalErr = "{\"type\":\"RunCodeCommand\", \"usrInpStr\":\"x1=1;x2=x2+x3\", \"super\":{\"cmdId\":1, \"type\":\"Command\"}}";
+		ToHaskellObject tho = new RunCodeCommand(1, evalErr);
 				
 		// print out object for debug		
 		RunCodeCommand rcc = (RunCodeCommand)tho;			
