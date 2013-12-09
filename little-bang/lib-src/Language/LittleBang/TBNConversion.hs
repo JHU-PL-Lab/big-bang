@@ -8,7 +8,6 @@ import qualified Language.TinyBangNested.Ast as TBN
 import Control.Applicative
 
 type TBNConvertError = String
-
 type TBNConvertM = Either TBNConvertError
 
 -- | Convert a LittleBang expression to a TinyBang Nested expression 

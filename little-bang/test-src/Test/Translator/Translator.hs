@@ -11,8 +11,10 @@ import qualified Language.LittleBang.Ast as LB
 import Language.TinyBang.Display
 import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location
-import Language.TinyBangNested.Syntax.Parser
-import Language.TinyBangNested.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Translator
+import Language.LittleBang.TBNConversion
 import Language.TinyBangNested.ATranslation.Translator
 import Test.HUnit
 
@@ -38,7 +40,7 @@ runTest input expected = if (verbose && not boolAnswer)
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           result = (render $ makeDoc $ performTranslation =<< parseTinyBangNested testContext =<< lexTinyBangNested "" input)
+                           result = (render $ makeDoc $ performTranslation =<< convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang testContext =<< lexLittleBang "" input)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 
@@ -71,6 +73,10 @@ aTranslationTests = TestList
   , testProjector2
   , testVarShadow
   , testNestedDef
+  , testIfThenElse1
+  , testIfThenElse2
+  , testIfThenElse3
+  , testIfThenElse4
   ]
 
 testArithmetic :: Test
@@ -111,4 +117,20 @@ testVarShadow = genUnitTest "Translating variable shadow" "def x = 1 in def x = 
 
 testNestedDef :: Test
 testNestedDef = genUnitTest "Translating nested def" "def x = 1 in (def x = 2 in x) + x" "3"
+
+-- Normal Case
+testIfThenElse1 :: Test
+testIfThenElse1 = genUnitTest "Desugar if-then-else" "if 1 == 2 then 3 else 4" "4"
+
+-- Nested in 'condition'
+testIfThenElse2 :: Test
+testIfThenElse2 = genUnitTest "Desugar if-then-else" "if (if 1 + 2 == 3 then `True() else `False ()) then `True () else `False ()" "`True ()"
+
+-- Nested in 'then'
+testIfThenElse3 :: Test
+testIfThenElse3 = genUnitTest "Desugar if-then-else" "if `True () then (if 1 == 1 then 3 else 4) else 5" "3"
+
+-- Nested in 'else'
+testIfThenElse4 :: Test
+testIfThenElse4 = genUnitTest "Desugar if-then-else" "if `False () then 3 else if `True () then 1 else 2" "1"
 
