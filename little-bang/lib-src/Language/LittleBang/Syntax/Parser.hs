@@ -7,6 +7,7 @@ module Language.LittleBang.Syntax.Parser
 ) where
 
 import Control.Applicative           ((*>), (<$>),(<$),(*>) ,(<*), (<*>))
+import Control.Monad
 import Control.Monad.Trans.Class     (lift)
 import Control.Monad.Trans.Reader
 import Text.Parsec.Combinator
@@ -15,7 +16,7 @@ import Text.Parsec.Pos
 import Data.List
 
 import Utils.ParserUtils
-import Language.TinyBang.Ast.Data (Origin (..))
+import Language.TinyBang.Ast.Data (Origin (..), originOf)
 import Language.TinyBang.Display
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Parsec
@@ -81,14 +82,27 @@ scapeExprParser =
   <?> "scape expression"
           
 -- Expr2 ::= if Expr2 then Expr1 else Expr1
+-- Expr2 ::= case Expr2 of (| Pattern -> Expr1) +
 -- Expr2 ::= Expr3          
 conditionParser :: Parser Expr
 conditionParser = 
       argorig3 ExprCondition <$ consume TokIf <*> conditionParser 
                 <* consume TokThen <*> scapeExprParser <* consume TokElse <*> scapeExprParser 
+  <|> caseExpr
   <|> arithOpExprParser  
-  <?> "condition expression"        
-          
+  <?> "condition expression"
+  where
+    caseExpr :: Parser Expr
+    caseExpr = try $ do
+        (start, ()) <- require (\x -> if x == TokCase then Just () else Nothing)
+        cond <- conditionParser
+        consume TokOf
+        clauses <- many1 caseClause
+        let stop = originOf $ last clauses
+        let origin = SourceOrigin $ SourceRegion (startLoc start) (stopLoc stop)
+        return $ ExprCase origin cond clauses
+    caseClause :: Parser CaseClause
+    caseClause = argorig2 CaseClause <$ consume TokVBar <*> patternOnionParser <* consume TokArrow <*> scapeExprParser
           
 -- Expr3 ::= Expr4 ArithOp Expr3
 -- Expr3 ::= Expr4

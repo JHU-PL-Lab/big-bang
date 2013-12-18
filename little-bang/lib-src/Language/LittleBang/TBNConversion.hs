@@ -23,9 +23,6 @@ class TBNConvertible a b | a -> b where
 -- | Convert a LittleBang expression to a TinyBang Nested expression
 instance TBNConvertible LB.Expr TBN.Expr where
   toTBN expr = case expr of 
-    LB.ExprCondition _ _ _ _ ->
-      undefined -- TODO: generate correct error for untranslated node
-    
     LB.ExprDef o var e1 e2 -> TBN.ExprDef o 
                                     <$> toTBN var 
                                     <*> toTBN e1 

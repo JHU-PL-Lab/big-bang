@@ -1,5 +1,6 @@
 module Language.LittleBang.Ast.Data
 ( Expr(..)
+, CaseClause(..)
 , Var (..)
 , Label (..)
 , OnionOperator(..)
@@ -32,6 +33,11 @@ data Expr =
  | ExprValUnit Origin
   -- For Little Bang
  | ExprCondition Origin Expr Expr Expr
+ | ExprCase Origin Expr [CaseClause]
+  deriving (Eq,Ord,Show)
+
+data CaseClause =
+   CaseClause Origin Pattern Expr
   deriving (Eq,Ord,Show)
 
 data OnionOperator =
@@ -98,7 +104,12 @@ instance HasOrigin Expr where
     ExprValUnit orig -> orig
     -- For Little Bang
     ExprCondition orig _ _ _ -> orig
+    ExprCase orig _ _ -> orig
 
+instance HasOrigin CaseClause where
+  originOf x = case x of
+    CaseClause orig _ _ -> orig
+    
 instance HasOrigin Var where
   originOf x = case x of
     Var orig _ -> orig

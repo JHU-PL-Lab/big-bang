@@ -47,6 +47,9 @@ data Token
   | TokIf -- ^@if@
   | TokThen -- ^@then@
   | TokElse -- ^@else@
+  | TokCase -- ^@case@
+  | TokOf -- ^@of@
+  | TokVBar -- ^@|@
   deriving (Eq, Ord, Show)
   
 -- |An annotation for tokens which describes their Parsec source position.
@@ -127,6 +130,9 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("if", TokIf)
     , ("then", TokThen)
     , ("else", TokElse)
+    , ("case", TokCase)
+    , ("of", TokOf)
+    , ("|", TokVBar)
     ]
 
 -- | This group of lexers matches all reserved words.
@@ -199,3 +205,6 @@ instance Display Token where
     TokIf -> dquotes $ text "if"
     TokThen -> dquotes $ text "then"
     TokElse -> dquotes $ text "else"
+    TokCase -> dquotes $ text "case"
+    TokOf -> dquotes $ text "of"
+    TokVBar -> dquotes $ text "|"

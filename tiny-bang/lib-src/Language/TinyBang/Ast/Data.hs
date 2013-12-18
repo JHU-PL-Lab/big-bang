@@ -430,6 +430,9 @@ instance Display AnyVar where
 class HasOrigin a where
   originOf :: a -> Origin
 
+instance HasOrigin Origin where
+  originOf = id
+
 instance HasOrigin Expr where
   originOf x = case x of
     Expr orig _ -> orig
