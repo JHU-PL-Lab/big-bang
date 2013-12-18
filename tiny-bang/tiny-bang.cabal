@@ -29,7 +29,6 @@ library
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
                    Language.TinyBang.Syntax.Location,
-                   Utils.Meta.Deriving,
                    Language.TinyBang.Interpreter,
                    Language.TinyBang.Ast.Data,
                    Language.TinyBang.Ast.WellFormedness,
@@ -44,14 +43,12 @@ library
                    Language.TinyBang.Interpreter.DeepValues,
                    Language.TinyBang.Utils.Parsec,
                    Language.TinyBang.Logging,
-                   Utils.Tuple,
-                   Utils.TemplateHaskell,
-                   Utils.ParserUtils
+                   Utils.ParserUtils,
                    Language.TinyBang.TypeSystem.Types,
                    Language.TinyBang.TypeSystem.Contours,
                    Data.NFA,
                    Language.TinyBang.TypeSystem.Relations,
-                   Language.TinyBang.TypeSystem.InitialDerivation
+                   Language.TinyBang.TypeSystem.InitialDerivation,
                    Language.TinyBang.TypeSystem.Inconsistency,
                    Language.TinyBang.TypeSystem.Relations.Contours,
                    Language.TinyBang.TypeSystem.TypeInference,
@@ -76,7 +73,14 @@ library
                    Utils.Toploop,
                    Language.TinyBang.Toploop,
                    Utils.Toploop.Logging,
-                   Language.TinyBang.TypeSystem.Data.Projection
+                   Language.TinyBang.TypeSystem.Data.Projection,
+                   Language.TinyBang.Metaprogramming.Deriving,
+                   Language.TinyBang.Metaprogramming.Reduce,
+                   Language.TinyBang.Metaprogramming.ReduceM,
+                   Language.TinyBang.Metaprogramming.Transform,
+                   Language.TinyBang.Metaprogramming.TransformM,
+                   Language.TinyBang.Metaprogramming.Utils
+                   
 
 executable tiny-bang
   hs-source-dirs:  interp-src

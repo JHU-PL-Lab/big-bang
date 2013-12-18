@@ -52,8 +52,8 @@ import Control.Applicative ((<$>))
 import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 import Language.TinyBang.Display
+import Language.TinyBang.Metaprogramming.Deriving
 import Language.TinyBang.Syntax.Location
-import Utils.Meta.Deriving
 
 -- |A data type representing expressions.
 data Expr
