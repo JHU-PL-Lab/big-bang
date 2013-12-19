@@ -1,5 +1,6 @@
 module Language.LittleBang.Translator
-( desugarLittleBang,
+( desugarLittleBang
+, DesugarError(..)
 ) where
 
 import qualified Language.LittleBang.Ast as LB
@@ -8,7 +9,9 @@ import Control.Applicative
 import Control.Monad.State
 
 type DesugarM = StateT DesugarState (Either DesugarError)
-type DesugarError = String
+data DesugarError
+        = EmptyCaseClauseList LB.Expr
+  deriving (Eq, Ord, Show)
 
 data DesugarState = DesugarState { freshVarIdx :: Int }
 
@@ -23,18 +26,18 @@ desugarLittleBang expr =
 runDesugarM :: DesugarM a -> Either DesugarError a
 runDesugarM x = fst <$> runStateT x (DesugarState 0)
     
-substCaseClauses :: (LB.Expr -> DesugarM LB.Expr) -> [LB.CaseClause] -> [DesugarM LB.CaseClause]    
-substCaseClauses f l = case l of
-    LB.CaseClause o p e : tl -> (LB.CaseClause o <$> return p <*> deepSubst f e) : substCaseClauses f tl
-    [] -> []
+substCaseClauses :: (LB.Expr -> DesugarM LB.Expr) -> [LB.CaseClause] -> DesugarM [LB.CaseClause]    
+substCaseClauses f = mapM substCaseClause
+    where
+        substCaseClause (LB.CaseClause o p e) = LB.CaseClause o <$> return p <*> deepSubst f e
 
 deepSubst :: (LB.Expr -> DesugarM LB.Expr) -> LB.Expr -> DesugarM LB.Expr
 deepSubst f e = case e of
     LB.ExprCase o e1 lst1 -> do
         e1' <- deepSubst f e1
-        lst1' <- sequence (substCaseClauses f lst1)
+        lst1' <- substCaseClauses f lst1
         let e' = LB.ExprCase o e1' lst1'
-        f e'     
+        f e' 
     LB.ExprCondition o e1 e2 e3 -> do
         e1' <- deepSubst f e1
         e2' <- deepSubst f e2
@@ -111,24 +114,24 @@ desugarIf expr = case expr of
 -- Desugar (case e of | p1 -> e1 | ... | pn -> en) 
 desugarCase :: LB.Expr -> DesugarM LB.Expr   
 desugarCase expr = case expr of 
-    LB.ExprCase o e1 list -> LB.ExprAppl o <$> caseClauseListToOnions list <*> return e1
+    LB.ExprCase o e1 list -> LB.ExprAppl o <$> caseClauseListToOnions (reverse list) <*> return e1
     _ -> return expr
     where
     caseClauseListToOnions :: [LB.CaseClause] -> DesugarM LB.Expr
     caseClauseListToOnions lst = case lst of
-        LB.CaseClause o p e : [] -> LB.ExprScape o 
-                                        <$> (LB.OuterPatternLabel o 
-                                                <$> nextFreshVar 
-                                                <*> return p) 
-                                        <*> desugarCase e
-        LB.CaseClause o p e : tl -> LB.ExprOnion o 
-                                        <$> (LB.ExprScape o 
-                                                <$> (LB.OuterPatternLabel o 
-                                                        <$> nextFreshVar 
-                                                        <*> return p) 
-                                                <*> desugarCase e)
+        [] -> lift $ Left $ EmptyCaseClauseList expr
+        c : [] -> clauseToScape c
+        c : tl -> LB.ExprOnion (TB.originOf c) 
+                                        <$> clauseToScape c
                                         <*> caseClauseListToOnions tl
-   
+        where
+          clauseToScape :: LB.CaseClause -> DesugarM LB.Expr
+          clauseToScape (LB.CaseClause o p e) = LB.ExprScape o 
+                                                        <$> (LB.OuterPatternLabel o 
+                                                                <$> nextFreshVar 
+                                                                <*> return p) 
+                                                        <*> return e
+                   
 -- Get the next fresh variable.       
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do
