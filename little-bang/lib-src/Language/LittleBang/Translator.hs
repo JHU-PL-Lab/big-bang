@@ -21,7 +21,7 @@ desugarLittleBang expr =
   runDesugarM $ foldl (>>=) (return expr) desugars
   where
     desugars :: [LB.Expr -> DesugarM LB.Expr]
-    desugars = [ deepSubst desugarIf, deepSubst desugarCase ]
+    desugars = [ deepSubst desugarIf, deepSubst desugarCase, deepSubst desugarList ]
 
 runDesugarM :: DesugarM a -> Either DesugarError a
 runDesugarM x = fst <$> runStateT x (DesugarState 0)
@@ -31,8 +31,17 @@ substCaseClauses f = mapM substCaseClause
     where
         substCaseClause (LB.CaseClause o p e) = LB.CaseClause o <$> return p <*> deepSubst f e
 
+substExprList :: (LB.Expr -> DesugarM LB.Expr) -> [LB.Expr] -> [DesugarM LB.Expr]
+substExprList f lst = case lst of
+        hd : tl -> deepSubst f hd : substExprList f tl
+        [] -> [] 
+
 deepSubst :: (LB.Expr -> DesugarM LB.Expr) -> LB.Expr -> DesugarM LB.Expr
 deepSubst f e = case e of
+    LB.ExprList o lst1 -> do
+       lst1' <- sequence (substExprList f lst1)
+       let e' = LB.ExprList o lst1'
+       f e'
     LB.ExprCase o e1 lst1 -> do
         e1' <- deepSubst f e1
         lst1' <- substCaseClauses f lst1
@@ -131,6 +140,18 @@ desugarCase expr = case expr of
                                                                 <$> nextFreshVar 
                                                                 <*> return p) 
                                                         <*> return e
+                   
+desugarList :: LB.Expr -> DesugarM LB.Expr
+desugarList expr = case expr of
+    LB.ExprList o list -> toHeadTailList o list
+    _ -> return expr
+    where
+    toHeadTailList :: TB.Origin -> [LB.Expr] -> DesugarM LB.Expr
+    toHeadTailList o lst = case lst of
+        [] -> return (LB.ExprLabelExp o (LB.LabelDef o "Tl") (LB.ExprLabelExp o (LB.LabelDef o "Nil") (LB.ExprValUnit o)))                    
+        e:tl -> LB.ExprOnion o 
+                        <$> return (LB.ExprLabelExp o (LB.LabelDef o "Hd") e) 
+                        <*> (LB.ExprLabelExp o <$> (LB.LabelDef o <$> return "Tl") <*> toHeadTailList o tl) 
                    
 -- Get the next fresh variable.       
 nextFreshVar :: DesugarM LB.Var

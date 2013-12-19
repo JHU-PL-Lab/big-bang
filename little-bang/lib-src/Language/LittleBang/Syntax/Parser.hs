@@ -171,6 +171,7 @@ labelExprParser =
 -- Expr8 ::= Char
 -- Expr8 ::= Unit
 -- Expr8 ::= ( Expr )
+-- Expr8 ::= [Expr, ...]
 valExprParser :: Parser Expr
 valExprParser = 
       ExprValInt <$&> require matchIntLit
@@ -178,7 +179,16 @@ valExprParser =
   <|> requirex TokEmptyOnion ExprValUnit             
   <|> argorig1 ExprVar <$> varParser
   <|> consume TokOpenParen *> expressionParser <* consume TokCloseParen
-  <?> "value expression - int/char literal, (), variable or use parens"
+  <|> listExprParser
+  <?> "value expression - int/char literal, (), list, variable or use parens"
+  where
+        listExprParser :: Parser Expr
+        listExprParser = try $ do
+                (start, ()) <- require (\x -> if x == TokOpenBracket then Just () else Nothing)
+                elements <- sepBy expressionParser (consume TokComma)
+                (stop, ()) <- require (\x -> if x == TokCloseBracket then Just () else Nothing)
+                let origin = SourceOrigin $ SourceRegion (startLoc start) (stopLoc stop)
+                return $ ExprList origin elements
             
 -- OuterPattern ::= Var : Pattern
 -- OuterPattern ::= Pattern (removed)

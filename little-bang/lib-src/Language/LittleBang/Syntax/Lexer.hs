@@ -50,6 +50,9 @@ data Token
   | TokCase -- ^@case@
   | TokOf -- ^@of@
   | TokVBar -- ^@|@
+  | TokOpenBracket -- ^@[@
+  | TokCloseBracket -- ^@]@
+  | TokComma -- ^@,@
   deriving (Eq, Ord, Show)
   
 -- |An annotation for tokens which describes their Parsec source position.
@@ -133,6 +136,9 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("case", TokCase)
     , ("of", TokOf)
     , ("|", TokVBar)
+    , ("[", TokOpenBracket)
+    , ("]", TokCloseBracket)
+    , (",", TokComma)
     ]
 
 -- | This group of lexers matches all reserved words.
@@ -208,3 +214,6 @@ instance Display Token where
     TokCase -> dquotes $ text "case"
     TokOf -> dquotes $ text "of"
     TokVBar -> dquotes $ text "|"
+    TokOpenBracket -> dquotes $ text "["
+    TokCloseBracket -> dquotes $ text "]"
+    TokComma -> dquotes $ text ","

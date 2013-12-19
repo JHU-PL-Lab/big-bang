@@ -34,6 +34,7 @@ data Expr =
   -- For Little Bang
  | ExprCondition Origin Expr Expr Expr
  | ExprCase Origin Expr [CaseClause]
+ | ExprList Origin [Expr]
   deriving (Eq,Ord,Show)
 
 data CaseClause =
@@ -105,6 +106,7 @@ instance HasOrigin Expr where
     -- For Little Bang
     ExprCondition orig _ _ _ -> orig
     ExprCase orig _ _ -> orig
+    ExprList orig _ -> orig
 
 instance HasOrigin CaseClause where
   originOf x = case x of
@@ -160,6 +162,8 @@ instance Display Expr where
    ExprValUnit _ -> text "()"
    -- For Little Bang
    ExprCondition _ e1 e2 e3 -> text "if " <> makeDoc e1 <> text " then " <> makeDoc e2 <> text " else " <> makeDoc e3
+   ExprCase _ e1 lst -> text "case " <> makeDoc e1 <> text "of |..."
+   ExprList _ lst -> text "list"
 
 instance Display OnionOperator where
  makeDoc x = case x of
