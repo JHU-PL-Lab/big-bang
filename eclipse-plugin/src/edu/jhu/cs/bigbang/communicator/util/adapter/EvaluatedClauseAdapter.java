@@ -35,7 +35,7 @@ public class EvaluatedClauseAdapter implements JsonDeserializer<EvaluatedClause>
 		Gson originG = originGb.create();
 		
 		GsonBuilder flowVarGb = new GsonBuilder();
-		flowVarGb.registerTypeHierarchyAdapter(AbstractFlowVar.class, new AbstractCellVarAdapter());
+		flowVarGb.registerTypeHierarchyAdapter(AbstractFlowVar.class, new AbstractFlowVarAdapter());
 		Gson flowVarG = flowVarGb.create();
 		
 		GsonBuilder cellVarGb = new GsonBuilder();
@@ -49,19 +49,19 @@ public class EvaluatedClauseAdapter implements JsonDeserializer<EvaluatedClause>
 		EvaluatedClause ec = null;
 		
 		if (type.equals("ValueDef")) {
-			
-			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);
-			
+
 			GsonBuilder valueGb = new GsonBuilder();
 			valueGb.registerTypeHierarchyAdapter(Value.class, new ValueAdapter());
 			Gson valueG = valueGb.create();
 			
 			Value value = valueG.fromJson(jo.get("value").getAsJsonObject(), Value.class);
 			
+			AbstractFlowVar flowVar = flowVarG.fromJson(jo.get("flowVar").getAsJsonObject(), AbstractFlowVar.class);					
+			
 			ec = new ValueDef(origin, flowVar, value);
 			
 		} else if (type.equals("CellDef")) {
-			
+	
 			GsonBuilder cellQualifierGb = new GsonBuilder();
 			cellQualifierGb.registerTypeHierarchyAdapter(CellQualifier.class, new CellQualifierAdapter());
 			Gson cellQualifierG = cellQualifierGb.create();

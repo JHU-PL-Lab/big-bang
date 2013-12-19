@@ -11,7 +11,6 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 
 data ToHaskellObject = RunCodeCommand String Int
                   deriving Show
-                           
 
 instance FromJSON ToHaskellObject where
   parseJSON (Object obj) = do

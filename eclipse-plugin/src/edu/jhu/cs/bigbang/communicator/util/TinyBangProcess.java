@@ -37,7 +37,8 @@ public class TinyBangProcess {
 	public void sendObj(ToHaskellObject tho) {
 		
 		GsonBuilder gb = new GsonBuilder();
-		Gson g = gb.registerTypeHierarchyAdapter(ToHaskellObject.class, new ToHaskellObjectAdapter()).create(); 		
+		Gson g = gb.registerTypeHierarchyAdapter(ToHaskellObject.class, new ToHaskellObjectAdapter()).create();
+		//Gson g = gb.create();
 		String inputStr = g.toJson(tho);
 		printf(tho.getClass().getSimpleName());
 		printf("Json String which will be sent to haskell: " + inputStr);

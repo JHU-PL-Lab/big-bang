@@ -13,6 +13,7 @@ public class ToHaskellObjectAdapter implements JsonSerializer<ToHaskellObject>{
 	@Override
 	public JsonElement serialize(ToHaskellObject src, Type typeOfSrc,
 			JsonSerializationContext context) {
+	
 		JsonObject runCodeCmdJsonStr = new JsonObject();
 	    String className = src.getClass().getSimpleName();
 	    
