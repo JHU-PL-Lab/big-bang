@@ -37,4 +37,8 @@ public class ExnPattern extends Pattern{
 		this.cellVar = cellVar;
 		this.innerPattern = innerPattern;
 	}
+	
+	public String toString() {
+		return  cellVar + " " + innerPattern;
+	}
 }
