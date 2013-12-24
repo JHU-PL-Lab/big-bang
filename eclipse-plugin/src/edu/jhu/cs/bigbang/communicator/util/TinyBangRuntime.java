@@ -37,7 +37,7 @@ public class TinyBangRuntime {
 		// get response from tinybang interpreter
 		// FromHaskellObject fho = tbp.readObject(FromHaskellObject.class);
 		FromHaskellObject fho = tbp.readObject();	
-		printf("get object " + fho);
+		printf("get object " + fho.getClass());
 		// destroy the subprocess
 		tbp.destroySubProcess();
 		
