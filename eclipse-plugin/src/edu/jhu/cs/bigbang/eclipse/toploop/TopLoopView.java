@@ -71,8 +71,7 @@ public class TopLoopView extends ViewPart implements Observer {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.character == '\r' || e.character == '\n') {
-					TopLoop.getInstance().eval(inputPanel.getText());
-					outputPanel.append("# " + inputPanel.getText());
+					TopLoop.getInstance().eval(inputPanel.getText().trim());
 					inputPanel.setText("");
 				}
 			}

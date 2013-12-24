@@ -57,7 +57,7 @@ public class TopLoop extends Observable {
 		returnBuffer = new StringBuffer();
 		tbRuntime = new TinyBangRuntime(Activator.getDefault().getInterpreterPath(), "--batch-mode");
 		returnBuffer.append("Current Interpreter: "
-				+ tbRuntime.getInterpreterPath());
+				+ tbRuntime.getInterpreterPath() + "\n");
 	}
 
 	/**
@@ -66,9 +66,11 @@ public class TopLoop extends Observable {
 	 */
 	public void eval(String s) {
 
+		returnBuffer.append("------------------\n");
+		returnBuffer.append("# " + s + "\n");
+		
 		// We append the line to the returnBuffer first.
 		// This will show the users what they typed.
-		returnBuffer.append(s + "\n");
 		FromHaskellObject returnObj = null;
 		try {
 			returnObj = tbRuntime.runSubProcess(s);
@@ -77,6 +79,7 @@ public class TopLoop extends Observable {
 		} catch (TinyBangInternalErrorException e) {
 			e.printStackTrace();
 		}
+		
 		returnBuffer.append("> " + returnObj + "\n");
 		setChanged();
 		notifyObservers();
