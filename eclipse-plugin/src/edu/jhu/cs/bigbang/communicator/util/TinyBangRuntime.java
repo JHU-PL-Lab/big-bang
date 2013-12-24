@@ -14,7 +14,7 @@ public class TinyBangRuntime {
 	private ProcessBuilder pb = null;
 
 	public TinyBangRuntime() {
-		cmdLst.add("/home/chao/work/big_bang/big-bang/tiny-bang/dist/build/tiny-bang/tiny-bang");
+		cmdLst.add("/Users/GeE/BigBang/tiny-bang/dist/build/tiny-bang/tiny-bang");
 		cmdLst.add("--batch-mode");
 		pb = new ProcessBuilder(cmdLst);
 	}

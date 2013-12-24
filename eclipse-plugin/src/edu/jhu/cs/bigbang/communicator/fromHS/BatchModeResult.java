@@ -61,10 +61,7 @@ public class BatchModeResult implements FromHaskellObject{
 	    while (it.hasNext()) {
 	        Map.Entry<AbstractFlowVar, Value> pairs = (Map.Entry<AbstractFlowVar, Value>)it.next();
 	        Value value = pairs.getValue();
-//	        String sVal = null;
-//	        if (value.getClass() == VInt.class) 
-//	        	sVal = ((VInt)value).getIntVar() +"";	
-//	        s += pairs.getKey().getFlowStr() + ", " + sVal + "\n";
+	        s += pairs.getKey().getFlowStr() + ", " + value + "\n";
 	        
 	    }
 		s += "::::::Cell to Flow Map::::::" + "\n";
@@ -72,7 +69,7 @@ public class BatchModeResult implements FromHaskellObject{
 	    while (it2.hasNext()) {
 	        Map.Entry<AbstractCellVar, AbstractFlowVar> pairs = 
 	        		(Map.Entry<AbstractCellVar, AbstractFlowVar>)it2.next();
-	        s += pairs.getKey().getCellVarStr() + ", " + pairs.getValue().getFlowStr() + "\n";
+	        s += pairs.getKey().getCellVarStr() + " map to " + pairs.getValue().getFlowStr() + "\n";
 	    }		
 		return s;
 	}
