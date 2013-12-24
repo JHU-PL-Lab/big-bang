@@ -16,5 +16,8 @@ public class PrimChar extends PrimitiveType{
 		this.origin = origin;
 	}
 	
-
+	public String toString() {
+		return  "char";
+	}
+	
 }

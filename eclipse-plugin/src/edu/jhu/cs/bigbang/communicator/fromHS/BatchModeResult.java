@@ -1,6 +1,9 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 
 public class BatchModeResult implements FromHaskellObject{
 
@@ -50,5 +53,28 @@ public class BatchModeResult implements FromHaskellObject{
 		this.flowToValueMap = flowVarMap;
 		this.cellToFlowMap = cellVarMap;
 	}
-
+	
+	public String toString() {
+		String s = "Flow Var:" + flowVar.getFlowStr() + "\n";
+		s += ":::::Flow to Value Map::::::" + "\n";
+		Iterator it = flowToValueMap.entrySet().iterator();
+	    while (it.hasNext()) {
+	        Map.Entry<AbstractFlowVar, Value> pairs = (Map.Entry<AbstractFlowVar, Value>)it.next();
+	        Value value = pairs.getValue();
+//	        String sVal = null;
+//	        if (value.getClass() == VInt.class) 
+//	        	sVal = ((VInt)value).getIntVar() +"";	
+//	        s += pairs.getKey().getFlowStr() + ", " + sVal + "\n";
+	        
+	    }
+		s += "::::::Cell to Flow Map::::::" + "\n";
+		Iterator it2 = cellToFlowMap.entrySet().iterator();
+	    while (it2.hasNext()) {
+	        Map.Entry<AbstractCellVar, AbstractFlowVar> pairs = 
+	        		(Map.Entry<AbstractCellVar, AbstractFlowVar>)it2.next();
+	        s += pairs.getKey().getCellVarStr() + ", " + pairs.getValue().getFlowStr() + "\n";
+	    }		
+		return s;
+	}
+	
 }

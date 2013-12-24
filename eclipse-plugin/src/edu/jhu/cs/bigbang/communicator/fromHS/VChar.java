@@ -20,5 +20,8 @@ public class VChar extends Value{
 		this.origin = origin;
 		this.charVar = charVar;
 	}	
-
+	
+	public String toString() {
+		return charVar + "";
+	}
 }

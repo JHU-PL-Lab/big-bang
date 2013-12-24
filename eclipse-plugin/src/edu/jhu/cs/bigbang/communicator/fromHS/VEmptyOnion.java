@@ -15,6 +15,9 @@ public class VEmptyOnion extends Value{
 		super();
 		this.origin = origin;
 	}
-	
+
+	public String toString() {
+		return "()";
+	}
 
 }

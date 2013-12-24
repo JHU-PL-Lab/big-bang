@@ -21,5 +21,8 @@ public class LabelName {
 		this.nameStr = nameStr;
 	}
 	
+	public String toString() {
+		return nameStr + "";
+	}
 	
 }

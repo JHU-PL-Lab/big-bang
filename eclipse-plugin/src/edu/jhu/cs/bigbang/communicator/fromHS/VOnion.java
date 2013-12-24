@@ -31,7 +31,8 @@ public class VOnion extends Value{
 		this.aFlowVar_2 = aFlowVar_2;
 	}
 	
-	
-	
+	public String toString() {
+		return aFlowVar_1 + " & "  + aFlowVar_2;
+	}	
 
 }

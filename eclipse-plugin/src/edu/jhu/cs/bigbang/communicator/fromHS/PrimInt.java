@@ -16,4 +16,7 @@ public class PrimInt extends PrimitiveType{
 		this.origin = origin;
 	}
 
+	public String toString() {
+		return  "int";
+	}
 }

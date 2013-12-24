@@ -23,5 +23,9 @@ public class ConjunctionPattern extends InnerPattern{
 		this.innerPattern = innerPattern;
 		this.innerPattern2 = innerPattern2;
 	}
+    
+	public String toString() {
+		return "(" + innerPattern + ") & (" + innerPattern2 + ")";  
+	}
 	
 }

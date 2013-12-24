@@ -18,4 +18,8 @@ public class PrimitivePattern extends InnerPattern{
 		this.primitiveType = primitiveType;
 	}
 
+	public String toString() {
+		return  primitiveType + "";
+	}
+	
 }

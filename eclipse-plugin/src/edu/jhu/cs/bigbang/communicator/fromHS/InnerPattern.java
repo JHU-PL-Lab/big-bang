@@ -15,4 +15,7 @@ public abstract class InnerPattern {
 		super();
 		this.origin = origin;
 	}
+	public String toString() {
+		return  "";
+	}
 }

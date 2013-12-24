@@ -29,4 +29,7 @@ public class VScape extends Value{
 		this.pattern = pattern;
 		this.expr = expr;
 	}
+	public String toString() {
+		return  pattern + " " + expr;
+	}
 }

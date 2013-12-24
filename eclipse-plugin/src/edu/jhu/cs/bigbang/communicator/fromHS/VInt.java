@@ -26,4 +26,8 @@ public class VInt extends Value{
 		this.intVar = intVar;
 	}
 
+	public String toString() {
+		return intVar + "";
+	}
+	
 }

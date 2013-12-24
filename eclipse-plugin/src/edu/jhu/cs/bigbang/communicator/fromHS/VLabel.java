@@ -29,5 +29,8 @@ public class VLabel extends Value{
 		this.labelName = labelName;
 		this.cellVar = abstractCellVar;
 	}
-
+	
+	public String toString() {
+		return  "`" + labelName + " " + cellVar;
+	}
 }

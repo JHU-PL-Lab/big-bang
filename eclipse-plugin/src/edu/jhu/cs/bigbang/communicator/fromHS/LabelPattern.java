@@ -31,5 +31,9 @@ public class LabelPattern extends InnerPattern{
 		this.cellVar = cellVar;
 		this.innerPattern = innerPattern;
 	}	
+
+	public String toString() {
+		return labelName + " " + cellVar + ":" + innerPattern;
+	}
 	
 }

@@ -26,4 +26,8 @@ public abstract class AbstractFlowVar {
 		this.flowContents= flowStr;
 	}
 	
+	public String toString() {
+		return  flowContents;
+	}
+	
 }

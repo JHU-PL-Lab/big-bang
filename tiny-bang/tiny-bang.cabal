@@ -98,8 +98,6 @@ executable tiny-bang
                    bytestring,
                    aeson
   ghc-options:     -Wall
-<<<<<<< HEAD
-=======
   other-modules:  
                    Language.TinyBang.Communicator, 
                    Language.TinyBang.Communicator.FromHaskellObject,
@@ -150,7 +148,6 @@ executable tiny-bang
                    Language.TinyBang.Toploop,
                    Utils.Toploop.Logging,
                    Language.TinyBang.TypeSystem.Data.Projection
->>>>>>> communicatorV2
 
 executable tests
   hs-source-dirs:  test-src
@@ -175,8 +172,6 @@ executable tests
                    bytestring,
                    aeson
   ghc-options:     -Wall
-<<<<<<< HEAD
-=======
   other-modules:  
                    Language.TinyBang.Communicator,   
                    Language.TinyBang.Communicator.FromHaskellObject,
@@ -216,5 +211,3 @@ executable tests
                    Language.TinyBang.Toploop,
                    Utils.Toploop.Logging,
                    Language.TinyBang.TypeSystem.Data.Projection
-
->>>>>>> communicatorV2
