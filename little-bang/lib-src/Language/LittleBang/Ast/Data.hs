@@ -19,7 +19,7 @@ import Language.TinyBang.Ast.Data (Origin, HasOrigin, originOf)
 -- | AST structure for LittleBang
 
 data Expr =
-   ExprDef Origin Var Expr Expr
+   ExprDef Origin Var Expr  Expr
  | ExprVarIn Origin Var Expr Expr
  | ExprScape Origin OuterPattern Expr
  | ExprBinaryOp Origin Expr BinaryOperator Expr
