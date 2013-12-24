@@ -7,6 +7,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Observable;
 
+import edu.jhu.cs.bigbang.communicator.exception.TinyBangInternalErrorException;
+import edu.jhu.cs.bigbang.communicator.exception.TinyBangProtocolException;
+import edu.jhu.cs.bigbang.communicator.fromHS.FromHaskellObject;
+import edu.jhu.cs.bigbang.communicator.util.TinyBangRuntime;
 import edu.jhu.cs.bigbang.eclipse.Activator;
 import edu.jhu.cs.bigbang.eclipse.process.ProcessManager;
 
@@ -22,16 +26,13 @@ import edu.jhu.cs.bigbang.eclipse.process.ProcessManager;
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu> 
  *
  */
-public class TopLoop extends Observable implements Runnable {
+public class TopLoop extends Observable {
 
 	public static final String OUTPUT_PREFIX = "# ";
 
 	private static TopLoop instance;
 
-	private ProcessManager processManager;
-	private Process currentProcess;
-	private BufferedReader reader;
-	private BufferedWriter writer;
+	private TinyBangRuntime tbRuntime;
 
 	// The buffer stores the output from the interpreter
 	private StringBuffer returnBuffer;
@@ -54,21 +55,9 @@ public class TopLoop extends Observable implements Runnable {
 	// A private constructor to create a TopLoop instance
 	private TopLoop() {
 		returnBuffer = new StringBuffer();
-		processManager = new ProcessManager();
-		currentProcess = processManager.startNewProcess();
+		tbRuntime = new TinyBangRuntime(Activator.getDefault().getInterpreterPath(), "--batch-mode");
 		returnBuffer.append("Current Interpreter: "
-				+ Activator.getDefault().getInterpreterPath());
-		try {
-			reader = new BufferedReader(new InputStreamReader(
-					currentProcess.getInputStream()));
-			writer = new BufferedWriter(new OutputStreamWriter(
-					currentProcess.getOutputStream()));
-		} catch (Exception e) {
-			System.err.println("TopLoop can't communicate with the process.");
-		}
-		// Start it self
-		Thread readerThread = new Thread(this);
-		readerThread.start();
+				+ tbRuntime.getInterpreterPath());
 	}
 
 	/**
@@ -80,12 +69,17 @@ public class TopLoop extends Observable implements Runnable {
 		// We append the line to the returnBuffer first.
 		// This will show the users what they typed.
 		returnBuffer.append(s + "\n");
+		FromHaskellObject returnObj = null;
 		try {
-			writer.write(s);
-			writer.flush();
-		} catch (IOException e) {
-			System.err.print("Error while writing to BigBang");
+			returnObj = tbRuntime.runSubProcess(s);
+		} catch (TinyBangProtocolException e) {
+			e.printStackTrace();
+		} catch (TinyBangInternalErrorException e) {
+			e.printStackTrace();
 		}
+		returnBuffer.append("> " + returnObj + "\n");
+		setChanged();
+		notifyObservers();
 	}
 
 	public void clear() {
@@ -104,20 +98,4 @@ public class TopLoop extends Observable implements Runnable {
 	public String getTopLoopString() {
 		return returnBuffer.toString();
 	}
-
-	@Override
-	public void run() {
-		String line = null;
-		try {
-			while ((line = reader.readLine()) != null) {
-				returnBuffer.append(line);
-				returnBuffer.append("\n");
-				setChanged();
-				notifyObservers();
-			}
-		} catch (Exception e) {
-			System.err.println("Error while reading from BigBang!");
-		}
-	}
-
 }
