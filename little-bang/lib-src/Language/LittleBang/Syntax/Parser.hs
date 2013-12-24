@@ -171,7 +171,8 @@ labelExprParser =
 -- Expr8 ::= Char
 -- Expr8 ::= Unit
 -- Expr8 ::= ( Expr )
--- Expr8 ::= [Expr, ...]
+-- Expr8 ::= [Expr 1,..., Expr n]
+-- Expr8 ::= [Pattern 1,..., Pattern n]
 valExprParser :: Parser Expr
 valExprParser = 
       ExprValInt <$&> require matchIntLit
@@ -185,7 +186,7 @@ valExprParser =
         listExprParser :: Parser Expr
         listExprParser = try $ do
                 (start, ()) <- require (\x -> if x == TokOpenBracket then Just () else Nothing)
-                elements <- sepBy expressionParser (consume TokComma)
+                elements <- sepEndBy expressionParser (consume TokComma)
                 (stop, ()) <- require (\x -> if x == TokCloseBracket then Just () else Nothing)
                 let origin = SourceOrigin $ SourceRegion (startLoc start) (stopLoc stop)
                 return $ ExprList origin elements
@@ -216,18 +217,27 @@ patternLabelParser =
   <|> patternPrimParser
   <?> "label pattern"
 
-
 -- Pattern2 ::= Primitive
 -- Pattern2 ::= fun
 -- Pattern2 ::= Var (removed)
 -- Pattern2 ::= (Pattern)
+-- Pattern2 ::= [OuterPattern]
 patternPrimParser :: Parser Pattern
 patternPrimParser = 
       argorig1 PrimitivePattern <$> primitiveParser
   <|> requirex TokFun ScapePattern
   <|> requirex TokEmptyOnion EmptyOnionPattern
   <|> consume TokOpenParen *> patternOnionParser <* consume TokCloseParen
+  <|> listPatternParser
   <?> "primitive pattern"
+  where
+        listPatternParser :: Parser Pattern
+        listPatternParser = try $ do
+                (start, ()) <- require (\x -> if x == TokOpenBracket then Just () else Nothing)
+                elements <- sepEndBy outerPatternParser (consume TokComma)
+                (stop, ()) <- require (\x -> if x == TokCloseBracket then Just () else Nothing)
+                let origin = SourceOrigin $ SourceRegion (startLoc start) (stopLoc stop)
+                return $ ListPattern origin elements Nothing -- TODO: allow possible finish pattern
 
 primitiveParser :: Parser Primitive
 primitiveParser = 

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-
 public class BatchModeResult implements FromHaskellObject{
 
 	private int cmdId;
@@ -73,5 +72,4 @@ public class BatchModeResult implements FromHaskellObject{
 	    }		
 		return s;
 	}
-	
 }

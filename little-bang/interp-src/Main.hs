@@ -6,6 +6,7 @@ import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Display
+import Language.TinyBang.Logging
 import Language.TinyBang.Toploop
 import Utils.Toploop.Logging
 
@@ -48,6 +49,7 @@ interpContext = ParserContext UnknownDocument "Interpreter"
 -- | Wrapper for evaluation
 eval :: String -> IO String
 eval input =
+ -- configureLogging ["debug"] >>
   let answer =
           do -- Either String String
             tokens <- lexLittleBang "" input
