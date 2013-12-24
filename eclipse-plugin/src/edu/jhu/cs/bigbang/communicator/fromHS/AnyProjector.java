@@ -16,4 +16,9 @@ public class AnyProjector {
 		super();
 		this.projector = projector;
 	}
+	
+	public String toString() {
+		return projector + " ";
+	}
+	
 }

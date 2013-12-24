@@ -15,4 +15,8 @@ public class OpOnionSub extends OnionOp{
 		super();
 		this.origin = origin;
 	}
+	
+	public String toString() {
+		return "OpOnionSub";
+	}
 }

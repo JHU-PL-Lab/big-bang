@@ -15,5 +15,8 @@ public abstract class Projector {
 		super();
 		this.origin = origin;
 	}
-
+	
+	public String toString() {
+		return "Projector";
+	}
 }

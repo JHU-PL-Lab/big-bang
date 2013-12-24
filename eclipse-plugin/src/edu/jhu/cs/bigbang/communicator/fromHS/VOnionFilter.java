@@ -1,6 +1,5 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
-
 public class VOnionFilter extends Value {
 
 	private Origin origin;
@@ -48,5 +47,10 @@ public class VOnionFilter extends Value {
 		this.onionOp = onionOp;
 		this.anyProjector = anyProjector;
 	}
-
+	
+	public String toString() {
+		return flowVar + "" + onionOp + " " + anyProjector + " ";
+	}
+	
 }
+	

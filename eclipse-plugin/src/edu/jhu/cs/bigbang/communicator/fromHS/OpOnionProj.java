@@ -15,5 +15,9 @@ public class OpOnionProj extends OnionOp{
 		super();
 		this.origin = origin;
 	}
-
+    
+	public String toString() {
+		return "OpOnionPoj";
+	}
+	
 }

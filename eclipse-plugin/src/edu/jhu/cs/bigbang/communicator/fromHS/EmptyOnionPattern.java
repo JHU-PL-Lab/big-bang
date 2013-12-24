@@ -7,7 +7,9 @@ public class EmptyOnionPattern extends InnerPattern{
 	}
     
 	public String toString() {
+		
 		return "()";
+		
 	}
 	
 }
