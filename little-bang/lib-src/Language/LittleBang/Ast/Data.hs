@@ -19,7 +19,7 @@ import Language.TinyBang.Ast.Data (Origin, HasOrigin, originOf)
 -- | AST structure for LittleBang
 
 data Expr =
-   ExprDef Origin Var Expr Expr
+   ExprDef Origin Var Expr  Expr
  | ExprVarIn Origin Var Expr Expr
  | ExprScape Origin OuterPattern Expr
  | ExprBinaryOp Origin Expr BinaryOperator Expr
@@ -37,6 +37,7 @@ data Expr =
  | ExprList Origin [Expr]
   deriving (Eq,Ord,Show)
 
+-- For Little Bang
 data CaseClause =
    CaseClause Origin Pattern Expr
   deriving (Eq,Ord,Show)
@@ -66,6 +67,9 @@ data Pattern =
  | ConjunctionPattern Origin Pattern Pattern 
  | ScapePattern Origin
  | EmptyOnionPattern Origin
+  -- For Little Bang
+ | ListPattern Origin [OuterPattern] (Maybe Pattern)
+        -- ^List of element patterns and possible rest-of-list pattern
   deriving (Eq,Ord,Show)
 
 data Var =
@@ -127,6 +131,7 @@ instance HasOrigin Pattern where
    PrimitivePattern orig _ -> orig
    ScapePattern orig -> orig
    EmptyOnionPattern orig -> orig
+   ListPattern orig _ _ -> orig
 
 instance HasOrigin Primitive where
   originOf x = case x of
@@ -191,6 +196,7 @@ instance Display Pattern where
    PrimitivePattern _ prim -> makeDoc prim
    ScapePattern _ -> text "fun"
    EmptyOnionPattern _ -> text "()"
+   ListPattern _ lst _ -> text "[pattern]" -- TODO
 
 instance Display Var where
   makeDoc x = case x of

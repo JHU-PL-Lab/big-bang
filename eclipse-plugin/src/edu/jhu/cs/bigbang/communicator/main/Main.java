@@ -11,7 +11,9 @@ public class Main {
 
 	public static void main(String[] args) throws TinyBangProtocolException, TinyBangInternalErrorException {		
 		TinyBangRuntime tbr = new TinyBangRuntime();
-		FromHaskellObject fho = tbr.runSubProcess(); 
+		FromHaskellObject fho = tbr.runSubProcess("a=5;b=3;c=a+b;;"); 
 	}	
+
+	
 	
 }

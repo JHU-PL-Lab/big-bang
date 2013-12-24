@@ -1,6 +1,6 @@
 name:           tiny-bang
 version:        0.2
-cabal-version:  >=1.8
+cabal-version:  >=1.2
 build-type:     Simple
 author:         Zachary Palmer
 
@@ -59,8 +59,6 @@ library
                    Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Relations.Projection,
                    Language.TinyBang.TypeSystem.Closure,
-                   Language.TinyBang.TypeSystem.Constraints,
-                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
@@ -82,21 +80,15 @@ library
                    Language.TinyBang.TypeSystem.Data.Projection
 
 executable tiny-bang
-  hs-source-dirs:  interp-src
+  hs-source-dirs:  
+                   lib-src,
+                   interp-src
   main-is:         Main.hs
   build-depends:   
                    base >= 4,
-                   tiny-bang,
                    containers,
                    mtl,
-                   cmdargs,
-                   parsec,
-                   split,
-                   wl-pprint,
-                   errors,
-                   hslogger,
-                   bytestring,
-                   aeson
+                   cmdargs
   ghc-options:     -Wall
   other-modules:  
                    Language.TinyBang.Communicator, 
@@ -150,27 +142,17 @@ executable tiny-bang
                    Language.TinyBang.TypeSystem.Data.Projection
 
 executable tests
-  hs-source-dirs:  test-src
+  hs-source-dirs:  lib-src, test-src
   main-is:         Main.hs
-  build-depends:   base >= 4,
-                   tiny-bang,
-                   containers,
+  build-depends:   
+                   base >= 4,
                    HUnit >= 1.2 && < 2,
                    QuickCheck >= 2.4,
                    test-framework >= 0.4.1,
                    test-framework-quickcheck2,
                    test-framework-hunit,
-                   mtl,
                    filepath,
-                   directory,
-                   cmdargs,
-                   parsec,
-                   split,
-                   wl-pprint,
-                   errors,
-                   hslogger,
-                   bytestring,
-                   aeson
+                   directory
   ghc-options:     -Wall
   other-modules:  
                    Language.TinyBang.Communicator,   
@@ -211,3 +193,4 @@ executable tests
                    Language.TinyBang.Toploop,
                    Utils.Toploop.Logging,
                    Language.TinyBang.TypeSystem.Data.Projection
+
