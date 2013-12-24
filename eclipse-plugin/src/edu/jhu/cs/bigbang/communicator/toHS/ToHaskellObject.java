@@ -2,19 +2,20 @@ package edu.jhu.cs.bigbang.communicator.toHS;
 
 import edu.jhu.cs.bigbang.communicator.util.CommunicatorSerializable;
 
-public class ToHaskellObject implements CommunicatorSerializable{
-	private int tho;
+public class ToHaskellObject implements CommunicatorSerializable {
 
-	public int getTho() {
-		return tho;
+	private int cmdId;
+
+	public int getCmdId() {
+		return cmdId;
 	}
 
-	public void setTho(int tho) {
-		this.tho = tho;
+	public void setCmdId(int cmdId) {
+		this.cmdId = cmdId;
 	}
 
-	public ToHaskellObject(int tho) {
-		super();
-		this.tho = tho;
-	} 
+	public ToHaskellObject(int cmdId) {
+		this.cmdId = cmdId;
+	}
+
 }

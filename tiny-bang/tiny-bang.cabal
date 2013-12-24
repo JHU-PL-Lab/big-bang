@@ -22,9 +22,10 @@ library
                    bytestring,
                    aeson
   ghc-options:     -Wall
-  exposed-modules: 
-                   Language.TinyBang.ToploopBM,
-                   Language.TinyBang.Communicator,
+  exposed-modules:   
+                   Language.TinyBang.Communicator,  
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Ast,
@@ -64,6 +65,8 @@ library
                    Language.TinyBang.TypeSystem.Monad.Trans.Flow,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
                    Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.Data.Compatibility,
                    Language.TinyBang.TypeSystem.Data,
@@ -95,6 +98,59 @@ executable tiny-bang
                    bytestring,
                    aeson
   ghc-options:     -Wall
+<<<<<<< HEAD
+=======
+  other-modules:  
+                   Language.TinyBang.Communicator, 
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
+                   Language.TinyBang.Syntax.Lexer,
+                   Language.TinyBang.Syntax.Parser,
+                   Language.TinyBang.Ast,
+                   Language.TinyBang.Syntax.Location,
+                   Utils.Meta.Deriving,
+                   Language.TinyBang.Interpreter,
+                   Language.TinyBang.Ast.Data,
+                   Language.TinyBang.Ast.WellFormedness,
+                   Language.TinyBang.Interpreter.Compatibility,
+                   Language.TinyBang.Interpreter.Basis,
+                   Language.TinyBang.Interpreter.Equality,
+                   Language.TinyBang.Interpreter.Projection,
+                   Utils.Monad,
+                   Language.TinyBang.Ast.Substitution,
+                   Language.TinyBang.Display,
+                   Data.Adj,
+                   Language.TinyBang.Interpreter.DeepValues,
+                   Language.TinyBang.Utils.Parsec,
+                   Language.TinyBang.Logging,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.Types,
+                   Language.TinyBang.TypeSystem.Contours,
+                   Data.NFA,
+                   Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.Relations.Contours,
+                   Language.TinyBang.TypeSystem.TypeInference,
+                   Language.TinyBang.TypeSystem.Fibrations,
+                   Language.TinyBang.TypeSystem.Relations.Projection,
+                   Language.TinyBang.TypeSystem.Closure,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase,
+                   Language.TinyBang.TypeSystem.Data.Compatibility,
+                   Language.TinyBang.TypeSystem.Data,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
+                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
+                   Language.TinyBang.Interpreter.Variables,
+                   Utils.Toploop,
+                   Language.TinyBang.Toploop,
+                   Utils.Toploop.Logging,
+                   Language.TinyBang.TypeSystem.Data.Projection
+>>>>>>> communicatorV2
 
 executable tests
   hs-source-dirs:  test-src
@@ -119,3 +175,46 @@ executable tests
                    bytestring,
                    aeson
   ghc-options:     -Wall
+<<<<<<< HEAD
+=======
+  other-modules:  
+                   Language.TinyBang.Communicator,   
+                   Language.TinyBang.Communicator.FromHaskellObject,
+                   Language.TinyBang.Communicator.ToHaskellObject,
+                   Language.TinyBang.Utils.Parsec,
+                   Test.TinyBang.SourceFile,
+                   Language.TinyBang.Logging,
+                   Utils.Tuple,
+                   Utils.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.Types,
+                   Language.TinyBang.TypeSystem.Contours,
+                   Data.NFA,
+                   Language.TinyBang.TypeSystem.Relations,
+                   Language.TinyBang.TypeSystem.Relations.Contours,
+                   Language.TinyBang.TypeSystem.TypeInference,
+                   Language.TinyBang.TypeSystem.Fibrations,
+                   Language.TinyBang.TypeSystem.Relations.Projection,
+                   Language.TinyBang.TypeSystem.Closure,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
+                   Language.TinyBang.TypeSystem.Relations.Compatibility,
+                   Language.TinyBang.TypeSystem.Constraints,
+                   Language.TinyBang.TypeSystem.ConstraintHistory,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase,
+                   Language.TinyBang.TypeSystem.Data.Compatibility,
+                   Language.TinyBang.TypeSystem.Data,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable,
+                   Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable,
+                   Language.TinyBang.TypeSystem.Relations.CellSubstitutable,
+                   Test.TinyBang.ExpectDsl.Lexer,
+                   Test.TinyBang.ExpectDsl,
+                   Test.TinyBang.ExpectDsl.Data,
+                   Language.TinyBang.Interpreter.Variables,
+                   Test.Data.NFA,
+                   Test.TinyBang.Language.TypeSystem.Contours,
+                   Utils.Toploop,
+                   Language.TinyBang.Toploop,
+                   Utils.Toploop.Logging,
+                   Language.TinyBang.TypeSystem.Data.Projection
+
+>>>>>>> communicatorV2

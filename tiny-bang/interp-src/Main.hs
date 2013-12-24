@@ -13,10 +13,10 @@ import Language.TinyBang.Toploop
 import Utils.Toploop
 import Utils.Toploop.Logging
 
---import Lanugage.TinyBang.ToploopBM
---import Language.TinyBang.Communicator
---import Language.TinyBang.Communnicator.FromHaskellObject
+-- package for testing
+import Language.TinyBang.ToploopTest as TLT
 import Data.List.Split
+import qualified Data.ByteString.Lazy.Char8 as BL
 
 data Options = Options
   { noTypecheck :: Bool
@@ -83,7 +83,7 @@ makeEval opts = do
 main :: IO ()
 main = do
   opts <- cmdArgs defOpts
-  
+            
   configurationSuccessful <- configureLogging $ loggingInstructions opts
   unless configurationSuccessful $
     ioError $ userError "Logging configuration failed."
@@ -91,17 +91,12 @@ main = do
 
   if batchMode opts     
     then do 
-      
+
       inp <- getContents
-      -- |Method for batchMode
-  
-      let exprSrcs = filter (not . null) $ splitOn ";;" inp
-          config = InterpreterConfiguration
-                     { typechecking = not $ noTypecheck opts
-                     , evaluating = not $ noEval opts
-                     , databaseType = Simple }                
-      mapM_ putStrLn $ map (stringyInterpretSource config) exprSrcs      
-      
+      let exprSrcs = filter (not . null) $ splitOn "\n" inp
+      mapM_ (putStrLn . messageHandler) exprSrcs
+      hFlush stdout
+ 
     else do 
       putStrLn versionStr
       putStrLn ""
@@ -110,4 +105,4 @@ main = do
   
       eval <- makeEval opts
       toploop eval
-
+       
