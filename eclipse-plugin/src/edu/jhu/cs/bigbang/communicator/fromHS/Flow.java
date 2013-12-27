@@ -37,5 +37,9 @@ public class Flow extends EvaluatedClause{
 		this.flowKind = flowKind;
 		this.flowVar2 = flowVar2;
 	}
-
+	
+	public String toString() {
+    	return " " + flowVar + " <~" + flowKind + " " + flowVar2;
+    }
+	
 }

@@ -8,18 +8,27 @@ public class ProjectionFailure extends EvalError{
 	public AbstractFlowVar getFlowVar() {
 		return flowVar;
 	}
+	
 	public void setFlowVar(AbstractFlowVar flowVar) {
 		this.flowVar = flowVar;
 	}
+	
 	public AnyProjector getAnyProject() {
 		return anyProjector;
 	}
+	
 	public void setAnyProject(AnyProjector anyProject) {
 		this.anyProjector = anyProject;
 	}
+	
 	public ProjectionFailure(AbstractFlowVar flowVar, AnyProjector anyProject) {
 		super();
 		this.flowVar = flowVar;
 		this.anyProjector = anyProject;
 	}
+	
+	public String toString() {
+		return " " + flowVar + " " + anyProjector;
+	}
+	
 }

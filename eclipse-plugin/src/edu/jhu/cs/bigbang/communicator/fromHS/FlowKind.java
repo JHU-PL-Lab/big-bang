@@ -15,4 +15,8 @@ public class FlowKind {
 		super();
 		this.flowKind = flowKind;
 	}
+	
+	public String toString() {
+    	return flowKind;
+    }
 }

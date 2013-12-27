@@ -18,4 +18,8 @@ public class Appl extends Redex{
 		this.flowVar2 = flowVar2;
 	}
 	
+	public String toString() {
+    	return " " + this.getFlowVar() + " " + flowVar2;
+    }
+	
 }

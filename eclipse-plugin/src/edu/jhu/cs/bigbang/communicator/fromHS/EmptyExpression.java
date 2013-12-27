@@ -16,4 +16,8 @@ public class EmptyExpression extends IllFormedness{
 		super();
 		this.content = content;
 	}
+	
+	public String toString() {
+    	return content;
+    }
 }

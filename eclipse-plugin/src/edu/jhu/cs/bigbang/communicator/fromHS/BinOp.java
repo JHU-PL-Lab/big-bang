@@ -28,4 +28,7 @@ public class BinOp extends Redex{
 		this.flowVar2 = flowVar2;
 	}
 	
+	public String toString() {
+    	return " " + this.getFlowVar() + " " + binaryOperator + " " + flowVar2;
+    }
 }

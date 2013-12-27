@@ -15,5 +15,8 @@ public class GenFlowVar extends AbstractFlowVar{
 		super(origin, flowStr);
 		this.flowNum = flowVarInt;
 	}
-	
+
+	public String toString() {
+    	return " " + flowNum; 
+    }
 }

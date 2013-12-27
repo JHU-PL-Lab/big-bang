@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public abstract class Redex {
+	
 	private Origin origin;
 	private AbstractFlowVar flowVar;
 	

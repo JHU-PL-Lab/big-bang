@@ -17,4 +17,8 @@ public class FlowVarNotClosed extends EvalError{
 		this.flowVar = flowVar;
 	}
 	
+	public String toString() {
+    	return " " + flowVar;
+    }
+	
 }

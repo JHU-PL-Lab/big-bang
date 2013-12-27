@@ -26,5 +26,8 @@ public class ValueDef extends EvaluatedClause{
 		this.flowVar = flowVar;
 		this.value = value;
 	}
-
+	
+	public String toString() {
+    	return " " + flowVar + " = " + value;
+    }
 }

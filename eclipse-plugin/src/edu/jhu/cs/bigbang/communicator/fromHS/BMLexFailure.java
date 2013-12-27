@@ -17,4 +17,8 @@ public class BMLexFailure extends BatchModeError {
 	    this.errMsg = errMsg;
     }
     
+    public String toString() {
+    	return errMsg;
+    }
+    
 }

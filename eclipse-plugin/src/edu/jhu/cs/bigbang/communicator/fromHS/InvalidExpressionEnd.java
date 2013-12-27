@@ -17,4 +17,8 @@ public class InvalidExpressionEnd extends IllFormedness{
 		this.clause = clause;
 	}
 	
+	public String toString() {
+		return " " + clause;
+	}
+	
 }

@@ -17,4 +17,8 @@ public class SomeCellVar extends AnyVar{
 		this.cellVar = cellVar;
 	}
 	
+	public String toString() {
+		return " " + cellVar;
+	}
+	
 }

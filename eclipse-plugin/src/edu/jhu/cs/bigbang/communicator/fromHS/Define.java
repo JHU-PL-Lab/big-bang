@@ -6,4 +6,7 @@ public class Define extends Redex {
 		super(origin, flowVar);
 	}
 	
+	public String toString() {
+    	return " " + this.getFlowVar();
+    }
 }

@@ -28,4 +28,7 @@ public class RedexDef extends Clause{
 		this.flowVar = flowVar;
 		this.redex = redex;
 	}
+	public String toString() {
+    	return flowVar + " = " + redex;
+    }
 }

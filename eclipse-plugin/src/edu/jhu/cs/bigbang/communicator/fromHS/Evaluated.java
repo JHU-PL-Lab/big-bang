@@ -17,4 +17,7 @@ public class Evaluated extends Clause{
 		this.evaluatedClause = evaluatedClause;
 	}
 	
+	public String toString() {
+    	return " " + evaluatedClause;
+    }
 }

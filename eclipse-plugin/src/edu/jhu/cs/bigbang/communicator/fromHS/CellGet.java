@@ -31,5 +31,8 @@ public class CellGet extends Clause{
 		this.cellVar = cellVar;
 	}
 	
+	public String toString() {
+    	return " " + cellVar + " =! " + flowVar;
+    }
 	
 }

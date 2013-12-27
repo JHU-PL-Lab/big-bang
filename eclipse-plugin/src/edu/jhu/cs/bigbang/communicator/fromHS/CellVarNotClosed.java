@@ -16,5 +16,8 @@ public class CellVarNotClosed extends EvalError{
 		super();
 		this.cellVar = cellVar;
 	}
-
+	
+	public String toString() {
+    	return " " + cellVar;
+    }
 }

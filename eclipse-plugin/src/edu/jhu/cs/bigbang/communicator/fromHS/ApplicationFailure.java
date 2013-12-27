@@ -26,4 +26,8 @@ public class ApplicationFailure extends EvalError{
 		this.flowVar2 = flowVar2;
 	}
 	
+	public String toString() {
+		return " " + flowVar1 + " " + flowVar2; 
+	}
+	
 }

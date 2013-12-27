@@ -17,4 +17,8 @@ public class SomeFlowVar extends AnyVar{
 		this.flowVar = flowVar;
 	}
 
+	public String toString() {
+		return " " + flowVar;
+	}
+	
 }

@@ -16,4 +16,8 @@ public class IllFormedExpression extends EvalError{
 		super();
 		this.illFormedness = illFormedness;
 	}
+	
+	public String toString() {
+		return " " + illFormedness;
+	}
 }

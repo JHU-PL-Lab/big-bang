@@ -6,4 +6,7 @@ public class QualImmutable extends CellQualifier{
 		super(origin);
 	}
 	
+	public String toString() {
+    	return "QualImmutable";
+    }
 }

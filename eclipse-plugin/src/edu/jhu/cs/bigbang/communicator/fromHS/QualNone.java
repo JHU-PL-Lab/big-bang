@@ -6,4 +6,7 @@ public class QualNone extends CellQualifier{
 		super(origin);
 	}
 	
+	public String toString() {
+    	return "QualNone";
+    }
 }

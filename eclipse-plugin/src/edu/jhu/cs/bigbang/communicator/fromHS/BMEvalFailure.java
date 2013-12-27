@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class BMEvalFailure extends BatchModeError{
 	private EvalError evalError;
@@ -27,6 +28,16 @@ public class BMEvalFailure extends BatchModeError{
 		super(cmdId);
 		this.evalError = evalError;
 		this.clauseLst = clauseLst;
+	}
+	
+	public String toString() {
+		StringBuffer resultStr = null;
+		resultStr.append(evalError.toString());
+		Iterator<Clause> arrLstI = clauseLst.iterator();
+		while(arrLstI.hasNext()) {
+			resultStr.append(arrLstI.next());
+		}
+		return resultStr.toString();
 	}
 	
 }

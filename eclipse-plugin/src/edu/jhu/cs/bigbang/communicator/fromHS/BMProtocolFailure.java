@@ -16,5 +16,8 @@ public class BMProtocolFailure extends BatchModeError {
 		super(cmdId);
 		this.errMsg = errMsg;
 	}
-	
+    
+	public String toString() {
+		return errMsg;		
+	}
 }

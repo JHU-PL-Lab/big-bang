@@ -6,4 +6,7 @@ public class QualFinal extends CellQualifier{
 		super(origin);
 	}
 	
+	public String toString() {
+    	return "QualFinal";
+    }
 }

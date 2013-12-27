@@ -38,4 +38,8 @@ public class CellDef extends EvaluatedClause{
 		this.cellVar = cellVar;
 	}
 	
+	public String toString() {
+    	return " " + cellQualifier + " " + flowVar + " := " + cellVar;
+    }
+	
 }

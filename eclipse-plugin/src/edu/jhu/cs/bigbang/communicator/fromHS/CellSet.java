@@ -29,4 +29,8 @@ public class CellSet extends Clause{
 		this.cellVar = cellVar;
 		this.flowVar = flowVar;
 	}
+	
+	public String toString() {
+    	return " " + cellVar + " <- " + flowVar;
+    }
 }

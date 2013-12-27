@@ -29,4 +29,7 @@ public class Throws extends Clause{
 		this.flowVar = flowVar;
 		this.flowVar2 = flowVar2;
 	}
+	public String toString() {
+    	return " " + flowVar + " throws " + flowVar2;
+    }
 }

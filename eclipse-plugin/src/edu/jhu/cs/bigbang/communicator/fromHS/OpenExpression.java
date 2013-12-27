@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class OpenExpression extends EvalError{
 	
@@ -18,4 +19,14 @@ public class OpenExpression extends EvalError{
 		super();
 		this.anyVarLst = anyVarLst;
 	}
+	
+	public String toString() {
+		Iterator arrLstI = anyVarLst.iterator();
+		StringBuffer resultStr = null;
+		while(arrLstI.hasNext()) {
+			resultStr.append(" " + arrLstI.next());
+		}
+		return resultStr.toString();
+	}
+	
 }
