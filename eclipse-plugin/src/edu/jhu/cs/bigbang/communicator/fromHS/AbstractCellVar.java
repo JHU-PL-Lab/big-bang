@@ -27,8 +27,8 @@ public abstract class AbstractCellVar {
 		this.cellContents= cellVarStr;
 	}
 	
-	
 	public String toString() {
 		return cellContents;
 	}
+	
  }

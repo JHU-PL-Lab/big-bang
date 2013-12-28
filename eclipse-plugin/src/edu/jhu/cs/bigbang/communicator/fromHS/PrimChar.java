@@ -20,4 +20,12 @@ public class PrimChar extends PrimitiveType{
 		return  "char";
 	}
 	
+	public boolean equals(PrimChar primCharObj) {
+		if(this.origin.equals(primCharObj.getOrigin())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 }

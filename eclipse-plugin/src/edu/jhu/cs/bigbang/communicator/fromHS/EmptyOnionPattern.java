@@ -6,10 +6,16 @@ public class EmptyOnionPattern extends InnerPattern{
 		super(origin);
 	}
     
-	public String toString() {
-		
-		return "()";
-		
+	public String toString() {		
+		return "()";		
+	}
+	
+	public boolean equals(EmptyOnionPattern emptyOnionPatternObj) {
+		if (this.getOrigin().equals(emptyOnionPatternObj.getOrigin())) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 }

@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class VLabel extends Value{
+	
 	private Origin origin;
 	private LabelName labelName;
 	private AbstractCellVar cellVar;
@@ -33,4 +34,13 @@ public class VLabel extends Value{
 	public String toString() {
 		return  "`" + labelName + " " + cellVar;
 	}
+	
+	public boolean equals(VLabel vLabelObj) {
+		if(this.origin.equals(vLabelObj.getOrigin()) && this.labelName.equals(vLabelObj.labelName) && this.cellVar.equals(vLabelObj.getCellVar())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 }

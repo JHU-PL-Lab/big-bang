@@ -20,4 +20,12 @@ public class Evaluated extends Clause{
 	public String toString() {
     	return " " + evaluatedClause;
     }
+	
+	public boolean equals(Evaluated evaluatedObj) { 
+		if(this.evaluatedClause.equals(evaluatedObj.getEvaluatedClause())) {				
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

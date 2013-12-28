@@ -31,4 +31,12 @@ public class BinOp extends Redex{
 	public String toString() {
     	return " " + this.getFlowVar() + " " + binaryOperator + " " + flowVar2;
     }
+	
+	public boolean equals(BinOp binOpObj) { 
+		if(this.getOrigin().equals(binOpObj.getOrigin()) &&
+		   this.getFlowVar().equals(binOpObj.getFlowVar()) &&
+		   this.getFlowVar2().equals(binOpObj.getFlowVar2()) &&
+		   this.getBinaryOperator().equals(binOpObj.getBinaryOperator())) return true;
+		else return false;   
+	}
 }

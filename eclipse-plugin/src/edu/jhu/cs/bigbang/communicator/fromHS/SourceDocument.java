@@ -21,4 +21,9 @@ public class SourceDocument {
 		return "Unknown";
 	}
 	
+	public boolean equals(SourceDocument srcDocObj) {
+		if (this.docType.equals(srcDocObj.getDocType())) return true;
+		else return false;
+	}
+	
  }

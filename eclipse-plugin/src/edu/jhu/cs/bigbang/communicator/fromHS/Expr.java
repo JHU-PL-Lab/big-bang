@@ -6,6 +6,7 @@ public class Expr {
 	
 	private Origin origin;
 	private ArrayList<Clause> clauseLst;
+	
 	public Origin getOrigin() {
 		return origin;
 	}
@@ -24,4 +25,12 @@ public class Expr {
 		this.clauseLst = clauseLst;
 	}
 	
+	public boolean equals(Expr exprObj) {
+		if(this.origin.equals(exprObj.getOrigin()) &&
+		   this.clauseLst.equals(exprObj.getClauseLst())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

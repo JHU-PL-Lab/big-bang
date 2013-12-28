@@ -25,4 +25,12 @@ public class LabelName {
 		return nameStr + "";
 	}
 	
+	public boolean equals(LabelName labelNameObj) {
+		if(this.origin.equals(labelNameObj.getOrigin()) && this.nameStr.equals(labelNameObj.getNameStr())) {
+			return true;
+		}else {
+			return false;
+		}
+		
+	}
 }

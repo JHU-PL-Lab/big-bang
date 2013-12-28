@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class GenFlowVar extends AbstractFlowVar{
+
 	private int flowNum;
 
 	public int getFlowVarInt() {
@@ -19,4 +20,13 @@ public class GenFlowVar extends AbstractFlowVar{
 	public String toString() {
     	return " " + flowNum; 
     }
+
+	public boolean equals(GenFlowVar genFlowVarObj) {
+		if(this.getOrigin().equals(genFlowVarObj.getOrigin()) && this.getFlowStr().equals(genFlowVarObj.getFlowStr()) && this.getFlowVarInt() == genFlowVarObj.getFlowVarInt()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 }

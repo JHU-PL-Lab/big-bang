@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class OpOnionProj extends OnionOp{
+	
 	private Origin origin;
 
 	public Origin getOrigin() {
@@ -18,6 +19,14 @@ public class OpOnionProj extends OnionOp{
     
 	public String toString() {
 		return "OpOnionPoj";
+	}
+	
+	public boolean equals(OpOnionProj opOnionProjObj) {
+		if(this.origin.equals(opOnionProjObj.getOrigin())) {
+			return true;
+		}else {
+			return false;
+		}
 	}
 	
 }

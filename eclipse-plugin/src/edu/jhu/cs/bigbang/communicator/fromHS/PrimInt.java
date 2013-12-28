@@ -19,4 +19,12 @@ public class PrimInt extends PrimitiveType{
 	public String toString() {
 		return  "int";
 	}
+	
+	public boolean equals(PrimInt primIntObj) {
+		if(this.origin.equals(primIntObj.getOrigin())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

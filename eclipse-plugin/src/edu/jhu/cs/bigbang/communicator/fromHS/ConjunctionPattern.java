@@ -28,4 +28,12 @@ public class ConjunctionPattern extends InnerPattern{
 		return "(" + innerPattern + ") & (" + innerPattern2 + ")";  
 	}
 	
+	public boolean equals(ConjunctionPattern conjunctionPatternObj) {
+		if(this.innerPattern.equals(conjunctionPatternObj.getInnerPattern()) &&
+		   this.innerPattern2.equals(conjunctionPatternObj.getInnerPattern2())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
 }

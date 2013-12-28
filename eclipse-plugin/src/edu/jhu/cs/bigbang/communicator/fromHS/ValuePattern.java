@@ -42,4 +42,14 @@ public class ValuePattern extends Pattern{
 		return  cellVar + " " + innerPattern;
 	}
 	
+	public boolean equals(ValuePattern valuePatternObj) {
+		if(this.origin.equals(valuePatternObj.getOrigin()) &&
+		   this.cellVar.equals(valuePatternObj.getCellVar()) &&
+		   this.innerPattern.equals(valuePatternObj.getInnerPattern())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 }

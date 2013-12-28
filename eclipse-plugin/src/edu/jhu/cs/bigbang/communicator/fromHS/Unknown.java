@@ -20,4 +20,9 @@ public class Unknown extends SourceLocation{
 		return "Unknown";
 	}
  	
+	public boolean equals(Unknown unknownObj) {
+		if(this.type.equals(unknownObj.getType())) return true;
+		else return false;
+	}
+	
 }

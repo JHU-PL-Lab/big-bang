@@ -19,4 +19,9 @@ public class FlowKind {
 	public String toString() {
     	return flowKind;
     }
+	
+	public boolean equals(FlowKind flowKindObj) {
+		if(this.flowKind.equals(flowKindObj.getFlowKind())) return true;
+		else return false;
+	}
 }

@@ -20,4 +20,11 @@ public class VEmptyOnion extends Value{
 		return "()";
 	}
 
+	public boolean equals(VEmptyOnion vEmptyOnionObj) {
+		if(this.origin.equals(vEmptyOnionObj.getOrigin())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
 }

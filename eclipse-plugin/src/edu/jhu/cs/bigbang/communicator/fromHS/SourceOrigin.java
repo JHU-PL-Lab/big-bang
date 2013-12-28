@@ -21,4 +21,8 @@ public class SourceOrigin extends Origin {
 		return " " + srcRegion;
 	}
 	
+	public boolean equals(SourceOrigin srcOriginObj) {
+		if(this.srcRegion.equals(srcOriginObj.getSrcRegion())) return true;
+		else return false;
+	}
 }

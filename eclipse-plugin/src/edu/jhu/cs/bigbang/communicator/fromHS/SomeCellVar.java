@@ -21,4 +21,12 @@ public class SomeCellVar extends AnyVar{
 		return " " + cellVar;
 	}
 	
+	public boolean equals(SomeCellVar someCellVarObj) {
+		if(this.cellVar.equals(someCellVarObj.getCellVar())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 }

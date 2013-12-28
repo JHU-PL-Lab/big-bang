@@ -42,4 +42,15 @@ public class CellDef extends EvaluatedClause{
     	return " " + cellQualifier + " " + flowVar + " := " + cellVar;
     }
 	
+	public boolean equals(CellDef cellDefObj) {
+		if(this.cellQualifier.equals(cellDefObj.getCellQualifier()) &&
+		   this.flowVar.equals(cellDefObj.getFlowVar()) &&
+		   this.cellVar.equals(cellDefObj.getCellVar()) &&
+		   this.getOrigin().equals(cellDefObj.getOrigin())) {
+			return true;
+		}else {
+			return false;
+		}	
+		
+	}
 }

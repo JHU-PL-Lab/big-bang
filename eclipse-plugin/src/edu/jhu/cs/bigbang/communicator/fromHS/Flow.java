@@ -42,4 +42,14 @@ public class Flow extends EvaluatedClause{
     	return " " + flowVar + " <~" + flowKind + " " + flowVar2;
     }
 	
+	public boolean equals(Flow flowObj) { 
+		if(this.flowVar.equals(flowObj.getFlowVar()) && 
+		   this.flowKind.equals(flowObj.getFlowKind()) && 
+		   this.flowVar2.equals(flowObj.getFlowVar2()) &&
+		   this.getOrigin().equals(flowObj.getOrigin())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
 }

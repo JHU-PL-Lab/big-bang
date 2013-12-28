@@ -9,4 +9,10 @@ public class Define extends Redex {
 	public String toString() {
     	return " " + this.getFlowVar();
     }
+	
+	public boolean equals(Define defineObj) {
+		if(this.getOrigin().equals(defineObj.getOrigin()) &&
+		   this.getFlowVar().equals(defineObj.getFlowVar())) return true;
+		else return false;
+	}
 }

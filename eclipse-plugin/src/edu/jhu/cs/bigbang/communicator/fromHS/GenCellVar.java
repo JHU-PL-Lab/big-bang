@@ -21,4 +21,12 @@ public class GenCellVar extends AbstractCellVar{
     	return " " + cellNum;
     }
 	
+	public boolean equals(GenCellVar genCellVarObj) {
+		if(this.getOrigin().equals(genCellVarObj.getOrigin()) && this.getCellVarStr().equals(genCellVarObj.getCellVarStr()) && this.getCellInt() == genCellVarObj.getCellInt()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 }

@@ -22,4 +22,12 @@ public class PrimitivePattern extends InnerPattern{
 		return  primitiveType + "";
 	}
 	
+	public boolean equals(PrimitivePattern primitivePatternObj) {
+		if(this.primitiveType.equals(primitivePatternObj.getPrimitiveType())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 }

@@ -1,9 +1,11 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class Throws extends Clause{
+	
 	private Origin origin;
 	private AbstractFlowVar flowVar;
 	private AbstractFlowVar flowVar2;
+	
 	public Origin getOrigin() {
 		return origin;
 	}
@@ -32,4 +34,10 @@ public class Throws extends Clause{
 	public String toString() {
     	return " " + flowVar + " throws " + flowVar2;
     }
+	public boolean equals(Throws throwsObj) {
+		if (this.origin.equals(throwsObj.getOrigin()) && 
+			this.flowVar.equals(throwsObj.getFlowVar()) &&
+			this.flowVar2.equals(throwsObj.getFlowVar2())) return true;
+		else return false;
+	}
 }

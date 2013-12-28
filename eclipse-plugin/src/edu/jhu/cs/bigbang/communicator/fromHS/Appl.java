@@ -22,4 +22,10 @@ public class Appl extends Redex{
     	return " " + this.getFlowVar() + " " + flowVar2;
     }
 	
+	public boolean equals(Appl applObject) { 
+		if(this.getOrigin().equals(applObject.getOrigin()) && 
+		   this.getFlowVar().equals(applObject.getFlowVar()) && 
+		   this.getFlowVar2().equals(applObject.getFlowVar2())) return true;
+		else return false;
+	}
 }

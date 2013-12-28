@@ -11,6 +11,22 @@ public class SourceRegion {
 		this.endPosition = endLoc;
 	}
 	
+	public SourceLocation getStartPosition() {
+		return startPosition;
+	}
+
+	public void setStartPosition(SourceLocation startPosition) {
+		this.startPosition = startPosition;
+	}
+
+	public SourceLocation getEndPosition() {
+		return endPosition;
+	}
+
+	public void setEndPosition(SourceLocation endPosition) {
+		this.endPosition = endPosition;
+	}
+
 	public String toString() {
 		if (startPosition instanceof Unknown || endPosition instanceof Unknown) {
 			return " " + startPosition + " - " + endPosition;
@@ -31,5 +47,11 @@ public class SourceRegion {
         	   return " @ " + startLineNum + " : " + startColNum + " - " + endLineNum + " : " + endColNum;
            }
 		}
+	}
+	
+	public boolean equals(SourceRegion srcRegionObj) { 
+		if(this.startPosition.equals(srcRegionObj.getStartPosition()) &&
+		   this.endPosition.equals(srcRegionObj.getEndPosition())) return true;
+		else return false;
 	}
 }

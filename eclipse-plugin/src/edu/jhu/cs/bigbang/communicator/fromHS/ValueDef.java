@@ -30,4 +30,11 @@ public class ValueDef extends EvaluatedClause{
 	public String toString() {
     	return " " + flowVar + " = " + value;
     }
+	
+	public boolean equals(ValueDef valueDefObj) {
+		if(this.flowVar.equals(valueDefObj.getFlowVar()) &&
+		   this.value.equals(valueDefObj.getValue()) &&
+		   this.getOrigin().equals(valueDefObj.getOrigin())) return true;
+		else return false;
+	}
 }

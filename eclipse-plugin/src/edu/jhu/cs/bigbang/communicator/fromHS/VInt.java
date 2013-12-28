@@ -30,4 +30,11 @@ public class VInt extends Value{
 		return intVar + "";
 	}
 	
+	public boolean equals(VInt vIntObj) {
+		if(this.intVar == vIntObj.getIntVar() && this.origin.equals(vIntObj.getOrigin())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
 }

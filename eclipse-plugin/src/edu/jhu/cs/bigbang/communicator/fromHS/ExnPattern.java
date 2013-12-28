@@ -41,4 +41,14 @@ public class ExnPattern extends Pattern{
 	public String toString() {
 		return  cellVar + " " + innerPattern;
 	}
+	
+	public boolean equals(ExnPattern exnPatternObj) {
+		if(this.origin.equals(exnPatternObj.getOrigin()) &&
+		   this.cellVar.equals(exnPatternObj.getCellVar()) &&
+		   this.innerPattern.equals(exnPatternObj.getInnerPattern())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
 }

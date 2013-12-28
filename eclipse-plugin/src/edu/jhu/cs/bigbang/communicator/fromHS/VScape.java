@@ -2,9 +2,11 @@ package edu.jhu.cs.bigbang.communicator.fromHS;
 
 
 public class VScape extends Value{
+	
 	private Origin origin;
 	private Pattern pattern;
 	private Expr expr;
+	
 	public Origin getOrigin() {
 		return origin;
 	}
@@ -31,5 +33,15 @@ public class VScape extends Value{
 	}
 	public String toString() {
 		return  pattern + " " + expr;
+	}
+	
+	public boolean equals(VScape vScapeObj) {
+		if (this.origin.equals(vScapeObj.getOrigin()) &&
+			this.pattern.equals(vScapeObj.getPattern())	&&
+			this.expr.equals(vScapeObj.getExpr())) {
+			return true;
+		}else {
+			return false;
+		}
 	}
 }

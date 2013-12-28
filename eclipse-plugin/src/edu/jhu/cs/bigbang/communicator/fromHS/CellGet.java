@@ -35,4 +35,13 @@ public class CellGet extends Clause{
     	return " " + cellVar + " =! " + flowVar;
     }
 	
+	public boolean equals(CellGet cellGetObj) { 
+		if(this.origin.equals(cellGetObj.getOrigin()) &&
+		   this.flowVar.equals(cellGetObj.getFlowVar()) &&
+		   this.cellVar.equals(cellGetObj.getCellVar())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

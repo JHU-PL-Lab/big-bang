@@ -21,4 +21,11 @@ public class AnyProjector {
 		return projector + " ";
 	}
 	
+	public boolean equals(AnyProjector anyProjObj) {
+		if(this.projector.equals(anyProjObj.getProjector())){
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

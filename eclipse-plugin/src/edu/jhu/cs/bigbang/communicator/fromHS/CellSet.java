@@ -33,4 +33,15 @@ public class CellSet extends Clause{
 	public String toString() {
     	return " " + cellVar + " <- " + flowVar;
     }
+	
+	public boolean equals(CellSet cellSetObj) { 
+		if(this.origin.equals(cellSetObj.getOrigin()) &&
+		   this.flowVar.equals(cellSetObj.getFlowVar()) &&
+		   this.cellVar.equals(cellSetObj.getCellVar())) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 }

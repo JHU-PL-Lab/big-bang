@@ -21,4 +21,12 @@ public class SomeFlowVar extends AnyVar{
 		return " " + flowVar;
 	}
 	
+	public boolean equals(SomeFlowVar someFlowVarObj) {
+		if(this.flowVar.equals(someFlowVarObj.getFlowVar())) {
+			return true;
+		}else {
+			return false;
+		}
+	}
+	
 }
