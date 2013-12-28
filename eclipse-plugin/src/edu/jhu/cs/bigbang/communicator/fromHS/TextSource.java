@@ -36,4 +36,9 @@ public class TextSource extends SourceLocation{
 		this.textSourceLineNo = textSourceLineNo;
 		this.textSourceCoNo = textSourceCoNo;
 	}
+	
+	public String toString() {
+		return " " + textSourceDocument + " @ " + this.textSourceLineNo + " - " + this.textSourceCoNo;
+	}
+	
 }

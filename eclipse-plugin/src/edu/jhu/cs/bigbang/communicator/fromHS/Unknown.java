@@ -16,4 +16,8 @@ public class Unknown extends SourceLocation{
 		this.type = type;
 	}
 	
+	public String toString() {
+		return "Unknown";
+	}
+ 	
 }

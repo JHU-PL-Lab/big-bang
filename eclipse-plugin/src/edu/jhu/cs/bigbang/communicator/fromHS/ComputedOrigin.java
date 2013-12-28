@@ -1,5 +1,6 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class ComputedOrigin extends Origin{
 	
@@ -17,4 +18,15 @@ public class ComputedOrigin extends Origin{
 		super();
 		this.originArr = originArr;
 	} 
+	
+	public String toString() {
+		StringBuffer resultStr = null;
+		resultStr.append("( computed from: ");
+		Iterator<Origin> originArrI = originArr.iterator();
+		while(originArrI.hasNext()) {
+			resultStr.append(originArrI.next() + " ");
+		}
+		resultStr.append(")");
+		return resultStr.toString();
+	}
 }

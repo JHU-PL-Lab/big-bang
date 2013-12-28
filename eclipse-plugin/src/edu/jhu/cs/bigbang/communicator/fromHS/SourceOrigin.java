@@ -17,4 +17,8 @@ public class SourceOrigin extends Origin {
 		this.srcRegion = srcRegion;
 	}
 	
+	public String toString() {
+		return " " + srcRegion;
+	}
+	
 }

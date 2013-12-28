@@ -11,4 +11,25 @@ public class SourceRegion {
 		this.endPosition = endLoc;
 	}
 	
+	public String toString() {
+		if (startPosition instanceof Unknown || endPosition instanceof Unknown) {
+			return " " + startPosition + " - " + endPosition;
+		} else {
+           TextSource startTextSrc = (TextSource) startPosition;
+           TextSource endTextSrc = (TextSource) endPosition;
+           int startLineNum = startTextSrc.getTextSourceLineNo();
+           int startColNum = startTextSrc.getTextSourceCoNo();
+           int endLineNum = endTextSrc.getTextSourceLineNo();
+           int endColNum = endTextSrc.getTextSourceCoNo();
+           if (startLineNum == endLineNum) {
+        	   if (startColNum == endColNum) {
+        		   return " " + startPosition;
+        	   } else {
+        		   return " @ " + startLineNum + " : " + startColNum + " - " + endColNum; 
+        	   }
+           } else {
+        	   return " @ " + startLineNum + " : " + startColNum + " - " + endLineNum + " : " + endColNum;
+           }
+		}
+	}
 }

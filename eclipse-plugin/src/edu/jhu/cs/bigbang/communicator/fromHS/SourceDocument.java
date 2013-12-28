@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class SourceDocument {
+	
 	private String docType;
 
 	public String getDocType() {
@@ -15,4 +16,9 @@ public class SourceDocument {
 		super();
 		this.docType = docType;
 	}
-}
+	
+	public String toString() {
+		return "Unknown";
+	}
+	
+ }
