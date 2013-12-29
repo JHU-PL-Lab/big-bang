@@ -17,7 +17,15 @@ public class BMProtocolFailure extends BatchModeError {
 		this.errMsg = errMsg;
 	}
     
+	@Override
 	public String toString() {
 		return errMsg;		
+	}
+	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+    	if(!(obj instanceof BMProtocolFailure)) return false;
+    	BMProtocolFailure BMProtocolFailureObj = (BMProtocolFailure) obj;
+    	return this.errMsg.equals(BMProtocolFailureObj.getErrMsg());
 	}
 }

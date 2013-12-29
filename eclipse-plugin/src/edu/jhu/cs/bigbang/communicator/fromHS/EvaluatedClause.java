@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public abstract class EvaluatedClause {
+	
 	private Origin origin;
 
 	public Origin getOrigin() {

@@ -20,6 +20,7 @@ public class OpenExpression extends EvalError{
 		this.anyVarLst = anyVarLst;
 	}
 	
+	@Override
 	public String toString() {
 		Iterator arrLstI = anyVarLst.iterator();
 		StringBuffer resultStr = null;
@@ -29,4 +30,10 @@ public class OpenExpression extends EvalError{
 		return resultStr.toString();
 	}
 	
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof OpenExpression)) return false;
+		OpenExpression openExpressionObj = (OpenExpression) obj;
+		return (this.anyVarLst.equals(openExpressionObj.getAnyVarLst()));
+	}
 }

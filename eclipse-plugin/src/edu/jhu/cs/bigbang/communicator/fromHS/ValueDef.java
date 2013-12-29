@@ -27,14 +27,17 @@ public class ValueDef extends EvaluatedClause{
 		this.value = value;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + flowVar + " = " + value;
     }
 	
-	public boolean equals(ValueDef valueDefObj) {
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(! (obj instanceof ValueDef)) return false;
+		ValueDef valueDefObj = (ValueDef) obj;
 		if(this.flowVar.equals(valueDefObj.getFlowVar()) &&
-		   this.value.equals(valueDefObj.getValue()) &&
-		   this.getOrigin().equals(valueDefObj.getOrigin())) return true;
+		   this.value.equals(valueDefObj.getValue())) return true;
 		else return false;
 	}
 }

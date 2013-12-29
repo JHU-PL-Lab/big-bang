@@ -37,13 +37,16 @@ public class RedexDef extends Clause{
 		this.redex = redex;
 	}
 	
+	@Override
 	public String toString() {
     	return flowVar + " = " + redex;
     }
 	
-	public boolean equals(RedexDef redexDefObj) {
-		if(this.origin.equals(redexDefObj.getOrigin()) &&
-		   this.flowVar.equals(redexDefObj.getFlowVar()) &&
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof RedexDef)) return false;
+		RedexDef redexDefObj = (RedexDef) obj;
+		if(this.flowVar.equals(redexDefObj.getFlowVar()) &&
 		   this.redex.equals(redexDefObj.getRedex())) return true;
 		else return false;
 	}

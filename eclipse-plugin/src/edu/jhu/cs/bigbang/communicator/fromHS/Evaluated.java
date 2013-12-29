@@ -17,11 +17,15 @@ public class Evaluated extends Clause{
 		this.evaluatedClause = evaluatedClause;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + evaluatedClause;
     }
 	
-	public boolean equals(Evaluated evaluatedObj) { 
+	public boolean equals(Object obj) { 
+		if(obj == null) return false;
+		if(! (obj instanceof Evaluated)) return false;
+		Evaluated evaluatedObj = (Evaluated) obj;
 		if(this.evaluatedClause.equals(evaluatedObj.getEvaluatedClause())) {				
 			return true;
 		} else {

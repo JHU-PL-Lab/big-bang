@@ -6,16 +6,15 @@ public class QualNone extends CellQualifier{
 		super(origin);
 	}
 	
+	@Override
 	public String toString() {
     	return "QualNone";
     }
 	
-	public boolean equals(QualNone qualNoneObj) { 
-		if(this.getOrigin().equals(qualNoneObj.getOrigin())) {
-			return true;
-		} else {
-			return false;
-		}
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		else if (! (obj instanceof QualNone)) return false;
+		else return true;
 	}
 	
 }

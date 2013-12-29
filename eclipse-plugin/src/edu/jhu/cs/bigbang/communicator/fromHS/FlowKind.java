@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class FlowKind {
+	
 	private String flowKind;
 
 	public String getFlowKind() {
@@ -16,12 +17,15 @@ public class FlowKind {
 		this.flowKind = flowKind;
 	}
 	
+	@Override
 	public String toString() {
     	return flowKind;
     }
 	
-	public boolean equals(FlowKind flowKindObj) {
-		if(this.flowKind.equals(flowKindObj.getFlowKind())) return true;
-		else return false;
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(! (obj instanceof FlowKind)) return false;
+		FlowKind flowKindObj = (FlowKind) obj;
+		return (this.flowKind.equals(flowKindObj.getFlowKind()));
 	}
 }

@@ -18,14 +18,17 @@ public class Appl extends Redex{
 		this.flowVar2 = flowVar2;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + this.getFlowVar() + " " + flowVar2;
     }
 	
-	public boolean equals(Appl applObject) { 
-		if(this.getOrigin().equals(applObject.getOrigin()) && 
-		   this.getFlowVar().equals(applObject.getFlowVar()) && 
-		   this.getFlowVar2().equals(applObject.getFlowVar2())) return true;
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(! (obj instanceof Appl)) return false;
+		Appl applObj = (Appl) obj;
+		if(this.getFlowVar().equals(applObj.getFlowVar()) && 
+		   this.getFlowVar2().equals(applObj.getFlowVar2())) return true;
 		else return false;
 	}
 }

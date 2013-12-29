@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 public class BMEvalFailure extends BatchModeError{
+	
 	private EvalError evalError;
 	private ArrayList<Clause> clauseLst;
 	
@@ -30,6 +31,7 @@ public class BMEvalFailure extends BatchModeError{
 		this.clauseLst = clauseLst;
 	}
 	
+	@Override
 	public String toString() {
 		StringBuffer resultStr = null;
 		resultStr.append(evalError.toString());
@@ -40,4 +42,13 @@ public class BMEvalFailure extends BatchModeError{
 		return resultStr.toString();
 	}
 	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+    	if(!(obj instanceof BMEvalFailure)) return false;
+    	BMEvalFailure BMEvalFailureObj = (BMEvalFailure) obj;
+    	if(this.evalError.equals(BMEvalFailureObj.getEvalError()) && 
+    	   this.clauseLst.equals(BMEvalFailureObj.getClauseLst())) return true;
+    	else return false;
+    
+	}
 }

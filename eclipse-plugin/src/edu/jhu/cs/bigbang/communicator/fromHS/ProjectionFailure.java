@@ -27,8 +27,18 @@ public class ProjectionFailure extends EvalError{
 		this.anyProjector = anyProject;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + flowVar + " " + anyProjector;
+	}
+	
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		if (! (obj instanceof ProjectionFailure)) return false;
+		ProjectionFailure projectionFailureObj = (ProjectionFailure) obj;
+		if (this.flowVar.equals(projectionFailureObj.getFlowVar()) &&
+			this.anyProjector.equals(projectionFailureObj.getAnyProject())) return true;
+		else return false;
 	}
 	
 }

@@ -17,8 +17,16 @@ public class InvalidExpressionEnd extends IllFormedness{
 		this.clause = clause;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + clause;
+	}
+	
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (!(obj instanceof InvalidExpressionEnd)) return false;
+		InvalidExpressionEnd invalidExpressionEndObj = (InvalidExpressionEnd) obj;
+		return (this.clause.equals(invalidExpressionEndObj.getClause()));
 	}
 	
 }

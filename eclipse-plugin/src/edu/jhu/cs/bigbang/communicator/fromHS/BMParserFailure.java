@@ -17,8 +17,15 @@ public class BMParserFailure extends BatchModeError {
 		this.errMsg = errMsg;
 	}
 	
+	@Override
 	public String toString() {
     	return errMsg;
     }
 	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+    	if(!(obj instanceof BMParserFailure)) return false;
+    	BMParserFailure BMParseFailureObj = (BMParserFailure) obj;
+    	return this.errMsg.equals(BMParseFailureObj.getErrMsg());
+	}
 }

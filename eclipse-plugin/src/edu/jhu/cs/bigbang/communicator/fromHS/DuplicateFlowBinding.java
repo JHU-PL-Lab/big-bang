@@ -17,8 +17,16 @@ public class DuplicateFlowBinding extends IllFormedness{
 		this.flowVar = flowVar;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + flowVar;
     }
+	
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		if (! (obj instanceof DuplicateFlowBinding)) return false;
+		DuplicateFlowBinding duplicateFlowBindingObj = (DuplicateFlowBinding) obj;
+		return (this.flowVar.equals(duplicateFlowBindingObj.getFlowVar()));		
+	}
 	
 }

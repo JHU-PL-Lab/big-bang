@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public abstract class BinaryOperator {
+	
 	private Origin origin;
 
 	public Origin getOrigin() {

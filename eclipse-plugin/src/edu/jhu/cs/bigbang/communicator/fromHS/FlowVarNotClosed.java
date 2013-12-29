@@ -17,8 +17,16 @@ public class FlowVarNotClosed extends EvalError{
 		this.flowVar = flowVar;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + flowVar;
     }
 	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(! (obj instanceof FlowVarNotClosed)) return false;
+		FlowVarNotClosed flowVarNotClosedObj = (FlowVarNotClosed) obj;
+		if(this.flowVar.equals(flowVarNotClosedObj.getFlowVar())) return true;
+		else return false;					
+	}
 }

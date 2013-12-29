@@ -6,4 +6,15 @@ public class OpMult extends BinaryOperator{
 		super(origin);
 	}
 
+	@Override
+	public String toString() {
+		return "*";
+	}
+	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		else if(! (obj instanceof OpMult)) return false;
+		else return true;
+	}
+	
 }

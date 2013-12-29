@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class ApplicationFailure extends EvalError{
+	
 	private AbstractFlowVar flowVar1;
 	private AbstractFlowVar flowVar2;
 	
@@ -26,8 +27,17 @@ public class ApplicationFailure extends EvalError{
 		this.flowVar2 = flowVar2;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + flowVar1 + " " + flowVar2; 
 	}
 	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(! (obj instanceof ApplicationFailure)) return false;
+		ApplicationFailure applicationFailureObj = (ApplicationFailure) obj;
+		if(this.flowVar1.equals(applicationFailureObj.getFlowVar1()) &&
+		   this.flowVar2.equals(applicationFailureObj.getFlowVar2())) return true;
+		else return false;					
+	}
 }

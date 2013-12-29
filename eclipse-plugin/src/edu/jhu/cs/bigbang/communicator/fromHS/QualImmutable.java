@@ -6,15 +6,14 @@ public class QualImmutable extends CellQualifier{
 		super(origin);
 	}
 	
+	@Override
 	public String toString() {
     	return "QualImmutable";
     }
 	
-	public boolean equals(QualImmutable qualImmutableObj) { 
-		if(this.getOrigin().equals(qualImmutableObj.getOrigin())) {
-			return true;
-		} else {
-			return false;
-		}
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		else if (! (obj instanceof QualImmutable)) return false;
+		else return true;
 	}
 }

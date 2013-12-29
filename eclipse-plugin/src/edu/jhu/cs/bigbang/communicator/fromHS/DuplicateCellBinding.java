@@ -17,8 +17,15 @@ public class DuplicateCellBinding extends IllFormedness{
 		this.cellVar = cellVar;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + cellVar;
     }
 	
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		if (! (obj instanceof DuplicateCellBinding)) return false;
+		DuplicateCellBinding duplicateCellBindingObj = (DuplicateCellBinding) obj;
+		return (this.cellVar.equals(duplicateCellBindingObj.getCellVar()));		
+	}
 }

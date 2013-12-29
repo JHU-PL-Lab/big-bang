@@ -38,15 +38,18 @@ public class Flow extends EvaluatedClause{
 		this.flowVar2 = flowVar2;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + flowVar + " <~" + flowKind + " " + flowVar2;
     }
 	
-	public boolean equals(Flow flowObj) { 
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof Flow)) return false;
+		Flow flowObj = (Flow) obj;
 		if(this.flowVar.equals(flowObj.getFlowVar()) && 
 		   this.flowKind.equals(flowObj.getFlowKind()) && 
-		   this.flowVar2.equals(flowObj.getFlowVar2()) &&
-		   this.getOrigin().equals(flowObj.getOrigin())) {
+		   this.flowVar2.equals(flowObj.getFlowVar2())) {
 			return true;
 		}else {
 			return false;

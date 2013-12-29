@@ -38,15 +38,18 @@ public class CellDef extends EvaluatedClause{
 		this.cellVar = cellVar;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + cellQualifier + " " + flowVar + " := " + cellVar;
     }
 	
-	public boolean equals(CellDef cellDefObj) {
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(!(obj instanceof CellDef)) return false;
+		CellDef cellDefObj = (CellDef) obj;
 		if(this.cellQualifier.equals(cellDefObj.getCellQualifier()) &&
 		   this.flowVar.equals(cellDefObj.getFlowVar()) &&
-		   this.cellVar.equals(cellDefObj.getCellVar()) &&
-		   this.getOrigin().equals(cellDefObj.getOrigin())) {
+		   this.cellVar.equals(cellDefObj.getCellVar())) {
 			return true;
 		}else {
 			return false;

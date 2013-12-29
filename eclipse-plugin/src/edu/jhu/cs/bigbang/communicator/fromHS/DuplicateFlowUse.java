@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class DuplicateFlowUse extends IllFormedness {
+	
 	private AbstractFlowVar flowVar;
 
 	public AbstractFlowVar getFlowVar() {
@@ -16,7 +17,15 @@ public class DuplicateFlowUse extends IllFormedness {
 		this.flowVar = flowVar;
 	}
 	
+	@Override
 	public String toString() {
     	return " " + flowVar;
     }
+	
+	public boolean equals(Object obj) { 
+		if (obj == null) return false;
+		if (! (obj instanceof DuplicateFlowUse)) return false;
+		DuplicateFlowUse duplicateFlowUseObj = (DuplicateFlowUse) obj;
+		return (this.flowVar.equals(duplicateFlowUseObj.getFlowVar()));		
+	}
 }

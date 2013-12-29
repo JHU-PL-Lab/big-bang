@@ -17,7 +17,15 @@ public class EmptyExpression extends IllFormedness{
 		this.content = content;
 	}
 	
+	@Override
 	public String toString() {
     	return content;
     }
+	
+	public boolean equals(Object obj) {
+		if(obj == null) return false;
+		if(!(obj instanceof EmptyExpression)) return false;
+		EmptyExpression emptyExpressionObj = (EmptyExpression) obj;
+		return (this.content.equals(emptyExpressionObj.getContent()));
+	}
 }

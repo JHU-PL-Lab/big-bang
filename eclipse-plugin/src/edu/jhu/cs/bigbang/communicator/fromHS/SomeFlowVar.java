@@ -17,11 +17,15 @@ public class SomeFlowVar extends AnyVar{
 		this.flowVar = flowVar;
 	}
 
+	@Override
 	public String toString() {
 		return " " + flowVar;
 	}
 	
-	public boolean equals(SomeFlowVar someFlowVarObj) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof SomeFlowVar)) return false;		
+		SomeFlowVar someFlowVarObj = (SomeFlowVar) obj;
 		if(this.flowVar.equals(someFlowVarObj.getFlowVar())) {
 			return true;
 		}else {
