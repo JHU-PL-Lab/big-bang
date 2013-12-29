@@ -38,13 +38,16 @@ public class ExnPattern extends Pattern{
 		this.innerPattern = innerPattern;
 	}
 	
+	@Override
 	public String toString() {
 		return  cellVar + " " + innerPattern;
 	}
 	
-	public boolean equals(ExnPattern exnPatternObj) {
-		if(this.origin.equals(exnPatternObj.getOrigin()) &&
-		   this.cellVar.equals(exnPatternObj.getCellVar()) &&
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof ExnPattern)) return false;
+		ExnPattern exnPatternObj = (ExnPattern) obj; 
+		if(this.cellVar.equals(exnPatternObj.getCellVar()) &&
 		   this.innerPattern.equals(exnPatternObj.getInnerPattern())) {
 			return true;
 		}else {

@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public abstract class AbstractFlowVar {
+	
 	private Origin origin;
 	private String flowContents;
 	

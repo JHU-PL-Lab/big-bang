@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class ProjPrim extends Projector{
+	
 	private PrimitiveType primitiveType;
 
 	public PrimitiveType getPrimitiveType() {
@@ -16,12 +17,16 @@ public class ProjPrim extends Projector{
 		this.primitiveType = primitiveType;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + primitiveType;
 	}
 	
-	public boolean equals(ProjPrim projPrimObj) {
-		if(this.getOrigin().equals(projPrimObj.getOrigin()) && this.primitiveType.equals(projPrimObj.getPrimitiveType())) {			
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof ProjPrim)) return false;
+		ProjPrim projPrimObj = (ProjPrim) obj;
+		if(this.primitiveType.equals(projPrimObj.getPrimitiveType())) {			
 			return true;
 		} else {
 			return false;

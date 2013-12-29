@@ -17,12 +17,16 @@ public class PrimitivePattern extends InnerPattern{
 		super(origin);
 		this.primitiveType = primitiveType;
 	}
-
+	
+	@Override
 	public String toString() {
 		return  primitiveType + "";
 	}
 	
-	public boolean equals(PrimitivePattern primitivePatternObj) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof PrimitivePattern)) return false;
+		PrimitivePattern primitivePatternObj = (PrimitivePattern) obj;
 		if(this.primitiveType.equals(primitivePatternObj.getPrimitiveType())) {
 			return true;
 		}else {

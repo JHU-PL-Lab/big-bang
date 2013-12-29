@@ -1,6 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class PrimInt extends PrimitiveType{
+	
 	private Origin origin;
 
 	public Origin getOrigin() {
@@ -16,15 +17,14 @@ public class PrimInt extends PrimitiveType{
 		this.origin = origin;
 	}
 
+	@Override
 	public String toString() {
 		return  "int";
 	}
 	
-	public boolean equals(PrimInt primIntObj) {
-		if(this.origin.equals(primIntObj.getOrigin())) {
-			return true;
-		} else {
-			return false;
-		}
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		else if (! (obj instanceof PrimInt)) return false;
+		else return true;		
 	}
 }

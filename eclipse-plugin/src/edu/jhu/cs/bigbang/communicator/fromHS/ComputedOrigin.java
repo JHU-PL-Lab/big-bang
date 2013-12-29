@@ -19,6 +19,7 @@ public class ComputedOrigin extends Origin{
 		this.originArr = originArr;
 	} 
 	
+	@Override
 	public String toString() {
 		StringBuffer resultStr = null;
 		resultStr.append("( computed from: ");
@@ -29,9 +30,5 @@ public class ComputedOrigin extends Origin{
 		resultStr.append(")");
 		return resultStr.toString();
 	}
-	
-	public boolean equals(ComputedOrigin computedOrigObj) {
-		if(this.originArr.equals(computedOrigObj.getOriginArr())) return true;
-		else return false;
-	}
+
 }

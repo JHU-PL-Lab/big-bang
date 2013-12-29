@@ -24,11 +24,15 @@ public class ConjunctionPattern extends InnerPattern{
 		this.innerPattern2 = innerPattern2;
 	}
     
+	@Override
 	public String toString() {
 		return "(" + innerPattern + ") & (" + innerPattern2 + ")";  
 	}
 	
-	public boolean equals(ConjunctionPattern conjunctionPatternObj) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof ConjunctionPattern)) return false;
+		ConjunctionPattern conjunctionPatternObj = (ConjunctionPattern) obj;
 		if(this.innerPattern.equals(conjunctionPatternObj.getInnerPattern()) &&
 		   this.innerPattern2.equals(conjunctionPatternObj.getInnerPattern2())) {
 			return true;

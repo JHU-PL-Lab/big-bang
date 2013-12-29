@@ -17,16 +17,15 @@ public class OpOnionProj extends OnionOp{
 		this.origin = origin;
 	}
     
+	@Override
 	public String toString() {
 		return "OpOnionPoj";
 	}
 	
-	public boolean equals(OpOnionProj opOnionProjObj) {
-		if(this.origin.equals(opOnionProjObj.getOrigin())) {
-			return true;
-		}else {
-			return false;
-		}
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		else if (! (obj instanceof OpOnionProj)) return false;
+		else return true;
 	}
 	
 }

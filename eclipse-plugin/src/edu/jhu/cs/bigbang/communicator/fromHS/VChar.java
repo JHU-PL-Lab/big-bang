@@ -27,12 +27,16 @@ public class VChar extends Value{
 		this.charVar = charVar;
 	}	
 	
+	@Override
 	public String toString() {
 		return charVar + "";
 	}
 	
-	public boolean equals(VChar vCharObj) {
-		if(this.charVar == vCharObj.getCharVar() && this.origin.equals(vCharObj.getOrigin())) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof VChar)) return false;
+		VChar vCharObj = (VChar) obj;
+		if(this.charVar == vCharObj.getCharVar()) {
 			return true;
 		}else {
 			return false;

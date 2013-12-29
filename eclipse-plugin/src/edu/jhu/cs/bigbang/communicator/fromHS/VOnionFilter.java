@@ -48,16 +48,18 @@ public class VOnionFilter extends Value {
 		this.anyProjector = anyProjector;
 	}
 	
+	@Override
 	public String toString() {
 		return flowVar + "" + onionOp + " " + anyProjector + " ";
 	}
 	
-	public boolean equals(VOnionFilter vOnionFilter) {
-		if(this.origin.equals(vOnionFilter.getOrigin()) && 
-		   this.flowVar.equals(vOnionFilter.getFlowVar()) && 
-		   this.onionOp.equals(vOnionFilter.getOnionOp()) && 
-		   this.anyProjector.equals(vOnionFilter.getAnyProjector())) {
-			
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof VOnionFilter)) return false;
+		VOnionFilter vOnionFilterObj = (VOnionFilter) obj;
+		if(this.flowVar.equals(vOnionFilterObj.getFlowVar()) && 
+		   this.onionOp.equals(vOnionFilterObj.getOnionOp()) && 
+		   this.anyProjector.equals(vOnionFilterObj.getAnyProjector())) {			
 			return true;
 		} else {
 			return false;

@@ -32,11 +32,15 @@ public class LabelPattern extends InnerPattern{
 		this.innerPattern = innerPattern;
 	}	
 
+	@Override
 	public String toString() {
 		return labelName + " " + cellVar + ":" + innerPattern;
 	}
 	
-	public boolean equals(LabelPattern labelPatternObj) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof LabelPattern)) return false;
+		LabelPattern labelPatternObj = (LabelPattern) obj;
 		if(this.labelName.equals(labelPatternObj.getLabelName()) &&
 		   this.cellVar.equals(labelPatternObj.getCellVar()) &&
 		   this.innerPattern.equals(labelPatternObj.getInnerPattern())) {

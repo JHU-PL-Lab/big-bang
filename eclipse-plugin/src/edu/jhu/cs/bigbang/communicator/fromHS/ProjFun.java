@@ -6,16 +6,15 @@ public class ProjFun extends Projector{
 		super(origin);
 	}
 	
+	@Override
 	public String toString() {
 		return "fun";
 	}
 	
-	public boolean equals(ProjFun projFunObj) {
-		if(this.getOrigin().equals(projFunObj.getOrigin())) {
-			return true;
-		} else {
-			return false;
-		}
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		else if (! (obj instanceof ProjFun)) return false;
+		else return true;		
 	}
 	
 }

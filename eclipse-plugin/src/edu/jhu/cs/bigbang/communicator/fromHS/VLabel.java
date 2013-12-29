@@ -31,12 +31,16 @@ public class VLabel extends Value{
 		this.cellVar = abstractCellVar;
 	}
 	
+	@Override
 	public String toString() {
 		return  "`" + labelName + " " + cellVar;
 	}
 	
-	public boolean equals(VLabel vLabelObj) {
-		if(this.origin.equals(vLabelObj.getOrigin()) && this.labelName.equals(vLabelObj.labelName) && this.cellVar.equals(vLabelObj.getCellVar())) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof VLabel)) return false;
+		VLabel vLabelObj = (VLabel) obj;
+		if(this.labelName.equals(vLabelObj.labelName) && this.cellVar.equals(vLabelObj.getCellVar())) {
 			return true;
 		}else {
 			return false;

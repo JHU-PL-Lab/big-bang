@@ -17,12 +17,17 @@ public class GenFlowVar extends AbstractFlowVar{
 		this.flowNum = flowVarInt;
 	}
 
+	@Override
 	public String toString() {
     	return " " + flowNum; 
     }
 
-	public boolean equals(GenFlowVar genFlowVarObj) {
-		if(this.getOrigin().equals(genFlowVarObj.getOrigin()) && this.getFlowStr().equals(genFlowVarObj.getFlowStr()) && this.getFlowVarInt() == genFlowVarObj.getFlowVarInt()) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof GenFlowVar)) return false;
+		GenFlowVar genFlowVarObj = (GenFlowVar) obj;
+		if(this.getFlowStr().equals(genFlowVarObj.getFlowStr()) && 
+		   this.getFlowVarInt() == genFlowVarObj.getFlowVarInt()) {
 			return true;
 		} else {
 			return false;

@@ -27,6 +27,7 @@ public class SourceRegion {
 		this.endPosition = endPosition;
 	}
 
+	@Override
 	public String toString() {
 		if (startPosition instanceof Unknown || endPosition instanceof Unknown) {
 			return " " + startPosition + " - " + endPosition;
@@ -49,9 +50,4 @@ public class SourceRegion {
 		}
 	}
 	
-	public boolean equals(SourceRegion srcRegionObj) { 
-		if(this.startPosition.equals(srcRegionObj.getStartPosition()) &&
-		   this.endPosition.equals(srcRegionObj.getEndPosition())) return true;
-		else return false;
-	}
 }

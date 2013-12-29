@@ -31,13 +31,17 @@ public class VScape extends Value{
 		this.pattern = pattern;
 		this.expr = expr;
 	}
+	
+	@Override
 	public String toString() {
 		return  pattern + " " + expr;
 	}
 	
-	public boolean equals(VScape vScapeObj) {
-		if (this.origin.equals(vScapeObj.getOrigin()) &&
-			this.pattern.equals(vScapeObj.getPattern())	&&
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof VScape)) return false;
+		VScape vScapeObj = (VScape) obj;
+		if (this.pattern.equals(vScapeObj.getPattern())	&&
 			this.expr.equals(vScapeObj.getExpr())) {
 			return true;
 		}else {

@@ -37,14 +37,9 @@ public class TextSource extends SourceLocation{
 		this.textSourceCoNo = textSourceCoNo;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + textSourceDocument + " @ " + this.textSourceLineNo + " - " + this.textSourceCoNo;
 	}
 	
-	public boolean equals(TextSource textSrcObj) {
-		if(this.textSourceDocument.equals(textSrcObj.getSourceDoc()) &&
-		   this.textSourceLineNo == textSrcObj.getTextSourceLineNo() && 
-		   this.textSourceCoNo == textSrcObj.getTextSourceCoNo()) return true;
-		else return false;
-	}
 }

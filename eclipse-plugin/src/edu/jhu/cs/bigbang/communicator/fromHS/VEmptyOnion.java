@@ -15,16 +15,15 @@ public class VEmptyOnion extends Value{
 		super();
 		this.origin = origin;
 	}
-
+	
+	@Override
 	public String toString() {
 		return "()";
 	}
 
-	public boolean equals(VEmptyOnion vEmptyOnionObj) {
-		if(this.origin.equals(vEmptyOnionObj.getOrigin())) {
-			return true;
-		}else {
-			return false;
-		}
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		else if (! (obj instanceof VEmptyOnion)) return false;
+		else return true;
 	}
 }

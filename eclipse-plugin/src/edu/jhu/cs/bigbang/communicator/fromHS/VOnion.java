@@ -38,15 +38,20 @@ public class VOnion extends Value{
 		this.aFlowVar_2 = aFlowVar_2;
 	}
 	
+	@Override
 	public String toString() {
 		return aFlowVar_1 + " & "  + aFlowVar_2;
 	}	
 	
-	public boolean equals(VOnion vOnionObj) {
-		if (this.origin.equals(vOnionObj.getOrigin()) && this.aFlowVar_1.equals(aFlowVar_1.getOrigin()) && this.aFlowVar_2.equals(vOnionObj.getaFlowVar_2())) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof VOnion)) return false;
+		VOnion vOnionObj = (VOnion) obj;
+		if (this.aFlowVar_1.equals(aFlowVar_1.getOrigin()) && this.aFlowVar_2.equals(vOnionObj.getaFlowVar_2())) {
 			return true;
 		} else {
 			return false;
 		}
 	}
+	
 }

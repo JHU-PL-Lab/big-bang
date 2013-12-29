@@ -1,8 +1,10 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
 public class LabelName {
+	
 	private Origin origin;
 	private String nameStr;
+	
 	public Origin getOrigin() {
 		return origin;
 	}
@@ -21,12 +23,16 @@ public class LabelName {
 		this.nameStr = nameStr;
 	}
 	
+	@Override	
 	public String toString() {
 		return nameStr + "";
 	}
 	
-	public boolean equals(LabelName labelNameObj) {
-		if(this.origin.equals(labelNameObj.getOrigin()) && this.nameStr.equals(labelNameObj.getNameStr())) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof LabelName)) return false;
+		LabelName labelNameObj = (LabelName) obj;
+		if(this.nameStr.equals(labelNameObj.getNameStr())) {
 			return true;
 		}else {
 			return false;

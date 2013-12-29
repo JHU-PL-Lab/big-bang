@@ -15,14 +15,10 @@ public class Unknown extends SourceLocation{
 	public Unknown(String type) {
 		this.type = type;
 	}
-	
+
+	@Override
 	public String toString() {
 		return "Unknown";
 	}
- 	
-	public boolean equals(Unknown unknownObj) {
-		if(this.type.equals(unknownObj.getType())) return true;
-		else return false;
-	}
-	
+
 }

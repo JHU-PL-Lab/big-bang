@@ -17,12 +17,16 @@ public class ProjLabel extends Projector{
 		this.labelName = labelName;
 	}
 	
+	@Override
 	public String toString() {
 		return " " + labelName;
 	}
 	
-	public boolean equals(ProjLabel projLabel) {
-		if(this.getOrigin().equals(projLabel.getOrigin()) && this.labelName.equals(projLabel.getLabelName())) {
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		if (! (obj instanceof ProjLabel)) return false;
+		ProjLabel projLabelObj = (ProjLabel) obj;
+		if(this.labelName.equals(projLabelObj.getLabelName())) {
 			return true;
 		} else {
 			return false;

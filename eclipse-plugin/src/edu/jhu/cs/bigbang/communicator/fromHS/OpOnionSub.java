@@ -21,12 +21,10 @@ public class OpOnionSub extends OnionOp{
 		return "OpOnionSub";
 	}
 	
-	public boolean equals(OpOnionSub opOnionSub) {
-		if (this.origin.equals(opOnionSub.getOrigin())) {
-			return true;
-		} else {
-			return false;
-		}
+	public boolean equals(Object obj) {
+		if (obj == null) return false;
+		else if (! (obj instanceof OpOnionSub)) return false;
+		else return true;		
 	}
 	
 }
