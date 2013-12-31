@@ -28,7 +28,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 
 -- |A data structure containing an evaluation environment.
 data EvalEnv = EvalEnv

@@ -30,7 +30,7 @@ import Control.Applicative ((<$>))
 import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 import Language.TinyBang.Ast.Origin
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.TemplateHaskell.Deriving
 
 -- * Basic data structures

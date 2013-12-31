@@ -12,7 +12,7 @@ module Language.TinyBang.Syntax.Location
 , (<-->)
 ) where
 
-import Language.TinyBang.Display hiding (line)
+import Language.TinyBang.Utils.Display hiding (line)
 
 -- |Defines a region of source.
 data SourceSpan

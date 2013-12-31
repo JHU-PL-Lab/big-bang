@@ -12,7 +12,7 @@ import Data.Map (Map)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Interpreter as I
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer

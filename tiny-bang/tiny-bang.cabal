@@ -32,7 +32,6 @@ library
                    Language.TinyBang.Interpreter.Basis,
                    Language.TinyBang.Interpreter.Equality,
                    Utils.Monad,
-                   Language.TinyBang.Display,
                    Data.Adj,
                    Language.TinyBang.Interpreter.DeepValues,
                    Language.TinyBang.TypeSystem.Types,
@@ -81,7 +80,8 @@ library
                    Language.TinyBang.Utils.Parser.OriginParser,
                    Language.TinyBang.Utils.Logger.Operations,
                    Language.TinyBang.Ast.Origin,
-                   Language.TinyBang.Utils.Parser.Parsec
+                   Language.TinyBang.Utils.Parser.Parsec,
+                   Language.TinyBang.Utils.Display
 
 executable tiny-bang
   hs-source-dirs:  interp-src

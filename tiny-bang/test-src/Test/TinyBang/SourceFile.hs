@@ -12,7 +12,7 @@ import System.FilePath
 import Test.HUnit
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer

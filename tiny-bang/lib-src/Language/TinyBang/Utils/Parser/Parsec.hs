@@ -20,7 +20,7 @@ module Language.TinyBang.Utils.Parser.Parsec
 import Control.Applicative ((<*),(<*>))
 import Text.Parsec.Prim
 
-import Language.TinyBang.Display hiding ((</>))
+import Language.TinyBang.Utils.Display hiding ((</>))
 import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)

@@ -7,7 +7,7 @@
 --  Show typeclass in that the expected output is an informal representation
 --  meant to be easy to parse rather than a Haskell expression which can be
 --  used to reconstruct the data structure.
-module Language.TinyBang.Display
+module Language.TinyBang.Utils.Display
 ( Display
 , display
 , displayList
@@ -22,8 +22,6 @@ module Language.TinyBang.Display
 , denseDisplay
 , render
 ) where
-
--- TODO: probably move this module to the Utils subpackage
 
 import Control.Monad (liftM)
 import qualified Data.Map as Map

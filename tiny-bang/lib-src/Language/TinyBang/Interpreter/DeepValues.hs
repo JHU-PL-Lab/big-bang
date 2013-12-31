@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 import Data.Monoid (Monoid, mappend, mempty)
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display hiding (empty)
+import Language.TinyBang.Utils.Display hiding (empty)
 
 -- |This data structure represents deeply-structured TinyBang values.  It can
 --  be used after evaluation to represent a result in a more human-friendly

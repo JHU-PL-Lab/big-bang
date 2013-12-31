@@ -13,7 +13,7 @@ import Data.Maybe
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Utils.Logger
 

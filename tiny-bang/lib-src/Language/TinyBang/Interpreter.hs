@@ -23,7 +23,7 @@ import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.Matching
 import Language.TinyBang.Interpreter.WellFormedness
 import Language.TinyBang.Interpreter.Variables
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
