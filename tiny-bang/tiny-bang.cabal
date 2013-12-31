@@ -24,7 +24,6 @@ library
                    aeson
   ghc-options:     -Wall
   exposed-modules: 
-                   Language.TinyBang.Communicator,
                    Language.TinyBang.Ast,
                    Language.TinyBang.Syntax.Location,
                    Language.TinyBang.Interpreter,

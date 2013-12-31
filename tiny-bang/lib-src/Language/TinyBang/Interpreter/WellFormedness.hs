@@ -10,7 +10,6 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Maybe
 import Data.Monoid
 
 import Language.TinyBang.Ast

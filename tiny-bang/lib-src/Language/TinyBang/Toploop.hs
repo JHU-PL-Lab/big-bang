@@ -7,7 +7,6 @@ module Language.TinyBang.Toploop
 , ConstraintDatabaseType(..)
 ) where
 
-import Control.Monad
 import Data.List
 import Data.Map (Map)
 import qualified Data.Set as Set
@@ -117,7 +116,7 @@ instance (ConstraintDatabase db, Display db)
         <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon incons))
     -}
     EvaluationFailure evalErr _ -> text "Evaluation error:" <+> case evalErr of
-      I.IllFormedExpression ill -> text "Ill-formed expression:" </>
+      I.IllFormedExpression ills -> text "Ill-formed expression:" </>
         indent 2 (align $ foldl1 (</>) $
           map (\ill -> case ill of
             DuplicateDefinition x -> text "Duplicate variable definition:"
@@ -127,7 +126,7 @@ instance (ConstraintDatabase db, Display db)
                                             map makeDoc $ Set.toList xs)
             EmptyExpression o -> text "Empty expression at " <+> makeDoc o
             EmptyPattern o -> text "Empty pattern at " <+> makeDoc o
-            ) $ Set.toList ill)
+            ) $ Set.toList ills)
       I.ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
                                       <+> text "to" <+> makeDoc x2
     EvaluationDisabled -> text "(evaluation disabled)"

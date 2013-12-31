@@ -31,7 +31,6 @@ import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 import Language.TinyBang.Ast.Origin
 import Language.TinyBang.Display
-import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.TemplateHaskell.Deriving
 
 -- * Basic data structures
@@ -189,18 +188,6 @@ instance Display LabelName where
 instance Display Var where
   makeDoc x = text $ unVar x
 
--- TODO: where is this used?  Can we deprecate?
-flattenOrigins :: Origin -> [SourceSpan]
-flattenOrigins orig = case orig of
-  SourceOrigin sr -> [sr]
-  ComputedOrigin origs -> concatMap flattenOrigins origs
-
-instance Display Origin where
-  makeDoc orig = case orig of
-    SourceOrigin sr -> makeDoc sr
-    ComputedOrigin origs -> text "(" <> text "computed from" <+>
-      makeDoc (concatMap flattenOrigins origs) <> text ")"
-      
 -- * Appropriate @Eq@ and @Ord@ instances for these data types
 
 $(concat <$> sequence

@@ -17,7 +17,7 @@ module Language.TinyBang.Utils.Parser.Parsec
 , (?+>)
 ) where
 
-import Control.Applicative ((*>),(<*),(<*>))
+import Control.Applicative ((<*),(<*>))
 import Text.Parsec.Prim
 
 import Language.TinyBang.Display hiding ((</>))

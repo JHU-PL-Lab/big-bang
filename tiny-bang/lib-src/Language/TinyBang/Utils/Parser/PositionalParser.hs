@@ -30,7 +30,6 @@ module Language.TinyBang.Utils.Parser.PositionalParser
 import Control.Applicative ((<$>),(<*>))
 import Control.Monad
 import Control.Monad.Trans.Class
-import Data.Maybe
 import Data.Monoid
 import Text.Parsec
 import Text.Parsec.Pos
