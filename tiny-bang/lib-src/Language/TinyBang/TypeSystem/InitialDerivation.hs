@@ -5,6 +5,8 @@
   for an expression.
 -}
 module Language.TinyBang.TypeSystem.InitialDerivation
+where -- TODO
+{-
 ( InitialDerivationError(..)
 , initialDerivation
 ) where
@@ -177,3 +179,4 @@ derivFlowVar x = FlowTVar x noContour
 -- |Creates a type variable for the specified cell variable.
 derivCellVar :: CellVar -> CellTVar
 derivCellVar y = CellTVar y noContour
+-}

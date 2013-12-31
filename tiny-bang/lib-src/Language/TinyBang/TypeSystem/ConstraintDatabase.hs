@@ -3,6 +3,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- For the DocumentContainer instance
 
 module Language.TinyBang.TypeSystem.ConstraintDatabase
+where -- TODO
+{-
 ( ConstraintDatabase(..)
 ) where
 
@@ -95,3 +97,4 @@ class (Eq db) => ConstraintDatabase db where
   
 instance (ConstraintDatabase db) => DocumentContainer db where
   getContainedDocuments = map makeDoc . Set.toList . getAllConstraints
+-}

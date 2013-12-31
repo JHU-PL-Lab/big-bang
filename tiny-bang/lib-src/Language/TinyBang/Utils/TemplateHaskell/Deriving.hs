@@ -5,7 +5,7 @@
   unusual typeclass instances.
 -}
 
-module Language.TinyBang.Metaprogramming.Deriving
+module Language.TinyBang.Utils.TemplateHaskell.Deriving
 ( deriveEqSkipFirst
 , deriveOrdSkipFirst
 ) where

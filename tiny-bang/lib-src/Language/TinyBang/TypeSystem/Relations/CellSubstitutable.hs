@@ -8,6 +8,8 @@
   type system structures.
 -}
 module Language.TinyBang.TypeSystem.Relations.CellSubstitutable
+where -- TODO
+{-
 ( CellSubstitutable(..)
 ) where
 
@@ -207,3 +209,4 @@ instance CellSubstitutable CompatibilityArgument where
   substCells m ca = case ca of
     ArgVal a -> ArgVal $ substCells m a
     ArgExn a -> ArgExn $ substCells m a
+-}

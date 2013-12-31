@@ -17,7 +17,7 @@ import Text.Parsec.Pos
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.DeepValues
-import Language.TinyBang.Utils.Parsec
+import Language.TinyBang.Utils.Parser.Parsec
 import Test.TinyBang.ExpectDsl.Lexer
 import Test.TinyBang.ExpectDsl.Data
 
@@ -71,34 +71,26 @@ labelParser = do
       _ -> Nothing
     demandLabel :: LabelName -> DeepOnionPredicate -> DeepOnionPredicate
     demandLabel n inner onion =
-      fromMaybe False $ inner <$> Map.lookup n (deepOnionLabels onion)
+      fromMaybe False $ inner <$> Map.lookup n (deepLabels onion)
 
 primitiveParser :: Parser DeepOnionPredicate
 primitiveParser =
       intParser
-  </> charParser
   </> emptyOnionParser
 
 intParser :: Parser DeepOnionPredicate
-intParser = demandPrim DeepPrimInt <$> require matchInt
+intParser = demandPrim PrimInt <$> require matchInt
   where
     matchInt = \case
-      TokLitInt n -> Just n
+      TokLitInt n -> Just $ VInt generated n
       _ -> Nothing
       
-charParser :: Parser DeepOnionPredicate
-charParser = demandPrim DeepPrimChar <$> require matchChar
-  where
-    matchChar = \case
-      TokLitChar c -> Just c
-      _ -> Nothing
-  
 emptyOnionParser :: Parser DeepOnionPredicate
 emptyOnionParser = consume TokEmptyOnion *> return (const True)
   
-demandPrim :: (Eq a) => DeepPrimitiveType a -> a -> DeepOnionPredicate
+demandPrim :: PrimitiveType -> PrimitiveValue -> DeepOnionPredicate
 demandPrim dpt val onion = fromMaybe False $
-  (==) val <$> lookup dpt (deepOnionPrimitives onion)
+  (==) val <$> Map.lookup dpt (deepPrimitives onion)
 
 -- |This parser is a specialization of the @token@ parser with the necessary
 --  pretty-printing and location-calculating routines embedded.

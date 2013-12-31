@@ -11,15 +11,16 @@
     -- Data structure describing the reduction.
     data MyReduction = MyReduction Int
     -- Catamorphic instances
-    $(concat <$> mapM (defineCatInstance ''MyReduction) [''Foo, ''Bar])
+    $(concat <$> mapM (defineCatInstance [t|Set Int|] ''MyReduction)
+                    [''Foo, ''Bar])
     -- Common instances
-    $(defineCommonCatInstances ''MyReduction)
+    $(defineCommonCatInstances [t|Set Int|] ''MyReduction)
     -- Special case
-    $(defineCatFunc ''MyReduction ''Baz $ mkName "catBaz")
-    instance Reduce Baz MyReduction (Set Int) where
+    $(defineCatFunc [t|Set Int|] ''MyReduction ''Baz $ mkName "catBaz")
+    instance Reduce MyReduction Baz (Set Int) where
       reduce (MyReduction n) baz = case baz of
         Baz5 m -> if n > m then mempty else Set.singleton m
-        _ -> homBaz baz
+        _ -> catBaz baz
   @
   
   In this example, we assume that Foo, Bar, and Baz are data structures which
@@ -33,7 +34,7 @@
   that this special case applies to all instances of Baz5 throughout all of the
   reduced structure.
 -}
-module Language.TinyBang.Metaprogramming.Reduce
+module Language.TinyBang.Utils.TemplateHaskell.Reduce
 ( Reduce(..)
 , defineCatInstance
 , defineCatFunc
@@ -51,7 +52,7 @@ import Data.Monoid
 import Data.Set (Set)
 import Language.Haskell.TH
 
-import Language.TinyBang.Metaprogramming.Utils
+import Language.TinyBang.Utils.TemplateHaskell.Utils
 
 class (Monoid r) => Reduce t d r | t d -> r where
   reduce :: t -> d -> r

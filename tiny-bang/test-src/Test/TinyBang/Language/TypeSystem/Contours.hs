@@ -12,7 +12,9 @@ import Language.TinyBang.TypeSystem.Contours
 import Test.HUnit
 
 contourTests :: Test
-contourTests =
+contourTests = TestList []
+{-
+TODO: replace
   let c1 = (cn1,"cn1")
       c2 = (cn2,"cn2")
       c3 = (cn3,"cn3")
@@ -101,3 +103,4 @@ x3 = FlowVar origin "x3"
 
 x4 :: FlowVar
 x4 = FlowVar origin "x4"
+-}

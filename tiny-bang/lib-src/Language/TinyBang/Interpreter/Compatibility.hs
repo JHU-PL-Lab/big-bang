@@ -1,93 +1,77 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, TemplateHaskell #-}
 
 {-|
   A module containing the compatibility relations for evaluation.
 -}
 
 module Language.TinyBang.Interpreter.Compatibility
-( applicationCompatibility
-, compatibility
-, CompatibilityArgument(..)
-, Substitution(..)
+( compatibility
 ) where
 
-import Control.Applicative ((<$>),(<*>))
-import Control.Monad (liftM2)
-import Data.Maybe (isNothing)
-import Data.Set (Set)
+import Control.Monad
+import Data.Maybe
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Display
 import Language.TinyBang.Interpreter.Basis
-import Language.TinyBang.Interpreter.Projection
-import Utils.Monad (ifM)
+import Language.TinyBang.Utils.Logger
 
--- |A data type for compatibility arguments.
-data CompatibilityArgument
-  = ArgVal FlowVar
-  | ArgExn FlowVar
-  
--- |Calculates application compatibility for evaluation.  Unlike the
---  specification, this function assumes that the *first* value in the list is
---  the highest-priority scape.
-applicationCompatibility :: CompatibilityArgument
-                         -> [Value]
-                         -> EvalM (Maybe Expr)
-applicationCompatibility arg scapes =
-  case scapes of
-    VScape _ pat (Expr orig cls) : scapes' -> do
-      mresult <- compatibility arg pat
-      case mresult of
-        Just (ss, Expr orig0 cls0) ->
-          return $ Just $ substitute (collect $ Set.toList ss) $
-            Expr (ComputedOrigin [orig,orig0]) $ cls0 ++ cls
-        Nothing -> applicationCompatibility arg scapes'
-    _ : scapes' -> applicationCompatibility arg scapes'
-    _ -> return Nothing
-        
--- |Calculates compatibility for evaluation.
-compatibility :: CompatibilityArgument
-              -> Pattern
-              -> EvalM (Maybe (Set Substitution, Expr))
-compatibility arg pat =
-  case (arg, pat) of
-    (ArgVal x1, ValuePattern orig y2 ipat) -> doMatch orig x1 y2 ipat
-    (ArgExn x1, ExnPattern orig y2 ipat) -> doMatch orig x1 y2 ipat
-    _ -> return Nothing
+$(loggingFunctions)
+
+-- |Calculates the compatibility of the first variable in the environment with
+--  the pattern expressed by the second variable and its pattern structure.  The
+--  result is @Nothing@ when they are incompatible and @Just@ an expression of
+--  the appropriate bindings when they are compatible.
+compatibility :: Var -> Var -> Pattern -> EvalM (Maybe Expr)
+compatibility x x' pat =
+  bracketLogM _debugI
+    (display $ text "Checking compatibility of " <+> makeDoc x <+>
+      text " with " <+> makeDoc x' <+> text " under " <+> makeDoc pat)
+    (\result ->
+      case result of
+        Just expr ->
+          display $ text "Variable " <+> makeDoc x <+>
+            text " is compatible with " <+> makeDoc x' <+> text " under " <+>
+            makeDoc pat <+> text " as expression " <+> makeDoc expr
+        Nothing ->
+          display $ text "Variable " <+> makeDoc x <+>
+            text " is not compatible with " <+> makeDoc x' <+>
+            text " under " <+> makeDoc pat)
+    $ do
+        v <- varLookup x
+        pv <- patVarLookup pat x'
+        case pv of
+          PPrimitive _ primt ->
+            case v of
+              VOnion _ x1 x2 -> matchOnOnion x1 x2
+              VPrimitive _ prim | typeOfPrimitiveValue prim == primt ->
+                return $ Just $ Expr generated []
+              _ -> return Nothing
+          PEmptyOnion _ ->
+            return $ Just $
+              Expr generated [RedexDef generated x' $ Define generated x]
+          PLabel _ n x1' ->
+            case v of
+              VOnion _ x1 x2 -> matchOnOnion x1 x2
+              VLabel _ n' x1 | n == n' -> compatibility x1 x1' pat
+              _ -> return Nothing
+          PConjunction _ x1' x2' -> do
+            me1 <- compatibility x x1' pat
+            me2 <- compatibility x x2' pat
+            return $ liftM2 exprConcat me1 me2
   where
-    doMatch :: Origin -> FlowVar -> CellVar -> InnerPattern
-            -> EvalM (Maybe (Set Substitution, Expr))
-    doMatch orig x y ipat = do
-      let orig' = ComputedOrigin [orig]
-      msubsts <- innerCompatibility x ipat
-      return $ (, Expr orig' [Evaluated $ CellDef orig' qualFinal y x])
-        <$> msubsts
-    
--- |Calculates compatibility for inner patterns.
-innerCompatibility :: FlowVar
-                   -> InnerPattern
-                   -> EvalM (Maybe (Set Substitution))
-innerCompatibility x1 ipat =
-  case ipat of
-    PrimitivePattern _ p ->
-      ifM (isNothing <$> project x1 (anyProjPrim p))
-        (return Nothing)
-        (return $ Just Set.empty)
-    LabelPattern _ n y2 ipat' -> do
-      mv <- project x1 $ anyProjLabel n
-      case mv of
-        Just (VLabel _ n' y3) | n == n' -> do
-          x4 <- cellLookup y3
-          inner <- innerCompatibility x4 ipat'
-          return $ Set.insert (CellSubstitution y3 y2) <$> inner
-        Just v -> error $ "projectAll for label " ++ show n
-                    ++ " produced a bad value: " ++ show v
-        Nothing -> return Nothing
-    ConjunctionPattern _ ipat1 ipat2 ->
-      liftM2 Set.union <$> innerCompatibility x1 ipat1
-                       <*> innerCompatibility x1 ipat2
-    ScapePattern _ ->
-      ifM (isNothing <$> project x1 anyProjFun)
-        (return Nothing)
-        (return $ Just Set.empty)
-    EmptyOnionPattern _ -> return $ Just Set.empty
+    matchOnOnion :: Var -> Var -> EvalM (Maybe Expr)
+    matchOnOnion x1 x2 = do
+      me1 <- compatibility x1 x' pat
+      if isNothing me1 then compatibility x2 x' pat else return me1
+    patVarLookup :: Pattern -> Var -> EvalM PatternValue
+    patVarLookup (Pattern _ pcls) px =
+      let pvs = mapMaybe (\(PatternClause _ px' pv) ->
+                                if px == px' then Just pv else Nothing) pcls in
+      case pvs of
+        [] -> raiseEvalError $ IllFormedExpression $ Set.singleton $
+                                  OpenExpression $ Set.singleton px
+        [pv] -> return pv
+        _ -> raiseEvalError $ IllFormedExpression $ Set.singleton $
+                                DuplicateDefinition px

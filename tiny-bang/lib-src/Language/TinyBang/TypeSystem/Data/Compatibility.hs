@@ -1,4 +1,6 @@
 module Language.TinyBang.TypeSystem.Data.Compatibility
+where -- TODO
+{-
 ( CompatibilityArgument(..)
 ) where
 
@@ -16,3 +18,4 @@ instance Display CompatibilityArgument where
   makeDoc arg = case arg of
     ArgVal a -> makeDoc a
     ArgExn a -> text "exn" <+> makeDoc a
+-}

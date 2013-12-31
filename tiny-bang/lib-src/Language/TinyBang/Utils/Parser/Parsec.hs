@@ -1,24 +1,27 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {-|
-  This module contains an assortment of Parsec-related utilities.
+  This module contains some simple Parsec utilities.  Most notably, it contains
+  "commit" operators @?=>@ and @?+>@ which are meant to be used with e.g.
+  @<*>@ to create a more BNF-style syntax.
 -}
-module Language.TinyBang.Utils.Parsec
-( (</>)
-, packrat
-, (<@>)
+module Language.TinyBang.Utils.Parser.Parsec
+( packrat
+, (</>)
+, ($%)
 , conditional
-, (?=>)
+, (<@>)
 , conditionalDiscard
-, (?+>)
+, (?=>)
 , eps
+, (?+>)
 ) where
 
 import Control.Applicative ((*>),(<*),(<*>))
 import Text.Parsec.Prim
 
 import Language.TinyBang.Display hiding ((</>))
-import Language.TinyBang.Logging
+import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
 
@@ -31,6 +34,13 @@ packrat a b = try a <|> b
 (</>) :: ParsecT s u m a -> ParsecT s u m a -> ParsecT s u m a
 (</>) = packrat
 infixl 1 </>
+
+-- |A binary operator for application.  This is equivalent to '$' but has an
+--  infix priority of higher than that of @<|>@ and @</>@, thus making it useful
+--  for writing BNF-like code.
+($%) :: (a -> b) -> a -> b
+($%) = ($)
+infixr 2 $%
 
 -- |A combinator which is used for conditional parsing.  This function takes a
 --  parser producing a function and another parser producing the argument of
@@ -72,13 +82,13 @@ loggingParser :: (Monad m, Display a)
               => String -> ParsecT s u m a -> ParsecT s u m a
 loggingParser desc p = do
   st <- getParserState
-  _debug $ "Trying " ++ desc ++ " at "  ++ show (statePos st)
-  result <- p <|> _debug ("Failed to parse " ++ desc ++ " at "
-                      ++ show (statePos st))
-                  *> parserZero
-  _debug $ "Parsed " ++ desc ++ " at " ++ show (statePos st) ++ ": "
-              ++ display result
-  return result
+  result <- _debugI ("Trying " ++ desc ++ " at "  ++ show (statePos st)) $
+                  p
+              <|> _debugI ("Failed to parse " ++ desc ++ " at "
+                            ++ show (statePos st)) parserZero
+  _debugI ("Parsed " ++ desc ++ " at " ++ show (statePos st) ++ ": " ++
+            display result) $
+    return result
   
 -- |An infix synonym for @loggingParser@.
 (<@>) :: (Monad m, Display a) => String -> ParsecT s u m a -> ParsecT s u m a

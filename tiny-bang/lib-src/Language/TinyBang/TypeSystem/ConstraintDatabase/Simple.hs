@@ -6,6 +6,8 @@
   O(n) time; no smart data structures are used.
 -}
 module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
+where -- TODO
+{-
 ( SimpleConstraintDatabase
 ) where
 
@@ -127,3 +129,4 @@ instance CellSubstitutable SimpleConstraintDatabase where
 
 instance Display SimpleConstraintDatabase where
   makeDoc (SimpleConstraintDatabase cs _) = makeDoc cs
+-}

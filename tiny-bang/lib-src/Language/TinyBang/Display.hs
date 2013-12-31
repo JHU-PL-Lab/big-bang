@@ -23,6 +23,8 @@ module Language.TinyBang.Display
 , render
 ) where
 
+-- TODO: probably move this module to the Utils subpackage
+
 import Control.Monad (liftM)
 import qualified Data.Map as Map
 import Data.Map (Map)

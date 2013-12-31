@@ -4,6 +4,8 @@
   This module defines TinyBang's projection relation.
 -}
 module Language.TinyBang.TypeSystem.Relations.Projection
+where -- TODO
+{-
 ( ProjectionError(..)
 , ProjM
 , project
@@ -169,3 +171,4 @@ projectVar check proj a = do
                     NonContractiveType (SomeProjector proj) lowerBound $
                       reverse alist
             else projectVar ((Set.insert a' *** (a':)) check) proj a'
+-}

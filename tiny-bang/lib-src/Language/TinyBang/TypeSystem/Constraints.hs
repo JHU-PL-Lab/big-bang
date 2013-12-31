@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module Language.TinyBang.TypeSystem.Constraints
+where -- TODO
+{-
 ( Constraint(..)
 , CellLowerBoundingConstraint(..)
 
@@ -183,3 +185,4 @@ instance Display CellLowerBoundingConstraint where
   makeDoc arg = case arg of
     CellCreationLowerBoundingConstraint c -> makeDoc c
     CellSettingLowerBoundingConstraint c -> makeDoc c
+-}

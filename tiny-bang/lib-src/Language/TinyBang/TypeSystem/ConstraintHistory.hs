@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs, DataKinds, KindSignatures, StandaloneDeriving, ScopedTypeVariables #-}
 
 module Language.TinyBang.TypeSystem.ConstraintHistory
+where -- TODO
+{-
 ( ConstraintHistory(..)
 , SourceElement(..)
 , ClosureRule(..)
@@ -177,3 +179,4 @@ instance (Display db, DocumentContainer db)
   makeDoc (ApplicationCompatibilityResult ca ts mdat fib) =
     text "ApplicationCompatibilityResult" <+> parens (makeDoc ca)
       <+> parens (makeDoc ts) <+> parens (makeDoc mdat) <+> parens (makeDoc fib)
+-}

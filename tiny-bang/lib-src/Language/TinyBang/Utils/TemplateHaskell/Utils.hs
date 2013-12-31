@@ -1,7 +1,7 @@
 {-|
   This module contains some handy Template Haskell utilities.
 -}
-module Language.TinyBang.Metaprogramming.Utils
+module Language.TinyBang.Utils.TemplateHaskell.Utils
 ( applyTypeCon
 , mkPrefixNames
 , mkFnType

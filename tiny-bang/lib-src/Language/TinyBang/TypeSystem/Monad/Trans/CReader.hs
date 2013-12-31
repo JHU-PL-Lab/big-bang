@@ -1,5 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FunctionalDependencies, FlexibleInstances, UndecidableInstances #-}
 module Language.TinyBang.TypeSystem.Monad.Trans.CReader
+where -- TODO
+{-
 ( CReaderT
 , MonadCReader(..)
 , CReader
@@ -50,3 +52,4 @@ instance MonadCReader r m => MonadCReader r (MaybeT m) where
 instance MonadCReader r m => MonadCReader r (EitherT e m) where
     askDb   = lift askDb
     localDb = mapEitherT . localDb
+-}

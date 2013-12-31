@@ -1,6 +1,8 @@
 {-# LANGUAGE TupleSections, ScopedTypeVariables, TemplateHaskell #-} 
 
 module Language.TinyBang.TypeSystem.Relations.Compatibility
+where -- TODO
+{-
 ( CompatibilityArgument(..)
 , CompatM
 , checkApplicationCompatible
@@ -170,3 +172,4 @@ checkInnerCompatible a1 tipat =
 
 liftCompat :: ProjM db m a -> CompatM db m a
 liftCompat = id
+-}

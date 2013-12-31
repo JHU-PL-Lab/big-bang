@@ -5,6 +5,8 @@
   top-level type inference routines for TinyBang.
 -}
 module Language.TinyBang.TypeSystem.TypeInference
+where -- TODO
+{-
 ( TypecheckingError(..)
 , typecheck
 ) where
@@ -71,3 +73,4 @@ typecheck expr = do
     bailWith msg f = either (Left . f . withMsg) Right
       where withMsg x = _debugI (msg ++ " failed: " ++ display x) x
           
+-}

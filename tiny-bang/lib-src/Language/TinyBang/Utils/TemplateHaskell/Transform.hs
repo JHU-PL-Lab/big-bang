@@ -17,7 +17,7 @@
     $(defineCommonHomInstances ''MyTransformation)
     -- Special case
     $(defineHomFunc ''MyTransformation ''Baz $ mkName "homBaz")
-    instance Transform Baz MyTransformation where
+    instance Transform MyTransformation Baz where
       transform (MyTransformation n) baz = case baz of
         Baz5 m -> Baz5 $ n + m
         _ -> homBaz baz
@@ -34,7 +34,7 @@
   Note that this special case applies to all instances of Baz5 throughout the
   transformed structure.
 -}
-module Language.TinyBang.Metaprogramming.Transform
+module Language.TinyBang.Utils.TemplateHaskell.Transform
 ( Transform(..)
 , defineHomInstance
 , defineHomFunc
@@ -50,7 +50,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Language.Haskell.TH
 
-import Language.TinyBang.Metaprogramming.Utils
+import Language.TinyBang.Utils.TemplateHaskell.Utils
 
 class Transform t d where
   transform :: t -> d -> d

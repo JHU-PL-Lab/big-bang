@@ -4,6 +4,8 @@
 -- OverlappingInstances 
 
 module Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable
+where -- TODO
+{-
 ( ContourInstantiable(..)
 ) where
 
@@ -222,3 +224,4 @@ instance ContourInstantiable CompatibilityArgument where
   instContours vs cn ca = case ca of
     ArgVal a -> ArgVal $ instContours vs cn a
     ArgExn a -> ArgExn $ instContours vs cn a
+-}

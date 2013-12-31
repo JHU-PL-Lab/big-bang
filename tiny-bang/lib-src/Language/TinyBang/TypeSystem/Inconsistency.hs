@@ -5,6 +5,8 @@
   constraint databases.
 -}
 module Language.TinyBang.TypeSystem.Inconsistency
+where -- TODO
+{-
 ( Inconsistency(..)
 , determineInconsistencies
 ) where
@@ -104,3 +106,4 @@ liftProjToIncon = id
 -- |Lifts a compatibility operation into the inconsistency monad.
 liftCompatToIncon :: (Functor m, Monad m) => CompatM db m a -> InconM db m a
 liftCompatToIncon = id
+-}

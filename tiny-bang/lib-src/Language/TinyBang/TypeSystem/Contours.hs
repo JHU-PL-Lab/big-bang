@@ -1,6 +1,9 @@
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances, TemplateHaskell #-}
 
 module Language.TinyBang.TypeSystem.Contours
+
+ where{-
+
 ( ContourElement(..)
 , ContourPart(..)
 , ContourStrand(..)
@@ -131,3 +134,4 @@ instance Display ContourPart where
 
 instance Display ContourElement where
   makeDoc (ContourElement x) = makeDoc x
+-}

@@ -4,6 +4,8 @@
 -- OverlappingInstances 
 
 module Language.TinyBang.TypeSystem.Relations.Contours.ContourReplacable
+where -- TODO
+{-
 ( ContourReplacable(..)
 ) where
 
@@ -212,3 +214,4 @@ instance ContourReplacable CompatibilityArgument where
   replContours cn ca = case ca of
     ArgVal a -> ArgVal $ replContours cn a
     ArgExn a -> ArgExn $ replContours cn a
+-}

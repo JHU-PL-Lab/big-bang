@@ -2,59 +2,82 @@
   A module defining source locations.
 -}
 module Language.TinyBang.Syntax.Location
-( SourceRegion(..)
-, SourceLocation(..)
+( SourceSpan(..)
+, HasSourceSpan(..)
+, DocumentPosition(..)
+, HasDocumentPosition(..)
+, HasDocumentStartStopPositions(..)
 , SourceDocument(..)
+, nameOfDocument
+, (<-->)
 ) where
 
 import Language.TinyBang.Display hiding (line)
 
--- |Defines a region of source code.
-data SourceRegion
-  = SourceRegion -- ^ Signifies a source region over known locations
-      SourceLocation -- ^ The start position
-      SourceLocation -- ^ The end position
+-- |Defines a region of source.
+data SourceSpan
+  = DocumentSpan SourceDocument DocumentPosition DocumentPosition
+      -- ^Defines a span over a given document from beginning to end
+      --  (inclusive).
+  | UnknownSpan
   deriving (Eq, Ord, Show)
+  
+class HasSourceSpan a where
+  spanOf :: a -> SourceSpan
 
--- |Defines a data type for text positions.  The @lineNo@ is one-based; the
---  @colNo@ is zero-based.
-data SourceLocation
-  = TextSource
-      { textSourceDocument :: SourceDocument
-      , textSourceLineNo :: Int
-      , textSourceColNo :: Int }
-  | Unknown
+instance HasSourceSpan SourceSpan where
+  spanOf = id
+  
+-- |Defines positions within textual documents.
+data DocumentPosition
+  = DocumentPosition
+      { lineNo :: Int
+      , colNo :: Int
+      }
   deriving (Eq, Ord, Show)
+  
+class HasDocumentPosition a where
+  documentPositionOf :: a -> DocumentPosition
+  
+instance HasDocumentPosition DocumentPosition where
+  documentPositionOf = id
+
+class HasDocumentStartStopPositions a where
+  documentStartPositionOf :: a -> DocumentPosition
+  documentStopPositionOf :: a -> DocumentPosition
 
 -- |Defines a data type describing source code documents.  A source document is
 --  some resource which contains the source code in textual form.
 data SourceDocument
-  = UnknownDocument
+  = NamedDocument String
+      -- ^A named document, such as the path name of a source file.
+  | UnknownDocument
   deriving (Eq, Ord, Show)
 
+-- |Defines an operator which extracts and joins source spans.
+(<-->) :: (HasSourceSpan a, HasSourceSpan b) => a -> b -> SourceSpan
+(<-->) a b =
+  case (spanOf a, spanOf b) of
+    (DocumentSpan doc1 p1l p1r, DocumentSpan doc2 p2l p2r) | doc1 == doc2 ->
+      -- Assuming that p1l <= p1r and that p2l <= p2r
+      DocumentSpan doc1 (p1l `min` p2l) (p1r `max` p2r)
+    _ -> UnknownSpan
+infixl 7 <-->
+    
+-- |Obtains a suitable (but not necessarily unique) way of naming a document.
+nameOfDocument :: SourceDocument -> String
+nameOfDocument doc = case doc of
+    NamedDocument s -> s
+    UnknownDocument -> "(unknown)"
 
-instance Display SourceRegion where
-  makeDoc (SourceRegion start end) =
-    case (start, end) of
-      (TextSource doc line col, TextSource doc' line' col') | doc == doc' ->
-        if line == line' then
-          if col == col' then
-            makeDoc start
-          else
-            makeDoc doc <> char '@' <> makeDoc line <> makeDoc ':'
-              <> makeDoc col <> char '-' <> makeDoc col'
-        else
-          makeDoc doc <> char '@' <> makeDoc line <> char ':' <> makeDoc col
-            <> char '-' <> makeDoc line' <> char ':' <> makeDoc col'
-      _ -> makeDoc start <> char '-' <> makeDoc end
+instance Display DocumentPosition where
+  makeDoc (DocumentPosition line col) = makeDoc line <> char ':' <> makeDoc col
 
-instance Display SourceLocation where
-  makeDoc sl = case sl of
-    TextSource doc line col ->
-      makeDoc doc <> char '@' <> makeDoc line <> char '-' <> makeDoc col
-    Unknown ->
-      text "(unknown)"
+instance Display SourceSpan where
+  makeDoc s = case s of
+    DocumentSpan doc start stop ->
+      makeDoc doc <> char '@' <> makeDoc start <> char '-' <> makeDoc stop
+    UnknownSpan -> text "(unknown)"
 
 instance Display SourceDocument where
-  makeDoc sd = case sd of
-    UnknownDocument -> text "(unknown)"
+  makeDoc doc = text $ nameOfDocument doc

@@ -16,6 +16,8 @@
   that no fibration exists which will satisfy the relation.
 -}
 module Language.TinyBang.TypeSystem.Fibrations
+where -- TODO
+{-
 ( Fibration(..)
 , mergeFibrations
 , blankFibrationFor
@@ -67,3 +69,4 @@ instance (Display db, DocumentContainer db) => Display (Fibration db) where
   makeDoc fib = case fib of
     Unexpanded -> char '*'
     Fibration typ fibs -> parens $ makeDoc typ <+> char ',' <+> makeDoc fibs
+-}

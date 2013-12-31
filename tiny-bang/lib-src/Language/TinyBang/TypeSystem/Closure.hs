@@ -8,6 +8,8 @@
   This module implements the TinyBang constraint closure relation.
 -}
 module Language.TinyBang.TypeSystem.Closure
+where -- TODO
+{-
 ( ClosureError(..)
 , calculateClosure
 ) where
@@ -284,3 +286,4 @@ doEqualityFor a1 oc history =
           , WrapTypeConstraint $ TypeConstraint (Label labelTrue b') a1
           , WrapTypeConstraint $ TypeConstraint (Label labelFalse b') a1
           ]
+-}

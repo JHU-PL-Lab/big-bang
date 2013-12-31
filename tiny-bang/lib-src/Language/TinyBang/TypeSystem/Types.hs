@@ -8,6 +8,8 @@
 -}
 
 module Language.TinyBang.TypeSystem.Types
+where-- TODO: rewrite
+{-
 ( Type(..)
 , PatternType(..)
 , InnerPatternType(..)
@@ -138,3 +140,4 @@ instance (DocumentContainer db) => Display (Type db) where
     Scape tpat a cs -> makeDoc tpat <+> text "->" <+> makeDoc a <+> char '\\'
                           <+> delimFillSep lbrace rbrace comma
                                 (getContainedDocuments cs)
+-}

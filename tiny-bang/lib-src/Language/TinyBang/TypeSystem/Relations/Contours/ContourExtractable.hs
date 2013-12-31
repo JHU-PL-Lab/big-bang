@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, OverlappingInstances #-}
 
 module Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable
+where -- TODO
+{-
 ( ContourExtractable(..)
 ) where
 
@@ -121,3 +123,4 @@ instance ContourExtractable PossibleContour where
 
 instance ContourExtractable Contour where
   extractContours = Set.singleton
+-}

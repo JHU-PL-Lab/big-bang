@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleInstances, UndecidableInstances, TemplateHaskell #-}
 
 module Language.TinyBang.TypeSystem.Relations.Contours
+where -- TODO
+{-
 ( cNew
 , module Language.TinyBang.TypeSystem.Relations.Contours.ContourExtractable
 , module Language.TinyBang.TypeSystem.Relations.Contours.ContourInstantiable
@@ -117,3 +119,4 @@ cWiden cn c =
 --  database.
 cNew :: (ConstraintDatabase db) => FlowTVar -> db -> Contour
 cNew a = cWiden (cCollapse $ tMakeCntr a)
+-}

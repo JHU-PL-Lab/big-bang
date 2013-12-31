@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeFamilies, DataKinds, KindSignatures #-}
 
 module Language.TinyBang.TypeSystem.Data.Projection
+where -- TODO
+{-
 ( MultiProjection
 , SingleProjection
 ) where
@@ -46,3 +48,4 @@ type instance SingleProjection db ProjLabelTag =
   (CellTVar, Fibration db -> Fibration db)
 type instance SingleProjection db ProjFunTag = (Type db, Fibration db)
 
+-}
