@@ -53,3 +53,8 @@ instance Display Token where
     TokIdentifier s -> text "id#" <> dquotes (text s)
     TokLitInt n -> text "int#" <> dquotes (text $ show n)
     TokLabel n -> text "label#" <> dquotes (text n)
+
+instance Display PositionalToken where
+  makeDoc pt =
+    makeDoc (posToken pt) <+> text "at" <+>
+      makeDoc (startPos pt) <> char '-' <> makeDoc (stopPos pt)

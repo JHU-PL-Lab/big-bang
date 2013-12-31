@@ -35,6 +35,7 @@ import Text.Parsec
 import Text.Parsec.Pos
 
 import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Display
 
 -- |A typeclass which must be implemented by the state mechanism in a positional
 --  parser.
@@ -59,7 +60,7 @@ type PositionalParserConstraints s u m c t =
   ( PositionalParserMonad m c
   , Stream s m t
   , HasDocumentStartStopPositions t
-  , Show t
+  , Display t
   , HasPositionalState u t)
 
 class PositionalParserMonad m c | m -> c where
@@ -96,16 +97,16 @@ prevPosition :: (PositionalParserConstraints s u m c t)
 prevPosition = liftM documentStopPositionOf <$> getLastToken <$> getState
 
 -- |Requires that the provided token meet a given predicate function.  Showing
---  the token is accomplished with @show@.  Because the token has position, this
---  information is used to update the Parsec positional state to ensure that
---  error messages are correct.
+--  the token is accomplished with @display@.  Because the token has position,
+--  this information is used to update the Parsec positional state to ensure
+--  that error messages are correct.
 require :: forall s u m a c t.
            (PositionalParserConstraints s u m c t)
         => (t -> Maybe a)
         -> ParsecT s u m a
 require f = do
   context <- lift parserContext
-  (a, t) <- tokenPrim show (nextPos context) matchToken
+  (a, t) <- tokenPrim display (nextPos context) matchToken
   modifyState $ setLastToken t
   return a
   where

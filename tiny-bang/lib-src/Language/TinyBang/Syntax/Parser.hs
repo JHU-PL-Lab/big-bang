@@ -50,30 +50,31 @@ instance PositionalParserMonad ParserM ParserContext where
 type TBParser a =
   ParsecT [PositionalToken] (SimplePositionalState PositionalToken) ParserM a
 
--- * Parser definitions
+-- * Non-leaf definitions
 
 pExpr :: TBParser Expr
-pExpr = origConstr1 Expr $ sepEndBy1 pClause (consume TokSemi)
+pExpr = "expression" <@>
+  origConstr1 Expr $% sepEndBy1 pClause (consume TokSemi)
 
 pClause :: TBParser Clause
-pClause =
+pClause = "clause" <@>
       Evaluated <$> pEvaluatedClause
   <|> origConstr2 RedexDef $% (,) <$> pVar <* consume TokIs <*> pRedex ?+> eps
 
 pEvaluatedClause :: TBParser EvaluatedClause
-pEvaluatedClause =
+pEvaluatedClause = "evaluated clause" <@>
       origConstr2 ValueDef $% (,) <$> pVar <* consume TokIs <*> pValue ?+> eps
 
 pRedex :: TBParser Redex
-pRedex =
+pRedex = "redex" <@>
       origConstr2 Appl $% (,) <$> pVar <*> pVar ?+> eps
   <|> origConstr1 Define pVar
 
 pVar :: TBParser Var
-pVar = origConstr1 Var pIdent ?+> eps
+pVar = "variable" <@> origConstr1 Var pIdent ?+> eps
 
 pValue :: TBParser Value
-pValue =
+pValue = "value" <@>
       origConstr1 VPrimitive $% origConstr1 VInt $% pInt
   <|> requirex TokEmptyOnion VEmptyOnion
   <|> origConstr2 VLabel $% (,) <$> pLabel ?=> pVar
@@ -84,36 +85,42 @@ pValue =
             <* consume TokStartBlock <*> pExpr <* consume TokStopBlock
 
 pPattern :: TBParser Pattern
-pPattern = origConstr1 Pattern $ sepEndBy1 pPatternClause (consume TokSemi)
+pPattern = "pattern" <@>
+      origConstr1 Pattern $% sepEndBy1 pPatternClause (consume TokSemi)
 
 pPatternClause :: TBParser PatternClause
-pPatternClause = origConstr2 PatternClause $%
-                    (,) <$> pVar <* consume TokIs <*> pPatternValue
+pPatternClause = "pattern clause" <@>
+  origConstr2 PatternClause $% (,) <$> pVar <* consume TokIs <*> pPatternValue
 
 pPatternValue :: TBParser PatternValue
-pPatternValue =
+pPatternValue = "pattern value" <@>
       requirex TokInt $% flip PPrimitive PrimInt
   <|> requirex TokEmptyOnion PEmptyOnion
   <|> origConstr2 PLabel $% (,) <$> pLabel ?=> pVar
   <|> origConstr2 PConjunction $% (,) <$> pVar <* consume TokOnion ?=> pVar
+
+-- * Terminal definitions
 
 pIdent :: TBParser String
 pIdent = require (\t ->
             case posToken t of
               TokIdentifier s -> Just s
               _ -> Nothing)
+      <?> "identifier"
 
 pInt :: TBParser Integer
 pInt = require (\t ->
             case posToken t of
               TokLitInt n -> Just n
               _ -> Nothing)
+      <?> "integer literal"
 
 pLabel :: TBParser LabelName
-pLabel = origConstr1 LabelName $ require (\t ->
+pLabel = origConstr1 LabelName $% require (\t ->
             case posToken t of
               TokLabel n -> Just n
               _ -> Nothing)
+      <?> "label name"
 
 -- * Utility definitions
 
@@ -121,9 +128,11 @@ pLabel = origConstr1 LabelName $ require (\t ->
 --  equality.  If it is matched, the second argument is applied to the origin
 --  of the token and the result is returned.
 requirex :: Token -> (Origin -> a) -> TBParser a
-requirex t f = do
-  f <$> fst <$> (originParser $ require $
-                    \pt' -> if t == posToken pt' then Just () else Nothing)
+requirex t f =
+  (
+    f <$> fst <$> originParser
+          (require $ \pt' -> if t == posToken pt' then Just () else Nothing)
+  ) <?> display t
 
 -- |Consumes a single token.  This is a specialization of @requirex@ which
 --  always returns unit.
