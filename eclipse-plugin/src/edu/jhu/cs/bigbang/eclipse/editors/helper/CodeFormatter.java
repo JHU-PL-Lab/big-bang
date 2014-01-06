@@ -6,7 +6,8 @@ import org.eclipse.jface.text.formatter.ContentFormatter;
 public class CodeFormatter extends ContentFormatter{
 
 	public CodeFormatter() {
-		setFormattingStrategy(new CodeFormattingStrategy(), IDocument.DEFAULT_CONTENT_TYPE);
+		setFormattingStrategy(new SpaceFormattingStrategy(), IDocument.DEFAULT_CONTENT_TYPE);
+		
 	}
 	
 }

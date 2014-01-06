@@ -29,8 +29,7 @@
 	</extension>
 
 	<extension point="org.eclipse.ui.views">
-      	<category name="BigBang" id="edu.jhu.cs.bigbang.eclipse">
-      	</category>
+      	<category name="BigBang" id="edu.jhu.cs.bigbang.eclipse"> </category>
       	<view
         	name="TopLoop View"
             icon="icons/sample.gif"

@@ -2,7 +2,6 @@ package edu.jhu.cs.bigbang.eclipse.editors;
 
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
-import org.eclipse.jface.text.formatter.ContentFormatter;
 import org.eclipse.jface.text.formatter.IContentFormatter;
 import org.eclipse.jface.text.presentation.IPresentationReconciler;
 import org.eclipse.jface.text.presentation.PresentationReconciler;
@@ -44,5 +43,5 @@ class Configuration extends SourceViewerConfiguration {
 		CodeFormatter codeFormatter = new CodeFormatter();
 		return codeFormatter;
 	}
-	
+
 }

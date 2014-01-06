@@ -34,7 +34,7 @@ public class TopLoop extends Observable {
 
 	private TinyBangRuntime tbRuntime;
 
-	// The buffer stores the output from the interpreter
+	// The buffer stores the output to be displayed
 	private StringBuffer returnBuffer;
 
 	/**
@@ -80,7 +80,7 @@ public class TopLoop extends Observable {
 			e.printStackTrace();
 		}
 		
-		returnBuffer.append("> " + returnObj + "\n");
+		returnBuffer.append("> " + new DisplayObject(returnObj) + "\n");
 		setChanged();
 		notifyObservers();
 	}

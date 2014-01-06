@@ -7,6 +7,7 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlAdapter;
 import org.eclipse.swt.events.ControlEvent;
@@ -14,6 +15,7 @@ import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -27,6 +29,7 @@ import org.eclipse.ui.part.ViewPart;
 
 import edu.jhu.cs.bigbang.eclipse.Activator;
 import edu.jhu.cs.bigbang.eclipse.util.ImageConstant;
+import org.eclipse.swt.graphics.Color;
 
 /**
  * A Top loop GUI. Users can code in the input panel, 
@@ -145,6 +148,11 @@ public class TopLoopView extends ViewPart implements Observer {
 				public void run() {
 					outputPanel.setText(TopLoop.getInstance()
 							.getTopLoopString());
+					// StyleRange [] sr = new StyleRange[1];
+					// sr[0] = new StyleRange();
+					// sr[0].foreground = new Color(Display.getCurrent(), new
+					// RGB(29, 109, 161));
+					// outputPanel.replaceStyleRanges(0, 10, sr);
 					outputPanel.setSelection(outputPanel.getCharCount());
 				}
 			});
