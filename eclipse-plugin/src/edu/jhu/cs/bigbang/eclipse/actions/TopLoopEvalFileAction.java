@@ -19,7 +19,9 @@ public class TopLoopEvalFileAction extends TopLoopEvalAction {
 	@Override
 	protected String getTargetString(TextEditor editor, TextSelection selection) {
 		IEditorInput input = editor.getEditorInput();
+		
 		IDocument document = editor.getDocumentProvider().getDocument(input);
+		
 		String strSelected = "";
 		try {
 			// Grab the text from the whole file
