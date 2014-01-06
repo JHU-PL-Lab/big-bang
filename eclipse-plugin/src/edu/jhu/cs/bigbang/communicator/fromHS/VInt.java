@@ -1,5 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
+import edu.jhu.cs.bigbang.eclipse.toploop.ValueEnvironment;
+
 public class VInt extends Value{
 	
 	private Origin origin;
@@ -30,6 +32,10 @@ public class VInt extends Value{
 	@Override
 	public String toString() {
 		return intVar + "";
+	}
+	
+	public String toDisplayString(ValueEnvironment env) {
+		return String.valueOf(intVar);
 	}
 	
 	public boolean equals(Object obj) {

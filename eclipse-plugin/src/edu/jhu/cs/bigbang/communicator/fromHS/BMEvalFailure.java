@@ -33,7 +33,7 @@ public class BMEvalFailure extends BatchModeError{
 	
 	@Override
 	public String toString() {
-		StringBuffer resultStr = null;
+		StringBuffer resultStr = new StringBuffer();
 		resultStr.append(evalError.toString());
 		Iterator<Clause> arrLstI = clauseLst.iterator();
 		while(arrLstI.hasNext()) {

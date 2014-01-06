@@ -18,7 +18,7 @@ public class OpOnionSub extends OnionOp{
 	}
 	
 	public String toString() {
-		return "OpOnionSub";
+		return "&-";
 	}
 	
 	public boolean equals(Object obj) {

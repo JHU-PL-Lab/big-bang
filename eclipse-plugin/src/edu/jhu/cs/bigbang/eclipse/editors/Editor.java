@@ -16,7 +16,6 @@ public class Editor extends TextEditor {
 
 	public Editor() {
 		super();
-		
 		configuration = new Configuration();
 		setSourceViewerConfiguration(configuration);
 	}

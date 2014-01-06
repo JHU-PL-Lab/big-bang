@@ -11,14 +11,4 @@ public class FlowVar extends AbstractFlowVar{
 		return this.getFlowStr();
 	}
 	
-	public boolean equals(Object obj) {
-		if (obj == null) return false;
-		if (! (obj instanceof FlowVar)) return false;
-		FlowVar flowVarObj = (FlowVar) obj;
-		if(this.getFlowStr().equals(flowVarObj.getFlowStr())) {
-			return true;
-		} else {
-			return false;
-		}
-	}
 }

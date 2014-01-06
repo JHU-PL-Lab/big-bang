@@ -1,5 +1,7 @@
 package edu.jhu.cs.bigbang.communicator.fromHS;
 
+import edu.jhu.cs.bigbang.eclipse.toploop.ValueEnvironment;
+
 public class VOnionFilter extends Value {
 
 	private Origin origin;
@@ -51,6 +53,10 @@ public class VOnionFilter extends Value {
 	@Override
 	public String toString() {
 		return flowVar + "" + onionOp + " " + anyProjector + " ";
+	}
+	
+	public String toDisplayString(ValueEnvironment env) {
+		return env.displayStringOf(flowVar) + "" + onionOp + " " + anyProjector + " ";
 	}
 	
 	public boolean equals(Object obj) {

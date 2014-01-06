@@ -22,16 +22,28 @@ public class GenFlowVar extends AbstractFlowVar{
     	return " " + flowNum; 
     }
 
-	public boolean equals(Object obj) {
-		if (obj == null) return false;
-		if (! (obj instanceof GenFlowVar)) return false;
-		GenFlowVar genFlowVarObj = (GenFlowVar) obj;
-		if(this.getFlowStr().equals(genFlowVarObj.getFlowStr()) && 
-		   this.getFlowVarInt() == genFlowVarObj.getFlowVarInt()) {
-			return true;
-		} else {
-			return false;
-		}
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + flowNum;
+		return result;
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		GenFlowVar other = (GenFlowVar) obj;
+		if (flowNum != other.flowNum)
+			return false;
+		return true;
+	}
+
+	
 	
 }

@@ -30,5 +30,31 @@ public abstract class AbstractCellVar {
 	public String toString() {
 		return cellContents;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((cellContents == null) ? 0 : cellContents.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		AbstractCellVar other = (AbstractCellVar) obj;
+		if (cellContents == null) {
+			if (other.cellContents != null)
+				return false;
+		} else if (!cellContents.equals(other.cellContents))
+			return false;
+		return true;
+	}
 	
  }

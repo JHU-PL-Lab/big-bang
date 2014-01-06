@@ -123,7 +123,7 @@ instance ToJSON AST.Value where
   toJSON (VEmptyOnion origin) = object ["type" .= ("VEmptyOnion" :: String), "origin" .= (toJSON origin)]
   toJSON (VLabel origin labelName cellVar) = object ["type" .= ("VLabel" :: String), "origin" .= (toJSON origin), "labelName" .= (toJSON labelName), "cellVar" .= (toJSON cellVar)]
   toJSON (VOnion origin flowVar flowVar2) = object ["type" .= ("VOnion" :: String), "origin" .= (toJSON origin), "flowVar_1" .= (toJSON flowVar), "flowVar_2" .= (toJSON flowVar2)]
-  toJSON (VOnionFilter origin flowVar onionOp anyProjector) = object ["type" .= ("VonionFilter" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "onionOp" .= (toJSON onionOp), "anyProjector" .= (toJSON anyProjector)]
+  toJSON (VOnionFilter origin flowVar onionOp anyProjector) = object ["type" .= ("VOnionFilter" :: String), "origin" .= (toJSON origin), "flowVar" .= (toJSON flowVar), "onionOp" .= (toJSON onionOp), "anyProjector" .= (toJSON anyProjector)]
   toJSON (VScape origin pattern expr) = object ["type" .= ("VScape" :: String), "origin" .= (toJSON origin), "pattern" .= (toJSON pattern), "expr" .= (toJSON expr)]
 
 instance ToJSON CellQualifier where

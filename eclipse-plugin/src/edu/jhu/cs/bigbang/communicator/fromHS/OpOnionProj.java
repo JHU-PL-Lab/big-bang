@@ -19,7 +19,7 @@ public class OpOnionProj extends OnionOp{
     
 	@Override
 	public String toString() {
-		return "OpOnionPoj";
+		return "&.";
 	}
 	
 	public boolean equals(Object obj) {
