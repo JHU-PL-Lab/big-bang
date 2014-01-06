@@ -37,7 +37,11 @@ public abstract class TopLoopEvalAction implements
 	protected abstract String getTargetString(TextEditor editor,
 			TextSelection selection);
 
-	public void tellTopLoopToEvalString(String lines) {
+	/**
+	 * Call a toploop to eval the given string
+	 * @param lines string to be evaled
+	 */
+	public void evalStringInTopLoop(String lines) {
 		// We split them in to an array of lines
 		// and pass them one by one to the TopLoop
 		lines = lines.trim();
@@ -63,7 +67,7 @@ public abstract class TopLoopEvalAction implements
 							(TextSelection) sel);
 					// Nothing to be done
 					if(!strSelected.equals(""))
-						tellTopLoopToEvalString(strSelected);
+						evalStringInTopLoop(strSelected);
 				}
 			} else {
 				MessageDialog.openInformation(window.getShell(),

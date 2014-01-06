@@ -10,7 +10,7 @@ import org.eclipse.ui.editors.text.TextEditor;
 
 /**
  * This class defines an action to evaluate the content
- * of the current file in the elected lines
+ * of the current file in the selected lines.
  * 
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu>
  *

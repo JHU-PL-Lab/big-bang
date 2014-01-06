@@ -16,16 +16,22 @@ import edu.jhu.cs.bigbang.eclipse.editors.helper.CodeFormatter;
 /**
  * An action to format the code in the editor.
  * This action is binded in plugin.xml
- * The current sequence is 'F8'
+ * The current sequence is 'F8' (look in the xml file).
  * 
  * @author Keeratipong Ukachoke <kukacho1@jhu.edu>
  *
  */
 public class CodeFormatAction implements IWorkbenchWindowActionDelegate {
 
+	/** The work bench that is currently running */
 	private IWorkbenchWindow window;
+	
+	/** The code formatter that will be used to format code */
 	private CodeFormatter codeFormatter;
 	
+	/**
+	 * The default constructor
+	 */
 	public CodeFormatAction() {
 		super();
 		codeFormatter = new CodeFormatter();
