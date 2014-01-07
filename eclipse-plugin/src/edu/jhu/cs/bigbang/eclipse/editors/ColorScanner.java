@@ -23,7 +23,7 @@ import org.eclipse.swt.widgets.Display;
  */
 class ColorScanner extends RuleBasedScanner {
 
-	public static RGB ONION_RGB = new RGB(29, 109, 161);
+	public static RGB ONION_RGB = new RGB(255, 0, 0);
 	public static String ONION_START_SYMBOL = "`";
 	public static String ONION_STOP_SYMBOL = " ";
 

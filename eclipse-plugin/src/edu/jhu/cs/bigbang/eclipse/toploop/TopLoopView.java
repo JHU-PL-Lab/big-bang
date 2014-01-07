@@ -148,11 +148,11 @@ public class TopLoopView extends ViewPart implements Observer {
 				public void run() {
 					outputPanel.setText(TopLoop.getInstance()
 							.getTopLoopString());
-					// StyleRange [] sr = new StyleRange[1];
-					// sr[0] = new StyleRange();
-					// sr[0].foreground = new Color(Display.getCurrent(), new
-					// RGB(29, 109, 161));
-					// outputPanel.replaceStyleRanges(0, 10, sr);
+//					 StyleRange [] sr = new StyleRange[1];
+//					 sr[0] = new StyleRange();
+//					 sr[0].foreground = new Color(Display.getCurrent(), new
+//					 RGB(255, 0, 0));
+//					 outputPanel.replaceStyleRanges(0, 10, sr);
 					outputPanel.setSelection(outputPanel.getCharCount());
 				}
 			});
