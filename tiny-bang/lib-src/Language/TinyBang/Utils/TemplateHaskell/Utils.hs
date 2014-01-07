@@ -8,6 +8,7 @@ module Language.TinyBang.Utils.TemplateHaskell.Utils
 , canonicalType
 , getDataArgTypes
 , getConstructors
+, tyVarBndrToName
 , getNameOfType
 ) where
 
@@ -57,7 +58,7 @@ canonicalType tname = do
         perBinding tvb = case tvb of
           PlainTV n -> (VarT n, PlainTV n)
           KindedTV n k -> (VarT n, KindedTV n k)
-
+          
 -- |Determines, for a given @Info@ representing a data type, *all* types of
 --  arguments that any of its constructors could accept.
 getDataArgTypes :: Info -> Q [Type]
@@ -84,6 +85,12 @@ getConstructors info = case info of
             ++ " is not a data decl or alias to one"
   _ -> error $ "getConstructors: " ++ show info
         ++ " is not a type constructor"
+
+-- |Retrieves the name appearing in a variable binding.
+tyVarBndrToName :: TyVarBndr -> Name
+tyVarBndrToName bndr = case bndr of
+                          PlainTV n -> n
+                          KindedTV n _ -> n
 
 -- |Obtains the name of a given type.
 getNameOfType :: Type -> Name

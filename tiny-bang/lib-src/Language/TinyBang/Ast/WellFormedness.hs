@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, FlexibleInstances #-}
 
-module Language.TinyBang.Interpreter.WellFormedness
+module Language.TinyBang.Ast.WellFormedness
 ( checkWellFormed
-, IllFormedness
+, IllFormedness(..)
 ) where
 
 import Control.Applicative
@@ -12,9 +12,25 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Monoid
 
-import Language.TinyBang.Ast
-import Language.TinyBang.Interpreter.Basis
+import Language.TinyBang.Ast.Data
+import Language.TinyBang.Ast.Origin
 import Language.TinyBang.Utils.TemplateHaskell.Reduce
+
+-- |A data structure representing types of ill-formed expressions.
+data IllFormedness
+  = DuplicateDefinition Var
+      -- ^Generated when a variable is declared twice.
+  | OpenExpression (Set Var)
+      -- ^Generated when the expression is not closed.
+  | EmptyExpression Origin
+      -- ^Generated when an empty expression (an expression with no clauses) is
+      --  encountered
+  | EmptyPattern Origin
+      -- ^Generated when an empty pattern (a pattern with no clauses) is
+      --  encountered.
+  deriving (Eq, Ord, Show)
+
+-- TODO: check to ensure that the expression is closed
 
 checkWellFormed :: Expr -> Set IllFormedness
 checkWellFormed e =

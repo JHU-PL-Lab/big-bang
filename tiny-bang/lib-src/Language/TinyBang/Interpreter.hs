@@ -21,7 +21,6 @@ import qualified Data.Set as Set
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.Matching
-import Language.TinyBang.Interpreter.WellFormedness
 import Language.TinyBang.Interpreter.Variables
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger

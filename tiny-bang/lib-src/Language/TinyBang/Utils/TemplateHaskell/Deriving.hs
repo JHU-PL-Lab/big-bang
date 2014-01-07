@@ -12,16 +12,30 @@ module Language.TinyBang.Utils.TemplateHaskell.Deriving
 
 import Control.Applicative ((<$>))
 import Control.Monad (when)
+import Data.List
 import Data.Monoid (mconcat)
 import Language.Haskell.TH
+
+import Language.TinyBang.Utils.TemplateHaskell.Utils
 
 -- |Derives an instance of @Eq@ for a given type but skips the first argument
 --  in each constructor.  Each constructor must have at least one argument.
 deriveEqSkipFirst :: Name -> Q [Dec]
 deriveEqSkipFirst name = do
   info <- reify name
-  [d|instance Eq $(mkInstanceType name) where
-      a == b = $(mkCaseExpr 'a 'b)|]
+  argTyps <- getDataArgTypes info
+  (ityp,tvarNames) <- mkInstanceType name
+  let cntxt = map (ClassP ''Eq . (:[])) $ nub $
+                map VarT tvarNames -- Eq for every param type
+  vA <- newName "a"
+  vB <- newName "b"
+  sequence
+    [ instanceD (return cntxt) [t|Eq $(return ityp)|] $
+        [ funD (mkName "==")
+            [ clause [varP vA, varP vB] (normalB $ mkCaseExpr vA vB) []
+            ]
+        ]
+    ]
   where
     mkCaseExpr :: Name -> Name -> Q Exp
     mkCaseExpr a b = do
@@ -59,8 +73,19 @@ deriveEqSkipFirst name = do
 deriveOrdSkipFirst :: Name -> Q [Dec]
 deriveOrdSkipFirst name = do
   info <- reify name
-  [d|instance Ord $(mkInstanceType name) where
-      compare a b = $(mkCaseExpr 'a 'b)|]
+  argTyps <- getDataArgTypes info
+  (ityp,tvarNames) <- mkInstanceType name
+  let cntxt = map (ClassP ''Ord . (:[])) $ nub $
+                map VarT tvarNames -- Eq for every param type
+  vA <- newName "a"
+  vB <- newName "b"
+  sequence
+    [ instanceD (return cntxt) [t|Ord $(return ityp)|] $
+        [ funD (mkName "compare")
+            [ clause [varP vA, varP vB] (normalB $ mkCaseExpr vA vB) []
+            ]
+        ]
+    ]
   where
     mkCaseExpr :: Name -> Name -> Q Exp
     mkCaseExpr a b = do
@@ -115,8 +140,11 @@ mkArgNames baseName = map (newName . (baseName ++)) suffixList
 
 -- |Creates an unconstrained type for typeclass instances for the given type
 --  name.  This type creates a series of type variables as per @mkArgNames@
---  to use as the type arguments to the type.
-mkInstanceType :: Name -> Q Type
+--  to use as the type arguments to the type; the names of those variables are
+--  returned as well.
+mkInstanceType :: Name -> Q (Type, [Name])
 mkInstanceType name = do
   dTyVarBndrs <- fst <$> getBindersAndCons name
-  foldl appT (conT name) $ map ((varT =<<) . snd) $ zip dTyVarBndrs $ mkArgNames "t"
+  tvarNames <- sequence $ take (length dTyVarBndrs) $ mkArgNames "t"
+  typ <- foldl appT (conT name) $ map varT tvarNames
+  return (typ, tvarNames)

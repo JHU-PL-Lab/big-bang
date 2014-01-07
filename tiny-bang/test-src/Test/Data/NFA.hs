@@ -4,16 +4,16 @@ module Test.Data.NFA
 ( nfaTests
 ) where
 
-import Data.NFA
+import qualified Language.TinyBang.Utils.Data.NFA as NFA
 import Test.HUnit
 
-type TestNfa = Nfa Int Char
+type TestNfa = NFA.Nfa Char
 
-{-@
+{-|@
   (1) --a--> ((2))
 @-}
 example1 :: TestNfa
-example1 = createFromData 1 [(1,'a',2)] [2]
+example1 = NFA.singleton 'a'
 
 {-|@
   (1) --a--> ((2))
@@ -22,7 +22,8 @@ example1 = createFromData 1 [(1,'a',2)] [2]
       b--> 3 --c
 @-}
 example2 :: TestNfa
-example2 = createFromData 1 [(1,'a',2),(1,'b',3),(3,'c',2)] [2]
+example2 =
+  NFA.singleton 'a' `NFA.union` (NFA.singleton 'b' `NFA.concatenate` NFA.singleton 'c')
 
 {-|@
   (1) --a--> ((2)) <---
@@ -30,19 +31,22 @@ example2 = createFromData 1 [(1,'a',2),(1,'b',3),(3,'c',2)] [2]
                 -b,c,d-
 @-}
 example3 :: TestNfa
-example3 = createFromData 1 ((1,'a',2):map (2,,2) "bcd") [2]
+example3 =
+  NFA.singleton 'a' `NFA.concatenate` NFA.kleeneSingleton ['b','c','d']
 
 {-|@
   (1) --a--> 2 --c--> 3 --b--> 4 --d--> ((5))
 @-}
 example4 :: TestNfa
-example4 = createFromData 1 (map (\(x,e) -> (x,e,x+1)) $ zip [1..] "acbd") [5]
+example4 =
+  NFA.singleton 'a' `NFA.concatenate` NFA.singleton 'c' `NFA.concatenate`
+    NFA.singleton 'b' `NFA.concatenate` NFA.singleton 'd'
 
 {-|@
   (1)   ((2))
 @-}
 example5 :: TestNfa
-example5 = createFromData 1 [] [2]
+example5 = NFA.empty
 
 {-|@
   (1) ----> 2<-
@@ -53,12 +57,9 @@ example5 = createFromData 1 [] [2]
     --a---> 3 --c--> ((4))
 @-}
 example6 :: TestNfa
-example6 = createFromDataWithEpsilon 1
-              [ (1,Nothing,2)
-              , (1,Just 'a',3)
-              , (2,Just 'b',3)
-              , (3,Nothing,2)
-              , (3,Just 'c',4) ] [4]
+example6 =
+  NFA.optional (NFA.singleton 'a') `NFA.concatenate`
+    NFA.kleeneStar (NFA.singleton 'b') `NFA.concatenate` NFA.singleton 'c'
 
 -- |The tests for this module.
 nfaTests :: Test
@@ -69,14 +70,14 @@ nfaTests =
       ex4 = ("example4",example4)
       ex5 = ("example5",example5)
       ex6 = ("example6",example6)
-      ex1or2 = ("ex1|ex2", example1 `union` example2)
-      ex1and2 = ("ex1&ex2", example1 `intersect` example2)
-      ex2and3 = ("ex2&ex3", example2 `intersect` example3)
-      ex1and4 = ("ex1&ex4", example1 `intersect` example4)
-      ex3and4 = ("ex3&ex4", example3 `intersect` example4)
-      ex1and6 = ("ex1&ex6", example1 `intersect` example6)
-      ex2and6 = ("ex2&ex6", example2 `intersect` example6)
-      ex3and6 = ("ex3&ex6", example3 `intersect` example6)
+      ex1or2 = ("ex1|ex2", example1 `NFA.union` example2)
+      ex1and2 = ("ex1&ex2", example1 `NFA.intersect` example2)
+      ex2and3 = ("ex2&ex3", example2 `NFA.intersect` example3)
+      ex1and4 = ("ex1&ex4", example1 `NFA.intersect` example4)
+      ex3and4 = ("ex3&ex4", example3 `NFA.intersect` example4)
+      ex1and6 = ("ex1&ex6", example1 `NFA.intersect` example6)
+      ex2and6 = ("ex2&ex6", example2 `NFA.intersect` example6)
+      ex3and6 = ("ex3&ex6", example3 `NFA.intersect` example6)
   in
   TestList
     [ TestLabel "Simple acceptance" $ TestList $
@@ -118,20 +119,22 @@ nfaTests =
             ]
     ]
   
-genContainTests :: (Show sy) => (String,Nfa st sy) -> [[sy]] -> [[sy]] -> [Test]
+genContainTests :: (Show sy, Ord sy)
+                => (String, NFA.Nfa sy) -> [[sy]] -> [[sy]] -> [Test]
 genContainTests target pos neg =
   map (genContainTest True target) pos ++ map (genContainTest False target) neg
 
-genContainTest :: (Show sy) => Bool -> (String, Nfa st sy) -> [sy] -> Test
+genContainTest :: (Show sy, Ord sy)
+               => Bool -> (String, NFA.Nfa sy) -> [sy] -> Test
 genContainTest cntn (name,nfa) str =
   TestLabel (makeMsg cntn)
-      $ test $ assertBool (makeMsg $ not cntn) $ accept nfa str == cntn
+      $ test $ assertBool (makeMsg $ not cntn) $ NFA.accept nfa str == cntn
   where
     makeMsg b = show str ++ " " ++ (if b then "not " else "") ++ "in " ++ name
 
-emptinessTest :: (Ord st) => Bool -> (String, Nfa st sy) -> Test
+emptinessTest :: (Ord sy) => Bool -> (String, NFA.Nfa sy) -> Test
 emptinessTest empt (name,nfa) =
   TestLabel (makeMsg empt)
-      $ test $ assertBool (makeMsg $ not empt) $ isEmpty nfa == empt
+      $ test $ assertBool (makeMsg $ not empt) $ NFA.isEmpty nfa == empt
   where
     makeMsg b = name ++ " is " ++ (if b then "" else "not ") ++ "empty"

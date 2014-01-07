@@ -16,7 +16,7 @@
     -- Common instances
     $(defineCommonHomInstances ''MyTransformation)
     -- Special case
-    $(defineHomFunc ''MyTransformation ''Baz $ mkName "homBaz")
+    $(defineHomFunc (mkName "homBaz") ''MyTransformation ''Baz)
     instance Transform MyTransformation Baz where
       transform (MyTransformation n) baz = case baz of
         Baz5 m -> Baz5 $ n + m

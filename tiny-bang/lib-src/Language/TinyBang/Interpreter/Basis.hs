@@ -4,7 +4,6 @@ module Language.TinyBang.Interpreter.Basis
 ( EvalEnv(..)
 , EvalState(..)
 , EvalError(..)
-, IllFormedness(..)
 , EvalM(..)
 , runEvalM
 , varLookup
@@ -56,20 +55,6 @@ data EvalError
   = IllFormedExpression (Set IllFormedness)
   | ApplicationFailure Var Var
       -- ^Generated when pattern matching fails completely during application.
-  deriving (Eq, Ord, Show)
-
--- |A data structure representing types of ill-formed expressions.
-data IllFormedness
-  = DuplicateDefinition Var
-      -- ^Generated when a variable is declared twice.
-  | OpenExpression (Set Var)
-      -- ^Generated when the expression is not closed.
-  | EmptyExpression Origin
-      -- ^Generated when an empty expression (an expression with no clauses) is
-      --  encountered
-  | EmptyPattern Origin
-      -- ^Generated when an empty pattern (a pattern with no clauses) is
-      --  encountered.
   deriving (Eq, Ord, Show)
 
 instance Display EvalError where

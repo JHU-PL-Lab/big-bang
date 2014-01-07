@@ -1,65 +1,91 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, TemplateHaskell, TupleSections, TypeSynonymInstances, GeneralizedNewtypeDeriving  #-}
 {-|
   This module implements the TinyBang constraint closure relation.
 -}
 module Language.TinyBang.TypeSystem.Closure
-where -- TODO
-{-
-( ClosureError(..)
-, calculateClosure
+( calculateClosure
 ) where
 
-import           Control.Applicative
-import           Control.Monad.Trans        (lift)
-import           Control.Monad.Trans.Either
-import qualified Data.Set                   as Set
+import Control.Applicative
+import Control.Monad
+import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
-import Language.TinyBang.Logging
-import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
+import Language.TinyBang.TypeSystem.Matching
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
-import Language.TinyBang.TypeSystem.Monad.Trans.Flow
-import Language.TinyBang.TypeSystem.Relations
+import Language.TinyBang.TypeSystem.Monad.Trans.NonDet
 import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
 
--- |A data structure representing errors in constraint closure.
-data ClosureError db
-  = ClosureFailedProjection (ProjectionError db)
-  deriving (Eq, Ord, Show)
-instance (ConstraintDatabase db, Display db) => Display (ClosureError db) where
-  makeDoc (ClosureFailedProjection err) = makeDoc err
+{- TODO: improve this implementation.  At the moment, a lot of cases are being
+         examined multiple times.  One possibility is a two-level implementation
+         in which the inner level operates under a "sloppy" cache, ignoring
+         e.g. call sites which have already been visited.  The outer level can
+         then clear the cache at each step and proceed until no progress is
+         made even with an empty cache. 
+-}
 
--- |Calculates the transitive closure of the provided constraint database.  The
---  transitive closure of a TinyBang database is only confluent up to
---  equivalence of contour folding; this function will produce a representative
---  of the appropriate equivalence class.
-calculateClosure :: (ConstraintDatabase db, Display db, Ord db)
-                 => db -> Either (ClosureError db) db
+-- |Calculates the transitive closure of the provided constraint set under the
+--  TinyBang constraint closure rules.
+calculateClosure :: (ConstraintDatabase db, Display db)
+                 => db -> db
 calculateClosure db =
-  case calculateClosureStep db of
-    Left err -> Left err
-    Right db' ->
-      if db == db' then Right db else calculateClosure db'
+  let db' = calculateClosureStep db in
+  if db == db' then db else calculateClosure db
 
--- |The monad under which each closure step occurs.
-type ClosureM db m = FlowT (EitherT (ClosureError db) m)
+-- |Calculates a single step of constraint closure.
+calculateClosureStep :: forall db. (ConstraintDatabase db, Display db)
+                     => db -> db
+calculateClosureStep db =
+  foldr CDb.union db $ concat $ runClosureStepM (sequence rules) db
+  where
+    rules :: [ClosureStepM db db]
+    rules =
+      [ closeTransitivity
+      , closeApplication
+      ]
 
--- |A routine for expanding a @ClosureM@ monadic value.
-expandClosureM :: (ConstraintDatabase db)
-               => ClosureM db (CReader db) a -> db
-               -> Either (ClosureError db) [a]
-expandClosureM calc = runCReader (runEitherT $ runFlowT calc)
+newtype ClosureStepM db a
+  = ClosureStepM
+      { unClosureStepM :: NonDetT (CReader db) a
+      }
+  deriving ( Monad, Functor, Applicative, MonadCReader db, MonadNonDet
+           , MonadPlus)
+
+runClosureStepM :: (ConstraintDatabase db, Display db) => ClosureStepM db a -> db -> [a]
+runClosureStepM x db = runCReader (runNonDetT (unClosureStepM x)) db
+
+closeTransitivity :: (ConstraintDatabase db, Display db) => ClosureStepM db db
+closeTransitivity = do
+  (t,a1) <- join $ choose <$> queryDb QueryAllTypesLowerBoundingTVars
+  a2 <- join $ choose <$> queryDb (QueryLowerBoundingTVarsOfTVar a1)
+  let h = DerivedFromClosure $ TransitivityRule t a1 a2
+  return $ CDb.singleton $ t <: a2 .: h
+
+closeApplication :: forall db. (ConstraintDatabase db, Display db)
+                 => ClosureStepM db db
+closeApplication = do
+  (a0,a1,a2) <- join $ choose <$> queryDb QueryAllApplications
+  db <- askDb
+  (argtov, mbinds) <- choose $ matches a2 a0 a1 db
+  case mbinds of
+    Nothing ->
+      -- TODO: perhaps implement contradictions as constraints?
+      mzero
+    Just (scapet, (a',db')) ->
+      let h = DerivedFromClosure $ ApplicationRule a0 a1 a2 scapet argtov in
+      let db'' = CDb.add (a' <: a2 .: h) db' in
+      let cntr = undefined in -- TODO
+      return $ CDb.polyinstantiate cntr db''
+
+{-
 
 -- |Calculates a single step of closure.
 calculateClosureStep :: forall db. (ConstraintDatabase db, Display db, Ord db)

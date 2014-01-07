@@ -16,7 +16,7 @@
     -- Common instances
     $(defineCommonCatInstances [t|Set Int|] ''MyReduction)
     -- Special case
-    $(defineCatFunc [t|Set Int|] ''MyReduction ''Baz $ mkName "catBaz")
+    $(defineCatFunc [t|Set Int|] (mkName "catBaz") ''MyReduction ''Baz)
     instance Reduce MyReduction Baz (Set Int) where
       reduce (MyReduction n) baz = case baz of
         Baz5 m -> if n > m then mempty else Set.singleton m

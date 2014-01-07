@@ -46,8 +46,9 @@ defOpts = Options { noTypecheck = def
                   , databaseName = def
                         &= name "db"
                         &= explicit
-                        &= help ("Selects the closure database.  This "
-                              ++ "must be one of the following: "
+                        &= help ("Selects the constraint database "
+                              ++ "implementation.  This must be one of the "
+                              ++ "following: "
                               ++ "simple")
                   , batchMode = def
                         &= name "batch-mode"

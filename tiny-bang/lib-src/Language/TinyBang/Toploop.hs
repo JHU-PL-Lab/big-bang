@@ -24,7 +24,6 @@ import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Inconsistency as In
 import Language.TinyBang.TypeSystem.InitialDerivation as ID
-import Language.TinyBang.TypeSystem.Relations
 import Language.TinyBang.TypeSystem.TypeInference as TI
 
 -- TODO: restore typechecking stuff
@@ -43,16 +42,15 @@ data InterpreterResult
       -- |The mapping from flow variables to their values.
       (Map Var Value)
   deriving (Eq, Ord, Show)
-  
+
+-- TODO: perhaps this should go somewhere else.  The unit tests would like to
+--       use these as well and unit tests shouldn't need the toploop, right?
 data ConstraintDatabaseType
   = Simple
 
 data DummyDatabase where
-  DummyDatabase :: forall db. (ConstraintDatabase db, Display db, Ord db)
+  DummyDatabase :: forall db. (ConstraintDatabase db, Display db)
                 => db -> DummyDatabase
--- TODO: remove the following
-class ConstraintDatabase db where
-instance ConstraintDatabase () where
   
 data InterpreterConfiguration
   = InterpreterConfiguration
@@ -63,7 +61,7 @@ data InterpreterConfiguration
 -- |Interprets the provided String as a TinyBang expression.  This value will be
 --  lexed, parsed, typechecked, and executed.  This function takes a dummy
 --  constraint database to drive the database type used by type inference.
-interpretSource :: (ConstraintDatabase db, Display db, Ord db)
+interpretSource :: (ConstraintDatabase db, Display db)
                 => db -> InterpreterConfiguration
                 -> String -> Either (InterpreterError db) InterpreterResult
 interpretSource _ interpConf src = do
@@ -87,8 +85,7 @@ interpretSource _ interpConf src = do
         Right ans -> Right ans
     evalFail (err,cls) = EvaluationFailure err cls
     
-instance (ConstraintDatabase db, Display db)
-      => Display (InterpreterError db) where
+instance (Display db) => Display (InterpreterError db) where
   makeDoc ierr = case ierr of
     LexerFailure msg -> text "Lexer error:" <+> text msg
     ParserFailure msg -> text "Parser error:" <+> text msg
@@ -173,4 +170,5 @@ stringyInterpretSource interpConf exprSrc =
 -- |Creates an empty database of a recognized type.
 emptyDatabaseFromType :: ConstraintDatabaseType -> DummyDatabase
 emptyDatabaseFromType dbt = case dbt of
-  Simple -> DummyDatabase () -- TODO: replace (CDb.empty :: SimpleConstraintDatabase)
+  Simple ->
+    DummyDatabase (CDb.empty :: SimpleConstraintDatabase)

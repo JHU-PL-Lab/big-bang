@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, GeneralizedNewtypeDeriving, GADTs #-}
 
 {-|
   This module carries an implementation of the constraint database which uses
@@ -6,127 +6,63 @@
   O(n) time; no smart data structures are used.
 -}
 module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
-where -- TODO
-{-
 ( SimpleConstraintDatabase
 ) where
 
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
+import Control.Monad.State
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.Ast
-import Language.TinyBang.Display
+import Language.TinyBang.TypeSystem.ConstraintDatabase.Interface
+import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FreeVars
+import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Polyinst
 import Language.TinyBang.TypeSystem.Constraints
-import Language.TinyBang.TypeSystem.ConstraintDatabase
-import Language.TinyBang.TypeSystem.ConstraintHistory
-import Language.TinyBang.TypeSystem.Relations
-import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.Utils.Display
 
-data SimpleConstraintDatabase
-  = SimpleConstraintDatabase
-      (Set (Constraint SimpleConstraintDatabase))
-      (Map
-        (Constraint SimpleConstraintDatabase)
-        (ConstraintHistory SimpleConstraintDatabase))
+newtype SimpleConstraintDatabase
+  = SimpleConstraintDatabase (Set (Constraint SimpleConstraintDatabase))
   deriving (Eq, Ord, Show)
 
+unSimpleConstraintDatabase :: SimpleConstraintDatabase -> Set (Constraint SimpleConstraintDatabase)
+unSimpleConstraintDatabase (SimpleConstraintDatabase s) = s
+
+-- TODO: contours for every add or union
+
 instance ConstraintDatabase SimpleConstraintDatabase where
-  empty = SimpleConstraintDatabase Set.empty Map.empty
-  add c hist (SimpleConstraintDatabase cs hists) =
-    SimpleConstraintDatabase (Set.insert c cs) (Map.insert c hist hists)
-  union (SimpleConstraintDatabase cs hists)
-        (SimpleConstraintDatabase cs' hists') =
-    SimpleConstraintDatabase (cs `Set.union` cs') (hists `Map.union` hists')
-    
-  getAllConstraints (SimpleConstraintDatabase cs _) = cs
-  getTypeConstraints = cfilter $ \case
-      { WrapTypeConstraint c -> Just c; _ -> Nothing }
-  getIntegerCalculationConstraints = opfilter $ \case
-      { OpPlus _ -> True; OpMinus _ -> True; OpMult _ -> True; _ -> False }
-  getIntegerOperationConstraints = opfilter $ \case
-      { OpGreater _ -> True; OpLess _ -> True; _ -> False }
-  getEqualityConstraints = opfilter $ \case
-      { OpEqual _ -> True; _ -> False }
-  getCellLoadingConstraints = cfilter $ \case
-      { WrapCellLoadingConstraint c -> Just c; _ -> Nothing }
-  getExceptionConstraints = cfilter $ \case
-      { WrapExceptionConstraint c -> Just c; _ -> Nothing }
-  getApplicationConstraints = cfilter $ \case
-      { WrapApplicationConstraint c -> Just c; _ -> Nothing }
+  empty = SimpleConstraintDatabase Set.empty
   
-  getTypeConstraintsByUpperBound a = cfilter $ \case
-      WrapTypeConstraint tc@(TypeConstraint _ a') | a == a' -> Just tc
-      _ -> Nothing
-  getIntermediateConstraintsByLowerBound a = cfilter $ \case
-      WrapIntermediateConstraint ic@(IntermediateConstraint a' _)
-        | a == a' -> Just ic
-      _ -> Nothing
-  getCellLowerBoundConstraints b = cfilter $ \case
-      WrapCellCreationConstraint c@(CellCreationConstraint _ b') | b == b' ->
-        Just $ CellCreationLowerBoundingConstraint c
-      WrapCellSettingConstraint c@(CellSettingConstraint _ b') | b == b' ->
-        Just $ CellSettingLowerBoundingConstraint c
-      _ -> Nothing
-  getFlowConstraintsByLowerBound a k = cfilter $ \case
-      WrapFlowConstraint c@(FlowConstraint a' k' _) | a == a' && k == k' ->
-        Just c
-      _ -> Nothing
-  getExceptionConstraintsByUpperBound a = cfilter $ \case
-      WrapExceptionConstraint c@(ExceptionConstraint _ a') | a == a' -> Just c
-      _ -> Nothing
-      
-  boundVariables (SimpleConstraintDatabase cs _) =
-    Set.fromList $ mapMaybe boundVariableOf $ Set.toList cs
-    where
-      boundVariableOf = \case
-        WrapIntermediateConstraint (IntermediateConstraint _ a) ->
-          Just $ SomeFlowTVar a
-        WrapTypeConstraint (TypeConstraint _ a) -> Just $ SomeFlowTVar a
-        WrapApplicationConstraint (ApplicationConstraint _ _ a) ->
-          Just $ SomeFlowTVar a
-        WrapOperationConstraint (OperationConstraint _ _ _ a) ->
-          Just $ SomeFlowTVar a
-        WrapCellCreationConstraint (CellCreationConstraint _ b) ->
-          Just $ SomeCellTVar b
-        WrapCellLoadingConstraint (CellLoadingConstraint _ a) ->
-          Just $ SomeFlowTVar a
-        WrapCellSettingConstraint _ -> Nothing
-        WrapFinalConstraint _ -> Nothing
-        WrapImmutableConstraint _ -> Nothing
-        WrapFlowConstraint _ -> Nothing
-        WrapExceptionConstraint (ExceptionConstraint _  a) ->
-          Just $ SomeFlowTVar a
+  add c = SimpleConstraintDatabase . Set.insert c . unSimpleConstraintDatabase
 
-  substituteCellVariables m (SimpleConstraintDatabase cs hist) =
-    SimpleConstraintDatabase (substCells m cs) (substCells m hist)
+  union db1 db2 =
+    SimpleConstraintDatabase $
+      Set.union (unSimpleConstraintDatabase db1)
+                (unSimpleConstraintDatabase db2)
 
-  getAllContours (SimpleConstraintDatabase cs _) = extractContours cs
-  instantiateContours vs cn (SimpleConstraintDatabase cs hist) =
-    SimpleConstraintDatabase (instContours vs cn cs) (instContours vs cn hist)
-  replaceContours cn (SimpleConstraintDatabase cs hist) =
-    SimpleConstraintDatabase (replContours cn cs) (replContours cn hist)
+  query db q =
+    let cs = unSimpleConstraintDatabase db in
+    case q of
+      QueryAllConstraints ->
+        cs
+      QueryAllFreeTVars ->
+        findFreeVars unSimpleConstraintDatabase db
+      QueryAllTypesLowerBoundingTVars -> Set.fromList $ do
+        TypeConstraint _ t a' <- Set.toList cs
+        return (t, a')
+      QueryAllApplications -> Set.fromList $ do
+        ApplicationConstraint _ a0 a1 a2 <- Set.toList cs
+        return (a0, a1, a2)
+      QueryLowerBoundingTypesOfTVar a -> Set.fromList $ do
+        TypeConstraint _ t a' <- Set.toList cs
+        guard $ a == a'
+        return t
+      QueryLowerBoundingTVarsOfTVar a -> Set.fromList $ do
+        IntermediateConstraint _ a1 a2 <- Set.toList cs
+        guard $ a == a2
+        return a1
+  
+  polyinstantiate =
+    polyinst unSimpleConstraintDatabase SimpleConstraintDatabase Set.empty
 
-cfilter :: (Ord a, ConstraintDatabase db)
-        => (Constraint db -> Maybe a) -> db -> [a]
-cfilter f = mapMaybe f . Set.toList . getAllConstraints
-
-opfilter :: (ConstraintDatabase db)
-         => (BinaryOperator -> Bool) -> db -> [OperationConstraint]
-opfilter f = cfilter $ \case
-    WrapOperationConstraint (oc@(OperationConstraint _ op _ _)) ->
-      if f op then Just oc else Nothing
-    _ -> Nothing
-
-instance ContourInstantiable SimpleConstraintDatabase where
-  instContours = instantiateContours
-instance ContourReplacable SimpleConstraintDatabase where
-  replContours = replaceContours
-instance CellSubstitutable SimpleConstraintDatabase where
-  substCells = substituteCellVariables
 
 instance Display SimpleConstraintDatabase where
-  makeDoc (SimpleConstraintDatabase cs _) = makeDoc cs
--}
+  makeDoc = makeDoc . unSimpleConstraintDatabase

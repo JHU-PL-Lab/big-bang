@@ -1,0 +1,64 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+
+{-|
+  Represents a monad transformer which describes multiple type flows.  This is
+  a semantic wrapper over @ListT@; it is used to signify intentional
+  non-deterministic computation.
+-}
+module Language.TinyBang.TypeSystem.Monad.Trans.NonDet
+( NonDetT
+, runNonDetT
+, mapNonDetT
+, MonadNonDet(..)
+) where
+
+import Control.Applicative
+import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Trans.List
+import Data.Foldable
+
+import Language.TinyBang.TypeSystem.Monad.Trans.CReader
+
+-- |A datatype for constraint flow computations.
+newtype NonDetT m a = NonDetT (ListT m a)
+  deriving (Monad, Functor, Applicative, MonadTrans, MonadPlus)
+  
+-- |Expands the underlying flow computation into its results.
+runNonDetT :: NonDetT m a -> m [a]
+runNonDetT (NonDetT listT) = runListT listT
+
+-- |Maps an operation through a @NonDetT@.
+mapNonDetT :: (m [a] -> n [b]) -> NonDetT m a -> NonDetT n b
+mapNonDetT f (NonDetT x) = NonDetT $ mapListT f x
+
+{-
+-- |Nondeterministically chooses from a foldable data structure.
+choose :: (Foldable f, Monad m) => f a -> NonDetT m a
+choose = chooseM . return
+
+-- |Nondeterministically chooses from a monadic foldable data structure.
+chooseM :: (Foldable f, Monad m) => m (f a) -> NonDetT m a
+chooseM xM = NonDetT $ ListT $ toList `liftM` xM
+-}
+
+instance MonadCReader r m => MonadCReader r (NonDetT m) where
+  askDb   = lift askDb
+  localDb f (NonDetT x) = NonDetT $ localDb f x
+
+instance MonadReader r m => MonadReader r (NonDetT m) where
+  ask = lift ask
+  local f (NonDetT x) = NonDetT $ local f x
+
+class (Monad m) => MonadNonDet m where
+  choose :: (Foldable f) => f a -> m a
+
+instance (Monad m) => MonadNonDet (NonDetT m) where
+  choose x = NonDetT $ ListT $ toList `liftM` return x
+
+instance (MonadNonDet m) => MonadNonDet (ReaderT r m) where
+  choose = lift . choose
+
+instance (MonadNonDet m) => MonadNonDet (StateT s m) where
+  choose = lift . choose

@@ -5,178 +5,126 @@
   for an expression.
 -}
 module Language.TinyBang.TypeSystem.InitialDerivation
-where -- TODO
-{-
 ( InitialDerivationError(..)
 , initialDerivation
 ) where
 
+import Control.Applicative
+import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.Ast as A
-import Language.TinyBang.Display hiding (empty)
-import Language.TinyBang.TypeSystem.Constraints
+import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
+import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
-import Language.TinyBang.TypeSystem.Types as T
+import Language.TinyBang.TypeSystem.Types
 
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
-  = IllFormedExpression IllFormedness
-  | OpenExpression (Set AnyVar)
+  = IllFormedExpression (Set IllFormedness)
   deriving (Eq, Ord, Show)
-instance Display InitialDerivationError where
-  makeDoc err = case err of
-    IllFormedExpression ill -> text "IllFormedExpression" <+> makeDoc ill
-    OpenExpression vs -> text "OpenExpression" <+> makeDoc vs
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
                   => Expr -> Either InitialDerivationError db
 initialDerivation expr = do
-  _ <- either (Left . IllFormedExpression) Right $ checkWellFormed expr
-  let vs = openVariables expr
-  () <- if Set.null vs then return () else Left $ OpenExpression vs
-  (_, db) <- expressionDerivation expr
-  return db
+  let ills = checkWellFormed expr
+  unless (Set.null ills) $ Left $ IllFormedExpression ills
+  snd <$> expressionDerivation expr
 
 -- |Represents the type for initial derivation computations.
 type DerivM a = Either InitialDerivationError a
 
 -- |Performs expression derivation.
 expressionDerivation :: forall db. (ConstraintDatabase db)
-                     => Expr -> DerivM (FlowTVar, db)
-expressionDerivation (Expr _ cls) = clauseListDerivation cls
-
--- |Performs derivation on a clause list.  This is the meat of expression
---  derivation, but is separated for the implementation.
-clauseListDerivation :: forall db. (ConstraintDatabase db)
-                     => [Clause] -> DerivM (FlowTVar, db)
-clauseListDerivation cls =
-  case cls of
-    [] -> error $ "Discovered empty expression but well-formedness check "
-                    ++ "should have excluded it!"
-    cl:cls' -> do
-      (mtvar, db::db) <- clauseDerivation cl
-      case cls' of
-        [] -> case mtvar of
-          Just a@(FlowTVar _ (PossibleContour Nothing)) ->
-            return (a, db)
-          _ -> error $
-            "Expression's last clause derived with bad type variable ("
-            ++ show mtvar ++ "); this should have been prohibited by "
-            ++ "well-formedness!"
-        _ -> do
-          (tvar, db'::db) <- clauseListDerivation cls'
-          return (tvar, db' `union` db)
+                     => Expr -> DerivM (TVar, db)
+expressionDerivation (Expr o cls) =
+  _derivationOverListOfClauses EmptyExpression clauseDerivation o cls  
 
 -- |Performs initial derivation for clauses.
-clauseDerivation :: (ConstraintDatabase db)
-                 => Clause -> DerivM (Maybe FlowTVar, db)
+clauseDerivation :: forall db. (ConstraintDatabase db)
+                 => Clause -> DerivM (TVar, Constraint db)
 clauseDerivation clause =
-  let history = DerivedFromSource $ ClauseElement clause in
+  let h = DerivedFromSource $ ClauseElement clause in
   case clause of
-    RedexDef _ x1 r ->
-      let a1 = derivFlowVar x1 in
-      let constraint = case r of
-            Define _ x2 ->
-              let a2 = derivFlowVar x2 in
-              cwrap $ IntermediateConstraint a2 a1
-            Appl _ x2 x3 ->
-              let a2 = derivFlowVar x2 in
-              let a3 = derivFlowVar x3 in
-              cwrap $ ApplicationConstraint a2 a3 a1
-            BinOp _ x2 op x3 ->
-              let a2 = derivFlowVar x2 in
-              let a3 = derivFlowVar x3 in
-              cwrap $ OperationConstraint a2 op a3 a1              
-      in return (Just a1, singleton constraint history)
-    CellSet _ y x ->
-      let a = derivFlowVar x in
-      let b = derivCellVar y in
-      let constraint = cwrap $ CellSettingConstraint a b in
-      return (Nothing, singleton constraint history)
-    CellGet _ x y ->
-      let a = derivFlowVar x in
-      let b = derivCellVar y in
-      let constraint = cwrap $ CellLoadingConstraint b a in
-      return (Just a, singleton constraint history)
-    Throws _ x1 x2 ->
-      let a1 = derivFlowVar x1 in
-      let a2 = derivFlowVar x2 in
-      let constraint = cwrap $ ExceptionConstraint a2 a1 in
-      return (Just a1, singleton constraint history)
+    RedexDef _ x1 r -> do
+      let a1 = derivVar x1
+      constraint <- case r of
+            Define _ x2 -> do
+              let a2 = derivVar x2
+              return $ a2 <: a1 .: h
+            Appl _ x2 x3 -> do
+              let a2 = derivVar x2
+              let a3 = derivVar x3
+              return $ (a2,a3) <: a1 .: h
+      return (a1, constraint)
     Evaluated ecl -> case ecl of
       ValueDef _ x1 v -> do
-        let a1 = derivFlowVar x1
-        t <- case v of
-              VInt _ _ -> return $ Primitive primInt
-              VChar _ _ -> return $ Primitive primChar
-              VEmptyOnion _ -> return EmptyOnion
-              VLabel _ n y -> return $ Label n $ derivCellVar y
-              VOnion _ x2 x3 ->
-                let a2 = derivFlowVar x2 in
-                let a3 = derivFlowVar x3 in
-                return $ Onion a2 a3
-              VOnionFilter _ x2 op proj ->
-                let a2 = derivFlowVar x2 in
-                return $ OnionFilter a2 op proj
+        let a1 = derivVar x1
+        t :: Type db <- case v of
+              VPrimitive _ pv ->
+                case pv of
+                  VInt _ _ -> return $ TPrimitive PrimInt
+              VEmptyOnion _ -> return TEmptyOnion
+              VLabel _ n x -> return $ TLabel n $ mktov $ derivVar x
+              VOnion _ x2 x3 -> do
+                let a2 = derivVar x2
+                let a3 = derivVar x3
+                return $ TOnion (mktov a2) (mktov a3)
               VScape _ pat expr -> do
-                let tpat = patternDerivation pat
-                (tvar, db::db) <- expressionDerivation expr
-                return $ Scape tpat tvar db
-        let constraint = WrapTypeConstraint $ TypeConstraint t a1
-        return (Just a1, singleton constraint history)
-      CellDef _ q y x ->
-        let a = derivFlowVar x in
-        let b = derivCellVar y in
-        let qhist = DerivedFromSource $ QualifierElement q in
-        let qdb =  case q of
-                    QualFinal _ -> singleton
-                        (cwrap $ FinalConstraint b) qhist
-                    QualImmutable _ -> singleton
-                        (cwrap $ ImmutableConstraint b) qhist
-                    QualNone _ -> empty
-        in
-        let constraint = cwrap $
-                            CellCreationConstraint a b in
-        return (Nothing, singleton constraint history `union` qdb)
-      Flow _ x1 k x2 ->
-        let a1 = derivFlowVar x1 in
-        let a2 = derivFlowVar x2 in
-        let constraint = cwrap $ FlowConstraint a1 k a2 in
-        return (Nothing, singleton constraint history)
-      
--- |Performs initial derivation for patterns.
-patternDerivation :: Pattern -> PatternType
-patternDerivation pat = case pat of
-  A.ValuePattern _ y ipat -> f y ipat T.ValuePattern
-  A.ExnPattern _ y ipat -> f y ipat T.ExnPattern
-  where
-    f y ipat constr = constr (derivCellVar y) $ innerPatternDerivation ipat
+                (tvarP, csP :: db) <- patternDerivation pat
+                (tvarE, csE :: db) <- expressionDerivation expr
+                return $ TScape tvarP csP tvarE csE
+        return (a1, t <: a1 .: h)
+
+-- |Performs pattern derivation.
+patternDerivation :: (ConstraintDatabase db)
+                  => Pattern -> DerivM (TVar, db)
+patternDerivation (Pattern o pcls) =
+  _derivationOverListOfClauses EmptyPattern patternClauseDerivation o pcls
+
+-- |Performs initial derivation for pattern clauses.
+patternClauseDerivation :: forall db. (ConstraintDatabase db)
+                        => PatternClause -> DerivM (TVar, Constraint db)
+patternClauseDerivation pcl =
+  let h = DerivedFromSource $ PatternElement pcl in
+  case pcl of
+    PatternClause _ x pv ->
+      return $
+        let t :: Type db = patternValueDerivation pv in
+        let a = derivVar x in
+        (a, t <: a .: h)
+    
+-- |Performs initial derivation for a pattern value.
+patternValueDerivation :: (ConstraintDatabase db)
+                       => PatternValue -> Type db
+patternValueDerivation pv =
+  case pv of
+    PPrimitive _ pt -> TPrimitive pt
+    PEmptyOnion _ -> TEmptyOnion
+    PLabel _ n x -> TLabel n $ mktov $ derivVar x
+    PConjunction _ x1 x2 ->
+      let a1 = derivVar x1 in
+      let a2 = derivVar x2 in
+      TOnion (mktov a1) (mktov a2)
   
--- |Performs initial derivation for inner patterns.
-innerPatternDerivation :: InnerPattern -> InnerPatternType
-innerPatternDerivation ipat = case ipat of
-  A.PrimitivePattern _ p -> T.PrimitivePattern p
-  A.LabelPattern _ n y ipat' ->
-    let b = derivCellVar y in
-    let tipat' = innerPatternDerivation ipat' in
-    T.LabelPattern n b tipat'
-  A.ConjunctionPattern _ ipat' ipat'' ->
-    let tipat' = innerPatternDerivation ipat' in
-    let tipat'' = innerPatternDerivation ipat'' in
-    T.ConjunctivePattern tipat' tipat''
-  A.ScapePattern _ -> T.ScapePattern
-  A.EmptyOnionPattern _ -> T.EmptyOnionPattern
-
 -- |Creates a type variable for the specified flow variable.
-derivFlowVar :: FlowVar -> FlowTVar
-derivFlowVar x = FlowTVar x noContour
+derivVar :: Var -> TVar
+derivVar x = TVar x noContour
 
--- |Creates a type variable for the specified cell variable.
-derivCellVar :: CellVar -> CellTVar
-derivCellVar y = CellTVar y noContour
--}
+-- Common utilities
+
+_derivationOverListOfClauses :: forall a db. (ConstraintDatabase db)
+                             => (Origin -> IllFormedness)
+                             -> (a -> DerivM (TVar, Constraint db))
+                             -> Origin
+                             -> [a]
+                             -> DerivM (TVar, db)
+_derivationOverListOfClauses emptyIllFormednessFn clauseDerivationFn o clauses =
+  if null clauses
+    then Left $ IllFormedExpression $ Set.singleton $ emptyIllFormednessFn o
+    else do
+      (vars, csLst) <- unzip <$> mapM clauseDerivationFn clauses
+      return (last vars, fromList csLst)
