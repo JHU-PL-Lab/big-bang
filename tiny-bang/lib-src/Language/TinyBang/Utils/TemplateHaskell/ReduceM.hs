@@ -13,12 +13,13 @@
     -- Data structure describing the reduction.
     data MyReduction = MyReduction Int
     -- Catamorphic instances
-    $(concat <$> mapM (defineCatInstanceM ''MyReduction) [''Foo, ''Bar])
+    $(concat <$> mapM (defineCatInstanceM [t|Set Int|] ''MyReduction)
+                    [''Foo, ''Bar])
     -- Common instances
-    $(defineCommonCatInstancesM ''MyReduction)
+    $(defineCommonCatInstancesM [t|Set Int|] ''MyReduction)
     -- Special case
-    $(defineCatFuncM ''MyReduction ''Baz $ mkName "catBaz")
-    instance ReduceM (State Int) Baz MyReduction (Set Int) where
+    $(defineCatFuncM [t|Set Int|] (mkName "catBaz") ''MyReduction ''Baz)
+    instance ReduceM (State Int) MyReduction Baz (Set Int) where
       reduceM (MyReduction n) baz = case baz of
         Baz5 m ->
           if n > m

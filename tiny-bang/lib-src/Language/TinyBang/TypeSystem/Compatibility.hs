@@ -35,8 +35,6 @@ data CompatibilityCallContext db
       }
   deriving (Eq, Ord, Show)
 
--- TODO: consider taking a set of TypeOrVar as an argument so we don't duplicate
---       union elimination work?
 {-|
   Determines if an argument is compatible with a pattern given the provided
   argument and pattern constraints. This function non-deterministically

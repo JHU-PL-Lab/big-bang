@@ -84,13 +84,10 @@ sourceFileTests = do
                           else Nothing
     createTest :: FilePath -> Expectation -> Expr -> Test
     createTest filepath expectation expr =
-      {-
       let tcResult = typecheck expr
           tcResult :: Either (TypecheckingError SimpleConstraintDatabase)
                         SimpleConstraintDatabase
       in
-      -}
-      let tcResult = Right () :: Either () () in -- TODO: replace
       let result = eval expr in
       case expectation of
         Pass predicate predSrc -> TestLabel filepath $ TestCase $

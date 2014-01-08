@@ -38,12 +38,9 @@ library
                    Language.TinyBang.TypeSystem.Types,
                    Language.TinyBang.TypeSystem.Contours,
                    Language.TinyBang.TypeSystem.InitialDerivation,
-                   Language.TinyBang.TypeSystem.Inconsistency,
                    Language.TinyBang.TypeSystem.TypeInference,
-                   Language.TinyBang.TypeSystem.Fibrations,
                    Language.TinyBang.TypeSystem.Closure,
                    Language.TinyBang.TypeSystem.Monad.Trans.CReader,
-                   Language.TinyBang.TypeSystem.Data.Compatibility,
                    Language.TinyBang.TypeSystem.Data,
                    Language.TinyBang.TypeSystem.Utils.DocumentContainer,
                    Language.TinyBang.Interpreter.Matching,
@@ -52,7 +49,6 @@ library
                    Utils.Toploop,
                    Language.TinyBang.Toploop,
                    Utils.Toploop.Logging,
-                   Language.TinyBang.TypeSystem.Data.Projection,
                    Language.TinyBang.Utils.TemplateHaskell.Deriving,
                    Language.TinyBang.Utils.TemplateHaskell.Reduce,
                    Language.TinyBang.Utils.TemplateHaskell.ReduceM,
@@ -85,6 +81,11 @@ library
                    Language.TinyBang.Utils.Data.NFA.Function,
                    Language.TinyBang.Utils.Data.NFA.Utils,
                    Language.TinyBang.Utils.Data.NFA.Generalized
+  other-modules:   
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.ReplaceVars,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars
 
 executable tiny-bang
   hs-source-dirs:  interp-src

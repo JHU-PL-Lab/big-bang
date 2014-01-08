@@ -74,5 +74,6 @@ data ConstraintQuery db r where
   QueryAllFreeTVars :: ConstraintQuery db TVar
   QueryAllTypesLowerBoundingTVars :: ConstraintQuery db (Type db, TVar)
   QueryAllApplications :: ConstraintQuery db (TVar, TVar, TVar)
+  QueryAllInconsistencies :: ConstraintQuery db (Inconsistency db)
   QueryLowerBoundingTypesOfTVar :: TVar -> ConstraintQuery db (Type db)
   QueryLowerBoundingTVarsOfTVar :: TVar -> ConstraintQuery db TVar

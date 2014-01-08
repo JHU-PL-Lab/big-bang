@@ -18,9 +18,9 @@
     -- Special case
     $(defineHomFunc (mkName "homBaz") ''MyTransformation ''Baz)
     instance Transform MyTransformation Baz where
-      transform (MyTransformation n) baz = case baz of
+      transform trans@(MyTransformation n) baz = case baz of
         Baz5 m -> Baz5 $ n + m
-        _ -> homBaz baz
+        _ -> homBaz trans baz
   @
   
   In this example, we assume that Foo, Bar, and Baz are data structures which

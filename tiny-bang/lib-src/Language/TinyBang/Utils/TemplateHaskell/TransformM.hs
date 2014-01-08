@@ -18,13 +18,13 @@
     -- Common instances
     $(defineCommonHomInstancesM ''MyTransformation)
     -- Special case
-    $(defineHomFuncM ''MyTransformationM ''Baz $ mkName "homBaz")
-    instance TransformM (Reader Int) Baz MyTransformation where
-      transformM (MyTransformation n) baz = case baz of
+    $(defineHomFuncM (mkName "homBaz") ''MyTransformationM ''Baz)
+    instance TransformM (Reader Int) MyTransformation Baz where
+      transformM trans@(MyTransformation n) baz = case baz of
         Baz5 m -> do
           k <- ask
           return $ Baz5 $ if m > k then m + n else m
-        _ -> homBaz baz
+        _ -> homBaz trans baz
   @
   
   In this example, we assume that Foo, Bar, and Baz are data structures which

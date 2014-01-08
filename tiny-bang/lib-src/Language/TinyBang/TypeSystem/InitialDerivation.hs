@@ -20,11 +20,16 @@ import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.Utils.Display
 
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
   = IllFormedExpression (Set IllFormedness)
   deriving (Eq, Ord, Show)
+
+instance Display InitialDerivationError where
+  makeDoc e = case e of
+    IllFormedExpression ills -> makeDoc ills
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)

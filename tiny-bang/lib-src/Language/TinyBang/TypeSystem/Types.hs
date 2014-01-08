@@ -10,6 +10,7 @@ module Language.TinyBang.TypeSystem.Types
 , mktov
 , Type(..)
 , TVar(..)
+, contourOfVar
 ) where
 
 import Language.TinyBang.Ast
@@ -43,7 +44,11 @@ data Type db
 data TVar
   = TVar Var PossibleContour
   deriving (Eq, Ord, Show)
-  
+
+-- |Retrieves the contour of a variable (if it has one).
+contourOfVar :: TVar -> Maybe Contour
+contourOfVar (TVar _ pcntr) = unPossibleContour pcntr
+
 -- * Display instances
 
 instance (Display db) => Display (TypeOrVar db) where

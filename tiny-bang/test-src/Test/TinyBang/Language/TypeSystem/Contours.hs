@@ -5,16 +5,12 @@ module Test.TinyBang.Language.TypeSystem.Contours
 ( contourTests
 ) where
 
-import qualified Data.Set as Set
-
 import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Contours
 import Test.HUnit
 
 contourTests :: Test
-contourTests = TestList []
-{-
-TODO: replace
+contourTests = 
   let c1 = (cn1,"cn1")
       c2 = (cn2,"cn2")
       c3 = (cn3,"cn3")
@@ -65,42 +61,40 @@ makeSubsumedByTest  expc (cn',n') (cn'', n'') =
     $ subsumedBy cn' cn'' == expc
 
 cn1 :: Contour
-cn1 = contour $ Set.fromList [ContourStrand [SinglePart $ ContourElement x1]]
+cn1 = mkcn [x1]
 
 cn2 :: Contour
-cn2 = contour $ Set.fromList [ContourStrand [SinglePart $ ContourElement x2]]
+cn2 = mkcn [x2]
 
 cn3 :: Contour
-cn3 = contour $ Set.fromList [ContourStrand [SinglePart $ ContourElement x1']]
+cn3 = mkcn [x1']
 
 cn4 :: Contour
-cn4 = contour $ Set.fromList [ContourStrand [SetPart $ Set.fromList $
-        map ContourElement [x1,x2]]]
+cn4 = mkcn [x1,x2,x1] 
 
 cn5 :: Contour
-cn5 = contour $ Set.fromList [ContourStrand
-        [ SinglePart $ ContourElement x1
-        , SetPart $ Set.fromList $ map ContourElement [x2,x3,x4] ]]
+cn5 = mkcn [x1,x2,x3,x4,x2]
 
 cn6 :: Contour
-cn6 = contour $ Set.fromList [ContourStrand $
-        map (SinglePart . ContourElement) [x1,x2,x3,x4]]
+cn6 = mkcn  [x1,x2,x3,x4]
+
+mkcn :: [Var] -> Contour
+mkcn = foldl (flip extend) initialContour
   
 origin :: Origin
 origin = ComputedOrigin []
 
-x1 :: FlowVar  
-x1 = FlowVar origin "x1"
+x1 :: Var  
+x1 = Var origin "x1"
 
-x1' :: FlowVar
-x1' = GenFlowVar origin "x1" 1
+x1' :: Var
+x1' = GenVar origin "x1" 1
 
-x2 :: FlowVar
-x2 = FlowVar origin "x2"
+x2 :: Var
+x2 = Var origin "x2"
 
-x3 :: FlowVar
-x3 = FlowVar origin "x3"
+x3 :: Var
+x3 = Var origin "x3"
 
-x4 :: FlowVar
-x4 = FlowVar origin "x4"
--}
+x4 :: Var
+x4 = Var origin "x4"

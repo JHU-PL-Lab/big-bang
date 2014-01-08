@@ -27,12 +27,12 @@ data ClosureRuleInstance db
   = TransitivityRule (Type db) TVar TVar
       -- ^Describes the transitivity closure rule.  The arguments are the
       --  t, a1, and a2 from {t <: a1, a1 <: a2}.
-  | ApplicationRule TVar TVar TVar (Type db) (TypeOrVar db)
+  | ApplicationRule TVar TVar TVar (Maybe (Type db)) (TypeOrVar db)
       {- ^Describes an instance of the application rule.  The arguments are:
             * The scape variable
             * The argument variable
             * The call site variable
-            * The slice of the scape which was used
+            * The type of the scape which was used (if available)
             * The slice of the argument which was used
       -}
   deriving (Eq, Ord, Show)

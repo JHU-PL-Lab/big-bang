@@ -20,7 +20,7 @@
     instance Reduce MyReduction Baz (Set Int) where
       reduce (MyReduction n) baz = case baz of
         Baz5 m -> if n > m then mempty else Set.singleton m
-        _ -> catBaz baz
+        _ -> catBaz MyReduction baz
   @
   
   In this example, we assume that Foo, Bar, and Baz are data structures which

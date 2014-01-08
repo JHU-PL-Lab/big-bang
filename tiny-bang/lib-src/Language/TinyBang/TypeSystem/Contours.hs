@@ -15,6 +15,7 @@ module Language.TinyBang.TypeSystem.Contours
 , subsumedBy
 , overlap
 , extend
+, union
 ) where
 
 import Data.Function
@@ -38,16 +39,17 @@ data ContourPart
   | SetPart (Set ContourElement)
   deriving (Eq, Ord, Show)
   
-newtype ContourStrand =
+data ContourStrand =
   ContourStrand
-    { contourParts :: [ContourPart] }
+    { contourParts :: [ContourPart]
+    , appearingElements :: Set ContourElement
+    }
   deriving (Eq, Ord, Show)
 
 data Contour =
   Contour
     { contourStrands :: Set ContourStrand
     , contourNfa :: NFA.Nfa ContourElement
-    , appearingElements :: Set ContourElement
     }
 
 instance Eq Contour where
@@ -71,7 +73,6 @@ initialContour =
   Contour
     { contourStrands = Set.empty
     , contourNfa = NFA.empty
-    , appearingElements = Set.empty
     }
 
 -- | The non-contour.
@@ -94,30 +95,54 @@ subsumedBy cn1 cn2 =
 overlap :: Contour -> Contour -> Bool
 overlap cn1 cn2 =
   not $ NFA.isEmpty $ NFA.intersect (contourNfa cn1) (contourNfa cn2)
-
+  
 -- | Extends a contour with a single variable element.  If this causes the
 --   contour to become ill-formed, it is then folded into the least well-formed
 --   contour.
 extend :: Var -> Contour -> Contour
 extend x cntr =
-  let elmt = ContourElement x in
-  if elmt `Set.member` appearingElements cntr
+  let newStrands = Set.map extendStrand $ contourStrands cntr in
+  if any (elmt `Set.member`) $ map appearingElements $ Set.toList $
+        contourStrands cntr
     then
-      let newStrands = undefined in
       Contour
         { contourStrands = newStrands
         , contourNfa = nfaFromContourStrands newStrands
-        , appearingElements = appearingElements cntr
         }
     else
       Contour
-        { contourStrands =
-            Set.map (ContourStrand . (++ [SinglePart elmt]) . contourParts) $
-              contourStrands cntr
+        { contourStrands = newStrands
         , contourNfa = NFA.addSuffix elmt $ contourNfa cntr
-        , appearingElements = Set.insert elmt $ appearingElements cntr
         }
   where
+    elmt = ContourElement x
+    extendStrand :: ContourStrand -> ContourStrand
+    extendStrand strand =
+      if elmt `Set.member` appearingElements strand
+        then
+          ContourStrand
+            { contourParts =
+                reverse $ collapse $ reverse $ contourParts strand
+            , appearingElements = appearingElements strand
+            }
+        else
+          ContourStrand
+            { contourParts = (++ [SinglePart elmt]) $ contourParts strand
+            , appearingElements = Set.insert elmt $ appearingElements strand
+            }
+    collapse :: [ContourPart] -> [ContourPart]
+    collapse = f Set.empty
+      where
+        f vars parts =
+          case parts of
+            [] -> [SetPart vars]
+            part:parts' ->
+              if elmt `Set.member` elmtsOf part
+                then SetPart (vars `Set.union` elmtsOf part):parts'
+                else f (vars `Set.union` elmtsOf part) parts'
+          where
+            elmtsOf (SinglePart e) = Set.singleton e
+            elmtsOf (SetPart es) = es
     nfaFromContourStrands :: Set ContourStrand -> NFA.Nfa ContourElement
     nfaFromContourStrands strands =
       let nfas = map nfaFromContourStrand $ Set.toList strands in
@@ -132,6 +157,14 @@ extend x cntr =
             nfaFromContourPart part = case part of
               SinglePart e -> NFA.singleton e
               SetPart es -> NFA.kleeneSingleton $ Set.toList es
+  
+-- | Unions a contour with another contour.
+union :: Contour -> Contour -> Contour
+union cntr1 cntr2 =
+  Contour
+    { contourStrands = contourStrands cntr1 `Set.union` contourStrands cntr2
+    , contourNfa = contourNfa cntr1 `NFA.union` contourNfa cntr2
+    }
 
 -- * Display instances
 
@@ -148,7 +181,7 @@ instance Display Contour where
       else makeDoc strands
 
 instance Display ContourStrand where
-  makeDoc (ContourStrand parts) = makeDoc parts
+  makeDoc (ContourStrand parts _) = makeDoc parts
   
 instance Display ContourPart where
   makeDoc part = case part of
