@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, GeneralizedNewtypeDeriving, ViewPatterns, ConstraintKinds #-}
+{-# LANGUAGE ScopedTypeVariables, GeneralizedNewtypeDeriving, ViewPatterns, ConstraintKinds, TemplateHaskell #-}
 
 {-|
   This module implements a computable function used for the compatibility
@@ -21,6 +21,9 @@ import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Monad.Trans.NonDet
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger
+
+$(loggingFunctions)
 
 type CompatibilityResult db = (Type db, Maybe db)
 
@@ -140,19 +143,31 @@ internalCompatibility :: (CompatibilityConstraints db)
                       => TypeOrVar db
                       -> TVar
                       -> CompatibilityM db (InternalCompatibilityResult db)
-internalCompatibility tov0 a0' = do
-  -- Get a concrete lower bound for the pattern.  We do this first because
-  -- conjunction patterns are always split before the arguments.
-  db' <- patdb <$> ask
-  {- NOTE: Here, we are assuming that variables in patterns have exactly one
-     lower bound.  This would produce incorrect behavior if unions in patterns
-     are used for e.g. disjunction.  This would be corrected by dropping the
-     call to "choose" and addressing the set of lower bounds appropriately. -}
-  t0' <- choose $ query db' $ QueryLowerBoundingTypesOfTVar a0'
-  -- We now defer to another function to handle compatibility once the pattern
-  -- type has been chosen.  (This allows recursion to enter at that point in
-  -- other functions.)
-  internalCompatibilityFixedPatternType tov0 a0' t0'
+internalCompatibility tov0 a0' =
+  bracketLogM _debugI
+    (display $ text "Checking type compatibility of" <+>
+                  makeDoc tov0 <+> text "with pattern" <+> makeDoc a0')
+    (\((sliceType, mcs), _) -> display $
+      text "Type compatibility of" <+>
+        makeDoc tov0 <+> text "with pattern" <+> makeDoc a0' <+>
+        text "at slice" <+> makeDoc sliceType <+>
+        case mcs of
+          Just cs -> text "gave binding constraints" <+> makeDoc cs
+          Nothing -> text "was unsuccessful") $
+    do
+      -- Get a concrete lower bound for the pattern.  We do this first because
+      -- conjunction patterns are always split before the arguments.
+      db' <- patdb <$> ask
+      {- NOTE: Here, we are assuming that variables in patterns have exactly one
+         lower bound.  This would produce incorrect behavior if unions in
+         patterns are used for e.g. disjunction.  This would be corrected by
+         dropping the call to "choose" and addressing the set of lower bounds
+         appropriately. -}
+      t0' <- choose $ query db' $ QueryLowerBoundingTypesOfTVar a0'
+      -- We now defer to another function to handle compatibility once the
+      -- pattern type has been chosen.  (This allows recursion to enter at that
+      -- point in other functions.)
+      internalCompatibilityFixedPatternType tov0 a0' t0'
 
 internalCompatibilityFixedPatternType
     :: forall db. (CompatibilityConstraints db)
@@ -186,13 +201,17 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
         (TPrimitive _, _) ->
           failure
         (TLabel n tov1, TLabel n' tov1') | n == n' ->
-          captureBindings tov1 (insistVar tov1')
+          mapSlice (TLabel n . mktov) <$>
+            captureBindings tov1 (insistVar tov1')
         (TLabel _ _, _) ->
           failure
         (TOnion tov1 tov2, _) -> do
+          -- TODO: this seems like it will produce the wrong slice...
           r <- internalCompatibilityFixedPatternType tov1 a0' t0'
-          if isJust $ snd $ fst r then return r else
-            internalCompatibilityFixedPatternType tov2 a0' t0'
+          if isJust $ snd $ fst r
+            then mapSlice (flip TOnion tov2 . mktov) <$> return r
+            else mapSlice (TOnion tov1 . mktov) <$>
+                    internalCompatibilityFixedPatternType tov2 a0' t0'
         (TScape{}, _) ->
           -- At the moment, the only thing which can match a scape is the empty
           -- onion pattern.
@@ -203,3 +222,7 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     insistVar :: (Display db) => TypeOrVar db -> TVar
     insistVar (unTypeOrVar -> Right a) = a
     insistVar x = error $ "insistVar failure: " ++ display x
+    mapSlice :: (Type db -> Type db)
+             -> InternalCompatibilityResult db
+             -> InternalCompatibilityResult db
+    mapSlice f ((t,mdb),vs) = ((f t, mdb),vs)

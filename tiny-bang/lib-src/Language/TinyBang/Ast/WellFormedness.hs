@@ -100,6 +100,9 @@ instance Reduce CountVariableBindings Clause (VarCountMap) where
 
 -- For findFreeVariables -------------------------------------------------------
 
+-- FIXME: this incorrectly assumes that anything bound within the pattern is
+--        also bound outside of the pattern
+
 instance Monoid FreeVarData where
   mempty = FreeVarData Set.empty Set.empty
   mappend fvd1 fvd2 =

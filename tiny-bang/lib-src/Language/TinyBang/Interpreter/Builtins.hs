@@ -6,6 +6,8 @@ module Language.TinyBang.Interpreter.Builtins
 
 , BuiltinSpecifier(..)
 , getBuiltinSpecifier
+, getBuiltinReturnVar
+, getBuiltinPattern
 ) where
 
 import Control.Applicative
@@ -15,6 +17,10 @@ import Data.Maybe
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
+
+-- TODO: consider moving this module to AST and then having the interpreter
+--       code simply translate the AST module error to an Interpreter.Basis
+--       error
 
 -- * Builtin evaluation
 
@@ -99,46 +105,16 @@ builtinEnv = map (builtinOpToClause . getBuiltinSpecifier) $ enumFrom minBound
   where
     builtinOpToClause :: BuiltinSpecifier -> Clause
     builtinOpToClause spec =
-      let (patternParts, vars) = unzip $ builtinPatterns spec in
-      let subPatterns = zipWith makeComponentPattern ordinalLabelNames
-                          patternParts in
-      let pattern = makeConjunctions subPatterns in
+      let vars = snd $ unzip $ builtinPatterns spec in
+      let pattern = getBuiltinPattern spec in
       Evaluated $ ValueDef generated (Var generated $ varname spec) $
         VScape generated (Pattern generated pattern) $
           Expr generated
-            [RedexDef generated (Var generated $ varname spec ++ "__return") $
+            [RedexDef generated (getBuiltinReturnVar spec) $
               Builtin generated (builtinOperator spec) vars]
-      where
-        ordinalLabelNames :: [LabelName]
-        ordinalLabelNames = map (LabelName generated . show) [1::Integer ..]
-        endVar :: [PatternClause] -> Var
-        endVar pcls = case last pcls of PatternClause _ x _ -> x
-        makeComponentPattern :: LabelName -> [PatternClause] -> [PatternClause]
-        makeComponentPattern ln pat =
-          pat ++
-            [PatternClause generated
-              (Var generated $ varname spec ++ "__label" ++ unLabelName ln) $
-                PLabel generated ln $ endVar pat]
-        makeConjunctions :: [[PatternClause]] -> [PatternClause]
-        makeConjunctions pclss =
-          if null pclss
-            then [PatternClause generated
-                    (Var generated $ varname spec ++ "__empty") $
-                    PEmptyOnion generated]
-            else foldl combineGroups (head pclss) (zip (tail pclss) [1::Int ..])
-          where
-            combineGroups :: [PatternClause]
-                          -> ([PatternClause], Int)
-                          -> [PatternClause]
-            combineGroups pcls1 (pcls2, idx) =
-              case (null pcls1, null pcls2) of
-                (True, _) -> pcls2
-                (False, True) -> pcls1
-                (False, False) ->
-                  pcls1 ++ pcls2 ++
-                    [PatternClause generated
-                      (Var generated $ varname spec ++ "__onion" ++ show idx) $
-                      PConjunction generated (endVar pcls1) (endVar pcls2)]
+
+endVar :: [PatternClause] -> Var
+endVar pcls = case last pcls of PatternClause _ x _ -> x
 
 -- * Builtin specification
 
@@ -159,7 +135,51 @@ getBuiltinSpecifier :: BuiltinOp -> BuiltinSpecifier
 getBuiltinSpecifier bop =
   case bop of
     Plus -> plusSpecifier
-  
+
+-- |A function which retrieves the output variable for a given builtin
+--  specifier.
+getBuiltinReturnVar :: BuiltinSpecifier -> Var
+getBuiltinReturnVar spec =
+  Var generated $ varname spec ++ "__return"
+
+-- |A function to obtain the pattern for a given built-in function.
+getBuiltinPattern :: BuiltinSpecifier -> [PatternClause]
+getBuiltinPattern spec =
+  let patternParts = fst $ unzip $ builtinPatterns spec in
+  let subPatterns = zipWith makeComponentPattern ordinalLabelNames
+                      patternParts in
+  let pattern = makeConjunctions subPatterns in
+  pattern
+    where
+      ordinalLabelNames :: [LabelName]
+      ordinalLabelNames = map (LabelName generated . show) [1::Integer ..]
+      makeComponentPattern :: LabelName -> [PatternClause] -> [PatternClause]
+      makeComponentPattern ln pat =
+        pat ++
+          [PatternClause generated
+            (Var generated $ varname spec ++ "__label" ++ unLabelName ln) $
+              PLabel generated ln $ endVar pat]
+      makeConjunctions :: [[PatternClause]] -> [PatternClause]
+      makeConjunctions pclss =
+        if null pclss
+          then [PatternClause generated
+                  (Var generated $ varname spec ++ "__empty") $
+                  PEmptyOnion generated]
+          else foldl combineGroups (head pclss) (zip (tail pclss) [1::Int ..])
+        where
+          combineGroups :: [PatternClause]
+                        -> ([PatternClause], Int)
+                        -> [PatternClause]
+          combineGroups pcls1 (pcls2, idx) =
+            case (null pcls1, null pcls2) of
+              (True, _) -> pcls2
+              (False, True) -> pcls1
+              (False, False) ->
+                pcls1 ++ pcls2 ++
+                  [PatternClause generated
+                    (Var generated $ varname spec ++ "__onion" ++ show idx) $
+                    PConjunction generated (endVar pcls1) (endVar pcls2)]
+
 -- Each specifier is written separately as a top-level value to avoid
 -- recomputation
   

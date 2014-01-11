@@ -7,6 +7,9 @@
 module Language.TinyBang.TypeSystem.InitialDerivation
 ( InitialDerivationError(..)
 , initialDerivation
+
+, initialPatternDerivation
+, derivVar
 ) where
 
 import Control.Applicative
@@ -15,6 +18,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
+import Language.TinyBang.Interpreter.Builtins
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
@@ -39,10 +43,19 @@ instance Display InitialDerivationError where
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
                   => Expr -> Either InitialDerivationError db
-initialDerivation expr = do
-  let ills = checkWellFormed expr
+initialDerivation expr@(Expr o cls) = do
+  -- TODO: maybe separate well-formedness check into a different step?  It
+  -- doesn't seem to belong here.
+  let ills = checkWellFormed $ Expr o $ builtinEnv ++ cls
   unless (Set.null ills) $ Left $ IllFormedExpression ills
   snd <$> expressionDerivation expr
+
+-- |Derives the initial constraint database for a given pattern.  This function
+--  is used by the builtin typing logic.  This function does *not* check for
+--  pattern well-formedness.
+initialPatternDerivation :: (ConstraintDatabase db)
+                         => Pattern -> Either InitialDerivationError (TVar, db)
+initialPatternDerivation = patternDerivation
 
 -- |Represents the type for initial derivation computations.
 type DerivM a = Either InitialDerivationError a

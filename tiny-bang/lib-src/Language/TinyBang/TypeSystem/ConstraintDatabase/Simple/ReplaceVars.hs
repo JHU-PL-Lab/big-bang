@@ -55,6 +55,7 @@ $(concat <$> mapM (defineTransformIdentityInstance ''ReplaceVars)
                   , ''LabelName
                   , ''PrimitiveType
                   , ''SourceElement
+                  , ''BuiltinOp
                   ])
 $(defineCommonHomInstances ''ReplaceVars)
 

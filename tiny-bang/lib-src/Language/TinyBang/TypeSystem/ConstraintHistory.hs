@@ -16,6 +16,9 @@ data ConstraintHistory db
       --  compatibility check, respectively.
   | DerivedFromClosure (ClosureRuleInstance db)
       -- ^Describe a constraint generated from a constraint closure rule.
+  | BuiltinTypeGeneration BuiltinOp
+      -- ^Indicates that the constraint was generated during the construction
+      --  of a builtin function type.
   deriving (Eq, Ord, Show)
 
 data SourceElement

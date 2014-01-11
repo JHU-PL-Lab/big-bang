@@ -13,7 +13,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.TypeSystem.Builtins
+import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Closure
@@ -51,7 +52,7 @@ typecheck expr = do
       (\db -> "Initial derivation produced: " ++ display db) $
         bailWith "Initial derivation" InitialDerivationFailed $
           initialDerivation expr
-  let startDb = polyinstantiate initialContour derivDb
+  let startDb = polyinstantiate initialContour $ CDb.union derivDb builtinDb
   let closedDb =
         bracketLog _debugI
           ("Performing constraint closure on " ++ display startDb)

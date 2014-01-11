@@ -40,6 +40,7 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|Set TVar|] ''FindAllVars)
                   , ''LabelName
                   , ''PrimitiveType
                   , ''SourceElement
+                  , ''BuiltinOp
                   ])
 $(defineCommonCatInstances [t|Set TVar|] ''FindAllVars)
 
