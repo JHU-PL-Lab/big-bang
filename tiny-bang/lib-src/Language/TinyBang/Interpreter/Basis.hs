@@ -55,6 +55,13 @@ data EvalError
   = IllFormedExpression (Set IllFormedness)
   | ApplicationFailure Var Var
       -- ^Generated when pattern matching fails completely during application.
+  | BuiltinBadOperandCount Origin BuiltinOp Int Int
+      -- ^Generated when a builtin operation has the wrong number of arguments.
+      --  Includes the expected number of arguments and the number which
+      --  appeared.
+  | BuiltinBadOperandType Origin BuiltinOp Int Var
+      -- ^Generated when a builtin operation has the wrong type of argument.
+      --  Includes the argument index and the variable which appeared there.
   deriving (Eq, Ord, Show)
 
 instance Display EvalError where

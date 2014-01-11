@@ -3,7 +3,7 @@ module Language.TinyBang.Syntax.Lexer
 , LexerErr
 ) where
 
-import Control.Applicative((<$>), (<*>), (<*), (*>), pure)
+import Control.Applicative((<$), (<$>), (<*>), (<*), (*>), pure)
 import Data.Functor.Identity
 import Text.Parsec
 
@@ -92,8 +92,7 @@ variableLengthLexers =
   ]
   where
     identifierLexer = TokIdentifier .: (:) <$> identStartChar <*> many identChar
-    labelLexer = TokLabel .: (:) <$>
-      (char '`' *> identStartChar) <*> many identChar
+    labelLexer = TokLabel <$ char '`' <*> many1 identChar
     integerLexer = TokLitInt . read .: (:) <$>
       option ' ' (char '-') <*> many1 digit <* notFollowedBy identChar
     -- |A convenient operator for composing a unary operator with a binary one.

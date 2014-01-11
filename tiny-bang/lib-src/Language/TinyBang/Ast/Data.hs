@@ -10,6 +10,7 @@ module Language.TinyBang.Ast.Data
 , Clause(..)
 , EvaluatedClause(..)
 , Redex(..)
+, BuiltinOp(..)
 , Value(..)
 , PrimitiveValue(..)
 , Pattern(..)
@@ -21,6 +22,8 @@ module Language.TinyBang.Ast.Data
 
 , unLabelName
 , unVar
+
+, valAsInt
 
 , typeOfPrimitiveValue
 , exprConcat
@@ -55,7 +58,13 @@ data EvaluatedClause
 data Redex
   = Define Origin Var
   | Appl Origin Var Var
+  | Builtin Origin BuiltinOp [Var]
   deriving (Show)
+
+-- |A data type enumerating the builtins supported by the semantics.
+data BuiltinOp
+  = Plus
+  deriving (Eq, Ord, Show, Enum, Bounded) 
 
 -- |A data type representing value forms.
 data Value
@@ -116,6 +125,11 @@ unVar :: Var -> String
 unVar x = case x of
   Var _ s -> s
   GenVar _ s n -> s ++ "__" ++ show n
+  
+valAsInt :: Value -> Maybe Integer
+valAsInt v = case v of
+  VPrimitive _ (VInt _ n) -> Just n
+  _ -> Nothing
 
 -- * Generally related routines
 
@@ -147,6 +161,12 @@ instance Display Redex where
   makeDoc r = case r of
     Define _ x -> makeDoc x
     Appl _ x x' -> makeDoc x <+> makeDoc x'
+    Builtin _ bop xs ->
+      makeDoc bop <+> sepDoc (char ' ') (map makeDoc xs)
+
+instance Display BuiltinOp where
+  makeDoc o = case o of
+    Plus -> char '+'
     
 instance Display Value where
   makeDoc v = case v of
@@ -228,6 +248,7 @@ instance HasOrigin Redex where
   originOf x = case x of
     Define orig _ -> orig
     Appl orig _ _ -> orig
+    Builtin orig _ _ -> orig
 
 instance HasOrigin Value where
   originOf x = case x of

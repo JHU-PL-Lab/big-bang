@@ -22,14 +22,19 @@ import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.Utils.Display
 
+-- TODO: rename to initial alignment
+
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
   = IllFormedExpression (Set IllFormedness)
+  | BuiltinClauseInDerivation Origin
   deriving (Eq, Ord, Show)
 
 instance Display InitialDerivationError where
   makeDoc e = case e of
     IllFormedExpression ills -> makeDoc ills
+    BuiltinClauseInDerivation o ->
+      makeDoc "Initial builtin clause:" <+> makeDoc o
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
@@ -41,6 +46,10 @@ initialDerivation expr = do
 
 -- |Represents the type for initial derivation computations.
 type DerivM a = Either InitialDerivationError a
+
+-- |Raises an error in the derivation monad.
+raiseDerivationError :: InitialDerivationError -> DerivM a
+raiseDerivationError = Left
 
 -- |Performs expression derivation.
 expressionDerivation :: forall db. (ConstraintDatabase db)
@@ -64,6 +73,8 @@ clauseDerivation clause =
               let a2 = derivVar x2
               let a3 = derivVar x3
               return $ (a2,a3) <: a1 .: h
+            Builtin o _ _ ->
+              raiseDerivationError $ BuiltinClauseInDerivation o
       return (a1, constraint)
     Evaluated ecl -> case ecl of
       ValueDef _ x1 v -> do

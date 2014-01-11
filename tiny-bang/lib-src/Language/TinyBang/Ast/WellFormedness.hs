@@ -119,6 +119,7 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|FreeVarData|] ''FindFreeVariable
     , ''LabelName
     , ''PrimitiveValue
     , ''PrimitiveType
+    , ''BuiltinOp
     ]
  )
 $(defineCommonCatInstances [t|FreeVarData|] ''FindFreeVariables)

@@ -98,6 +98,8 @@ instance (Display db) => Display (InterpreterError db) where
               EmptyPattern o ->
                 text "Source contains an empty pattern at" <+> makeDoc o
             )
+        ID.BuiltinClauseInDerivation o ->
+          text "Initial expression contained built-in clause at" <+> makeDoc o
       TI.ClosureInconsistent incons db ->
         text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
         <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon $
@@ -116,6 +118,15 @@ instance (Display db) => Display (InterpreterError db) where
             ) $ Set.toList ills)
       I.ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
                                       <+> text "to" <+> makeDoc x2
+      I.BuiltinBadOperandCount o bop n n' ->
+        text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
+          makeDoc bop <+> text "had an invalid operand count (had" <+>
+          text (show n) <> char ',' <+> text "expected" <+> text (show n') <>
+          text ")"
+      I.BuiltinBadOperandType o bop n x ->
+        text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
+          makeDoc bop <+> text "had an invalid operand type in position" <+>
+          text (show n) <+> text "(variable" <+> makeDoc x <+> text ")"
     EvaluationDisabled -> text "(evaluation disabled)"
     where
       docForIncon :: (Display db) => Inconsistency db -> Doc

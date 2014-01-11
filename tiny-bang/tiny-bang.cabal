@@ -80,12 +80,12 @@ library
                    Language.TinyBang.Utils.Data.NFA.Dictionary,
                    Language.TinyBang.Utils.Data.NFA.Function,
                    Language.TinyBang.Utils.Data.NFA.Utils,
-                   Language.TinyBang.Utils.Data.NFA.Generalized
-  other-modules:   
+                   Language.TinyBang.Utils.Data.NFA.Generalized,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.ReplaceVars,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars,
+                   Language.TinyBang.Interpreter.Builtins
 
 executable tiny-bang
   hs-source-dirs:  interp-src

@@ -58,6 +58,7 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|Set Var|] ''FindAllVariables)
                   , ''PrimitiveValue
                   , ''LabelName
                   , ''PrimitiveType
+                  , ''BuiltinOp
                   ])
 $(defineCommonCatInstances [t|Set Var|] ''FindAllVariables)
 

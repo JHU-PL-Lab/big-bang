@@ -20,6 +20,7 @@ import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.Basis
+import Language.TinyBang.Interpreter.Builtins
 import Language.TinyBang.Interpreter.Matching
 import Language.TinyBang.Interpreter.Variables
 import Language.TinyBang.Utils.Display
@@ -32,19 +33,20 @@ $(loggingFunctions)
 --  result of evaluation).  If an error occurs, it is accompanied by the list
 --  of unevaluated clauses when evaluation failed.
 eval :: Expr -> Either (EvalError, [Clause]) (EvalEnv, Var)
-eval e@(Expr _ cls) =
-  let initialState = EvalState ( EvalEnv Map.empty Nothing ) cls 1 in
+eval (Expr o cls) =
+  let e'@(Expr _ cls') = Expr o $ builtinEnv ++ cls in
+  let initialState = EvalState ( EvalEnv Map.empty Nothing ) cls' 1 in
   let (merr, rstate) = runEvalM initialState $
-                          wellFormednessCheck >> smallStepMany
+                          wellFormednessCheck e' >> smallStepMany
   in
   either (Left . (,evalClauses rstate))
          (Right . const ( evalEnv rstate
                         , fromJust $ lastVar $ evalEnv rstate))
          merr
   where
-    wellFormednessCheck :: EvalM ()
-    wellFormednessCheck =
-      let illFormednesses = checkWellFormed e in
+    wellFormednessCheck :: Expr -> EvalM ()
+    wellFormednessCheck e' =
+      let illFormednesses = checkWellFormed e' in
       unless (Set.null illFormednesses) $
         raiseEvalError $ IllFormedExpression illFormednesses
     smallStepMany :: EvalM ()
@@ -79,6 +81,9 @@ smallStep = do
                 x' <- rvexpr e''
                 replaceFirstClause $
                   cls'' ++ [RedexDef orig x2 $ Define generated x']
+          Builtin o bop xs -> do
+            v <- evalBuiltin o bop xs
+            replaceFirstClause [Evaluated $ ValueDef orig' x2 v]
       Evaluated ecl : _ ->
         case ecl of
           ValueDef _ x v -> do
