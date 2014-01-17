@@ -7,6 +7,7 @@ module Language.TinyBang.Interpreter.Builtins
 , BuiltinSpecifier(..)
 , getBuiltinSpecifier
 , getBuiltinReturnVar
+, getBuiltinEmptyOnionVar
 , getBuiltinPattern
 ) where
 
@@ -89,13 +90,37 @@ expectInt v =
   case v of
     VPrimitive o' (VInt _ n) -> Just (o',n)
     _ -> Nothing
-    
-evalPlus :: BuiltinEvalM Value
-evalPlus = do
+
+evalIntOp :: (Integer -> Integer -> Integer) -> BuiltinEvalM Value
+evalIntOp f = do
   (x1,x2) <- demand2
   (o1,n1) <- project 0 expectInt x1
   (o2,n2) <- project 1 expectInt x2
-  return $ VPrimitive (ComputedOrigin [o1,o2]) $ VInt generated $ n1 + n2
+  return $ VPrimitive (ComputedOrigin [o1,o2]) $ VInt generated $ f n1 n2
+    
+evalPlus :: BuiltinEvalM Value
+evalPlus = evalIntOp (+)
+
+evalMinus :: BuiltinEvalM Value
+evalMinus = evalIntOp (-)
+
+evalIntCompare :: BuiltinSpecifier
+               -> (Integer -> Integer -> Bool)
+               -> BuiltinEvalM Value
+evalIntCompare spec f = do
+  (x1,x2) <- demand2
+  (o1,n1) <- project 0 expectInt x1
+  (o2,n2) <- project 1 expectInt x2
+  let x' = getBuiltinEmptyOnionVar spec
+  biLift $ setVar x' $ VEmptyOnion generated
+  let lname = LabelName generated $ if f n1 n2 then "True" else "False"
+  return $ VLabel (ComputedOrigin [o1,o2]) lname x'
+
+evalLessEq :: BuiltinEvalM Value
+evalLessEq = evalIntCompare lessEqSpecifier (<=)
+
+evalGreaterEq :: BuiltinEvalM Value
+evalGreaterEq = evalIntCompare greaterEqSpecifier (>=)
 
 -- * Builtin environment
 
@@ -134,13 +159,23 @@ data BuiltinSpecifier
 getBuiltinSpecifier :: BuiltinOp -> BuiltinSpecifier
 getBuiltinSpecifier bop =
   case bop of
-    Plus -> plusSpecifier
+    OpPlus -> plusSpecifier
+    OpMinus -> minusSpecifier
+    OpLessEq -> lessEqSpecifier
+    OpGreaterEq -> greaterEqSpecifier
+
+getBuiltinVar :: BuiltinSpecifier -> String -> Var
+getBuiltinVar spec name = Var generated $ varname spec ++ "__" ++ name
 
 -- |A function which retrieves the output variable for a given builtin
 --  specifier.
 getBuiltinReturnVar :: BuiltinSpecifier -> Var
-getBuiltinReturnVar spec =
-  Var generated $ varname spec ++ "__return"
+getBuiltinReturnVar spec = getBuiltinVar spec "return"
+
+-- |A function which retrieves the output variable for a given builtin
+--  specifier.
+getBuiltinEmptyOnionVar :: BuiltinSpecifier -> Var
+getBuiltinEmptyOnionVar spec = getBuiltinVar spec "emptyonion"
 
 -- |A function to obtain the pattern for a given built-in function.
 getBuiltinPattern :: BuiltinSpecifier -> [PatternClause]
@@ -157,14 +192,13 @@ getBuiltinPattern spec =
       makeComponentPattern ln pat =
         pat ++
           [PatternClause generated
-            (Var generated $ varname spec ++ "__label" ++ unLabelName ln) $
+            (getBuiltinVar spec $ "label" ++ unLabelName ln) $
               PLabel generated ln $ endVar pat]
       makeConjunctions :: [[PatternClause]] -> [PatternClause]
       makeConjunctions pclss =
         if null pclss
           then [PatternClause generated
-                  (Var generated $ varname spec ++ "__empty") $
-                  PEmptyOnion generated]
+                  (getBuiltinVar spec "empty") $ PEmptyOnion generated]
           else foldl combineGroups (head pclss) (zip (tail pclss) [1::Int ..])
         where
           combineGroups :: [PatternClause]
@@ -177,7 +211,7 @@ getBuiltinPattern spec =
               (False, False) ->
                 pcls1 ++ pcls2 ++
                   [PatternClause generated
-                    (Var generated $ varname spec ++ "__onion" ++ show idx) $
+                    (getBuiltinVar spec $ "onion" ++ show idx) $
                     PConjunction generated (endVar pcls1) (endVar pcls2)]
 
 -- Each specifier is written separately as a top-level value to avoid
@@ -193,8 +227,50 @@ plusSpecifier =
         [ generateIntPattern name 1
         , generateIntPattern name 2
         ]
-    , builtinOperator = Plus
+    , builtinOperator = OpPlus
     , builtinEval = evalPlus
+    }
+
+-- |The builtin specifier for minus.
+minusSpecifier :: BuiltinSpecifier
+minusSpecifier =
+  let name = "__minus" in
+  BuiltinSpecifier
+    { varname = name
+    , builtinPatterns =
+        [ generateIntPattern name 1
+        , generateIntPattern name 2
+        ]
+    , builtinOperator = OpMinus
+    , builtinEval = evalMinus
+    }
+
+-- |The builtin specifier for minus.
+lessEqSpecifier :: BuiltinSpecifier
+lessEqSpecifier =
+  let name = "__leq" in
+  BuiltinSpecifier
+    { varname = name
+    , builtinPatterns =
+        [ generateIntPattern name 1
+        , generateIntPattern name 2
+        ]
+    , builtinOperator = OpLessEq
+    , builtinEval = evalLessEq
+    }
+
+-- |The builtin specifier for minus.
+greaterEqSpecifier :: BuiltinSpecifier
+greaterEqSpecifier =
+  let name = "__geq" in
+  BuiltinSpecifier
+    { varname = name
+    , builtinPatterns =
+        [ generateIntPattern name 1
+        , generateIntPattern name 2
+        ]
+    , builtinOperator = OpGreaterEq
+    , builtinEval = evalGreaterEq
     }
 
 -- |Generates a pattern clause for an int.  Uses the provided variable name

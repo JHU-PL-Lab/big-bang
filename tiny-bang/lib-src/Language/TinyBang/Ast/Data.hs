@@ -63,7 +63,10 @@ data Redex
 
 -- |A data type enumerating the builtins supported by the semantics.
 data BuiltinOp
-  = Plus
+  = OpPlus
+  | OpMinus
+  | OpLessEq
+  | OpGreaterEq
   deriving (Eq, Ord, Show, Enum, Bounded) 
 
 -- |A data type representing value forms.
@@ -166,7 +169,10 @@ instance Display Redex where
 
 instance Display BuiltinOp where
   makeDoc o = case o of
-    Plus -> char '+'
+    OpPlus -> char '+'
+    OpMinus -> char '-'
+    OpLessEq -> text "<="
+    OpGreaterEq -> text ">="
     
 instance Display Value where
   makeDoc v = case v of

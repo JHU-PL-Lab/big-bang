@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 
 module Language.TinyBang.TypeSystem.Constraints
 ( Constraint(..)
@@ -48,7 +48,7 @@ newtype ConstraintWithoutHistory db =
 class ConstraintConstructable a b db where
   (<:) :: a -> b -> ConstraintWithoutHistory db
 
-instance ConstraintConstructable (Type db) TVar db where
+instance (db ~ db') => ConstraintConstructable (Type db') TVar db where
   a <: b = ConstraintWithoutHistory $ \h -> TypeConstraint h a b
 
 instance ConstraintConstructable TVar TVar db where

@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-|
   This module defines the type system components for builtins.
 -}
@@ -22,17 +24,46 @@ builtinDb =
 builtinConstraints :: (ConstraintDatabase db) => BuiltinOp -> db
 builtinConstraints bop =
   case bop of
-    Plus -> builtinPlusConstraints
+    OpPlus -> builtinPlusConstraints
+    OpMinus -> builtinMinusConstraints
+    OpLessEq -> builtinLessEqConstraints
+    OpGreaterEq -> builtinGreaterEqConstraints
+    
+builtinIntegerOperationConstraints ::
+  forall db. (ConstraintDatabase db) => BuiltinOp -> db
+builtinIntegerOperationConstraints =
+  makeBuiltinScape
+    (\a h -> CDb.singleton $ TPrimitive PrimInt <: a .: h)
 
 builtinPlusConstraints :: (ConstraintDatabase db) => db
-builtinPlusConstraints =
-  makeBuiltinScape (TPrimitive PrimInt) CDb.empty Plus
+builtinPlusConstraints = builtinIntegerOperationConstraints OpPlus
+
+builtinMinusConstraints :: (ConstraintDatabase db) => db
+builtinMinusConstraints = builtinIntegerOperationConstraints OpMinus
+
+builtinIntegerComparisonConstraints ::
+  forall db. (ConstraintDatabase db) => BuiltinOp -> db
+builtinIntegerComparisonConstraints bop =
+  let a10 = derivVar $ getBuiltinEmptyOnionVar $ getBuiltinSpecifier bop in
+  makeBuiltinScape
+    (\a h -> CDb.fromList
+                [ TEmptyOnion <: a10 .: h
+                , TLabel (LabelName generated "True") (mktov a10) <: a .: h
+                , TLabel (LabelName generated "False") (mktov a10) <: a .: h
+                ])
+    bop
+
+builtinLessEqConstraints :: forall db. (ConstraintDatabase db) => db
+builtinLessEqConstraints = builtinIntegerComparisonConstraints OpLessEq
+
+builtinGreaterEqConstraints :: (ConstraintDatabase db) => db
+builtinGreaterEqConstraints = builtinIntegerComparisonConstraints OpGreaterEq
 
 -- |A function which, given an output type and set of supporting constriants,
 --  constructs an appropriate scape constraint for a builtin.
 makeBuiltinScape :: (ConstraintDatabase db)
-                 => Type db -> db -> BuiltinOp -> db
-makeBuiltinScape t cs bop =
+                 => (TVar -> ConstraintHistory db -> db) -> BuiltinOp -> db
+makeBuiltinScape csF bop =
   let spec = getBuiltinSpecifier bop in
   let pat = Pattern generated $ getBuiltinPattern spec in
   let rvar = getBuiltinReturnVar spec in
@@ -44,7 +75,7 @@ makeBuiltinScape t cs bop =
           
   let tvExpr = derivVar rvar in
   let h = BuiltinTypeGeneration bop in
-  let dbExpr = CDb.singleton (t <: tvExpr .: h) `CDb.union` cs in
+  let dbExpr = csF tvExpr h in
   
   let scapeType = TScape tvPat dbPat tvExpr dbExpr in
   let tvBuiltin = derivVar $ Var generated $ varname spec in
