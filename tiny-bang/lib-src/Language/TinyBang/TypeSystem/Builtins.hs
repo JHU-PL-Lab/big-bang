@@ -24,10 +24,11 @@ builtinDb =
 builtinConstraints :: (ConstraintDatabase db) => BuiltinOp -> db
 builtinConstraints bop =
   case bop of
-    OpPlus -> builtinPlusConstraints
-    OpMinus -> builtinMinusConstraints
-    OpLessEq -> builtinLessEqConstraints
-    OpGreaterEq -> builtinGreaterEqConstraints
+    OpIntPlus -> builtinIntPlusConstraints
+    OpIntMinus -> builtinIntMinusConstraints
+    OpIntEq -> builtinIntEqConstraints
+    OpIntLessEq -> builtinIntLessEqConstraints
+    OpIntGreaterEq -> builtinIntGreaterEqConstraints
     
 builtinIntegerOperationConstraints ::
   forall db. (ConstraintDatabase db) => BuiltinOp -> db
@@ -35,11 +36,11 @@ builtinIntegerOperationConstraints =
   makeBuiltinScape
     (\a h -> CDb.singleton $ TPrimitive PrimInt <: a .: h)
 
-builtinPlusConstraints :: (ConstraintDatabase db) => db
-builtinPlusConstraints = builtinIntegerOperationConstraints OpPlus
+builtinIntPlusConstraints :: (ConstraintDatabase db) => db
+builtinIntPlusConstraints = builtinIntegerOperationConstraints OpIntPlus
 
-builtinMinusConstraints :: (ConstraintDatabase db) => db
-builtinMinusConstraints = builtinIntegerOperationConstraints OpMinus
+builtinIntMinusConstraints :: (ConstraintDatabase db) => db
+builtinIntMinusConstraints = builtinIntegerOperationConstraints OpIntMinus
 
 builtinIntegerComparisonConstraints ::
   forall db. (ConstraintDatabase db) => BuiltinOp -> db
@@ -53,11 +54,14 @@ builtinIntegerComparisonConstraints bop =
                 ])
     bop
 
-builtinLessEqConstraints :: forall db. (ConstraintDatabase db) => db
-builtinLessEqConstraints = builtinIntegerComparisonConstraints OpLessEq
+builtinIntEqConstraints :: forall db. (ConstraintDatabase db) => db
+builtinIntEqConstraints = builtinIntegerComparisonConstraints OpIntEq
 
-builtinGreaterEqConstraints :: (ConstraintDatabase db) => db
-builtinGreaterEqConstraints = builtinIntegerComparisonConstraints OpGreaterEq
+builtinIntLessEqConstraints :: forall db. (ConstraintDatabase db) => db
+builtinIntLessEqConstraints = builtinIntegerComparisonConstraints OpIntLessEq
+
+builtinIntGreaterEqConstraints :: (ConstraintDatabase db) => db
+builtinIntGreaterEqConstraints = builtinIntegerComparisonConstraints OpIntGreaterEq
 
 -- |A function which, given an output type and set of supporting constriants,
 --  constructs an appropriate scape constraint for a builtin.

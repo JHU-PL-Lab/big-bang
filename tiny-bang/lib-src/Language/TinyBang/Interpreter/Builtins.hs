@@ -98,11 +98,11 @@ evalIntOp f = do
   (o2,n2) <- project 1 expectInt x2
   return $ VPrimitive (ComputedOrigin [o1,o2]) $ VInt generated $ f n1 n2
     
-evalPlus :: BuiltinEvalM Value
-evalPlus = evalIntOp (+)
+evalIntPlus :: BuiltinEvalM Value
+evalIntPlus = evalIntOp (+)
 
-evalMinus :: BuiltinEvalM Value
-evalMinus = evalIntOp (-)
+evalIntMinus :: BuiltinEvalM Value
+evalIntMinus = evalIntOp (-)
 
 evalIntCompare :: BuiltinSpecifier
                -> (Integer -> Integer -> Bool)
@@ -116,11 +116,14 @@ evalIntCompare spec f = do
   let lname = LabelName generated $ if f n1 n2 then "True" else "False"
   return $ VLabel (ComputedOrigin [o1,o2]) lname x'
 
-evalLessEq :: BuiltinEvalM Value
-evalLessEq = evalIntCompare lessEqSpecifier (<=)
+evalIntEq :: BuiltinEvalM Value
+evalIntEq = evalIntCompare intLessEqSpecifier (==)
 
-evalGreaterEq :: BuiltinEvalM Value
-evalGreaterEq = evalIntCompare greaterEqSpecifier (>=)
+evalIntLessEq :: BuiltinEvalM Value
+evalIntLessEq = evalIntCompare intLessEqSpecifier (<=)
+
+evalIntGreaterEq :: BuiltinEvalM Value
+evalIntGreaterEq = evalIntCompare intGreaterEqSpecifier (>=)
 
 -- * Builtin environment
 
@@ -159,10 +162,11 @@ data BuiltinSpecifier
 getBuiltinSpecifier :: BuiltinOp -> BuiltinSpecifier
 getBuiltinSpecifier bop =
   case bop of
-    OpPlus -> plusSpecifier
-    OpMinus -> minusSpecifier
-    OpLessEq -> lessEqSpecifier
-    OpGreaterEq -> greaterEqSpecifier
+    OpIntPlus -> intPlusSpecifier
+    OpIntMinus -> intMinusSpecifier
+    OpIntEq -> intEqSpecifier
+    OpIntLessEq -> intLessEqSpecifier
+    OpIntGreaterEq -> intGreaterEqSpecifier
 
 getBuiltinVar :: BuiltinSpecifier -> String -> Var
 getBuiltinVar spec name = Var generated $ varname spec ++ "__" ++ name
@@ -217,60 +221,74 @@ getBuiltinPattern spec =
 -- Each specifier is written separately as a top-level value to avoid
 -- recomputation
   
--- |The builtin specifier for plus.
-plusSpecifier :: BuiltinSpecifier
-plusSpecifier =
-  let name = "__plus" in
+-- |The builtin specifier for integer plus.
+intPlusSpecifier :: BuiltinSpecifier
+intPlusSpecifier =
+  let name = "__intplus" in
   BuiltinSpecifier
     { varname = name
     , builtinPatterns =
         [ generateIntPattern name 1
         , generateIntPattern name 2
         ]
-    , builtinOperator = OpPlus
-    , builtinEval = evalPlus
+    , builtinOperator = OpIntPlus
+    , builtinEval = evalIntPlus
     }
 
--- |The builtin specifier for minus.
-minusSpecifier :: BuiltinSpecifier
-minusSpecifier =
-  let name = "__minus" in
+-- |The builtin specifier for integer minus.
+intMinusSpecifier :: BuiltinSpecifier
+intMinusSpecifier =
+  let name = "__intminus" in
   BuiltinSpecifier
     { varname = name
     , builtinPatterns =
         [ generateIntPattern name 1
         , generateIntPattern name 2
         ]
-    , builtinOperator = OpMinus
-    , builtinEval = evalMinus
+    , builtinOperator = OpIntMinus
+    , builtinEval = evalIntMinus
     }
 
--- |The builtin specifier for minus.
-lessEqSpecifier :: BuiltinSpecifier
-lessEqSpecifier =
-  let name = "__leq" in
+-- |The builtin specifier for integer equal-to.
+intEqSpecifier :: BuiltinSpecifier
+intEqSpecifier =
+  let name = "__inteq" in
   BuiltinSpecifier
     { varname = name
     , builtinPatterns =
         [ generateIntPattern name 1
         , generateIntPattern name 2
         ]
-    , builtinOperator = OpLessEq
-    , builtinEval = evalLessEq
+    , builtinOperator = OpIntEq
+    , builtinEval = evalIntEq
     }
 
--- |The builtin specifier for minus.
-greaterEqSpecifier :: BuiltinSpecifier
-greaterEqSpecifier =
-  let name = "__geq" in
+-- |The builtin specifier for integer less-than-or-equal-to.
+intLessEqSpecifier :: BuiltinSpecifier
+intLessEqSpecifier =
+  let name = "__intleq" in
   BuiltinSpecifier
     { varname = name
     , builtinPatterns =
         [ generateIntPattern name 1
         , generateIntPattern name 2
         ]
-    , builtinOperator = OpGreaterEq
-    , builtinEval = evalGreaterEq
+    , builtinOperator = OpIntLessEq
+    , builtinEval = evalIntLessEq
+    }
+
+-- |The builtin specifier for integer greater-than-or-equal-to.
+intGreaterEqSpecifier :: BuiltinSpecifier
+intGreaterEqSpecifier =
+  let name = "__intgeq" in
+  BuiltinSpecifier
+    { varname = name
+    , builtinPatterns =
+        [ generateIntPattern name 1
+        , generateIntPattern name 2
+        ]
+    , builtinOperator = OpIntGreaterEq
+    , builtinEval = evalIntGreaterEq
     }
 
 -- |Generates a pattern clause for an int.  Uses the provided variable name
