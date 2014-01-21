@@ -68,6 +68,7 @@ data BuiltinOp
   | OpIntEq
   | OpIntLessEq
   | OpIntGreaterEq
+  | OpSet
   deriving (Eq, Ord, Show, Enum, Bounded) 
 
 -- |A data type representing value forms.
@@ -75,6 +76,7 @@ data Value
   = VPrimitive Origin PrimitiveValue
   | VEmptyOnion Origin
   | VLabel Origin LabelName Var
+  | VRef Origin Var
   | VOnion Origin Var Var
   | VScape Origin Pattern Expr
   deriving (Show)
@@ -99,6 +101,7 @@ data PatternValue
   = PPrimitive Origin PrimitiveType
   | PEmptyOnion Origin
   | PLabel Origin LabelName Var
+  | PRef Origin Var
   | PConjunction Origin Var Var
   deriving (Show)
 
@@ -175,12 +178,14 @@ instance Display BuiltinOp where
     OpIntEq -> text "=="
     OpIntLessEq -> text "<="
     OpIntGreaterEq -> text ">="
+    OpSet -> text "<-"
     
 instance Display Value where
   makeDoc v = case v of
     VPrimitive _ n -> makeDoc n
     VEmptyOnion _ -> text "()"
     VLabel _ n x -> makeDoc n <+> makeDoc x
+    VRef _ x -> text "ref" <+> makeDoc x
     VOnion _ x x' -> makeDoc x <+> text "&" <+> makeDoc x'
     VScape _ pat e -> makeDoc pat <+> text "->" <+> text "{" <+> makeDoc e
                           <+> text "}"
@@ -204,6 +209,7 @@ instance Display PatternValue where
     PPrimitive _ n -> makeDoc n
     PEmptyOnion _ -> text "()"
     PLabel _ n x -> makeDoc n <+> makeDoc x
+    PRef _ x -> text "ref" <+> makeDoc x
     PConjunction _ x x' -> makeDoc x <+> text "&" <+> makeDoc x'
 
 instance Display PrimitiveType where
@@ -263,6 +269,7 @@ instance HasOrigin Value where
     VPrimitive orig _ -> orig
     VEmptyOnion orig -> orig
     VLabel orig _ _ -> orig
+    VRef orig _ -> orig
     VOnion orig _ _ -> orig
     VScape orig _ _ -> orig
 

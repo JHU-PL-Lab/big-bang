@@ -36,6 +36,7 @@ data Type db
   = TPrimitive PrimitiveType
   | TEmptyOnion
   | TLabel LabelName (TypeOrVar db)
+  | TRef TVar
   | TOnion (TypeOrVar db) (TypeOrVar db)
   | TScape TVar db TVar db
   deriving (Show)
@@ -60,6 +61,7 @@ instance (Display db) => Display (Type db) where
       TPrimitive pt -> makeDoc pt
       TEmptyOnion -> text "()"
       TLabel n tov -> makeDoc n <+> recurse tov
+      TRef a -> text "ref" <+> makeDoc a
       TOnion tov1 tov2 -> recurse tov1 <+> char '&' <+> recurse tov2
       TScape a' cs' a cs ->
         makeDoc a' <> char '\\' <> makeDoc cs' <+> text "->" <+>
@@ -75,6 +77,7 @@ instance (Display db) => Display (Type db) where
         TPrimitive _ -> atom
         TEmptyOnion -> atom
         TLabel{} -> 8
+        TRef{} -> 8
         TOnion{} -> 4
         TScape{} -> 0
         where atom = 9999

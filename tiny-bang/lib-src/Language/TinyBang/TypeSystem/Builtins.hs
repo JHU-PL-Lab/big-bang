@@ -29,6 +29,7 @@ builtinConstraints bop =
     OpIntEq -> builtinIntEqConstraints
     OpIntLessEq -> builtinIntLessEqConstraints
     OpIntGreaterEq -> builtinIntGreaterEqConstraints
+    OpSet -> builtinSetConstraints
     
 builtinIntegerOperationConstraints ::
   forall db. (ConstraintDatabase db) => BuiltinOp -> db
@@ -62,6 +63,15 @@ builtinIntLessEqConstraints = builtinIntegerComparisonConstraints OpIntLessEq
 
 builtinIntGreaterEqConstraints :: (ConstraintDatabase db) => db
 builtinIntGreaterEqConstraints = builtinIntegerComparisonConstraints OpIntGreaterEq
+
+builtinSetConstraints :: (ConstraintDatabase db) => db
+builtinSetConstraints =
+  -- FIXME: there is no backflow rule here
+  makeBuiltinScape
+    (\a h -> CDb.fromList
+                [ TEmptyOnion <: a .: h
+                ])
+    OpSet
 
 -- |A function which, given an output type and set of supporting constriants,
 --  constructs an appropriate scape constraint for a builtin.

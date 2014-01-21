@@ -56,6 +56,11 @@ compatibility x x' pat =
               VOnion _ x1 x2 -> matchOnOnion x1 x2
               VLabel _ n' x1 | n == n' -> compatibility x1 x1' pat
               _ -> return Nothing
+          PRef _ x1' ->
+            case v of
+              VOnion _ x1 x2 -> matchOnOnion x1 x2
+              VRef _ x1 -> compatibility x1 x1' pat
+              _ -> return Nothing
           PConjunction _ x1' x2' -> do
             me1 <- compatibility x x1' pat
             me2 <- compatibility x x2' pat

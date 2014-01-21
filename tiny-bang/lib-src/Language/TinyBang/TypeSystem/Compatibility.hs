@@ -205,8 +205,15 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
             captureBindings tov1 (insistVar tov1')
         (TLabel _ _, _) ->
           failure
+        (TRef a1, TRef a1') -> do
+          -- TODO: update this part if/when the model of state changes
+          --   Currently, this code is just discarding the slice of the type
+          --   under the cell.
+          ((_,mdb),cs) <- captureBindings (mktov a1) a1'
+          return ((TRef a1, mdb), cs)
+        (TRef _, _) ->
+          failure
         (TOnion tov1 tov2, _) -> do
-          -- TODO: this seems like it will produce the wrong slice...
           r <- internalCompatibilityFixedPatternType tov1 a0' t0'
           if isJust $ snd $ fst r
             then mapSlice (flip TOnion tov2 . mktov) <$> return r

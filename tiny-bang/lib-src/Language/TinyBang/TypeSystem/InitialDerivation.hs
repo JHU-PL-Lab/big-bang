@@ -98,6 +98,7 @@ clauseDerivation clause =
                   VInt _ _ -> return $ TPrimitive PrimInt
               VEmptyOnion _ -> return TEmptyOnion
               VLabel _ n x -> return $ TLabel n $ mktov $ derivVar x
+              VRef _ x -> return $ TRef $ derivVar x
               VOnion _ x2 x3 -> do
                 let a2 = derivVar x2
                 let a3 = derivVar x3
@@ -134,6 +135,7 @@ patternValueDerivation pv =
     PPrimitive _ pt -> TPrimitive pt
     PEmptyOnion _ -> TEmptyOnion
     PLabel _ n x -> TLabel n $ mktov $ derivVar x
+    PRef _ x -> TRef $ derivVar x
     PConjunction _ x1 x2 ->
       let a1 = derivVar x1 in
       let a2 = derivVar x2 in

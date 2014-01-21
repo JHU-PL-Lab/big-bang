@@ -57,6 +57,7 @@ instance Transform PolyInst (Type SimpleConstraintDatabase) where
     TEmptyOnion -> TEmptyOnion
     TPrimitive _ -> t
     TLabel n tov -> TLabel n $ transform p tov
+    TRef a -> TRef $ transform p a
     TOnion tov1 tov2 -> TOnion (transform p tov1) (transform p tov2)
     TScape a' db' a db ->
       let patBound = topBound db' in

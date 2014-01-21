@@ -58,6 +58,7 @@ instance Reduce FindFreeVars (Type SimpleConstraintDatabase)
     TEmptyOnion -> (Set.empty, Set.empty)
     TPrimitive _ -> (Set.empty, Set.empty)
     TLabel _ tov -> reduce ffv tov
+    TRef a -> reduce ffv a
     TOnion tov1 tov2 -> reduce ffv tov1 `mappend` reduce ffv tov2
     TScape a' cs' a cs ->
       let (patFree, patBound) =

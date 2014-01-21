@@ -91,6 +91,15 @@ expectInt v =
     VPrimitive o' (VInt _ n) -> Just (o',n)
     _ -> Nothing
 
+expectRef :: Value -> Maybe (Origin, Var)
+expectRef v =
+  case v of
+    VRef o' x -> Just (o', x)
+    _ -> Nothing
+
+acceptAnything :: Value -> Maybe (Origin, Value)
+acceptAnything v = Just (originOf v, v)
+
 evalIntOp :: (Integer -> Integer -> Integer) -> BuiltinEvalM Value
 evalIntOp f = do
   (x1,x2) <- demand2
@@ -124,6 +133,15 @@ evalIntLessEq = evalIntCompare intLessEqSpecifier (<=)
 
 evalIntGreaterEq :: BuiltinEvalM Value
 evalIntGreaterEq = evalIntCompare intGreaterEqSpecifier (>=)
+
+evalSet :: BuiltinEvalM Value
+evalSet = do
+  (x1,x2) <- demand2
+  -- TODO: use origins from projection to annotate something here
+  (_,cellX) <- project 0 expectRef x1
+  (_,newValue) <- project 1 acceptAnything x2
+  biLift $ setVar cellX newValue
+  return $ VEmptyOnion generated
 
 -- * Builtin environment
 
@@ -167,9 +185,16 @@ getBuiltinSpecifier bop =
     OpIntEq -> intEqSpecifier
     OpIntLessEq -> intLessEqSpecifier
     OpIntGreaterEq -> intGreaterEqSpecifier
+    OpSet -> setSpecifier
 
 getBuiltinVar :: BuiltinSpecifier -> String -> Var
 getBuiltinVar spec name = Var generated $ varname spec ++ "__" ++ name
+
+-- |Creates a variable for a builtin pattern.  The first @Int@ is the operand
+--  index; the second @Int@ is the variable index at that operand.
+getBuiltinPatternVar :: BuiltinSpecifier -> Int -> Int -> Var
+getBuiltinPatternVar spec opn varn =
+  getBuiltinVar spec $ "operand" ++ show opn ++ "__pos" ++ show varn 
 
 -- |A function which retrieves the output variable for a given builtin
 --  specifier.
@@ -224,12 +249,11 @@ getBuiltinPattern spec =
 -- |The builtin specifier for integer plus.
 intPlusSpecifier :: BuiltinSpecifier
 intPlusSpecifier =
-  let name = "__intplus" in
   BuiltinSpecifier
-    { varname = name
+    { varname = "__intplus"
     , builtinPatterns =
-        [ generateIntPattern name 1
-        , generateIntPattern name 2
+        [ generateIntPattern intPlusSpecifier 1
+        , generateIntPattern intPlusSpecifier 2
         ]
     , builtinOperator = OpIntPlus
     , builtinEval = evalIntPlus
@@ -238,12 +262,11 @@ intPlusSpecifier =
 -- |The builtin specifier for integer minus.
 intMinusSpecifier :: BuiltinSpecifier
 intMinusSpecifier =
-  let name = "__intminus" in
   BuiltinSpecifier
-    { varname = name
+    { varname = "__intminus"
     , builtinPatterns =
-        [ generateIntPattern name 1
-        , generateIntPattern name 2
+        [ generateIntPattern intMinusSpecifier 1
+        , generateIntPattern intMinusSpecifier 2
         ]
     , builtinOperator = OpIntMinus
     , builtinEval = evalIntMinus
@@ -252,12 +275,11 @@ intMinusSpecifier =
 -- |The builtin specifier for integer equal-to.
 intEqSpecifier :: BuiltinSpecifier
 intEqSpecifier =
-  let name = "__inteq" in
   BuiltinSpecifier
-    { varname = name
+    { varname = "__inteq"
     , builtinPatterns =
-        [ generateIntPattern name 1
-        , generateIntPattern name 2
+        [ generateIntPattern intEqSpecifier 1
+        , generateIntPattern intEqSpecifier 2
         ]
     , builtinOperator = OpIntEq
     , builtinEval = evalIntEq
@@ -266,12 +288,11 @@ intEqSpecifier =
 -- |The builtin specifier for integer less-than-or-equal-to.
 intLessEqSpecifier :: BuiltinSpecifier
 intLessEqSpecifier =
-  let name = "__intleq" in
   BuiltinSpecifier
-    { varname = name
+    { varname = "__intleq"
     , builtinPatterns =
-        [ generateIntPattern name 1
-        , generateIntPattern name 2
+        [ generateIntPattern intLessEqSpecifier 1
+        , generateIntPattern intLessEqSpecifier 2
         ]
     , builtinOperator = OpIntLessEq
     , builtinEval = evalIntLessEq
@@ -280,21 +301,49 @@ intLessEqSpecifier =
 -- |The builtin specifier for integer greater-than-or-equal-to.
 intGreaterEqSpecifier :: BuiltinSpecifier
 intGreaterEqSpecifier =
-  let name = "__intgeq" in
   BuiltinSpecifier
-    { varname = name
+    { varname = "__intgeq"
     , builtinPatterns =
-        [ generateIntPattern name 1
-        , generateIntPattern name 2
+        [ generateIntPattern intGreaterEqSpecifier 1
+        , generateIntPattern intGreaterEqSpecifier 2
         ]
     , builtinOperator = OpIntGreaterEq
     , builtinEval = evalIntGreaterEq
     }
 
+-- |The builtin specifier for cell assignment.
+setSpecifier :: BuiltinSpecifier
+setSpecifier =
+  BuiltinSpecifier
+    { varname = "__set"
+    , builtinPatterns =
+        [ ( [ PatternClause generated (variable 1 1) $
+                PEmptyOnion generated
+            , PatternClause generated (variable 1 2) $
+                PRef generated $ variable 1 1
+            , PatternClause generated (variable 1 3) $
+                PEmptyOnion generated
+            , PatternClause generated (variable 1 4) $
+                PConjunction generated (variable 1 2) (variable 1 3)
+            ]
+          , variable 1 4
+          )
+        , ( [ PatternClause generated (variable 2 1) $
+                PEmptyOnion generated
+            ]
+          , variable 2 1
+          )
+        ]
+    , builtinOperator = OpSet
+    , builtinEval = evalSet
+    }
+  where
+    variable = getBuiltinPatternVar setSpecifier
+    
 -- |Generates a pattern clause for an int.  Uses the provided variable name
 --  prefix.
-generateIntPattern :: String -> Int -> ([PatternClause], Var)
-generateIntPattern name idx =
+generateIntPattern :: BuiltinSpecifier -> Int -> ([PatternClause], Var)
+generateIntPattern spec idx =
   ( [ PatternClause generated (variable 1) $ PPrimitive generated PrimInt
     , PatternClause generated (variable 2) $ PEmptyOnion generated
     , PatternClause generated (variable 3) $
@@ -304,5 +353,4 @@ generateIntPattern name idx =
   )
   where
     variable :: Int -> Var
-    variable n = Var generated $ name ++ "__operand" ++ show idx ++ "__pos" ++
-                    show n
+    variable = getBuiltinPatternVar spec idx
