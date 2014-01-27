@@ -26,7 +26,7 @@ import Language.TinyBang.Utils.Parser.PositionalParser
 
 parseTinyBang :: SourceDocument -> [PositionalToken] -> Either ParseErr Expr
 parseTinyBang doc toks =
-  let x = runParserT pExpr mempty (nameOfDocument doc) toks in
+  let x = runParserT pProgram mempty (nameOfDocument doc) toks in
   either (Left . show) Right $ runReader (unParserM x) (ParserContext doc)
 
 type ParseErr = String
@@ -52,6 +52,9 @@ type TBParser a =
 
 -- * Non-leaf definitions
 
+pProgram :: TBParser Expr
+pProgram = pExpr <* eof
+
 pExpr :: TBParser Expr
 pExpr = "expression" <@>
   origConstr1 Expr $% sepEndBy1 pClause (consume TokSemi)
@@ -64,8 +67,8 @@ pRedex :: TBParser Redex
 pRedex = "redex" <@>
       origConstr2 Appl $% (,) <$> pVar <*> pVar ?+> eps
   <|> origConstr2 Builtin $% (,) <$> pOp ?=> pVars
-  <|> origConstr1 Copy pVar
   <|> origConstr1 Def pValue
+  <|> origConstr1 Copy pVar
 
 pVar :: TBParser Var
 pVar = "variable" <@> origConstr1 mkvar pIdent ?+> eps
