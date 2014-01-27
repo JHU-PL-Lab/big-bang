@@ -13,7 +13,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.TypeSystem.Builtins
+import Language.TinyBang.Interpreter.Builtins
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
@@ -45,14 +45,15 @@ instance (ConstraintDatabase db, Display db)
 --  successful) or an error containing as much information as was obtained.
 typecheck :: forall db. (ConstraintDatabase db, Display db, Ord db)
           => Expr -> Either (TypecheckingError db) db
-typecheck expr = do
+typecheck (Expr o cls) = do
+  let expr = Expr o $ builtinEnv ++ cls
   derivDb::db <-
     bracketLogM _debugI
       ("Typechecking expression: " ++ display expr)
       (\db -> "Initial derivation produced: " ++ display db) $
         bailWith "Initial derivation" InitialDerivationFailed $
           initialDerivation expr
-  let startDb = polyinstantiate initialContour $ CDb.union derivDb builtinDb
+  let startDb = polyinstantiate initialContour derivDb
   let closedDb =
         bracketLog _debugI
           ("Performing constraint closure on " ++ display startDb)

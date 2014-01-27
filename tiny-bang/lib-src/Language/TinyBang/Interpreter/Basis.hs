@@ -133,11 +133,4 @@ freshVarIndex = do
 -- |Obtains fresh variables.  This is a general form of the fresh variable
 --  functions below.
 freshVar :: Var -> EvalM Var
-freshVar xx = do
-  idx <- freshVarIndex
-  return $ uncurry GenVar (destruct xx) idx
-  where
-    destruct :: Var -> (Origin, String)
-    destruct x = case x of
-                  Var o s -> (o,s)
-                  GenVar o s _ -> (o,s)
+freshVar (Var o n _) = Var o n . Just <$> freshVarIndex

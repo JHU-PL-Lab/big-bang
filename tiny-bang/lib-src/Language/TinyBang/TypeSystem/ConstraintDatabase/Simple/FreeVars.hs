@@ -49,6 +49,8 @@ instance Reduce FindFreeVars (Constraint SimpleConstraintDatabase)
     ApplicationConstraint _ a1 a2 a3 ->
       reduce ffv a1 `mappend` reduce ffv a2 `mappend`
         (Set.empty, Set.singleton a3)
+    BuiltinConstraint _ _ as a ->
+      reduce ffv as `mappend` (Set.empty, Set.singleton a)
     InconsistencyConstraint _ _ ->
       (Set.empty, Set.empty)
 

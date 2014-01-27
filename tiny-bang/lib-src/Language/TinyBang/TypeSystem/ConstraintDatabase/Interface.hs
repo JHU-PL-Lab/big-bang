@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, FlexibleInstances, UndecidableInstances #-}
 
 {-|
   Specifies the typeclass interface for constraint databases and constraint
@@ -9,10 +9,12 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Interface
 , ConstraintQuery(..)
 ) where
 
-import Data.Set (Set)
 import Data.Foldable (Foldable)
+import Data.Monoid
+import Data.Set (Set)
 import qualified Data.Foldable as Foldable
 
+import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Types
@@ -27,7 +29,7 @@ import Language.TinyBang.TypeSystem.Types
     merge occurs; a @db@ value always maintains the invariant that contours are
     disjoint and properly merged.
 -}
-class (Eq db, Ord db) => ConstraintDatabase db where
+class (Eq db, Ord db, Monoid db) => ConstraintDatabase db where
   -- |An empty constraint database.
   empty :: db
   -- |Adds a new constraint to a database.
@@ -47,6 +49,8 @@ class (Eq db, Ord db) => ConstraintDatabase db where
   polyinstantiate :: Contour -> db -> db
 
   -- ### Convenience functions
+  empty = mempty
+  union = mappend
   -- |Creates a singleton constraint database.  By default, this simply adds
   --  a constraint to an empty database.
   singleton :: Constraint db -> db
@@ -74,6 +78,7 @@ data ConstraintQuery db r where
   QueryAllFreeTVars :: ConstraintQuery db TVar
   QueryAllTypesLowerBoundingTVars :: ConstraintQuery db (Type db, TVar)
   QueryAllApplications :: ConstraintQuery db (TVar, TVar, TVar)
+  QueryAllBuiltins :: ConstraintQuery db (BuiltinOp, [TVar], TVar)
   QueryAllInconsistencies :: ConstraintQuery db (Inconsistency db)
   QueryLowerBoundingTypesOfTVar :: TVar -> ConstraintQuery db (Type db)
   QueryLowerBoundingTVarsOfTVar :: TVar -> ConstraintQuery db TVar

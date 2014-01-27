@@ -85,16 +85,16 @@ origin :: Origin
 origin = ComputedOrigin []
 
 x1 :: Var  
-x1 = Var origin "x1"
+x1 = mkvar origin "x1"
 
 x1' :: Var
-x1' = GenVar origin "x1" 1
+x1' = Var origin (IdentifierVar "x1") $ Just 1
 
 x2 :: Var
-x2 = Var origin "x2"
+x2 = mkvar origin "x2"
 
 x3 :: Var
-x3 = Var origin "x3"
+x3 = mkvar origin "x3"
 
 x4 :: Var
-x4 = Var origin "x4"
+x4 = mkvar origin "x4"

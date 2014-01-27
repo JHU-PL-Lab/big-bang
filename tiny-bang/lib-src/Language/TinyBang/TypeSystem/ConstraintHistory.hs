@@ -38,5 +38,8 @@ data ClosureRuleInstance db
             * The type of the scape which was used (if available)
             * The slice of the argument which was used
       -}
+  | BuiltinRule BuiltinOp [TVar] TVar
+      -- ^Describes the built-in operation closure rule.  The arguments are the
+      --  operator, operands, and output type variable.
   deriving (Eq, Ord, Show)
 

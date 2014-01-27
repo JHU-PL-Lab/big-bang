@@ -16,6 +16,8 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Monad.Writer
+import Control.Monad.Trans.Either
 import Control.Monad.Trans.List
 import Data.Foldable
 
@@ -32,16 +34,6 @@ runNonDetT (NonDetT listT) = runListT listT
 -- |Maps an operation through a @NonDetT@.
 mapNonDetT :: (m [a] -> n [b]) -> NonDetT m a -> NonDetT n b
 mapNonDetT f (NonDetT x) = NonDetT $ mapListT f x
-
-{-
--- |Nondeterministically chooses from a foldable data structure.
-choose :: (Foldable f, Monad m) => f a -> NonDetT m a
-choose = chooseM . return
-
--- |Nondeterministically chooses from a monadic foldable data structure.
-chooseM :: (Foldable f, Monad m) => m (f a) -> NonDetT m a
-chooseM xM = NonDetT $ ListT $ toList `liftM` xM
--}
 
 instance MonadCReader r m => MonadCReader r (NonDetT m) where
   askDb   = lift askDb
@@ -61,4 +53,10 @@ instance (MonadNonDet m) => MonadNonDet (ReaderT r m) where
   choose = lift . choose
 
 instance (MonadNonDet m) => MonadNonDet (StateT s m) where
+  choose = lift . choose
+
+instance (Monoid w, MonadNonDet m) => MonadNonDet (WriterT w m) where
+  choose = lift . choose
+
+instance (MonadNonDet m) => MonadNonDet (EitherT e m) where
   choose = lift . choose

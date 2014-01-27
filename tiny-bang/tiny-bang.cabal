@@ -85,8 +85,11 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars,
-                   Language.TinyBang.Interpreter.Builtins
-  other-modules:   Language.TinyBang.TypeSystem.Builtins
+                   Language.TinyBang.Interpreter.Builtins,
+                   Language.TinyBang.Utils.Projection,
+                   Language.TinyBang.TypeSystem.Closure.Basis,
+                   Language.TinyBang.TypeSystem.Closure.Rules,
+                   Language.TinyBang.TypeSystem.Closure.Builtins
 
 executable tiny-bang
   hs-source-dirs:  interp-src

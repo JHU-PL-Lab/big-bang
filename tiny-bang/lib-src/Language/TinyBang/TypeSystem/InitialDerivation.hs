@@ -18,7 +18,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Interpreter.Builtins
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
@@ -31,22 +30,19 @@ import Language.TinyBang.Utils.Display
 -- |A datatype for errors which may occur during initial derivation.
 data InitialDerivationError
   = IllFormedExpression (Set IllFormedness)
-  | BuiltinClauseInDerivation Origin
   deriving (Eq, Ord, Show)
 
 instance Display InitialDerivationError where
   makeDoc e = case e of
     IllFormedExpression ills -> makeDoc ills
-    BuiltinClauseInDerivation o ->
-      makeDoc "Initial builtin clause:" <+> makeDoc o
 
 -- |Derives the initial constraint database for a given expression. 
 initialDerivation :: (ConstraintDatabase db)
                   => Expr -> Either InitialDerivationError db
-initialDerivation expr@(Expr o cls) = do
+initialDerivation expr = do
   -- TODO: maybe separate well-formedness check into a different step?  It
   -- doesn't seem to belong here.
-  let ills = checkWellFormed $ Expr o $ builtinEnv ++ cls
+  let ills = checkWellFormed expr
   unless (Set.null ills) $ Left $ IllFormedExpression ills
   snd <$> expressionDerivation expr
 
@@ -60,10 +56,6 @@ initialPatternDerivation = patternDerivation
 -- |Represents the type for initial derivation computations.
 type DerivM a = Either InitialDerivationError a
 
--- |Raises an error in the derivation monad.
-raiseDerivationError :: InitialDerivationError -> DerivM a
-raiseDerivationError = Left
-
 -- |Performs expression derivation.
 expressionDerivation :: forall db. (ConstraintDatabase db)
                      => Expr -> DerivM (TVar, db)
@@ -73,41 +65,38 @@ expressionDerivation (Expr o cls) =
 -- |Performs initial derivation for clauses.
 clauseDerivation :: forall db. (ConstraintDatabase db)
                  => Clause -> DerivM (TVar, Constraint db)
-clauseDerivation clause =
-  let h = DerivedFromSource $ ClauseElement clause in
-  case clause of
-    RedexDef _ x1 r -> do
-      let a1 = derivVar x1
-      constraint <- case r of
-            Define _ x2 -> do
-              let a2 = derivVar x2
-              return $ a2 <: a1 .: h
-            Appl _ x2 x3 -> do
-              let a2 = derivVar x2
-              let a3 = derivVar x3
-              return $ (a2,a3) <: a1 .: h
-            Builtin o _ _ ->
-              raiseDerivationError $ BuiltinClauseInDerivation o
-      return (a1, constraint)
-    Evaluated ecl -> case ecl of
-      ValueDef _ x1 v -> do
-        let a1 = derivVar x1
-        t :: Type db <- case v of
-              VPrimitive _ pv ->
-                case pv of
-                  VInt _ _ -> return $ TPrimitive PrimInt
-              VEmptyOnion _ -> return TEmptyOnion
-              VLabel _ n x -> return $ TLabel n $ mktov $ derivVar x
-              VRef _ x -> return $ TRef $ derivVar x
-              VOnion _ x2 x3 -> do
-                let a2 = derivVar x2
-                let a3 = derivVar x3
-                return $ TOnion (mktov a2) (mktov a3)
-              VScape _ pat expr -> do
-                (tvarP, csP :: db) <- patternDerivation pat
-                (tvarE, csE :: db) <- expressionDerivation expr
-                return $ TScape tvarP csP tvarE csE
-        return (a1, t <: a1 .: h)
+clauseDerivation clause@(Clause _ x1 r) = do
+  let h = DerivedFromSource $ ClauseElement clause
+  let a1 = derivVar x1
+  constraint <- case r of
+        Def _ v -> do
+          t :: Type db <- case v of
+                VPrimitive _ pv ->
+                  case pv of
+                    VInt _ _ -> return $ TPrimitive PrimInt
+                VEmptyOnion _ -> return TEmptyOnion
+                VLabel _ n x -> return $ TLabel n $ mktov $ derivVar x
+                VRef _ x -> return $ TRef $ derivVar x
+                VOnion _ x2 x3 -> do
+                  let a2 = derivVar x2
+                  let a3 = derivVar x3
+                  return $ TOnion (mktov a2) (mktov a3)
+                VScape _ pat expr -> do
+                  (tvarP, csP :: db) <- patternDerivation pat
+                  (tvarE, csE :: db) <- expressionDerivation expr
+                  return $ TScape tvarP csP tvarE csE
+          return $ t <: a1 .: h          
+        Copy _ x2 -> do
+          let a2 = derivVar x2
+          return $ a2 <: a1 .: h
+        Appl _ x2 x3 -> do
+          let a2 = derivVar x2
+          let a3 = derivVar x3
+          return $ (a2,a3) <: a1 .: h
+        Builtin _ op xs ->
+          let as = map derivVar xs in
+          return $ (op,as) <: a1 .: h
+  return (a1, constraint)
 
 -- |Performs pattern derivation.
 patternDerivation :: (ConstraintDatabase db)

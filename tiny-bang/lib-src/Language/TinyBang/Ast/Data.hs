@@ -8,7 +8,6 @@
 module Language.TinyBang.Ast.Data
 ( Expr(..)
 , Clause(..)
-, EvaluatedClause(..)
 , Redex(..)
 , BuiltinOp(..)
 , Value(..)
@@ -19,12 +18,14 @@ module Language.TinyBang.Ast.Data
 , PrimitiveType(..)
 , LabelName(..)
 , Var(..)
+, VarName(..)
 
 , unLabelName
 , unVar
 
 , valAsInt
 
+, mkvar
 , typeOfPrimitiveValue
 , exprConcat
 ) where
@@ -45,18 +46,13 @@ data Expr
 
 -- |A data type representing general clauses.
 data Clause
-  = Evaluated EvaluatedClause
-  | RedexDef Origin Var Redex
-  deriving (Show)
-
--- |A data type representing evaluated clauses.
-data EvaluatedClause
-  = ValueDef Origin Var Value
+  = Clause Origin Var Redex
   deriving (Show)
 
 -- |A data type representing reducible expressions.
 data Redex
-  = Define Origin Var
+  = Def Origin Value
+  | Copy Origin Var
   | Appl Origin Var Var
   | Builtin Origin BuiltinOp [Var]
   deriving (Show)
@@ -114,24 +110,27 @@ data PrimitiveType
 data LabelName
   = LabelName Origin String
   deriving (Show)
-
--- |A semantic wrapper for variables.
+  
+-- |A semantic wrapper for variables.  The @Maybe Integer@ contains a freshening
+--  index; it is @Nothing@ for an original (unfreshened) variable.
 data Var
-  = Var Origin String
-  | GenVar Origin String Integer
-      -- ^Generated variables.  Arguments are the name of the original variable
-      --  and the generation index.
+  = Var Origin VarName (Maybe Integer)
   deriving (Show)
+  
+-- |A description of variable names.  This includes variables from syntax and
+--  globally unique variables, such as those used by builtin operations.
+data VarName
+  = IdentifierVar String
+  | BuiltinVar BuiltinOp
+  deriving (Eq, Ord, Show)
 
 -- * Destructors
 
 unLabelName :: LabelName -> String
 unLabelName (LabelName _ s) = s
 
-unVar :: Var -> String
-unVar x = case x of
-  Var _ s -> s
-  GenVar _ s n -> s ++ "__" ++ show n
+unVar :: Var -> VarName
+unVar (Var _ n _) = n
   
 valAsInt :: Value -> Maybe Integer
 valAsInt v = case v of
@@ -139,6 +138,9 @@ valAsInt v = case v of
   _ -> Nothing
 
 -- * Generally related routines
+
+mkvar :: Origin -> String -> Var
+mkvar o s = Var o (IdentifierVar s) Nothing
 
 typeOfPrimitiveValue :: PrimitiveValue -> PrimitiveType
 typeOfPrimitiveValue v = case v of
@@ -157,16 +159,12 @@ instance Display Expr where
 
 instance Display Clause where
   makeDoc cl = case cl of
-    RedexDef _ x r -> makeDoc x <+> text "=" <+> makeDoc r
-    Evaluated ecl -> makeDoc ecl
-    
-instance Display EvaluatedClause where
-  makeDoc ecl = case ecl of
-    ValueDef _ x v -> makeDoc x <+> text "=" <+> makeDoc v
+    Clause _ x r -> makeDoc x <+> text "=" <+> makeDoc r
 
 instance Display Redex where
   makeDoc r = case r of
-    Define _ x -> makeDoc x
+    Def _ v -> makeDoc v
+    Copy _ x -> makeDoc x
     Appl _ x x' -> makeDoc x <+> makeDoc x'
     Builtin _ bop xs ->
       makeDoc bop <+> sepDoc (char ' ') (map makeDoc xs)
@@ -220,7 +218,13 @@ instance Display LabelName where
   makeDoc n = text "`" <> text (unLabelName n)
   
 instance Display Var where
-  makeDoc x = text $ unVar x
+  makeDoc (Var _ n mf) =
+    makeDoc n <> maybe empty (\i -> char '#' <> text (show i)) mf
+
+instance Display VarName where
+  makeDoc n = case n of
+    IdentifierVar s -> text s
+    BuiltinVar op -> char '(' <> makeDoc op <> char ')'
 
 -- * Appropriate @Eq@ and @Ord@ instances for these data types
 
@@ -230,7 +234,6 @@ $(concat <$> sequence
   , name <-
       [ ''Expr
       , ''Clause
-      , ''EvaluatedClause
       , ''Redex
       , ''Value
       , ''PrimitiveValue
@@ -251,16 +254,12 @@ instance HasOrigin Expr where
 
 instance HasOrigin Clause where
   originOf x = case x of
-    RedexDef orig _ _ -> orig
-    Evaluated c -> originOf c
-
-instance HasOrigin EvaluatedClause where
-  originOf x = case x of
-    ValueDef orig _ _ -> orig
+    Clause orig _ _ -> orig
 
 instance HasOrigin Redex where
   originOf x = case x of
-    Define orig _ -> orig
+    Def orig _ -> orig
+    Copy orig _ -> orig
     Appl orig _ _ -> orig
     Builtin orig _ _ -> orig
 
@@ -291,5 +290,4 @@ instance HasOrigin LabelName where
 
 instance HasOrigin Var where
   originOf x = case x of
-    Var orig _ -> orig
-    GenVar orig _ _ -> orig
+    Var orig _ _ -> orig

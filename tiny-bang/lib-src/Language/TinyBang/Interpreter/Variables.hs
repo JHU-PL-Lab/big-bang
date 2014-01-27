@@ -46,7 +46,6 @@ data FindBoundVariables = FindBoundVariables
 $(concat <$> mapM (defineCatInstance [t|Set Var|] ''FindAllVariables)
                   [ ''Expr
                   , ''Clause
-                  , ''EvaluatedClause
                   , ''Redex
                   , ''Value
                   , ''Pattern
@@ -77,7 +76,4 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|Set Var|] ''FindBoundVariables)
 $(defineCommonCatInstances [t|Set Var|] ''FindBoundVariables)
 
 instance Reduce FindBoundVariables Clause (Set Var) where
-  reduce FindBoundVariables cl =
-    case cl of
-      RedexDef _ x _ -> Set.singleton x
-      Evaluated (ValueDef _ x _) -> Set.singleton x
+  reduce FindBoundVariables (Clause _ x _) = Set.singleton x

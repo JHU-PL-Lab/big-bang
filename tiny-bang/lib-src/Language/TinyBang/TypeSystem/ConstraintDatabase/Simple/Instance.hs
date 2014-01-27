@@ -13,6 +13,7 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance
 
 import Control.Monad.State
 import Data.Maybe
+import Data.Monoid
 import qualified Data.Set as Set
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Interface
@@ -24,17 +25,17 @@ import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.ReplaceVars
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Types
 
+instance Monoid SimpleConstraintDatabase where
+  mempty = SimpleConstraintDatabase Set.empty
+  mappend db1 db2 =
+    foldr add db1 $ Set.toList $ query db2 QueryAllConstraints
+
 instance ConstraintDatabase SimpleConstraintDatabase where
-  empty = SimpleConstraintDatabase Set.empty
-  
   add c db =
     let newVars = findAllVars c in
     let newCntrs = Set.fromList $ mapMaybe contourOfVar $ Set.toList newVars in
     contourReplaceVars newCntrs $
       SimpleConstraintDatabase $ Set.insert c $ unSimpleConstraintDatabase db
-
-  union db1 db2 =
-    foldr add db1 $ Set.toList $ query db2 QueryAllConstraints
 
   query db q =
     let cs = unSimpleConstraintDatabase db in
@@ -49,6 +50,9 @@ instance ConstraintDatabase SimpleConstraintDatabase where
       QueryAllApplications -> Set.fromList $ do
         ApplicationConstraint _ a0 a1 a2 <- Set.toList cs
         return (a0, a1, a2)
+      QueryAllBuiltins -> Set.fromList $ do
+        BuiltinConstraint _ op as a <- Set.toList cs
+        return (op, as, a)
       QueryAllInconsistencies -> Set.fromList $ do
         InconsistencyConstraint _ i <- Set.toList cs
         return i

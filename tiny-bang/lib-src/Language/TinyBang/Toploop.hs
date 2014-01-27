@@ -98,8 +98,6 @@ instance (Display db) => Display (InterpreterError db) where
               EmptyPattern o ->
                 text "Source contains an empty pattern at" <+> makeDoc o
             )
-        ID.BuiltinClauseInDerivation o ->
-          text "Initial expression contained built-in clause at" <+> makeDoc o
       TI.ClosureInconsistent incons db ->
         text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
         <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon $
@@ -140,6 +138,23 @@ instance (Display db) => Display (InterpreterError db) where
               text "and argument variable" <+> makeDoc aa <+>
               text "but argument slice" <+> makeDoc as </>
               text "does not apply."
+            )
+        Language.TinyBang.TypeSystem.Constraints.BuiltinBadOperandCount
+            site op expected actual ->
+          text "Bad built-in operand count:" </> nest 2
+            (
+              text "At site" <+> makeDoc site <> text "," <+> makeDoc actual <+>
+              text "operands appeared for operator" <+> makeDoc op <+>
+              text "when" <+> makeDoc expected <+>
+              text "operands were expected"
+            )
+        Language.TinyBang.TypeSystem.Constraints.BuiltinBadOperandType
+            site op index a ->
+          text "Bad built-in operand type:" </> nest 2
+            ( text "At site" <+> makeDoc site <> text "," <+> text "operand" <+>
+              makeDoc index <+> text "for operator" <+> makeDoc op <+>
+              text "had an incorrect type (original variable" <+> makeDoc a <>
+              char ')'
             )
 
 -- |Interprets the provided String as a TinyBang expression.  This routine is

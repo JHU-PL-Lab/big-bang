@@ -25,6 +25,11 @@ data Token
   | TokIdentifier String
   | TokLitInt Integer
   | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
+  | TokPlus -- ^@+@
+  | TokMinus -- ^@+@
+  | TokEq -- ^@+@
+  | TokLessEq -- ^@+@
+  | TokGreaterEq -- ^@+@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -53,6 +58,11 @@ instance Display Token where
     TokIdentifier s -> text "id#" <> dquotes (text s)
     TokLitInt n -> text "int#" <> dquotes (text $ show n)
     TokLabel n -> text "label#" <> dquotes (text n)
+    TokPlus -> text "+"
+    TokMinus -> text "-"
+    TokEq -> text "=="
+    TokLessEq -> text "<="
+    TokGreaterEq -> text ">="
 
 instance Display PositionalToken where
   makeDoc pt =

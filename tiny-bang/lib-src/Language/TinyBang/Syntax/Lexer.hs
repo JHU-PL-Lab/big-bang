@@ -67,6 +67,9 @@ operators :: [Lexer Token]
 operators = map (\(s,t) -> string s *> pure t)
     [ ("->", TokArrow)
     , ("()", TokEmptyOnion)
+    , ("==", TokEq)
+    , ("<=", TokLessEq)
+    , (">=", TokGreaterEq)
     , ("&", TokOnion)
     , ("=", TokIs)
     , ("(", TokOpenParen)
@@ -74,6 +77,8 @@ operators = map (\(s,t) -> string s *> pure t)
     , (";", TokSemi)
     , ("{", TokStartBlock)
     , ("}", TokStopBlock)
+    , ("+", TokPlus)
+    , ("-", TokMinus)
     ]
 
 -- | This group of lexers matches all reserved words.

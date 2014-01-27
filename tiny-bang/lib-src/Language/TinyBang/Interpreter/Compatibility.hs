@@ -50,7 +50,7 @@ compatibility x x' pat =
               _ -> return Nothing
           PEmptyOnion _ ->
             return $ Just $
-              Expr generated [RedexDef generated x' $ Define generated x]
+              Expr generated [Clause generated x' $ Copy generated x]
           PLabel _ n x1' ->
             case v of
               VOnion _ x1 x2 -> matchOnOnion x1 x2

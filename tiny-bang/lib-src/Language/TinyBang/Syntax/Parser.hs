@@ -58,20 +58,20 @@ pExpr = "expression" <@>
 
 pClause :: TBParser Clause
 pClause = "clause" <@>
-      Evaluated <$> pEvaluatedClause
-  <|> origConstr2 RedexDef $% (,) <$> pVar <* consume TokIs <*> pRedex ?+> eps
-
-pEvaluatedClause :: TBParser EvaluatedClause
-pEvaluatedClause = "evaluated clause" <@>
-      origConstr2 ValueDef $% (,) <$> pVar <* consume TokIs <*> pValue ?+> eps
+      origConstr2 Clause $% (,) <$> pVar <* consume TokIs <*> pRedex ?+> eps
 
 pRedex :: TBParser Redex
 pRedex = "redex" <@>
       origConstr2 Appl $% (,) <$> pVar <*> pVar ?+> eps
-  <|> origConstr1 Define pVar
+  <|> origConstr2 Builtin $% (,) <$> pOp ?=> pVars
+  <|> origConstr1 Copy pVar
+  <|> origConstr1 Def pValue
 
 pVar :: TBParser Var
-pVar = "variable" <@> origConstr1 Var pIdent ?+> eps
+pVar = "variable" <@> origConstr1 mkvar pIdent ?+> eps
+
+pVars :: TBParser [Var]
+pVars = "variable list" <@> many pVar
 
 pValue :: TBParser Value
 pValue = "value" <@>
@@ -121,6 +121,17 @@ pLabel = origConstr1 LabelName $% require (\t ->
               TokLabel n -> Just n
               _ -> Nothing)
       <?> "label name"
+
+pOp :: TBParser BuiltinOp
+pOp = require (\t ->
+            case posToken t of
+              TokPlus -> Just OpIntPlus
+              TokMinus -> Just OpIntMinus
+              TokEq -> Just OpIntEq
+              TokLessEq -> Just OpIntLessEq
+              TokGreaterEq -> Just OpIntGreaterEq
+              _ -> Nothing)
+      <?> "built-in operator"
 
 -- * Utility definitions
 

@@ -24,7 +24,6 @@ data VariableSubstitution = VariableSubstitution (Map Var Var)
 $(concat <$> mapM (defineHomInstance ''VariableSubstitution)
                   [ ''Expr
                   , ''Clause
-                  , ''EvaluatedClause
                   , ''Redex
                   , ''Value
                   , ''Pattern

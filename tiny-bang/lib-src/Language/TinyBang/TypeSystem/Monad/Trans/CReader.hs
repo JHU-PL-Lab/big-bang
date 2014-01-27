@@ -16,6 +16,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Maybe
+import Control.Monad.Writer
 import Data.Set (Set)
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase
@@ -62,3 +63,8 @@ instance MonadCReader r m => MonadCReader r (ReaderT r' m) where
 instance MonadCReader r m => MonadCReader r (StateT s m) where
   askDb = lift askDb
   localDb = mapStateT . localDb
+
+instance (MonadCReader r m, Monoid w) => MonadCReader r (WriterT w m) where
+  askDb = lift askDb
+  localDb = mapWriterT . localDb
+

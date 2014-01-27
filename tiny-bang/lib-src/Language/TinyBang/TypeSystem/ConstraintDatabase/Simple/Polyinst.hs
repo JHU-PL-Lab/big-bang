@@ -13,6 +13,7 @@ import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data
 import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
@@ -41,6 +42,7 @@ $(concat <$> mapM (defineHomInstance ''PolyInst)
     ])
 $(concat <$> mapM (defineTransformIdentityInstance ''PolyInst)
     [ ''ConstraintHistory
+    , ''BuiltinOp
     ])
 $(defineCommonHomInstances ''PolyInst)
 
@@ -83,4 +85,5 @@ instance Transform PolyInst (Type SimpleConstraintDatabase) where
                     TypeConstraint _ _ a1 -> Just a1
                     IntermediateConstraint _ _ a2 -> Just a2
                     ApplicationConstraint _ _ _ a3 -> Just a3
+                    BuiltinConstraint _ _ _ a0 -> Just a0
                     InconsistencyConstraint _ _ -> Nothing

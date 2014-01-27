@@ -66,12 +66,16 @@ smallStep = do
   _infoI (display $ text "Clauses: " </> indent 2 (makeDoc cls)) $
     case cls of
       [] -> return ()
-      RedexDef orig x2 redex : _ ->
+      Clause orig x2 redex : _ ->
         let orig' = ComputedOrigin [orig] in
         case redex of
-          Define _ x1 -> do
+          Def _ v -> do
+            setVar x2 v
+            setMostRecent x2
+            replaceFirstClause []
+          Copy _ x1 -> do
             v' <- varLookup x1
-            replaceFirstClause [Evaluated $ ValueDef orig' x2 v']
+            replaceFirstClause [Clause orig' x2 $ Def orig' v']
           Appl _ x0 x1 -> do
             me' <- matches x0 x1
             case me' of
@@ -80,22 +84,14 @@ smallStep = do
                 e''@(Expr _ cls'') <- freshen e'
                 x' <- rvexpr e''
                 replaceFirstClause $
-                  cls'' ++ [RedexDef orig x2 $ Define generated x']
+                  cls'' ++ [Clause orig' x2 $ Copy orig' x']
           Builtin o bop xs -> do
             v <- evalBuiltin o bop xs
-            replaceFirstClause [Evaluated $ ValueDef orig' x2 v]
-      Evaluated ecl : _ ->
-        case ecl of
-          ValueDef _ x v -> do
-            setVar x v
-            setMostRecent x
-            replaceFirstClause []
+            replaceFirstClause [Clause orig' x2 $ Def orig' v]
   where
     rvexpr :: Expr -> EvalM Var
     rvexpr (Expr o cls) =
-      if null cls
-        then raiseEvalError $ IllFormedExpression $ Set.singleton $
-              EmptyExpression o
-        else case last cls of
-                RedexDef _ x _ -> return x
-                Evaluated (ValueDef _ x _) -> return x
+      case reverse cls of
+        [] -> raiseEvalError $ IllFormedExpression $ Set.singleton $
+                EmptyExpression o
+        Clause _ x _ : _ -> return x
