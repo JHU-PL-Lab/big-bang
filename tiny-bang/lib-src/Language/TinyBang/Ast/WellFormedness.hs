@@ -93,7 +93,20 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|VarCountMap|] ''CountVariableBin
 $(defineCommonCatInstances [t|VarCountMap|] ''CountVariableBindings)
 
 instance Reduce CountVariableBindings Clause (VarCountMap) where
-  reduce CountVariableBindings (Clause _ x _) = VarCountMap $ Map.singleton x 1
+  reduce CountVariableBindings (Clause _ x v) =
+    VarCountMap (Map.singleton x 1) `mappend` reduce CountVariableBindings v
+
+instance Reduce CountVariableBindings Redex (VarCountMap) where
+  reduce CountVariableBindings redex =
+    case redex of
+      Def _ (VScape _ pattern expr) ->
+        reduce CountVariableBindings pattern `mappend`
+        reduce CountVariableBindings expr
+      _ -> VarCountMap Map.empty
+
+instance Reduce CountVariableBindings PatternClause VarCountMap where
+  reduce CountVariableBindings (PatternClause _ x _) =
+    VarCountMap (Map.singleton x 1)
 
 -- For findFreeVariables -------------------------------------------------------
 
