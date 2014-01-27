@@ -7,7 +7,7 @@ module Language.TinyBang.Utils.Data.NFA.Dictionary
 ( empty
 , emptyString
 , singleton
-, kleeneSingleton
+, oneOf
 , addSuffix
 , kleeneStar
 , oneOrMore
@@ -30,29 +30,47 @@ import Language.TinyBang.Utils.Data.NFA.Data
 import qualified Language.TinyBang.Utils.Data.NFA.Utils as Utils
 
 empty :: (Ord a) => DictionaryNfa a
-empty = DictionaryNfa (IntSet.singleton 0) IntMap.empty IntSet.empty 1
+empty =
+  DictionaryNfa
+    { dictInitialStates = IntSet.singleton 0
+    , dictTransitions = IntMap.fromList
+        [ (0, Map.empty)
+        ]
+    , dictAcceptingStates = IntSet.empty
+    , dictNextState = 1
+    }
 
 emptyString :: (Ord a) => DictionaryNfa a
 emptyString =
-  DictionaryNfa (IntSet.singleton 0) IntMap.empty (IntSet.singleton 0) 1
+  DictionaryNfa
+    { dictInitialStates = IntSet.singleton 0
+    , dictTransitions = IntMap.fromList
+        [ (0, Map.empty)
+        ]
+    , dictAcceptingStates = IntSet.singleton 0
+    , dictNextState = 1
+    }
 
 singleton :: (Ord a) => a -> DictionaryNfa a
 singleton sym =
   DictionaryNfa
     { dictInitialStates = IntSet.singleton 0
-    , dictTransitions =
-        IntMap.singleton 0 $ Map.singleton (Just sym) $ IntSet.singleton 1
+    , dictTransitions = IntMap.fromList
+        [ (0, Map.singleton (Just sym) $ IntSet.singleton 1)
+        , (1, Map.empty)
+        ]
     , dictAcceptingStates = IntSet.singleton 1
     , dictNextState = 2
     }
 
-kleeneSingleton :: (Ord a) => [a] -> DictionaryNfa a
-kleeneSingleton syms =
+oneOf :: (Ord a) => [a] -> DictionaryNfa a
+oneOf syms =
   DictionaryNfa
     { dictInitialStates = IntSet.singleton 0
-    , dictTransitions =
-        IntMap.singleton 0 $ Map.fromList $
-          map ((,IntSet.singleton 1) . Just) syms
+    , dictTransitions = IntMap.fromList
+        [ (0, Map.fromList $ map ((,IntSet.singleton 1) . Just) syms)
+        , (1, Map.empty)
+        ]
     , dictAcceptingStates = IntSet.singleton 1
     , dictNextState = 2
     }
@@ -172,10 +190,14 @@ union nfa1 nfa2 =
 acceptingStatesFn :: (Ord a) => DictionaryNfa a -> Int -> Bool
 acceptingStatesFn nfa st = st `IntSet.member` dictAcceptingStates nfa
 
-transitionsFn :: (Ord a) => DictionaryNfa a -> Int -> Map (Maybe a) IntSet
-transitionsFn nfa st = fromJust $ IntMap.lookup st $ dictTransitions nfa
+transitionsFn :: (Show a, Ord a)
+              => DictionaryNfa a -> Int -> Map (Maybe a) IntSet
+transitionsFn nfa st =
+  fromMaybe
+    (error $ "Could not find state " ++ show st ++ " in NFA:" ++ show nfa) $
+    IntMap.lookup st $ dictTransitions nfa
 
-accept :: forall a. (Ord a) => DictionaryNfa a -> [a] -> Bool
+accept :: forall a. (Show a, Ord a) => DictionaryNfa a -> [a] -> Bool
 accept =
   Utils.accept
     IntSet.empty
@@ -185,7 +207,7 @@ accept =
     acceptingStatesFn
     transitionsFn
 
-isEmpty :: forall a. (Ord a) => DictionaryNfa a -> Bool
+isEmpty :: forall a. (Show a, Ord a) => DictionaryNfa a -> Bool
 isEmpty =
   Utils.isEmpty
     IntSet.empty

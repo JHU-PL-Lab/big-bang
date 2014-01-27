@@ -71,8 +71,12 @@ unPossibleContour (PossibleContour mcntr) = mcntr
 initialContour :: Contour
 initialContour =
   Contour
-    { contourStrands = Set.empty
-    , contourNfa = NFA.empty
+    { contourStrands = Set.singleton $
+        ContourStrand
+          { contourParts = []
+          , appearingElements = Set.empty
+          }
+    , contourNfa = NFA.emptyString
     }
 
 -- | The non-contour.
@@ -82,9 +86,11 @@ noContour = PossibleContour Nothing
 -- * Contour operations
 
 -- | Defines contour subsumption as specified in the TinyBang language document.
+--   In particular, this routine asks if the first argument is subsumed by the
+--   second.
 subsumedBy :: Contour -> Contour -> Bool
 subsumedBy cn1 cn2 =
-  let answer = 
+  let answer =
         NFA.isEmpty $ NFA.subtract (contourNfa cn1) (contourNfa cn2)
       message = "Contour subsumption check: " ++ display cn2 ++
         (if answer then " subsumes " else " does not subsume ") ++ display cn1
@@ -156,7 +162,7 @@ extend x cntr =
             nfaFromContourPart :: ContourPart -> NFA.Nfa ContourElement
             nfaFromContourPart part = case part of
               SinglePart e -> NFA.singleton e
-              SetPart es -> NFA.kleeneSingleton $ Set.toList es
+              SetPart es -> NFA.kleeneStar $ NFA.oneOf $ Set.toList es
   
 -- | Unions a contour with another contour.
 union :: Contour -> Contour -> Contour

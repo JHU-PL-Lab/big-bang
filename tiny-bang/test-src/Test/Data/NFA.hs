@@ -32,7 +32,7 @@ example2 =
 @-}
 example3 :: TestNfa
 example3 =
-  NFA.singleton 'a' `NFA.concatenate` NFA.kleeneSingleton ['b','c','d']
+  NFA.singleton 'a' `NFA.concatenate` NFA.kleeneStar (NFA.oneOf ['b','c','d'])
 
 {-|@
   (1) --a--> 2 --c--> 3 --b--> 4 --d--> ((5))
@@ -58,8 +58,9 @@ example5 = NFA.empty
 @-}
 example6 :: TestNfa
 example6 =
-  NFA.optional (NFA.singleton 'a') `NFA.concatenate`
-    NFA.kleeneStar (NFA.singleton 'b') `NFA.concatenate` NFA.singleton 'c'
+  NFA.oneOf ['a','b'] `NFA.concatenate`
+  NFA.kleeneStar (NFA.singleton 'b') `NFA.concatenate`
+  NFA.singleton 'c'
 
 -- |The tests for this module.
 nfaTests :: Test
@@ -132,9 +133,9 @@ genContainTest cntn (name,nfa) str =
   where
     makeMsg b = show str ++ " " ++ (if b then "not " else "") ++ "in " ++ name
 
-emptinessTest :: (Ord sy) => Bool -> (String, NFA.Nfa sy) -> Test
+emptinessTest :: (Show sy, Ord sy) => Bool -> (String, NFA.Nfa sy) -> Test
 emptinessTest empt (name,nfa) =
   TestLabel (makeMsg empt)
       $ test $ assertBool (makeMsg $ not empt) $ NFA.isEmpty nfa == empt
   where
-    makeMsg b = name ++ " is " ++ (if b then "" else "not ") ++ "empty"
+    makeMsg b = name ++ " is " ++ (if b then "not " else "") ++ "empty"

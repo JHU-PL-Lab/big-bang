@@ -9,7 +9,7 @@ module Language.TinyBang.Utils.Data.NFA.Generalized
 ( empty
 , emptyString
 , singleton
-, kleeneSingleton
+, oneOf
 , addSuffix
 , kleeneStar
 , oneOrMore
@@ -26,17 +26,22 @@ import Language.TinyBang.Utils.Data.NFA.Data
 import qualified Language.TinyBang.Utils.Data.NFA.Dictionary as Dict
 import qualified Language.TinyBang.Utils.Data.NFA.Function as Func
 
+-- |An NFA accepting nothing.
 empty :: (Ord a) => Nfa a
 empty = DictNfa Dict.empty
 
+-- |An NFA accepting just the empty string.
 emptyString :: (Ord a) => Nfa a
 emptyString = DictNfa Dict.emptyString
 
+-- |An NFA accepting just a string composed of the specified character.
 singleton :: (Ord a) => a -> Nfa a
 singleton = DictNfa . Dict.singleton
 
-kleeneSingleton :: (Ord a) => [a] -> Nfa a
-kleeneSingleton = DictNfa . Dict.kleeneSingleton
+-- |An NFA accepting any single-character string such that the character is one
+--  of those specified.
+oneOf :: (Ord a) => [a] -> Nfa a
+oneOf = DictNfa . Dict.oneOf
 
 addSuffix :: (Ord a) => a -> Nfa a -> Nfa a
 addSuffix sym = nfa1Fn (Dict.addSuffix sym) (FuncNfa . Func.addSuffix sym)
@@ -56,18 +61,19 @@ concatenate = nfa2Fn Dict.concatenate $ \x y -> FuncNfa $ Func.concatenate x y
 union :: (Ord a) => Nfa a -> Nfa a -> Nfa a
 union = nfa2Fn Dict.union $ \x y -> FuncNfa $ Func.union x y
 
-accept :: (Ord a) => Nfa a -> [a] -> Bool
+accept :: (Show a, Ord a) => Nfa a -> [a] -> Bool
 accept nfa =
   case nfa of
     DictNfa dNfa -> Dict.accept dNfa
     FuncNfa fNfa -> Func.accept fNfa
 
-isEmpty :: (Ord a) => Nfa a -> Bool
+isEmpty :: (Show a, Ord a) => Nfa a -> Bool
 isEmpty nfa =
   case nfa of
     DictNfa dNfa -> Dict.isEmpty dNfa
     FuncNfa fNfa -> Func.isEmpty fNfa
 
+-- |Subtracts the second NFA from the first NFA.
 subtract :: (Ord a) => Nfa a -> Nfa a -> Nfa a
 subtract = nfa2FnPromote $ \x y -> FuncNfa $ Func.subtract x y
 

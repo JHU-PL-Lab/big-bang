@@ -9,7 +9,7 @@ module Language.TinyBang.Utils.Data.NFA
 , empty
 , emptyString
 , singleton
-, kleeneSingleton
+, oneOf
 , addSuffix
 , kleeneStar
 , oneOrMore

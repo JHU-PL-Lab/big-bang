@@ -30,6 +30,8 @@ data Token
   | TokEq -- ^@+@
   | TokLessEq -- ^@+@
   | TokGreaterEq -- ^@+@
+  | TokSet -- ^@<-@
+  | TokRef -- ^@ref@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -63,6 +65,8 @@ instance Display Token where
     TokEq -> text "=="
     TokLessEq -> text "<="
     TokGreaterEq -> text ">="
+    TokSet -> text "<-"
+    TokRef -> text "ref"
 
 instance Display PositionalToken where
   makeDoc pt =

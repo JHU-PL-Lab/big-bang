@@ -70,6 +70,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("==", TokEq)
     , ("<=", TokLessEq)
     , (">=", TokGreaterEq)
+    , ("<-", TokSet)
     , ("&", TokOnion)
     , ("=", TokIs)
     , ("(", TokOpenParen)
@@ -86,6 +87,7 @@ reservedWords :: [Lexer Token]
 reservedWords =
   map (\(s, t) -> string s *> notFollowedBy identChar *> pure t)
     [ ("int"   , TokInt)
+    , ("ref"   , TokRef)
     ]
 
 -- | This group of lexers matches parametric tokens.

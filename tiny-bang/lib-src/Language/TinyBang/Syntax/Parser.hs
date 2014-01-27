@@ -81,6 +81,7 @@ pValue = "value" <@>
       origConstr1 VPrimitive $% origConstr1 VInt $% pInt
   <|> requirex TokEmptyOnion VEmptyOnion
   <|> origConstr2 VLabel $% (,) <$> pLabel ?=> pVar
+  <|> origConstr1 VRef $% (consume TokRef >> pVar)
   <|> origConstr2 VOnion $% (,) <$> pVar <* consume TokOnion ?=> pVar
   <|> origConstr2 VScape $%
         (,) <$ consume TokStartBlock <*> pPattern <* consume TokStopBlock
@@ -100,6 +101,7 @@ pPatternValue = "pattern value" <@>
       requirex TokInt $% flip PPrimitive PrimInt
   <|> requirex TokEmptyOnion PEmptyOnion
   <|> origConstr2 PLabel $% (,) <$> pLabel ?=> pVar
+  <|> origConstr1 PRef $% (consume TokRef >> pVar)
   <|> origConstr2 PConjunction $% (,) <$> pVar <* consume TokOnion ?=> pVar
 
 -- * Terminal definitions
@@ -133,6 +135,7 @@ pOp = require (\t ->
               TokEq -> Just OpIntEq
               TokLessEq -> Just OpIntLessEq
               TokGreaterEq -> Just OpIntGreaterEq
+              TokSet -> Just OpSet
               _ -> Nothing)
       <?> "built-in operator"
 

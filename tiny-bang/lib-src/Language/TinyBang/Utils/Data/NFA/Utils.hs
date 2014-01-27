@@ -71,7 +71,7 @@ isEmpty
     acceptingStateFn
     transitionsFn
     nfa =
-  any (acceptingStateFn nfa) $ stateSetToList $
+  not $ any (acceptingStateFn nfa) $ stateSetToList $
     explore (initialStatesFn nfa) emptyStateSet
   where
     explore :: stS -> stS -> stS
@@ -80,6 +80,7 @@ isEmpty
             map (transitionsFn nfa) $ stateSetToList toVisit
       in
       let newStates = stateSetDifference reachable visited in
+      let oldStates = stateSetUnion visited toVisit in
       if stateSetNull newStates
-        then visited
-        else explore newStates $ stateSetUnion visited toVisit
+        then oldStates
+        else explore newStates oldStates

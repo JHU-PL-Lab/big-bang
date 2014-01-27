@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables, StandaloneDeriving #-}
 
 {-|
   Defines the core data types for the NFA implementation used in the TinyBang
@@ -37,6 +37,7 @@ data DictionaryNfa symbol where
       , dictNextState :: Int
       }
     -> DictionaryNfa symbol
+deriving instance (Show symbol) => Show (DictionaryNfa symbol)
 
 -- |Defines the dictionary form of an NFA.  The initial and accepting states
 --  are multiple (rather than using epsilons from a single start or end state)

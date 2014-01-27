@@ -10,7 +10,7 @@ module Language.TinyBang.Utils.Data.NFA.Function
 ( empty
 , emptyString
 , singleton
-, kleeneSingleton
+, oneOf
 , addSuffix
 , kleeneStar
 , oneOrMore
@@ -55,8 +55,8 @@ emptyString =
 singleton :: (Ord sy) => sy -> FunctionNfa Int sy
 singleton = fromDictionaryNfa . Dict.singleton
 
-kleeneSingleton :: (Ord sy) => [sy] -> FunctionNfa Int sy
-kleeneSingleton = fromDictionaryNfa . Dict.kleeneSingleton
+oneOf :: (Ord sy) => [sy] -> FunctionNfa Int sy
+oneOf = fromDictionaryNfa . Dict.oneOf
 
 addSuffix :: (Ord sy)
           => sy -> FunctionNfa st sy -> FunctionNfa (Either st ()) sy
@@ -197,7 +197,7 @@ subtract nfa1@(FunctionNfa is1 ias1 tr1) nfa2@(FunctionNfa is2 ias2 _) =
                      | st1 <- Set.toList is1
                      , st2 <- Set.toList is2 ]
     , funIsAcceptingState = \st ->
-        ias1 (fst st) && maybe False ias2 (snd st)
+        ias1 (fst st) && not (maybe False ias2 (snd st))
     , funTransitions = \(st1, mst2) ->
         case mst2 of
           Nothing -> Map.map (Set.map (,Nothing)) $ tr1 st1
