@@ -1,4 +1,4 @@
-# EXPECT: typefail
+# EXPECT: 30
 
 Y = { pbody = ()
     } ->

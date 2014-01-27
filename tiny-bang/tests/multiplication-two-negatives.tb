@@ -40,14 +40,14 @@ multiply = { n1 = ();
                                                          } ->
                                                          { x10 = + n2 x6;
                                                            x11 = pself x10;
-                                                           x12 = - x11 n2;
+                                                           x12 = - x11 n1;
                                                          };
                                                     x13 = { p7 = ();
                                                             p8 = `False p7;
                                                           } ->
                                                           { x14 = - n2 x6;
                                                             x15 = pself x14;
-                                                            x16 = + x15 n2;
+                                                            x16 = + x15 n1;
                                                           };
                                                     x17 = x9 & x13;
                                                     x18 = x17 x8;
