@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 
 module Test.Data.NFA
-( nfaTests
+( tests
 ) where
 
 import qualified Language.TinyBang.Utils.Data.NFA as NFA
@@ -63,8 +63,8 @@ example6 =
   NFA.singleton 'c'
 
 -- |The tests for this module.
-nfaTests :: Test
-nfaTests =
+tests :: Test
+tests =
   let ex1 = ("example1",example1)
       ex2 = ("example2",example2)
       ex3 = ("example3",example3)

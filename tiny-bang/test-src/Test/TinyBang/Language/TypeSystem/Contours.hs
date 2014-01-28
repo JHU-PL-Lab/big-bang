@@ -2,15 +2,15 @@
   This test module tests the basic functionality of the contour operations.
 -}
 module Test.TinyBang.Language.TypeSystem.Contours
-( contourTests
+( tests
 ) where
 
 import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Contours
 import Test.HUnit
 
-contourTests :: Test
-contourTests = 
+tests :: Test
+tests = 
   let c1 = (cn1,"cn1")
       c2 = (cn2,"cn2")
       c3 = (cn3,"cn3")

@@ -2,7 +2,8 @@
   This module loads the source file tests.
 -}
 module Test.TinyBang.SourceFile
-( sourceFileTests
+( tests
+, filteredTests
 ) where
 
 import Data.List
@@ -25,14 +26,25 @@ import Test.TinyBang.ExpectDsl
 testsPath :: FilePath
 testsPath = "tests"
 
-sourceFileTests :: IO Test
-sourceFileTests = do
+tests :: IO Test
+tests = generateTests Nothing
+
+filteredTests :: String -> IO Test
+filteredTests = generateTests . Just
+
+generateTests :: Maybe String -> IO Test
+generateTests filterName = do
   dirContents <- getDirectoryContents testsPath
-  let paths = map ((testsPath ++ [pathSeparator]) ++) $
-                filter (isSuffixOf ".tb") dirContents
+  let paths = map ((testsPath ++ [pathSeparator]) ++) $ 
+                filter dirFilter dirContents
   mtests <- mapM makeTestFromPath paths
   return $ TestList mtests
   where
+    dirFilter :: String -> Bool
+    dirFilter pathname =
+      case filterName of
+        Nothing -> ".tb" `isSuffixOf` pathname
+        Just str -> pathname == str ++ ".tb"
     failure :: String -> Test
     failure = TestCase . assertFailure
     makeTestFromPath :: FilePath -> IO Test

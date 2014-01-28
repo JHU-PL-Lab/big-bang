@@ -60,7 +60,6 @@ library
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Utils.Parser.PositionalParser,
                    Language.TinyBang.Utils.Parser.OriginParser,
-                   Language.TinyBang.Utils.Logger.Operations,
                    Language.TinyBang.Ast.Origin,
                    Language.TinyBang.Ast.WellFormedness,
                    Language.TinyBang.Utils.Parser.Parsec,
@@ -89,7 +88,11 @@ library
                    Language.TinyBang.Utils.Projection,
                    Language.TinyBang.TypeSystem.Closure.Basis,
                    Language.TinyBang.TypeSystem.Closure.Rules,
-                   Language.TinyBang.TypeSystem.Closure.Builtins
+                   Language.TinyBang.TypeSystem.Closure.Builtins,
+                   Language.TinyBang.Utils.Logger,
+                   Language.TinyBang.Utils.Logger.Config,
+                   Language.TinyBang.Utils.Logger.Generators,
+                   Language.TinyBang.Utils.Logger.Operations
 
 executable tiny-bang
   hs-source-dirs:  interp-src
@@ -132,3 +135,4 @@ executable tests
                    bytestring,
                    aeson
   ghc-options:     -Wall
+  other-modules:   Options
