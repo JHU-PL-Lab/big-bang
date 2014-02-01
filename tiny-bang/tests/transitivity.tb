@@ -1,0 +1,10 @@
+# EXPECT: typefail
+
+x1 = ();
+x2 = x1;
+x3 = x2;
+x4 = x3;
+x5 = x4;
+f = { p = int } -> { r = p };
+z = f x5;
+
