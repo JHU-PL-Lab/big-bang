@@ -81,4 +81,5 @@ data ConstraintQuery db r where
   QueryAllBuiltins :: ConstraintQuery db (BuiltinOp, [TVar], TVar)
   QueryAllInconsistencies :: ConstraintQuery db (Inconsistency db)
   QueryLowerBoundingTypesOfTVar :: TVar -> ConstraintQuery db (Type db)
-  QueryLowerBoundingTVarsOfTVar :: TVar -> ConstraintQuery db TVar
+  QueryUpperBoundingTVarsOfTVar :: TVar -> ConstraintQuery db TVar
+

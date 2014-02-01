@@ -60,9 +60,9 @@ instance ConstraintDatabase SimpleConstraintDatabase where
         TypeConstraint _ t a' <- Set.toList cs
         guard $ a == a'
         return t
-      QueryLowerBoundingTVarsOfTVar a -> Set.fromList $ do
+      QueryUpperBoundingTVarsOfTVar a -> Set.fromList $ do
         IntermediateConstraint _ a1 a2 <- Set.toList cs
-        guard $ a == a2
-        return a1
+        guard $ a == a1
+        return a2
   
   polyinstantiate = polyinst Set.empty

@@ -62,7 +62,7 @@ closeTransitivity = bracketLogM _debugI
   (\res -> display $ text "Transitivity results:" <+> makeDoc res) $
   do
     (t,a1) <- join $ choose <$> queryDb QueryAllTypesLowerBoundingTVars
-    a2 <- join $ choose <$> queryDb (QueryLowerBoundingTVarsOfTVar a1)
+    a2 <- join $ choose <$> queryDb (QueryUpperBoundingTVarsOfTVar a1)
     let h = DerivedFromClosure $ TransitivityRule t a1 a2
     return $ CDb.singleton $ t <: a2 .: h
 
@@ -72,7 +72,13 @@ closeApplication = bracketLogM _debugI
   "Calculating application closure"
   (\res -> display $ text "Application results:" <+> makeDoc res) $
   do
-    (a0,a1,a2) <- join $ choose <$> queryDb QueryAllApplications
+    (a0,a1,a2) <-
+      bracketLogM (maybeLog _debugI) Nothing
+        (\(a0,a1,a2) -> Just $ display $
+                          text "Found call site" <+> makeDoc a2 <+>
+                          text "with function" <+> makeDoc a0 <+>
+                          text "and argument" <+> makeDoc a1) $
+        join $ choose <$> queryDb QueryAllApplications
     db <- askDb
     (argtov, mbinds) <- choose $ matches a2 a0 a1 db
     case mbinds of

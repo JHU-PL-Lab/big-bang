@@ -7,11 +7,15 @@
 module Language.TinyBang.Utils.Logger.Operations
 ( logI
 , logM
+, maybeLog
+, postLog
+, postLogM
 , bracketLog
 , bracketLogM
 ) where
 
 import Control.DeepSeq
+import Control.Monad
 import System.IO.Unsafe
 import System.Log
 import qualified System.Log.Logger
@@ -44,17 +48,32 @@ logM :: (Monad m) => String -> Priority -> String -> m ()
 logM moduleName logLevel message =
   logI moduleName logLevel message $ return ()
 
+-- |A function to log only if the provided message is @Just@ a string.  Expects
+--  its first argument to be a normal @String@ logging function like @_debugI@.
+maybeLog :: (s -> a -> a) -> Maybe s -> a -> a
+maybeLog f ms x = maybe x (`f` x) ms
+
+-- |A logging function designed for logging results of computation.  It expects
+--  a logging routine such as @_debugI@ for the first argument.  The second
+--  argument is a function which produces a log message from the computation.
+postLog :: (s -> a -> a) -> (a -> s) -> a -> a
+postLog logFn msgFn val = logFn (msgFn val) val 
+
+-- |A version of 'postLog' for monadic arguments.
+postLogM :: (Monad m) => (s -> a -> a) -> (a -> s) -> m a -> m a
+postLogM logFn msgFn val = logFn `liftM` (msgFn `liftM` val) `ap` val 
+
 -- |A bracket logging function designed for wrapping around a computation.
 --  It expects a logging routine such as @_debugI@.  The start message is
 --  generic; the end message is based on the reuslt of computation.  The "end"
 --  of this bracket occurs whenever the data on which the end logging message
 --  function pulls has been computed.
-bracketLog :: (String -> a -> a) -> String -> (a -> String) -> a -> a
+bracketLog :: (s -> a -> a) -> s -> (a -> s) -> a -> a
 bracketLog logFn startMsg endMsgFn val =
   let result = logFn startMsg val in logFn (endMsgFn result) result
 
 bracketLogM :: (Monad m)
-            => (String -> m a -> m a) -> String -> (a -> String) -> m a -> m a
+            => (s -> m a -> m a) -> s -> (a -> s) -> m a -> m a
 bracketLogM logFn startMsg endMsgFn val = do
   result <- logFn startMsg val
   logFn (endMsgFn result) $ return result

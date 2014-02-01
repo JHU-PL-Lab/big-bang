@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TupleSections, TemplateHaskell #-}
 
 {-|
   This module defines a computable function which calculates the appropriate
@@ -21,6 +21,9 @@ import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 import Language.TinyBang.TypeSystem.Monad.Trans.NonDet
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger
+
+$(loggingFunctions)
 
 type MatchResult db = (TypeOrVar db, Maybe (Type db, (TVar, db)))
 
@@ -88,19 +91,33 @@ runMatchesM x callSiteVar =
 --  non-determinism.
 matchesInternal :: forall db. (ConstraintDatabase db, Display db)
                 => TypeOrVar db -> TVar -> MatchesM db (MatchResult db)
-matchesInternal tov0 a1 = do
-  db <- askDb
-  t <- choose $ queryLowerBoundsOfTypeOrVar db tov0
-  alreadyVisited <- Set.member t <$> visitedScapes <$> get
-  if alreadyVisited then return (mktov a1, Nothing) else
-    case t of
-      TScape a' patdb a bodydb -> do
-        modify $ \s -> s { visitedScapes = Set.insert t $ visitedScapes s }
-        ccc <- CompatibilityCallContext tov0 a1 <$> (matchesCallSiteVar <$> ask)
-        (argt,mbinds) <- choose $ compatibility ccc a1 db a' patdb
-        return (mktov argt, (t,) <$> (a,) . CDb.union bodydb <$> mbinds) 
-      TOnion a2 a3 -> do
-        r <- matchesInternal a2 a1
-        if isJust $ snd r then return r else matchesInternal a3 a1
-      _ ->
-        return (mktov a1, Nothing)
+matchesInternal tov0 a1 =
+  bracketLogM _debugI
+    (display $ text "Checking matches for function" <+> makeDoc tov0 <+>
+               text "and argument" <+> makeDoc a1)
+    (\(slc, mout) -> display $ text "Matching of function" <+> makeDoc tov0 <+>
+                               text "and argument" <+> makeDoc a1 <+>
+      case mout of
+        Nothing -> text "failed with slice" <+> makeDoc slc
+        Just (tfn, _) -> text "succeeded with slice" <+> makeDoc slc <+>
+                              text "at concrete function type" <+>
+                              makeDoc tfn) $
+  do
+    db <- askDb
+    t <- postLogM _debugI
+          (\t -> display $ text "Checking matches for chosen function" <+>
+                           makeDoc t <+> text "and argument" <+> makeDoc a1) $
+          choose $ queryLowerBoundsOfTypeOrVar db tov0
+    alreadyVisited <- Set.member t <$> visitedScapes <$> get
+    if alreadyVisited then return (mktov a1, Nothing) else
+      case t of
+        TScape a' patdb a bodydb -> do
+          modify $ \s -> s { visitedScapes = Set.insert t $ visitedScapes s }
+          ccc <- CompatibilityCallContext tov0 a1 <$> (matchesCallSiteVar <$> ask)
+          (argt,mbinds) <- choose $ compatibility ccc a1 db a' patdb
+          return (mktov argt, (t,) <$> (a,) . CDb.union bodydb <$> mbinds) 
+        TOnion a2 a3 -> do
+          r <- matchesInternal a2 a1
+          if isJust $ snd r then return r else matchesInternal a3 a1
+        _ ->
+          return (mktov a1, Nothing)
