@@ -18,4 +18,4 @@ x4 = `B x3;
 x5 = `A x4;
 # Do the call
 x6 = x1 x5;
-
+x7 = x5; # Return x5
