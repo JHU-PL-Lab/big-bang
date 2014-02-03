@@ -1,4 +1,4 @@
-# EXPECT: `A `B 4
+# EXPECT: `A `B ref 4
 
 # Build a scape to update the deep cell
 x1 = { p1 = ();
@@ -9,7 +9,7 @@ x1 = { p1 = ();
        p6 = `A p5;
      } ->
      { y1 = 4;
-       y2 = <- p3 x1;
+       y2 = <- p3 y1;
      };
 # Build a `A `B ref 4
 x2 = 0;

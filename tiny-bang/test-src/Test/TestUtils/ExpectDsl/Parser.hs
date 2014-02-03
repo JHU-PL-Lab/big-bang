@@ -57,6 +57,7 @@ onionParser = do
 primaryParser :: Parser DeepOnionPredicate
 primaryParser =
       labelParser
+  </> refParser
   </> primitiveParser
   </> consume TokOpenParen *> predicateParser <* consume TokCloseParen
 
@@ -72,6 +73,16 @@ labelParser = do
     demandLabel :: LabelName -> DeepOnionPredicate -> DeepOnionPredicate
     demandLabel n inner onion =
       fromMaybe False $ inner <$> Map.lookup n (deepLabels onion)
+
+refParser :: Parser DeepOnionPredicate
+refParser = do
+  consume TokRef
+  inner <- primaryParser
+  return $ demandRef inner
+  where
+    demandRef :: DeepOnionPredicate -> DeepOnionPredicate
+    demandRef inner onion =
+      fromMaybe False $ inner <$> deepRef onion
 
 primitiveParser :: Parser DeepOnionPredicate
 primitiveParser =

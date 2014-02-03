@@ -1,4 +1,4 @@
-# EXPECT: `A 4
+# EXPECT: `A ref 4
 
 # Initial scape
 x1 = { p1 = ();

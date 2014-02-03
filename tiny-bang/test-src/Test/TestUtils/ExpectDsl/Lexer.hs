@@ -22,6 +22,7 @@ data Token
   | TokLitInt Integer
   | TokLitChar Char
   | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
+  | TokRef -- ^@ref@
   | TokScapes -- ^@scapes@
   | TokTypeFail -- ^@typefail@
   deriving (Eq, Ord, Show)
@@ -75,6 +76,7 @@ reservedWords :: [Parser Token]
 reservedWords =
   map (\(s, t) -> string s *> notFollowedBy identChar *> pure t)
     [ ("scapes", TokScapes)
+    , ("ref", TokRef)
     , ("typefail", TokTypeFail)
     ]
 
