@@ -47,7 +47,7 @@ type MatchResult db = (TypeOrVar db, Maybe (Type db, (TVar, db)))
 matches :: (ConstraintDatabase db, Display db)
         => TVar -> TVar -> TVar -> db -> [MatchResult db]
 matches callSiteVar a0 a1 db =
-  runMatchesM (matchesInternal (mktov a0) a1) callSiteVar db
+  runMatchesM (matchesInternal (mktov a0) (mktov a1)) callSiteVar db
 
 newtype MatchesM db a
   = MatchesM
@@ -90,13 +90,13 @@ runMatchesM x callSiteVar =
 --  and the list of scapes already visited by this procedure.  It also handles
 --  non-determinism.
 matchesInternal :: forall db. (ConstraintDatabase db, Display db)
-                => TypeOrVar db -> TVar -> MatchesM db (MatchResult db)
-matchesInternal tov0 a1 =
+                => TypeOrVar db -> TypeOrVar db -> MatchesM db (MatchResult db)
+matchesInternal tov0 tov1 =
   bracketLogM _debugI
     (display $ text "Checking matches for function" <+> makeDoc tov0 <+>
-               text "and argument" <+> makeDoc a1)
+               text "and argument" <+> makeDoc tov1)
     (\(slc, mout) -> display $ text "Matching of function" <+> makeDoc tov0 <+>
-                               text "and argument" <+> makeDoc a1 <+>
+                               text "and argument" <+> makeDoc tov1 <+>
       case mout of
         Nothing -> text "failed with slice" <+> makeDoc slc
         Just (tfn, _) -> text "succeeded with slice" <+> makeDoc slc <+>
@@ -106,18 +106,31 @@ matchesInternal tov0 a1 =
     db <- askDb
     t <- postLogM _debugI
           (\t -> display $ text "Checking matches for chosen function" <+>
-                           makeDoc t <+> text "and argument" <+> makeDoc a1) $
+                           makeDoc t <+> text "and argument" <+> makeDoc tov1) $
           choose $ queryLowerBoundsOfTypeOrVar db tov0
     alreadyVisited <- Set.member t <$> visitedScapes <$> get
-    if alreadyVisited then return (mktov a1, Nothing) else
+    if alreadyVisited then return (tov1, Nothing) else
       case t of
         TScape a' patdb a bodydb -> do
           modify $ \s -> s { visitedScapes = Set.insert t $ visitedScapes s }
-          ccc <- CompatibilityCallContext tov0 a1 <$> (matchesCallSiteVar <$> ask)
-          (argt,mbinds) <- choose $ compatibility ccc a1 db a' patdb
+          ccc <- CompatibilityCallContext tov0 tov1 <$>
+                    (matchesCallSiteVar <$> ask)
+          (argt,mbinds) <- choose $ compatibility ccc tov1 db a' patdb
           return (mktov argt, (t,) <$> (a,) . CDb.union bodydb <$> mbinds) 
         TOnion a2 a3 -> do
-          r <- matchesInternal a2 a1
-          if isJust $ snd r then return r else matchesInternal a3 a1
+          {- PERF: do something to prevent duplicate work
+              e.g. let f and g be functions with pattern int and let fOrG be
+                   their union; let h be a function with pattern char; then
+                     (fOrG & h) 'z'
+                   will slice the argument once for f and once for g,
+                   propagating both back to h independently; this could be quite
+                   expensive if the onion is quite deep (e.g. object with
+                   dynamic mixin) and is definitely redundant if the slices are
+                   the same
+          -}
+          r <- matchesInternal a2 tov1
+          if isJust $ snd r
+            then return r
+            else matchesInternal a3 $ fst r
         _ ->
-          return (mktov a1, Nothing)
+          return (tov1, Nothing)

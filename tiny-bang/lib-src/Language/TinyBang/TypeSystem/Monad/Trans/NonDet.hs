@@ -24,7 +24,8 @@ import Data.Foldable
 import Language.TinyBang.TypeSystem.Monad.Trans.CReader
 
 -- |A datatype for constraint flow computations.
-newtype NonDetT m a = NonDetT (ListT m a)
+newtype NonDetT m a
+  = NonDetT (ListT m a)
   deriving (Monad, Functor, Applicative, MonadTrans, MonadPlus)
   
 -- |Expands the underlying flow computation into its results.

@@ -10,7 +10,7 @@ import Language.TinyBang.TypeSystem.Types
 data ConstraintHistory db
   = DerivedFromSource SourceElement
       -- ^Describes a constraint generated during initial derivation.
-  | CompatibilityWiring (TypeOrVar db) TVar TVar
+  | CompatibilityWiring (TypeOrVar db) (TypeOrVar db) TVar
       -- ^Describes a constraint generated from a compatibility check.  The
       --  arguments are the scape, argument, and call site which inspired the
       --  compatibility check, respectively.

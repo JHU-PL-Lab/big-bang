@@ -33,7 +33,7 @@ type CompatibilityConstraints db = (ConstraintDatabase db, Display db)
 data CompatibilityCallContext db
   = CompatibilityCallContext
       { cxtCallScapeTypeOrVar :: TypeOrVar db
-      , cxtCallArgVar :: TVar
+      , cxtCallArgTypeOrVar :: TypeOrVar db
       , cxtCallSiteVar :: TVar
       }
   deriving (Eq, Ord, Show)
@@ -60,14 +60,14 @@ data CompatibilityCallContext db
 -}
 compatibility :: (CompatibilityConstraints db)
               => CompatibilityCallContext db
-              -> TVar
+              -> TypeOrVar db
               -> db
               -> TVar
               -> db
               -> [CompatibilityResult db]
-compatibility ccc argVar argDb patVar patDb =
+compatibility ccc argTypeOrVarVar argDb patVar patDb =
   map fst $ runCompatibilityM ccc argDb patDb $
-    captureBindings (mktov argVar) patVar
+    captureBindings argTypeOrVarVar patVar
 
 newtype CompatibilityM db a
   = CompatibilityM
@@ -112,7 +112,9 @@ captureBindings tov0 a0' = do
   ((t,f),vars) <- internalCompatibility tov0 a0'
   ccc <- callContext <$> ask
   let h = CompatibilityWiring
-            (cxtCallScapeTypeOrVar ccc) (cxtCallArgVar ccc) (cxtCallSiteVar ccc)
+            (cxtCallScapeTypeOrVar ccc)
+            (cxtCallArgTypeOrVar ccc)
+            (cxtCallSiteVar ccc)
   let newBindings = map ((.: h) . (t <:)) $ Set.toList vars
   let f' = CDb.union (CDb.fromList newBindings) <$> f
   return ((t, f'), Set.empty)
