@@ -1,4 +1,4 @@
-module Test.TinyBang.ExpectDsl.Data
+module Test.TestUtils.ExpectDsl.Data
 ( Expectation(..)
 , DeepOnionPredicate
 ) where

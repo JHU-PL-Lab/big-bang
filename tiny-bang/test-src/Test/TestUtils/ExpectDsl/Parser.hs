@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, ExistentialQuantification #-}
 
-module Test.TinyBang.ExpectDsl.Parser
+module Test.TestUtils.ExpectDsl.Parser
 ( parseValueDsl
 , DeepOnionPredicate
 ) where
@@ -18,8 +18,8 @@ import Text.Parsec.Pos
 import Language.TinyBang.Ast
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Utils.Parser.Parsec
-import Test.TinyBang.ExpectDsl.Lexer
-import Test.TinyBang.ExpectDsl.Data
+import Test.TestUtils.ExpectDsl.Lexer
+import Test.TestUtils.ExpectDsl.Data
 
 -- |A function to parse the value DSL's tokens into a predicate function which
 --  matches against @DeepValue@ structures.  If this is successful, the result

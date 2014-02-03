@@ -16,8 +16,8 @@ import Test.Framework.Providers.HUnit
 
 import Language.TinyBang.Utils.Logger
 import Options
-import qualified Test.Data.NFA as NFA
-import qualified Test.TinyBang.Language.TypeSystem.Contours as Contours
+import qualified Test.TinyBang.TypeSystem.NFA as NFA
+import qualified Test.TinyBang.TypeSystem.Contours as Contours
 import qualified Test.TinyBang.SourceFile as SourceFile
 
 testsM :: IO [Test]

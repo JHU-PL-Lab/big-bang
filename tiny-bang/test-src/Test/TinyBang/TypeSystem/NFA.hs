@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module Test.Data.NFA
+module Test.TinyBang.TypeSystem.NFA
 ( tests
 ) where
 

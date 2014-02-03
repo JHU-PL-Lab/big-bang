@@ -21,7 +21,7 @@ import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Parser
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
 import Language.TinyBang.TypeSystem.TypeInference
-import Test.TinyBang.ExpectDsl
+import Test.TestUtils.ExpectDsl
 
 testsPath :: FilePath
 testsPath = "tests"

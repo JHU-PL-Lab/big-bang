@@ -1,7 +1,7 @@
 {-|
   This test module tests the basic functionality of the contour operations.
 -}
-module Test.TinyBang.Language.TypeSystem.Contours
+module Test.TinyBang.TypeSystem.Contours
 ( tests
 ) where
 
