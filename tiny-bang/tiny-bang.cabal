@@ -21,7 +21,8 @@ library
                    hslogger,
                    deepseq,
                    bytestring,
-                   aeson
+                   aeson,
+                   stable-memo
   ghc-options:     -Wall
   exposed-modules: 
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
