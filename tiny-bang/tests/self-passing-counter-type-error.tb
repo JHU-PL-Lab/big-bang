@@ -17,7 +17,7 @@ x1 = { p1self = ()
                      p6 = `False p5;
                    } ->
                    { # Induce a type error within the recursion!
-                     x8 = 0;
+                     x8 = ();
                      x9 = - p2 x8;
                      x10 = p1self p1self;
                      x11 = x10 x9;
