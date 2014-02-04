@@ -47,6 +47,22 @@ class (Eq db, Ord db, Monoid db) => ConstraintDatabase db where
   --  for those named in the provided bound variables set.  This can used for a
   --  capture-avoiding susbtitution.
   polyinstantiate :: Contour -> db -> db
+  
+  -- ### Performance functions by contract
+  -- |Adds a new constraint to the database.  This function is potentially
+  --  more efficient than 'add', but the caller is obligated to ensure that,
+  --  in the provided constraint, every type variable either has no contour
+  --  or has a contour which already appears in this constraint database.
+  --  Failure to do so may result in this constraint database violating the
+  --  invariant that all appearing contours are disjoint.
+  addWithExistingContours :: Constraint db -> db -> db
+  -- |Unions two constraint databases.  This function is potentially more
+  --  efficient than 'union', but the caller must ensure that every type
+  --  variable appearing in the second database either has no contour
+  --  or has a contour which already appears in this constraint database.
+  --  Failure to do so may result in this constraint database violating the
+  --  invariant that all appearing contours are disjoint.
+  unionWithExistingContours :: db -> db -> db
 
   -- ### Convenience functions
   empty = mempty

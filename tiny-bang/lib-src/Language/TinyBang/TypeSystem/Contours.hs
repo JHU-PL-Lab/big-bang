@@ -112,7 +112,9 @@ subsumedBy' cn1 cn2 =
 
 -- | Defines contour overlap as specified in the TinyBang language document.
 overlap :: Contour -> Contour -> Bool
-overlap cn1 cn2 =
+overlap = memo2 overlap'
+overlap' :: Contour -> Contour -> Bool
+overlap' cn1 cn2 =
   not $ NFA.isEmpty $ NFA.intersect (contourNfa cn1) (contourNfa cn2)
   
 -- | Extends a contour with a single variable element.  If this causes the

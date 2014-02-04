@@ -61,13 +61,16 @@ calculateClosureStep db =
         sepDoc (char ',') $ map makeDoc $ catMaybes $ Set.toList $
           Set.map contourOfVar $ query db QueryAllTVars))
     (\result -> display $ text "Finished closure step:" <+> makeDoc result) $
-    foldr CDb.union db $ concatMap (`runClosureStepM` db) rules
+    foldr ($) db $ map mergeStep rules
   where
-    rules :: [ClosureStepM db db]
+    mergeStep :: (ClosureStepM db db, db -> db -> db) -> db -> db
+    mergeStep (step, unionFn) db' =
+      foldr unionFn db' $ runClosureStepM step db'
+    rules :: [(ClosureStepM db db, db -> db -> db)]
     rules =
-      [ closeTransitivity
-      , closeApplication
-      , closeBuiltin
+      [ (closeTransitivity, CDb.unionWithExistingContours)
+      , (closeApplication, CDb.union)
+      , (closeBuiltin, CDb.unionWithExistingContours)
       ]
 
 closeTransitivity :: (ConstraintDatabase db, Display db) => ClosureStepM db db

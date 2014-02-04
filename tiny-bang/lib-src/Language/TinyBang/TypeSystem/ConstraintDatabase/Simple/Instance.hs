@@ -37,6 +37,10 @@ instance ConstraintDatabase SimpleConstraintDatabase where
     let db' = SimpleConstraintDatabase $ Set.insert c $
                 unSimpleConstraintDatabase db in
     contourReplaceVars cCntrs db'
+    
+  addWithExistingContours = add
+
+  unionWithExistingContours = union
 
   query db q =
     let cs = unSimpleConstraintDatabase db in
