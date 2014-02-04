@@ -28,10 +28,10 @@ x13 = `C x12;
 x14 = x13 & x11;
 # Now attempt to match on the conjunction
 x15 = { p5 = ();
-	p6 = `A p5;
-	p7 = ();
-	p8 = `B p7;
-	p9 = p6 & p8;
+        p6 = `A p5;
+        p7 = ();
+        p8 = `B p7;
+        p9 = p6 & p8;
       } ->
       { x16 = 0;
       };
