@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cabal configure && cabal build && cabal build --ghc-options='-prof -auto-all -osuf p_o -hisuf p_hi'
