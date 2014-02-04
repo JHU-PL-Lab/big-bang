@@ -178,53 +178,64 @@ internalCompatibilityFixedPatternType
     -> Type db
     -> CompatibilityM db (InternalCompatibilityResult db)
 internalCompatibilityFixedPatternType tov0 a0' t0' =
-  -- We proceed based on the type of pattern.
-  case t0' of
-    TOnion tov1' tov2' -> do
-      -- A conjunction pattern.  We must match both sides.
-      ((t1,f1),vs1) <- internalCompatibility tov0 (insistVar tov1')
-      ((t2,f2),vs2) <- internalCompatibility (mktov t1) (insistVar tov2')
-      return ((t2, CDb.union <$> f1 <*> f2), vs1 `Set.union` vs2)
-    _ -> do
-      -- It's not a conjunction pattern, so we can select a concrete lower bound
-      -- now.
-      t0 <- choose =<< queryLowerBoundsOfTypeOrVar <$> (argdb <$> ask) <*>
-              return tov0
-      let failure = return ((t0, Nothing), Set.empty)
-      case (t0, t0') of
-        (_, TOnion _ _) ->
-          error "TOnion pattern should have been captured in previous case!"
-        (_, TEmptyOnion) ->
-          return ((t0, Just CDb.empty), Set.singleton a0')
-        (TEmptyOnion, _) ->
-          failure
-        (TPrimitive p, TPrimitive p') | p == p' ->
-          return ((t0, Just CDb.empty), Set.empty)
-        (TPrimitive _, _) ->
-          failure
-        (TLabel n tov1, TLabel n' tov1') | n == n' ->
-          mapSlice (TLabel n . mktov) <$>
-            captureBindings tov1 (insistVar tov1')
-        (TLabel _ _, _) ->
-          failure
-        (TRef a1, TRef a1') -> do
-          -- TODO: update this part if/when the model of state changes
-          --   Currently, this code is just discarding the slice of the type
-          --   under the cell.
-          ((_,mdb),cs) <- captureBindings (mktov a1) a1'
-          return ((TRef a1, mdb), cs)
-        (TRef _, _) ->
-          failure
-        (TOnion tov1 tov2, _) -> do
-          r <- internalCompatibilityFixedPatternType tov1 a0' t0'
-          if isJust $ snd $ fst r
-            then mapSlice (flip TOnion tov2 . mktov) <$> return r
-            else mapSlice (TOnion tov1 . mktov) <$>
-                    internalCompatibilityFixedPatternType tov2 a0' t0'
-        (TScape{}, _) ->
-          -- At the moment, the only thing which can match a scape is the empty
-          -- onion pattern.
-          failure
+  bracketLogM _debugI
+    (display $ text "Checking type compatibility of" <+> makeDoc tov0 <+>
+               text "with pattern" <+> makeDoc t0')
+    (\r -> display $
+        text "Type compatibility of" <+>
+          makeDoc tov0 <+> text "with pattern" <+> makeDoc t0' <+>
+          text "at slice" <+> makeDoc (fst $ fst r) <+>
+          case (snd $ fst r) of
+            Just cs -> text "gave binding constraints" <+> makeDoc cs
+            Nothing -> text "was unsuccessful")
+    $
+    -- We proceed based on the type of pattern.
+    case t0' of
+      TOnion tov1' tov2' -> do
+        -- A conjunction pattern.  We must match both sides.
+        ((t1,f1),vs1) <- internalCompatibility tov0 (insistVar tov1')
+        ((t2,f2),vs2) <- internalCompatibility (mktov t1) (insistVar tov2')
+        return ((t2, CDb.union <$> f1 <*> f2), vs1 `Set.union` vs2)
+      _ -> do
+        -- It's not a conjunction pattern, so we can select a concrete lower bound
+        -- now.
+        t0 <- choose =<< queryLowerBoundsOfTypeOrVar <$> (argdb <$> ask) <*>
+                return tov0
+        let failure = return ((t0, Nothing), Set.empty)
+        case (t0, t0') of
+          (_, TOnion _ _) ->
+            error "TOnion pattern should have been captured in previous case!"
+          (_, TEmptyOnion) ->
+            return ((t0, Just CDb.empty), Set.singleton a0')
+          (TEmptyOnion, _) ->
+            failure
+          (TPrimitive p, TPrimitive p') | p == p' ->
+            return ((t0, Just CDb.empty), Set.empty)
+          (TPrimitive _, _) ->
+            failure
+          (TLabel n tov1, TLabel n' tov1') | n == n' ->
+            mapSlice (TLabel n . mktov) <$>
+              captureBindings tov1 (insistVar tov1')
+          (TLabel _ _, _) ->
+            failure
+          (TRef a1, TRef a1') -> do
+            -- TODO: update this part if/when the model of state changes
+            --   Currently, this code is just discarding the slice of the type
+            --   under the cell.
+            ((_,mdb),cs) <- captureBindings (mktov a1) a1'
+            return ((TRef a1, mdb), cs)
+          (TRef _, _) ->
+            failure
+          (TOnion tov1 tov2, _) -> do
+            r <- internalCompatibilityFixedPatternType tov1 a0' t0'
+            if isJust $ snd $ fst r
+              then mapSlice (flip TOnion tov2 . mktov) <$> return r
+              else mapSlice (TOnion tov1 . mktov) <$>
+                      internalCompatibilityFixedPatternType tov2 a0' t0'
+          (TScape{}, _) ->
+            -- At the moment, the only thing which can match a scape is the empty
+            -- onion pattern.
+            failure
   where
     -- TODO: deprecate this function by using static typing to ensure that
     --       patterns never contain deep types.

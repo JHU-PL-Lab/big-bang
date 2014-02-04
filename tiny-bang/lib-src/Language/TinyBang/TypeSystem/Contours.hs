@@ -21,6 +21,7 @@ module Language.TinyBang.TypeSystem.Contours
 import Data.Function
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.StableMemo
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Utils.Display
@@ -53,9 +54,19 @@ data Contour =
     }
 
 instance Eq Contour where
-  (==) = (==) `on` contourStrands
+  a == b =
+    ((==) `on` contourStrands) a b ||
+    (a `subsumedBy` b && b `subsumedBy` a)
 instance Ord Contour where
-  compare = compare `on` contourStrands
+  compare a b =
+    let ab = a `subsumedBy` b in
+    let ba = b `subsumedBy` a in
+    case (ab,ba) of
+      (True,True) -> EQ
+      (True,False) -> LT
+      (False,True) -> GT
+      (False,False) ->
+        (compare `on` contourStrands) a b
 instance Show Contour where
   show = show . contourStrands
   
@@ -71,7 +82,7 @@ unPossibleContour (PossibleContour mcntr) = mcntr
 initialContour :: Contour
 initialContour =
   Contour
-    { contourStrands = Set.singleton $
+    { contourStrands = Set.singleton
         ContourStrand
           { contourParts = []
           , appearingElements = Set.empty
@@ -89,7 +100,9 @@ noContour = PossibleContour Nothing
 --   In particular, this routine asks if the first argument is subsumed by the
 --   second.
 subsumedBy :: Contour -> Contour -> Bool
-subsumedBy cn1 cn2 =
+subsumedBy = memo2 subsumedBy'
+subsumedBy' :: Contour -> Contour -> Bool
+subsumedBy' cn1 cn2 =
   let answer =
         NFA.isEmpty $ NFA.subtract (contourNfa cn1) (contourNfa cn2)
       message = "Contour subsumption check: " ++ display cn2 ++
@@ -106,7 +119,9 @@ overlap cn1 cn2 =
 --   contour to become ill-formed, it is then folded into the least well-formed
 --   contour.
 extend :: Var -> Contour -> Contour
-extend x cntr =
+extend = memo2 extend'
+extend' :: Var -> Contour -> Contour
+extend' x cntr =
   let newStrands = Set.map extendStrand $ contourStrands cntr in
   if any (elmt `Set.member`) $ map appearingElements $ Set.toList $
         contourStrands cntr
@@ -133,7 +148,7 @@ extend x cntr =
             }
         else
           ContourStrand
-            { contourParts = (++ [SinglePart elmt]) $ contourParts strand
+            { contourParts = contourParts strand ++ [SinglePart elmt]
             , appearingElements = Set.insert elmt $ appearingElements strand
             }
     collapse :: [ContourPart] -> [ContourPart]
@@ -167,10 +182,16 @@ extend x cntr =
 -- | Unions a contour with another contour.
 union :: Contour -> Contour -> Contour
 union cntr1 cntr2 =
-  Contour
-    { contourStrands = contourStrands cntr1 `Set.union` contourStrands cntr2
-    , contourNfa = contourNfa cntr1 `NFA.union` contourNfa cntr2
-    }
+  case () of
+    _ | cntr1 `subsumedBy` cntr2 -> cntr2
+    _ | cntr2 `subsumedBy` cntr1 -> cntr1
+    _ ->
+      -- PERF: introduce a notion of subsumption on individual strands so we can
+      --       eliminate redundant strands 
+      Contour
+        { contourStrands = contourStrands cntr1 `Set.union` contourStrands cntr2
+        , contourNfa = contourNfa cntr1 `NFA.union` contourNfa cntr2
+        }
 
 -- * Display instances
 

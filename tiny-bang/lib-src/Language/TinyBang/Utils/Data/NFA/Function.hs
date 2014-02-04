@@ -162,11 +162,11 @@ isEmpty =
     (\(FunctionNfa _ ias _) -> ias)
     (\(FunctionNfa _ _ tr) -> tr)
 
-epsilonEliminatingTransition :: forall st sy. (Ord st, Ord sy)
+epsilonFollowingTransition :: forall st sy. (Ord st, Ord sy)
                              => FunctionNfa st sy
                              -> st
                              -> Map sy (Set st)
-epsilonEliminatingTransition nfa st =
+epsilonFollowingTransition nfa st =
   examine (Set.singleton st) st
   where
     examine :: Set st -> st -> Map sy (Set st)
@@ -181,39 +181,28 @@ epsilonEliminatingTransition nfa st =
             Map.unionsWith Set.union $
               map (examine $ avoid `Set.union` stS) $
                 Set.toList $ stS `Set.difference` avoid
-
+                
 subtract :: forall st1 st2 sy. (Ord sy)
          => FunctionNfa st1 sy
          -> FunctionNfa st2 sy
-         -> FunctionNfa (st1, Maybe st2) sy
-subtract nfa1@(FunctionNfa is1 ias1 tr1) nfa2@(FunctionNfa is2 ias2 _) =
+         -> FunctionNfa (st1, Set st2) sy
+subtract nfa1@(FunctionNfa is1 ias1 _) nfa2@(FunctionNfa is2 ias2 _) =
   -- We model each state as the product of the first NFA state and Maybe the
   -- second NFA state.  If the second state is not accepting or the second
   -- state is Nothing (due to an invalid transition of the second NFA), then
   -- an accepting state from the first NFA is still accepting in the result.
   FunctionNfa
-    { funInitialStates =
-        Set.fromList [ (st1, Just st2)
-                     | st1 <- Set.toList is1
-                     , st2 <- Set.toList is2 ]
+    { funInitialStates = Set.map (,is2) is1
     , funIsAcceptingState = \st ->
-        ias1 (fst st) && not (maybe False ias2 (snd st))
-    , funTransitions = \(st1, mst2) ->
-        case mst2 of
-          Nothing -> Map.map (Set.map (,Nothing)) $ tr1 st1
-          Just st2 ->
-            let m1 = epsilonEliminatingTransition nfa1 st1 in
-            let m2 = epsilonEliminatingTransition nfa2 st2 in
-            Map.fromList $ map
-                      (\(sy,st1's) -> (Just sy,) $ Set.fromList
-                        [ (st1',mst2')
-                        | st1' <- Set.toList st1's
-                        , mst2' <- case Map.lookup sy m2 of
-                                    Just st2's -> map Just $ Set.toList st2's
-                                    Nothing -> [Nothing]
-                        ]
-                      ) $
-                      Map.toList m1 
+        ias1 (fst st) && not (any ias2 $ Set.toList $ snd st)
+    , funTransitions = \(st1, st2s) ->
+        let m1 = epsilonFollowingTransition nfa1 st1 in
+        let m2 = Map.unionsWith Set.union $
+                  map (epsilonFollowingTransition nfa2) $ Set.toList st2s in
+        Map.mapKeys Just $
+          Map.mergeWithKey
+            (\_ sts1' sts2' -> Just $ Set.map (,sts2') sts1')
+            (Map.map $ Set.map (,Set.empty)) (const Map.empty) m1 m2
     }
 
 intersect :: forall st1 st2 sy. (Ord sy)
@@ -228,8 +217,8 @@ intersect nfa1@(FunctionNfa is1 ias1 _) nfa2@(FunctionNfa is2 ias2 _) =
                      , st2 <- Set.toList is2 ]
     , funIsAcceptingState = \st -> ias1 (fst st) && ias2 (snd st)
     , funTransitions = \(st1, st2) ->
-        let m1 = epsilonEliminatingTransition nfa1 st1 in
-        let m2 = epsilonEliminatingTransition nfa2 st2 in
+        let m1 = epsilonFollowingTransition nfa1 st1 in
+        let m2 = epsilonFollowingTransition nfa2 st2 in
         let joinStateSets ss1 ss2 =
               Set.fromList
                 [ (st1',st2')

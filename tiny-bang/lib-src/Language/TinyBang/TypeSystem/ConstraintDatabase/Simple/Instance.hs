@@ -32,16 +32,19 @@ instance Monoid SimpleConstraintDatabase where
 
 instance ConstraintDatabase SimpleConstraintDatabase where
   add c db =
-    let newVars = findAllVars c in
-    let newCntrs = Set.fromList $ mapMaybe contourOfVar $ Set.toList newVars in
-    contourReplaceVars newCntrs $
-      SimpleConstraintDatabase $ Set.insert c $ unSimpleConstraintDatabase db
+    let cCntrs = Set.map fromJust $ Set.filter isJust $ Set.map contourOfVar $
+                    findAllVars db in
+    let db' = SimpleConstraintDatabase $ Set.insert c $
+                unSimpleConstraintDatabase db in
+    contourReplaceVars cCntrs db'
 
   query db q =
     let cs = unSimpleConstraintDatabase db in
     case q of
       QueryAllConstraints ->
         cs
+      QueryAllTVars ->
+        findAllVars db
       QueryAllFreeTVars ->
         findFreeVars db
       QueryAllTypesLowerBoundingTVars -> Set.fromList $ do

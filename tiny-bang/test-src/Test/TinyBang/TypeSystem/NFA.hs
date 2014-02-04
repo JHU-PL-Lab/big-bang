@@ -61,6 +61,22 @@ example6 =
   NFA.oneOf ['a','b'] `NFA.concatenate`
   NFA.kleeneStar (NFA.singleton 'b') `NFA.concatenate`
   NFA.singleton 'c'
+  
+{-|@
+  (1) --a--> ((2)) --b,c--> ((3))
+               ^              |
+               |              |
+                \------------/
+@-}
+example7 :: TestNfa
+example7 = NFA.singleton 'a' `NFA.concatenate`
+            NFA.kleeneStar (NFA.oneOf ['b','c'])
+
+{-|@
+  (1) --a--> 2 --b--> 3 --c--> ((4))
+@-}
+example8 :: TestNfa
+example8 = foldl1 NFA.concatenate $ map NFA.singleton ['a','b','c']
 
 -- |The tests for this module.
 tests :: Test
@@ -71,6 +87,9 @@ tests =
       ex4 = ("example4",example4)
       ex5 = ("example5",example5)
       ex6 = ("example6",example6)
+      ex7 = ("example7",example7)
+      ex8 = ("example8",example8)
+      emptyStr = ("emptyString",NFA.emptyString)
       ex1or2 = ("ex1|ex2", example1 `NFA.union` example2)
       ex1and2 = ("ex1&ex2", example1 `NFA.intersect` example2)
       ex2and3 = ("ex2&ex3", example2 `NFA.intersect` example3)
@@ -79,6 +98,7 @@ tests =
       ex1and6 = ("ex1&ex6", example1 `NFA.intersect` example6)
       ex2and6 = ("ex2&ex6", example2 `NFA.intersect` example6)
       ex3and6 = ("ex3&ex6", example3 `NFA.intersect` example6)
+      ex7or8 = ("ex7|ex8", example7 `NFA.union` example8)
   in
   TestList
     [ TestLabel "Simple acceptance" $ TestList $
@@ -107,7 +127,7 @@ tests =
             [ "abc", "abbbbc", "ac" ]
             [ "bc", "bbbc", "abcd", "acc", "acb", "" ]
     , TestLabel "Emptiness" $ TestList $
-            map (emptinessTest False) [ex1,ex2,ex3,ex4]
+            map (emptinessTest False) [ex1,ex2,ex3,ex4,ex6,ex7,ex8]
         ++  [ emptinessTest True ex5
             , emptinessTest False ex1or2
             , emptinessTest False ex1and2
@@ -117,7 +137,22 @@ tests =
             , emptinessTest True ex1and6
             , emptinessTest False ex2and6
             , emptinessTest False ex3and6
+            , emptinessTest False ex7or8
             ]
+    , TestLabel "Subtraction" $ TestList $
+        let merger ((s,a), (t,b)) =
+              (s ++ " - " ++ t, a `NFA.subtract` b) in
+            map (emptinessTest False . merger)
+              [ (ex7or8, ex8)
+              , (ex7, ex8)
+              , (ex7or8, ex8)
+              , (emptyStr, ex1)
+              , (ex1, emptyStr)
+              ]
+        ++  map (emptinessTest True . merger)
+              [ (ex7, ex7or8)
+              , (ex8, ex7or8)
+              ]
     ]
   
 genContainTests :: (Show sy, Ord sy)
@@ -138,4 +173,4 @@ emptinessTest empt (name,nfa) =
   TestLabel (makeMsg empt)
       $ test $ assertBool (makeMsg $ not empt) $ NFA.isEmpty nfa == empt
   where
-    makeMsg b = name ++ " is " ++ (if b then "not " else "") ++ "empty"
+    makeMsg b = name ++ " is " ++ (if b then "" else "not ") ++ "empty"

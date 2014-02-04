@@ -8,6 +8,8 @@ module Language.TinyBang.TypeSystem.Closure.Rules
 
 import Control.Applicative
 import Control.Monad
+import Data.Maybe
+import qualified Data.Set as Set
 
 import Language.TinyBang.TypeSystem.Closure.Basis
 import Language.TinyBang.TypeSystem.Closure.Builtins
@@ -44,8 +46,20 @@ calculateClosure db =
 calculateClosureStep :: forall db. (ConstraintDatabase db, Display db)
                      => db -> db
 calculateClosureStep db =
+  {- TODO: global debugging mode
+    In general, we are conflating debug /logging/ and debug /mode/.  If we were
+    in debug /mode/, we would look at the contours present in the constraint set
+    and verify that they were disjoint; if they aren't disjoint, we would /log/
+    an error.  But this is an expensive computation; in this way, the debug mode
+    mentioned here would be similar to Java's "enable assertions".  So yeah; we
+    should have a one of those.
+  -}
   bracketLog _debugI
-    (display $ text "Calculating closure step for:" <+> makeDoc db)
+    (display $
+      text "Calculating closure step for:" </> align (indent 2 $ makeDoc db) </>
+      text "Closure step contours present:" </> align (indent 2 $
+        sepDoc (char ',') $ map makeDoc $ catMaybes $ Set.toList $
+          Set.map contourOfVar $ query db QueryAllTVars))
     (\result -> display $ text "Finished closure step:" <+> makeDoc result) $
     foldr CDb.union db $ concatMap (`runClosureStepM` db) rules
   where

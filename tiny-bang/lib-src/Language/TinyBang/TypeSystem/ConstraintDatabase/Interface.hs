@@ -65,6 +65,7 @@ class (Eq db, Ord db, Monoid db) => ConstraintDatabase db where
   A data type describing the forms of query which can be executed against a
   constraint database.  The queries are as follows:
     * @QueryAllConstraints@: all constraints appearing in the database.
+    * @QueryAllTVars@: all type variables appearing anywhere in the database
     * @QueryAllFreeTVars@: all free type variables appearing in the database.
     * @QueryAllTypesLowerBoundingTVars@: constraints of the form "t <: a"
     * @QueryAllApplications@: constraints of the form "a1 a2 <: a3"
@@ -75,6 +76,7 @@ class (Eq db, Ord db, Monoid db) => ConstraintDatabase db where
 -}
 data ConstraintQuery db r where
   QueryAllConstraints :: ConstraintQuery db (Constraint db)
+  QueryAllTVars :: ConstraintQuery db TVar
   QueryAllFreeTVars :: ConstraintQuery db TVar
   QueryAllTypesLowerBoundingTVars :: ConstraintQuery db (Type db, TVar)
   QueryAllApplications :: ConstraintQuery db (TVar, TVar, TVar)
