@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, ConstraintKinds #-}
 
 {-|
   This module defines a function which determines the free variables in a set of
@@ -6,6 +6,7 @@
 -}
 module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FreeVars
 ( findFreeVars
+, FindFreeVarsable
 
 , createFindFreeVarsInstances
 ) where
@@ -19,6 +20,8 @@ import Language.Haskell.TH as TH
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Types as TBT
 import Language.TinyBang.Utils.TemplateHaskell.Reduce
+
+type FindFreeVarsable a = (Reduce FindFreeVars a FindFreeVarsResult)
 
 findFreeVars :: (Reduce FindFreeVars a FindFreeVarsResult)
              => a -> Set TVar

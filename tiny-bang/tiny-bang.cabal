@@ -79,9 +79,6 @@ library
                    Language.TinyBang.Utils.Data.NFA.Function,
                    Language.TinyBang.Utils.Data.NFA.Utils,
                    Language.TinyBang.Utils.Data.NFA.Generalized,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars,
                    Language.TinyBang.Interpreter.Builtins,
                    Language.TinyBang.Utils.Projection,
                    Language.TinyBang.TypeSystem.Closure.Basis,
@@ -93,7 +90,9 @@ library
                    Language.TinyBang.Utils.Logger.Operations,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FreeVars,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.ReplaceVars,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.Polyinst
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.Polyinst,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FindVars,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.LinearQuery
 
 executable tiny-bang
   hs-source-dirs:  interp-src
