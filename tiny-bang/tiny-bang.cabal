@@ -69,8 +69,6 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
                    Language.TinyBang.TypeSystem.ConstraintHistory,
                    Language.TinyBang.TypeSystem.Constraints,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FreeVars,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Polyinst,
                    Language.TinyBang.TypeSystem.Compatibility,
                    Language.TinyBang.TypeSystem.Matching,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils,
@@ -81,7 +79,6 @@ library
                    Language.TinyBang.Utils.Data.NFA.Function,
                    Language.TinyBang.Utils.Data.NFA.Utils,
                    Language.TinyBang.Utils.Data.NFA.Generalized,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.ReplaceVars,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Instance,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FindVars,
@@ -93,7 +90,10 @@ library
                    Language.TinyBang.Utils.Logger,
                    Language.TinyBang.Utils.Logger.Config,
                    Language.TinyBang.Utils.Logger.Generators,
-                   Language.TinyBang.Utils.Logger.Operations
+                   Language.TinyBang.Utils.Logger.Operations,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FreeVars,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.ReplaceVars,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.Polyinst
 
 executable tiny-bang
   hs-source-dirs:  interp-src

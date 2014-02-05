@@ -4,24 +4,26 @@
   This module defines a function which determines the free variables in a set of
   constraints.
 -}
-module Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.FreeVars
+module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FreeVars
 ( findFreeVars
+
+, createFindFreeVarsInstances
 ) where
 
 import Control.Applicative
 import Data.Monoid
 import Data.Set (Set)
-
 import qualified Data.Set as Set
+import Language.Haskell.TH as TH
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple.Data
 import Language.TinyBang.TypeSystem.Constraints
-import Language.TinyBang.TypeSystem.Types
+import Language.TinyBang.TypeSystem.Types as TBT
 import Language.TinyBang.Utils.TemplateHaskell.Reduce
 
-findFreeVars :: SimpleConstraintDatabase -> Set TVar
+findFreeVars :: (Reduce FindFreeVars a FindFreeVarsResult)
+             => a -> Set TVar
 findFreeVars cs =
-  snd $ reduce FindFreeVars cs
+  let (free,bound) = reduce FindFreeVars cs in free `Set.difference` bound
 
 data FindFreeVars = FindFreeVars
 
@@ -34,13 +36,8 @@ $(concat <$> mapM (defineCatInstance [t|FindFreeVarsResult|] ''FindFreeVars)
 
 $(defineCommonCatInstances [t|FindFreeVarsResult|] ''FindFreeVars)
 
-instance Reduce FindFreeVars SimpleConstraintDatabase FindFreeVarsResult where
-  reduce ffv db =
-    let (free,bound) = reduce ffv $ unSimpleConstraintDatabase db in
-    (free `Set.difference` bound, Set.empty)
-
-instance Reduce FindFreeVars (Constraint SimpleConstraintDatabase)
-            FindFreeVarsResult where
+instance (Reduce FindFreeVars db FindFreeVarsResult)
+      => Reduce FindFreeVars (Constraint db) FindFreeVarsResult where
   reduce ffv c = case c of
     TypeConstraint _ t a ->
       reduce ffv t `mappend` (Set.empty, Set.singleton a)
@@ -54,8 +51,8 @@ instance Reduce FindFreeVars (Constraint SimpleConstraintDatabase)
     InconsistencyConstraint _ _ ->
       (Set.empty, Set.empty)
 
-instance Reduce FindFreeVars (Type SimpleConstraintDatabase)
-            FindFreeVarsResult where
+instance (Reduce FindFreeVars db FindFreeVarsResult)
+      => Reduce FindFreeVars (TBT.Type db) FindFreeVarsResult where
   reduce ffv t = case t of
     TEmptyOnion -> (Set.empty, Set.empty)
     TPrimitive _ -> (Set.empty, Set.empty)
@@ -64,8 +61,7 @@ instance Reduce FindFreeVars (Type SimpleConstraintDatabase)
     TOnion tov1 tov2 -> reduce ffv tov1 `mappend` reduce ffv tov2
     TScape a' cs' a cs ->
       let (patFree, patBound) =
-            reduce ffv a' `mappend`
-              reduce ffv (unSimpleConstraintDatabase cs') in
+            reduce ffv a' `mappend` reduce ffv cs' in
       let (exprFree, exprBound) =
             reduce ffv a `mappend` reduce ffv cs in
       -- Calculate the variables which are free in this scape.
@@ -75,3 +71,9 @@ instance Reduce FindFreeVars (Type SimpleConstraintDatabase)
 
 instance Reduce FindFreeVars TVar FindFreeVarsResult where
   reduce _ a = (Set.singleton a, Set.empty)
+
+-- |A routine to define an appropriate catamorphism for the wrapper of a set
+--  of constraints.
+createFindFreeVarsInstances :: Name -> Q [Dec]
+createFindFreeVarsInstances =
+  defineCatInstance [t|FindFreeVarsResult|] ''FindFreeVars
