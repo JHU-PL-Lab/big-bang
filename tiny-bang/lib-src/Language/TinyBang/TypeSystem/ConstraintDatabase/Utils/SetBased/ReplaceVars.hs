@@ -23,6 +23,7 @@ import Language.TinyBang.TypeSystem.ConstraintHistory
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours as Cntr
 import Language.TinyBang.TypeSystem.Types as TBT
+import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger
 import Language.TinyBang.Utils.TemplateHaskell.Transform
@@ -71,14 +72,13 @@ instance Transform ReplaceVars Contour where
                                 else Nothing) $
             Set.toList cntrs
     in
-    -- TODO: only do the multiplicity check if we're in debug mode (which
-    --       hasn't been implemented yet!)
-    case replacements of
-      [] -> cntr' -- The new contours don't replace this one
-      [cntr''] -> cntr'' -- We found a replacement contour
-      _ -> error $ display $ text "Multiple replacements for contour" <+>
-                    makeDoc cntr' <+> text "have been found:" <+>
-                    makeDoc replacements
+    assertWithMessage
+      (display $ text "Multiple replacements for contour" <+> makeDoc cntr' <+>
+                 text "have been found:" <> line <>
+                 indent 2 (align $
+                    sepDoc (char ',' <> line) $ map makeDoc replacements))
+      (length replacements < 2) $
+      fromMaybe cntr' $ listToMaybe replacements
 
 -- |Defines an instance of variable replacement for a set-based constraint
 --  database.

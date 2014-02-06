@@ -12,8 +12,9 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed
 import Control.Monad
 import Data.EitherR
 import Data.IndexedSet as IS
+import Data.List
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void
@@ -28,6 +29,7 @@ import Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.ReplaceVar
 import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours as Cntr
 import Language.TinyBang.TypeSystem.Types as TBT
+import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger
 import Language.TinyBang.Utils.TemplateHaskell.Reduce
@@ -138,6 +140,7 @@ instance Display IndexedConstraintDatabase where
 instance Monoid IndexedConstraintDatabase where
   mempty = IndexedConstraintDatabase IS.empty
   mappend db1 db2 =
+    assertWellFormed $
     either absurd id $ runEitherR $
       do -- EitherR
         let db1cs = unIndexedConstraintDatabase db1
@@ -180,11 +183,13 @@ instance ConstraintDatabase IndexedConstraintDatabase where
     mappend db $ IndexedConstraintDatabase $ IS.singleton c
   
   addWithExistingContours c db =
-    IndexedConstraintDatabase $ IS.insert c $ unIndexedConstraintDatabase db
+    assertWellFormed $
+      IndexedConstraintDatabase $ IS.insert c $ unIndexedConstraintDatabase db
 
   unionWithExistingContours a b =
-    IndexedConstraintDatabase $
-      unIndexedConstraintDatabase a `IS.union` unIndexedConstraintDatabase b
+    assertWellFormed $
+      IndexedConstraintDatabase $
+        unIndexedConstraintDatabase a `IS.union` unIndexedConstraintDatabase b
 
   polyinstantiate = polyinst
   
@@ -237,3 +242,33 @@ instance Transform ReplaceVars IndexedConstraintDatabase where
 -- |Declares a free variable reduction for the indexed constriant database.
 instance Reduce FindFreeVars IndexedConstraintDatabase FindFreeVarsResult where
   reduce ffv db = reduce ffv $ IS.toSet $ unIndexedConstraintDatabase db
+
+-- Assertion utilities ---------------------------------------------------------
+
+-- |Ensures that the database is "well-formed" -- that is, that none of the
+--  contours appearing within it overlap with each other.
+assertWellFormed :: IndexedConstraintDatabase -> IndexedConstraintDatabase
+assertWellFormed db =
+  -- We'll do this by forming a list of assertion functions and then chaining
+  -- them together.  Then, any arriving argument must trigger all of these
+  -- functions in sequence in order to make it to the other side.
+  let cntrs = Set.toList $ Set.map fromJust $ Set.filter isJust $
+                Set.map contourOfVar $ findAllVars db in
+  (foldl (.) id $ map ensureNoneOverlapping $ inits cntrs) db
+  where
+    ensureNotOverlapping :: Contour -> Contour -> a -> a
+    ensureNotOverlapping cn1 cn2 =
+      assertWithMessage
+        (display $
+          text "Two contours in the same indexed constraint database overlapped!" <> line <>
+          (indent 2 $ align $
+            text "Contour 1:" <+> makeDoc cn1 <> line <> 
+            text "Contour 2:" <+> makeDoc cn2 <> line <>
+            text "Database: " <+> makeDoc db))
+        (not $ cn1 `overlap` cn2)
+    ensureNoneOverlapping :: [Contour] -> a -> a
+    ensureNoneOverlapping cntrs =
+      case cntrs of
+        [] -> id
+        _:[] -> id
+        cntr:cntrs' -> foldl1 (.) $ map (ensureNotOverlapping cntr) cntrs'

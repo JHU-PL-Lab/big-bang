@@ -58,6 +58,8 @@ defOpts = Options { noTypecheck = def
                         &= help "Performs batch mode operations."
                   , assertions = def
                         &= name "enable-assertions"
+                        &= name "ea"
+                        &= name "A"
                         &= explicit
                         &= help ("Enables assertion checking.  This will only "
                               ++ "function correctly if assertions were "
@@ -99,8 +101,10 @@ main = do
     ioError $ userError "Logging configuration failed."
   configureLoggingHandlers
   
-  when (assertions opts) enableAssertions
-
+  when (assertions opts) $ do
+    enableAssertions
+    print "Assertions enabled!"
+  
   if batchMode opts     
     then do 
       

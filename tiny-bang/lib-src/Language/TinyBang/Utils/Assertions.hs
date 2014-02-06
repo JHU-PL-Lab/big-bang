@@ -16,9 +16,7 @@ module Language.TinyBang.Utils.Assertions
 , assertWithMessage
 ) where
 
-import Control.Applicative
 import qualified Control.Exception as E
-import Control.Monad
 import Data.IORef
 import System.IO.Unsafe
 
@@ -26,18 +24,20 @@ import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
 
-assertionState :: IO (IORef Bool)
-assertionState = newIORef False
+assertionState :: IORef Bool
+assertionState = unsafePerformIO $ newIORef False
 
 staticAssertionsEnabled :: IO Bool
 staticAssertionsEnabled =
-  E.catch (assert False $ return False) (\(E.AssertionFailed _) -> return True)
+  E.catch
+    (E.assert False $ return False)
+    (\(E.AssertionFailed _) -> return True)
 
 enableAssertions :: IO ()
 enableAssertions = do
   sae <- staticAssertionsEnabled
   if sae
-    then join $ writeIORef <$> assertionState <*> return True
+    then writeIORef assertionState True
     else ioError $ userError
             "Attempted to enable assertions, but assertions not compiled in."
 
@@ -50,7 +50,7 @@ assert b =
   E.assert $
     -- Using if-then-else rather than short-circuiting operators here to make
     -- our assumptions explicit.
-    if unsafePerformIO $ join $ readIORef <$> assertionState
+    if unsafePerformIO $ readIORef assertionState
       then b
       else True {- assertions are disabled; don't evaluate the check -}
 
@@ -63,7 +63,7 @@ assertWithMessage msg b =
   E.assert $
     -- Using if-then-else rather than short-circuiting operators here to make
     -- our assumptions explicit.
-    if unsafePerformIO $ join $ readIORef <$> assertionState
+    if unsafePerformIO $ readIORef assertionState
       then
         if b
           then True -- Assertion successful

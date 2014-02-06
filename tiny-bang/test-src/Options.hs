@@ -149,7 +149,7 @@ tinyBangTestOptions =
     in
     Option [] ["db"] (ReqArg parse "impl")
       "execute tests using database implementation (one of: [simple] indexed)"
-  , Option [] ["enable-assertions"]
+  , Option "A" ["ea", "enable-assertions"]
       (NoArg $ Right $ mempty {staticAssertions = Just True})
       "enable static assertions (must be compiled in)"
   ]
