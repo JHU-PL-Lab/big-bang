@@ -49,7 +49,7 @@ defOpts = Options { noTypecheck = def
                         &= help ("Selects the constraint database "
                               ++ "implementation.  This must be one of the "
                               ++ "following: "
-                              ++ "simple")
+                              ++ "[simple] indexed")
                   , batchMode = def
                         &= name "batch-mode"
                         &= explicit
@@ -77,6 +77,7 @@ makeEval opts = do
   where
     typeFromName dbname = case dbname of
       "simple" -> Just Simple
+      "indexed" -> Just Indexed
       "" -> Just Simple -- default if none is specified
       _ -> Nothing
 

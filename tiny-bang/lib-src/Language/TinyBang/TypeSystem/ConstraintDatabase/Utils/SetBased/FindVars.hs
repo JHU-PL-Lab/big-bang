@@ -8,6 +8,7 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FindVars
 ( findAllVars
 , FindAllVarsable
 
+, FindAllVars(..)
 , createFindAllVarsInstances
 ) where
 

@@ -7,6 +7,7 @@
 module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.Polyinst
 ( polyinst
 
+, PolyInst
 , createPolyinstInstances
 ) where
 

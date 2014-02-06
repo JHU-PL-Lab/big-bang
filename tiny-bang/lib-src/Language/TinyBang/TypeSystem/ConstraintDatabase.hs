@@ -8,6 +8,7 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase
 ( module X
 ) where
 
+import Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed as X
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Interface as X
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple as X
 import Language.TinyBang.TypeSystem.ConstraintDatabase.Utils as X

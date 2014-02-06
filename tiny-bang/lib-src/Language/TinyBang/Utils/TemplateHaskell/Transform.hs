@@ -132,17 +132,21 @@ defineHomFuncX fname tname dname = do
     makeBranch :: Name -> Con -> Q Match
     makeBranch tagName con =
       case con of
-        NormalC cname typs -> do
+        NormalC cname typs -> conMatch cname $ length typs
+        RecC cname vtyps -> conMatch cname $ length vtyps
+        _ -> error $ "defineHomFunc: " ++ show con
+              ++ " is not a normal or record constructor"
+      where
+        conMatch :: Name -> Int -> Q Match
+        conMatch cname numTyps = do
           -- get some names for the argument variables
-          argNames <- mapM (newName . ("x" ++) . show) [1..(length typs)]
+          argNames <- mapM (newName . ("x" ++) . show) [1..numTyps]
           -- the pattern is now pretty straightforward
           let pattern = conP cname $ map varP argNames
           -- the body is slightly more involved
           let trans nm = [|transform $(varE tagName) $(varE nm)|]
           let e = foldl appE (conE cname) $ map trans argNames
           match pattern (normalB e) []
-        _ -> error $ "defineHomFunc: " ++ show con
-              ++ " is not a normal constructor"
 
 -- |Creates a common identity instance for @Transform@.
 defineTransformIdentityInstance :: Name -> Name -> Q [Dec]

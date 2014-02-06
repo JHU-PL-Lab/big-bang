@@ -70,8 +70,9 @@ getDataArgTypes info = do
     typesOfCon :: Con -> [Type]
     typesOfCon con = case con of
       NormalC _ sts -> map snd sts
+      RecC _ vsts -> map (\(_,_,t) -> t) vsts
       _ -> error $ "getDataArgTypes: " ++ show con
-            ++ " is not a normal constructor"
+            ++ " is not a normal or record constructor"
             
 -- |Retrieves data constructors for a type info.
 getConstructors :: Info -> Q [Con]

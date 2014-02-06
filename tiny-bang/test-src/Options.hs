@@ -11,6 +11,7 @@ module Options
 
 import Control.Applicative
 import Data.Either
+import Data.Either.Combinators
 import Data.Monoid
 import System.Console.GetOpt
 import System.Environment
@@ -18,6 +19,7 @@ import System.Exit
 import System.Log
 import Test.Framework
 
+import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.Utils.Logger
 
 {-
@@ -74,8 +76,8 @@ data TinyBangTestOptions =
   TinyBangTestOptions
   { loggerInstructions :: Maybe [LoggerInstruction]
   , sourceFileOnlyByName :: Maybe (Maybe String)
+  , emptyDatabase :: Maybe SomeDisplayableConstraintDatabase
   }
-  deriving (Eq, Ord, Show)
   
 instance Monoid TinyBangTestOptions where
   mempty =
@@ -83,12 +85,14 @@ instance Monoid TinyBangTestOptions where
     TinyBangTestOptions
     { loggerInstructions = Nothing
     , sourceFileOnlyByName = Nothing
+    , emptyDatabase = Nothing
     }
   mappend x y =
     -- Operations here to join two defined sets of behavior
     TinyBangTestOptions
     { loggerInstructions = mappendBy (++) loggerInstructions
     , sourceFileOnlyByName = mappendBy preferJustRight sourceFileOnlyByName
+    , emptyDatabase = mappendBy (flip const) emptyDatabase
     }
     where
       mappendBy :: (a -> a -> a) -> (TinyBangTestOptions -> Maybe a) -> Maybe a
@@ -112,6 +116,8 @@ defaultOptions =
   TinyBangTestOptions
   { loggerInstructions = Just []
   , sourceFileOnlyByName = Just Nothing
+  , emptyDatabase = Just $ SomeDisplayableConstraintDatabase $
+                      (CDb.empty :: IndexedConstraintDatabase)
   }
 
 -- |The getOpt descriptions for this program.
@@ -128,6 +134,17 @@ tinyBangTestOptions =
   , let parse s = Right $ mempty {sourceFileOnlyByName = Just $ Just s } in 
     Option [] ["sf-only"] (ReqArg parse "filename")
       "execute only source file tests matching the provided filename"
+  , let parse s =
+          mapRight (\db -> mempty {emptyDatabase = Just db}) $
+          case s of
+            "simple" -> Right $ SomeDisplayableConstraintDatabase $
+                          (CDb.empty :: SimpleConstraintDatabase)
+            "indexed" -> Right $ SomeDisplayableConstraintDatabase $
+                          (CDb.empty :: IndexedConstraintDatabase)
+            _ -> Left $ "Unrecognized database name: " ++ s
+    in
+    Option [] ["db"] (ReqArg parse "impl")
+      "execute tests using database implementation (one of: [simple] indexed)"
   ]
   
 -- |Lifts an existing @OptDescr@ to a new space.

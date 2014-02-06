@@ -8,6 +8,8 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FreeVars
 ( findFreeVars
 , FindFreeVarsable
 
+, FindFreeVars
+, FindFreeVarsResult
 , createFindFreeVarsInstances
 ) where
 

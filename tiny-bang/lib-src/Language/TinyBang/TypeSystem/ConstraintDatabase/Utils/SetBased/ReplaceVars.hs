@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances #-}
 
 {-|
   This module defines a mechanism for replacing all variables in a set of
@@ -8,6 +8,7 @@
 module Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.ReplaceVars
 ( replaceVarsByContours
 
+, ReplaceVars(..)
 , createReplaceVarsInstances
 ) where
 
@@ -28,6 +29,8 @@ import Language.TinyBang.Utils.TemplateHaskell.Transform
 
 $(loggingFunctions)
 
+-- TODO: rename module to "ReplaceContours"
+
 -- |Defines a function which performs variable replacements using a given set of
 --  contours.  Any variable with a contour entirely subsumed by one in the
 --  provided set will have its contour replaced by that subsuming contour.  The
@@ -47,6 +50,8 @@ $(concat <$> mapM (defineHomInstance ''ReplaceVars)
                   , ''TypeOrVar
                   , ''ConstraintHistory
                   , ''ClosureRuleInstance
+                  , ''TVar
+                  , ''PossibleContour
                   ])
 $(concat <$> mapM (defineTransformIdentityInstance ''ReplaceVars)
                   [ ''Origin
@@ -54,28 +59,26 @@ $(concat <$> mapM (defineTransformIdentityInstance ''ReplaceVars)
                   , ''PrimitiveType
                   , ''SourceElement
                   , ''BuiltinOp
+                  , ''Var
                   ])
 $(defineCommonHomInstances ''ReplaceVars)
 
-instance Transform ReplaceVars TVar where
-  transform (ReplaceVars cntrs) (TVar x pcntr) =
-    TVar x $ PossibleContour $ mightReplace <$> unPossibleContour pcntr
-    where
-      mightReplace cntr' =
-        let replacements =
-              mapMaybe (\cntr -> if cntr' `subsumedBy` cntr
-                                    then Just cntr
-                                    else Nothing) $
-                Set.toList cntrs
-        in
-        -- TODO: only do the multiplicity check if we're in debug mode (which
-        --       hasn't been implemented yet!)
-        case replacements of
-          [] -> cntr' -- The new contours don't replace this one
-          [cntr''] -> cntr'' -- We found a replacement contour
-          _ -> error $ display $ text "Multiple replacements for contour" <+>
-                        makeDoc cntr' <+> text "have been found:" <+>
-                        makeDoc replacements
+instance Transform ReplaceVars Contour where
+  transform (ReplaceVars cntrs) cntr' =
+    let replacements =
+          mapMaybe (\cntr -> if cntr' `subsumedBy` cntr
+                                then Just cntr
+                                else Nothing) $
+            Set.toList cntrs
+    in
+    -- TODO: only do the multiplicity check if we're in debug mode (which
+    --       hasn't been implemented yet!)
+    case replacements of
+      [] -> cntr' -- The new contours don't replace this one
+      [cntr''] -> cntr'' -- We found a replacement contour
+      _ -> error $ display $ text "Multiple replacements for contour" <+>
+                    makeDoc cntr' <+> text "have been found:" <+>
+                    makeDoc replacements
 
 -- |Defines an instance of variable replacement for a set-based constraint
 --  database.

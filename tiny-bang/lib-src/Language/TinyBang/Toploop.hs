@@ -43,11 +43,8 @@ data InterpreterResult
 --       use these as well and unit tests shouldn't need the toploop, right?
 data ConstraintDatabaseType
   = Simple
+  | Indexed
 
-data DummyDatabase where
-  DummyDatabase :: forall db. (CDb.ConstraintDatabase db, Display db)
-                => db -> DummyDatabase
-  
 data InterpreterConfiguration
   = InterpreterConfiguration
     { typechecking :: Bool
@@ -164,7 +161,7 @@ instance (Display db) => Display (InterpreterError db) where
 stringyInterpretSource :: InterpreterConfiguration -> String -> String
 stringyInterpretSource interpConf exprSrc =
   case emptyDatabaseFromType $ databaseType interpConf of
-    DummyDatabase dummy ->
+    CDb.SomeDisplayableConstraintDatabase dummy ->
       case interpretSource dummy interpConf exprSrc of
         Left err -> display err
         Right (InterpreterResult x vs) ->
@@ -175,7 +172,13 @@ stringyInterpretSource interpConf exprSrc =
             Right value -> display value
 
 -- |Creates an empty database of a recognized type.
-emptyDatabaseFromType :: ConstraintDatabaseType -> DummyDatabase
+emptyDatabaseFromType :: ConstraintDatabaseType
+                      -> CDb.SomeDisplayableConstraintDatabase
 emptyDatabaseFromType dbt = case dbt of
   Simple ->
-    DummyDatabase (CDb.empty :: CDb.SimpleConstraintDatabase)
+    CDb.SomeDisplayableConstraintDatabase
+      (CDb.empty :: CDb.SimpleConstraintDatabase)
+  Indexed ->
+    CDb.SomeDisplayableConstraintDatabase
+      (CDb.empty :: CDb.IndexedConstraintDatabase)
+

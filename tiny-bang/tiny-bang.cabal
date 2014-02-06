@@ -22,7 +22,8 @@ library
                    deepseq,
                    bytestring,
                    aeson,
-                   stable-memo
+                   stable-memo,
+                   void
   ghc-options:     -Wall
   exposed-modules: 
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
@@ -92,7 +93,12 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.ReplaceVars,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.Polyinst,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.FindVars,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.LinearQuery
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Utils.SetBased.LinearQuery,
+                   Data.IndexedSet,
+                   Data.IndexedSet.Class,
+                   Data.IndexedSet.Common,
+                   Data.IndexedSet.TemplateHaskell,
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed
 
 executable tiny-bang
   hs-source-dirs:  interp-src
@@ -133,6 +139,7 @@ executable tests
                    errors,
                    hslogger,
                    bytestring,
-                   aeson
+                   aeson,
+                   either
   ghc-options:     -Wall
   other-modules:   Options

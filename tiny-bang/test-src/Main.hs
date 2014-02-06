@@ -20,13 +20,6 @@ import qualified Test.TinyBang.TypeSystem.NFA as NFA
 import qualified Test.TinyBang.TypeSystem.Contours as Contours
 import qualified Test.TinyBang.SourceFile as SourceFile
 
-testsM :: IO [Test]
-testsM = sequence
-  [ return $ testGroup "NFA tests" $ hUnitTestToTests NFA.tests
-  , return $ testGroup "Contour tests" $ hUnitTestToTests Contours.tests
-  , testGroup "source file tests" <$> hUnitTestToTests <$> SourceFile.tests
-  ]  
-
 -- |The main for the TinyBang unit tests.  We accept more options than the
 --  default test runner, so we have to bolt into the side of test-framework and
 --  parse its options.  This is accomplished by building our own getOpt options
@@ -40,16 +33,32 @@ main = do
     Left (msg,exitcode) -> do
       putStrLn msg
       exitWith exitcode
-    Right (tfOpts,k3tOpts) -> do
-      -- ## First, process K3 tester options
+    Right (tfOpts,tbOpts) -> do
+      -- ## First, process TinyBang tester options
       -- Logger options first
-      let loggerSettings = fromJust $ loggerInstructions k3tOpts
+      let loggerSettings = fromJust $ loggerInstructions tbOpts
       mconcat <$> mapM configureByInstruction loggerSettings
       -- The type system override next
-      let typeSystemFilter = fromJust $ sourceFileOnlyByName k3tOpts
-      -- ## Then run the test-framework main
-      tests' <- case typeSystemFilter of
-                  Nothing -> testsM
-                  Just filename ->
-                    hUnitTestToTests <$> SourceFile.filteredTests filename
-      defaultMainWithOpts tests' tfOpts
+      let typeSystemFilter = fromJust $ sourceFileOnlyByName tbOpts
+      -- Fetch the empty database
+      let emptyDb = fromJust $ emptyDatabase tbOpts
+      -- Build the source file options
+      let sfOpts = SourceFile.SourceFileTestConfig
+                    { SourceFile.sftFilter = typeSystemFilter
+                    , SourceFile.sftDatabase = emptyDb 
+                    }
+      -- Construct the appropriate source file tests
+      let sfTests = sequence
+                      [ testGroup "source file tests" <$> hUnitTestToTests <$>
+                          SourceFile.generateTests sfOpts
+                      ]
+      -- Construct the other tests
+      let otherTests = return
+            [ testGroup "NFA tests" $ hUnitTestToTests NFA.tests
+            , testGroup "Contour tests" $ hUnitTestToTests Contours.tests
+            ]
+      -- Build the test list
+      tests <- case typeSystemFilter of
+                  Nothing -> concat <$> sequence [otherTests, sfTests]
+                  Just _ -> sfTests
+      defaultMainWithOpts tests tfOpts
