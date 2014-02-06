@@ -103,7 +103,7 @@ main = do
   
   when (assertions opts) $ do
     enableAssertions
-    print "Assertions enabled!"
+    putStrLn "Assertions enabled!"
   
   if batchMode opts     
     then do 
