@@ -7,6 +7,7 @@ module Main
 ) where
 
 import Control.Applicative ((<$>))
+import Control.Monad
 import Data.Monoid
 import Data.Maybe
 import System.Environment
@@ -14,6 +15,7 @@ import System.Exit
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
+import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Logger
 import Options
 import qualified Test.TinyBang.TypeSystem.NFA as NFA
@@ -38,6 +40,8 @@ main = do
       -- Logger options first
       let loggerSettings = fromJust $ loggerInstructions tbOpts
       mconcat <$> mapM configureByInstruction loggerSettings
+      -- Assertion options next
+      when (fromJust $ staticAssertions tbOpts) enableAssertions
       -- The type system override next
       let typeSystemFilter = fromJust $ sourceFileOnlyByName tbOpts
       -- Fetch the empty database

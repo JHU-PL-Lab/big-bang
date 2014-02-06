@@ -98,7 +98,8 @@ library
                    Data.IndexedSet.Class,
                    Data.IndexedSet.Common,
                    Data.IndexedSet.TemplateHaskell,
-                   Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed
+                   Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed,
+                   Language.TinyBang.Utils.Assertions
 
 executable tiny-bang
   hs-source-dirs:  interp-src

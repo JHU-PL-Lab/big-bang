@@ -77,6 +77,7 @@ data TinyBangTestOptions =
   { loggerInstructions :: Maybe [LoggerInstruction]
   , sourceFileOnlyByName :: Maybe (Maybe String)
   , emptyDatabase :: Maybe SomeDisplayableConstraintDatabase
+  , staticAssertions :: Maybe Bool
   }
   
 instance Monoid TinyBangTestOptions where
@@ -86,6 +87,7 @@ instance Monoid TinyBangTestOptions where
     { loggerInstructions = Nothing
     , sourceFileOnlyByName = Nothing
     , emptyDatabase = Nothing
+    , staticAssertions = Nothing
     }
   mappend x y =
     -- Operations here to join two defined sets of behavior
@@ -93,6 +95,7 @@ instance Monoid TinyBangTestOptions where
     { loggerInstructions = mappendBy (++) loggerInstructions
     , sourceFileOnlyByName = mappendBy preferJustRight sourceFileOnlyByName
     , emptyDatabase = mappendBy (flip const) emptyDatabase
+    , staticAssertions = mappendBy (flip const) staticAssertions
     }
     where
       mappendBy :: (a -> a -> a) -> (TinyBangTestOptions -> Maybe a) -> Maybe a
@@ -116,8 +119,9 @@ defaultOptions =
   TinyBangTestOptions
   { loggerInstructions = Just []
   , sourceFileOnlyByName = Just Nothing
-  , emptyDatabase = Just $ SomeDisplayableConstraintDatabase $
+  , emptyDatabase = Just $ SomeDisplayableConstraintDatabase
                       (CDb.empty :: IndexedConstraintDatabase)
+  , staticAssertions = Just False
   }
 
 -- |The getOpt descriptions for this program.
@@ -145,6 +149,9 @@ tinyBangTestOptions =
     in
     Option [] ["db"] (ReqArg parse "impl")
       "execute tests using database implementation (one of: [simple] indexed)"
+  , Option [] ["enable-assertions"]
+      (NoArg $ Right $ mempty {staticAssertions = Just True})
+      "enable static assertions (must be compiled in)"
   ]
   
 -- |Lifts an existing @OptDescr@ to a new space.
