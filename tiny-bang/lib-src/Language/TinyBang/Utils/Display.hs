@@ -17,7 +17,6 @@ module Language.TinyBang.Utils.Display
 , module Text.PrettyPrint.Leijen
 , delimSepDoc
 , sepDoc
-, delimFillSep
 , binaryOpDoc
 , denseDisplay
 , render
@@ -83,19 +82,6 @@ delimSepDoc l r delim xs =
 sepDoc :: Doc -> [Doc] -> Doc
 sepDoc = delimSepDoc empty empty
 
--- |Defines a utility function for concatenation of elements.  The given list
---  will be concatenated by a separator and surrounded in delimiters.  The
---  elements will be indented under the open delimiter.  This packs elements
---  as efficiently as possible in a group in order to avoid wasting space.
-delimFillSep :: Doc -> Doc -> Doc -> [Doc] -> Doc
-delimFillSep l r delim xs =
-  let ds =
-        if null xs
-          then []
-          else (map (<> delim) $ init xs) ++ [last xs]
-  in
-  l <> nest (length $ render l) (fillSep ds <> r)
-
 -- |A binary version of @sepDoc@ which does makeDoc translation.
 binaryOpDoc :: (Display x, Display y, Display z) => x -> y -> z -> Doc
 binaryOpDoc x y z =
@@ -145,7 +131,7 @@ instance (Display a) => Display [a] where
     makeDoc = makeListDoc
 
 instance (Display a) => Display (Set a) where
-    makeDoc = delimFillSep lbrace rbrace comma . map makeDoc . Set.toList
+    makeDoc = delimSepDoc lbrace rbrace comma . map makeDoc . Set.toList
 
 instance (Display a) => Display (Maybe a) where
     makeDoc = maybe (text "Nothing") ((text "Just" <+>) . makeDoc)

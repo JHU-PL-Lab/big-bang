@@ -45,7 +45,12 @@ data ContourStrand =
     { contourParts :: [ContourPart]
     , appearingElements :: Set ContourElement
     }
-  deriving (Eq, Ord, Show)
+instance Eq ContourStrand where
+  (==) = (==) `on` contourParts
+instance Ord ContourStrand where
+  compare = compare `on` contourParts
+instance Show ContourStrand where
+  show = show . contourParts
 
 data Contour =
   Contour
@@ -54,19 +59,9 @@ data Contour =
     }
 
 instance Eq Contour where
-  a == b =
-    ((==) `on` contourStrands) a b ||
-    (a `subsumedBy` b && b `subsumedBy` a)
+  a == b = compare a b == EQ
 instance Ord Contour where
-  compare a b =
-    let ab = a `subsumedBy` b in
-    let ba = b `subsumedBy` a in
-    case (ab,ba) of
-      (True,True) -> EQ
-      (True,False) -> LT
-      (False,True) -> GT
-      (False,False) ->
-        (compare `on` contourStrands) a b
+  compare = compare `on` contourStrands
 instance Show Contour where
   show = show . contourStrands
   

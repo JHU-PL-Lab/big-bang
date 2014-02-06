@@ -37,7 +37,6 @@ $(concat <$> mapM (defineCatInstance [t|Set TVar|] ''FindAllVars)
                   , ''Inconsistency
                   , ''TBT.Type
                   , ''TypeOrVar
-                  , ''ConstraintHistory
                   , ''ClosureRuleInstance
                   ])
 $(concat <$> mapM (defineReduceEmptyInstance [t|Set TVar|] ''FindAllVars)
@@ -46,6 +45,10 @@ $(concat <$> mapM (defineReduceEmptyInstance [t|Set TVar|] ''FindAllVars)
                   , ''PrimitiveType
                   , ''SourceElement
                   , ''BuiltinOp
+                  , ''ConstraintHistory
+                      -- ConstraintHistory should be empty because FindAllVars
+                      -- is used to refer to variables which "appear" in the
+                      -- constraint; history is secondary.
                   ])
 $(defineCommonCatInstances [t|Set TVar|] ''FindAllVars)
 

@@ -44,7 +44,7 @@ main = do
       -- Assertion options next
       when (fromJust $ staticAssertions tbOpts) $ do
         enableAssertions
-        print "Assertions enabled!"
+        putStrLn "Assertions enabled!"
       -- The type system override next
       let typeSystemFilter = fromJust $ sourceFileOnlyByName tbOpts
       -- Fetch the empty database

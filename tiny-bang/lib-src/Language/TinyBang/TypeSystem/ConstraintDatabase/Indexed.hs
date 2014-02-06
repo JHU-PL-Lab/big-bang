@@ -12,7 +12,9 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed
 import Control.Monad
 import Data.EitherR
 import Data.IndexedSet as IS
+import Data.IndexedSet.Common
 import Data.List
+import qualified Data.Map as Map
 import Data.Maybe
 import Data.Monoid hiding ((<>))
 import Data.Set (Set)
@@ -146,36 +148,57 @@ instance Monoid IndexedConstraintDatabase where
         let db1cs = unIndexedConstraintDatabase db1
         let db2cs = unIndexedConstraintDatabase db2
         -- Start by calculating the contours in each database
-        let db1Cntrs = IS.query db1cs (QueryIxAllContours ())
-        let db2Cntrs = IS.query db2cs (QueryIxAllContours ())
+        let (db1Cntrs, db2Cntrs) = (contoursOfDb db1, contoursOfDb db2)
         -- If there are no novel contours, just use the easy implementation
-        when (Set.null $ db2Cntrs Set.\\ db1Cntrs) $
+        when (Set.null (db2Cntrs Set.\\ db1Cntrs)
+           || Set.null (db1Cntrs Set.\\ db2Cntrs) ) $
           succeed $ unionWithExistingContours db1 db2
-        -- Next, determine if any of the input contours overlap with each other
-        -- (in case an internally incoherent constraint was created, although
-        -- this should never happen)
-        let cntrs' = Set.map (`mergeIfOverlap` Set.toList db2Cntrs) db2Cntrs
-        {- PERF: if the new contours are wholly subsumed, we can do replacement
-                 on the constraint and then just addWithExistingContours
-        -}
+        -- Next, merge any overlapping contours
+        let allCntrs = Set.union db1Cntrs db2Cntrs
+        let mergedCntrs =
+              Set.map (`mergeIfOverlap` Set.toList allCntrs) allCntrs
+        -- And filter out any contours which are subsumed by the new ones
+        let disjointCntrs = Set.filter
+              (\cn -> not $ any (cn `strictlySubsumedBy`) $
+                        Set.toList mergedCntrs)
+              mergedCntrs
+        -- Also filter out any contours which we already know about
+        let interestingCntrs = Set.filter (`Set.member` allCntrs) disjointCntrs
         -- Create the new set of constraints (since the indices won't be useful
         -- anymore)
+        -- PERF: It's not impossible to reuse at least some of the indices,
+        --       even with the TH-generated indexed set.  But we'd have to
+        --       specialize that step.
         let cs = Set.union (IS.toSet db1cs) (IS.toSet db2cs)
-        -- Calculate the overlap for each of the existing contours with the
-        -- new ones
-        let cntrs'' = Set.map (`mergeIfOverlap` Set.toList db1Cntrs) cntrs'
+        -- Log the contours which have been found.  This can be done as a post
+        -- step because EitherR is strict enough.
+        _debugM $ display $
+          text "Unioning two indexed constraint databases:" <> line <>
+            indent 2 (align $
+              text "Contours in db1:  " <+> makeDoc db1Cntrs <> line <>
+              text "Contours in db2:  " <+> makeDoc db2Cntrs <> line <>
+              text "Merged contours:  " <+> makeDoc mergedCntrs <> line <>
+              text "Disjoint contours:" <+> makeDoc disjointCntrs <> line <>
+              text "Interesting contours:" <+> makeDoc interestingCntrs)
         -- This new set of contours is disjoint and each contour in it entirely
         -- subsumes any contour in the constraint database that it overlaps.
         -- Therefore, any contour in the database which overlaps a contour in
         -- this new set should be replaced by the latter contour.  Do that now.
         -- TODO: remove the following debug logs (or clean them up)
         succeed $ IndexedConstraintDatabase $ IS.fromSet $
-          replaceVarsByContours cntrs'' cs
+          replaceVarsByContours interestingCntrs cs
     where
       mergeIfOverlap :: Contour -> [Contour] -> Contour
       mergeIfOverlap cntr others =
         foldl Cntr.union cntr $
           filter (\cntr' -> overlap cntr cntr' && cntr /= cntr') others
+      strictlySubsumedBy :: Contour -> Contour -> Bool
+      strictlySubsumedBy cn1 cn2 =
+        postLog _debugI
+          (\r -> display $ text "Strict subsumption check: " <+> makeDoc cn1 <+>
+                  text (if r then "is" else "is not") <+>
+                  text "strictly subsumed by" <+> makeDoc cn2) $
+          cn1 `subsumedBy` cn2 && not (cn2 `subsumedBy` cn1)
 
 -- |Declares the 'ConstraintDatabase' instance for 'IndexedConstraintDatabase'.
 instance ConstraintDatabase IndexedConstraintDatabase where
@@ -245,6 +268,24 @@ instance Reduce FindFreeVars IndexedConstraintDatabase FindFreeVarsResult where
 
 -- Assertion utilities ---------------------------------------------------------
 
+-- |Fetches all of the contours appearing in an indexed constraint database.
+contoursOfDb :: IndexedConstraintDatabase -> Set Contour
+contoursOfDb db =
+  let cntrs =  IS.query (unIndexedConstraintDatabase db) $
+                  QueryIxAllContours () in
+  let cntrs' = Set.map fromJust $ Set.filter isJust $ Set.map contourOfVar $
+                  findAllVars $ IS.toSet $ unIndexedConstraintDatabase db in
+  assertWithMessage
+    (display $
+        text "Indexed constraint database has incorrect cached contour set:" <>
+        line <>
+        indent 2 (align $
+          text "Cached set:" <+> makeDoc cntrs <> line <>
+          text "Actual set:" <+> makeDoc cntrs'
+          ))
+    (cntrs == cntrs')
+    cntrs
+
 -- |Ensures that the database is "well-formed" -- that is, that none of the
 --  contours appearing within it overlap with each other.
 assertWellFormed :: IndexedConstraintDatabase -> IndexedConstraintDatabase
@@ -252,21 +293,26 @@ assertWellFormed db =
   -- We'll do this by forming a list of assertion functions and then chaining
   -- them together.  Then, any arriving argument must trigger all of these
   -- functions in sequence in order to make it to the other side.
-  let cntrs = Set.toList $ Set.map fromJust $ Set.filter isJust $
-                Set.map contourOfVar $ findAllVars db in
+  let cntrs = Set.toList $ contoursOfDb db in
   (foldl (.) id $ map ensureNoneOverlapping $ inits cntrs) db
   where
-    ensureNotOverlapping :: Contour -> Contour -> a -> a
-    ensureNotOverlapping cn1 cn2 =
+    ensureNotOverlapping :: Contour
+                         -> Contour
+                         -> IndexedConstraintDatabase
+                         -> IndexedConstraintDatabase
+    ensureNotOverlapping cn1 cn2 db' =
       assertWithMessage
         (display $
           text "Two contours in the same indexed constraint database overlapped!" <> line <>
           (indent 2 $ align $
             text "Contour 1:" <+> makeDoc cn1 <> line <> 
             text "Contour 2:" <+> makeDoc cn2 <> line <>
-            text "Database: " <+> makeDoc db))
+            text "Database: " <+> makeDoc db'))
         (not $ cn1 `overlap` cn2)
-    ensureNoneOverlapping :: [Contour] -> a -> a
+        db'
+    ensureNoneOverlapping :: [Contour]
+                          -> IndexedConstraintDatabase
+                          -> IndexedConstraintDatabase
     ensureNoneOverlapping cntrs =
       case cntrs of
         [] -> id
