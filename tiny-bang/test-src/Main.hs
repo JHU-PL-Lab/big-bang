@@ -40,6 +40,7 @@ main = do
       -- Logger options first
       let loggerSettings = fromJust $ loggerInstructions tbOpts
       mconcat <$> mapM configureByInstruction loggerSettings
+      configureLoggingHandlers
       -- Assertion options next
       when (fromJust $ staticAssertions tbOpts) $ do
         enableAssertions
