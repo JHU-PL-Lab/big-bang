@@ -12,9 +12,7 @@ module Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed
 import Control.Monad
 import Data.EitherR
 import Data.IndexedSet as IS
-import Data.IndexedSet.Common
 import Data.List
-import qualified Data.Map as Map
 import Data.Maybe
 import Data.Monoid hiding ((<>))
 import Data.Set (Set)
