@@ -10,7 +10,7 @@ import Debug.Trace
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Display (render, makeDoc)
+import Language.TinyBang.Utils.Display (render, makeDoc)
 import Test.HUnit
 
 -- | Utility functions for Lexer unit tests:
@@ -19,10 +19,6 @@ import Test.HUnit
 verbose :: Bool
 verbose = True
 
--- | Function for automating calls to lexTinyBangNested and unwrapping result
-testContext :: ParserContext
-testContext = ParserContext UnknownDocument "UnitTestDoc"
-
 -- | Takes a label, input, expected ouput and generates a TestCase for these values
 genUnitTest :: String -> String -> String -> Test
 genUnitTest label input expected = 
@@ -30,7 +26,7 @@ genUnitTest label input expected =
     then trace ("Test " ++ label ++ " parsed\n" ++ result ++ "\nInstead of\n" ++ expected ++ "\n") $ testCase
     else testCase
       where
-       result = render $ makeDoc $ parseTinyBangNested testContext =<< lexTinyBangNested "" input
+       result = render $ makeDoc $ parseTinyBangNested UnknownDocument =<< lexTinyBangNested "" input
        boolAnswer = result == expected
        testCase = TestCase $ assertBool label boolAnswer
 
@@ -51,7 +47,7 @@ parserTests = TestList
 
 -- | Test def expressions
 testDef :: Test
-testDef = genUnitTest "def expression" "def x = 1 in x" "def x = (1) in (x)"
+testDef = genUnitTest "def expression" "let x = 1 in x" "let x = (1) in (x)"
 
 -- | Test arithop associativity
 testArithOpAssoc :: Test

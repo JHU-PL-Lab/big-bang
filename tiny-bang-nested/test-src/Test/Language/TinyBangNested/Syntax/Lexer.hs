@@ -36,7 +36,7 @@ testEmpty = createLexerTest "Lexing empty string" "" []
 
 -- | Reserved Words
 testReservedWords :: Test
-testReservedWords = createLexerTest  "Lexing reserved words" "char int fun def in" [TokChar, TokInt, TokFun, TokDef, TokIn]
+testReservedWords = createLexerTest  "Lexing reserved words" "int fun let in" [TokInt, TokFun, TokLet, TokIn]
 
 -- | Identifiers
 testIdentifiers :: Test
@@ -48,9 +48,9 @@ testLiterals = createLexerTest "Lexing literals" "123 'a'" [TokLitInt 123, TokLi
 
 -- | Operators
 testOperators :: Test
-testOperators = createLexerTest "Lexing operators" "= -> & () ( ) &- &. &! + - == > >= < <= :" testOperatorsExpected
+testOperators = createLexerTest "Lexing operators" "= -> & () ( ) + - == >= <=" testOperatorsExpected
 testOperatorsExpected :: [Token]
-testOperatorsExpected = [TokIs, TokArrow, TokOnion, TokEmptyOnion, TokOpenParen, TokCloseParen, TokOnionSub, TokOnionProj, TokOnionSym, TokPlus, TokMinus, TokEq, TokGT, TokGTE, TokLT, TokLTE, TokColon]
+testOperatorsExpected = [TokIs, TokArrow, TokOnion, TokEmptyOnion, TokOpenParen, TokCloseParen, TokPlus, TokMinus, TokEq, TokGreaterEq, TokLessEq]
 
 
 

@@ -8,12 +8,12 @@ module Test.ATranslation.Translator
 import Debug.Trace
 import qualified Language.TinyBangNested.Ast.Data as TBN
 import qualified Language.TinyBang.Ast.Data as TBA
-import Language.TinyBang.Display
-import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Toploop
+import Language.TinyBang.Utils.Display
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Syntax.Lexer
-import Language.TinyBangNested.ATranslation.Translator
+import Language.TinyBangNested.ATranslator
 import Test.HUnit
 
 -- | Display unit tests?
@@ -36,7 +36,8 @@ runTest input expected = if (verbose && not boolAnswer)
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           result = (render $ makeDoc $ performTranslation =<< parseTinyBangNested testContext =<< lexTinyBangNested "" input)
+                           doc = UnknownDocument
+                           result = (render $ makeDoc $ return . aTranslate =<< parseTinyBangNested doc =<< lexTinyBangNested "" input)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 
@@ -50,9 +51,6 @@ filterWhiteSpace s = filter keepChar s
 
 testConfig :: InterpreterConfiguration
 testConfig = InterpreterConfiguration True True Simple
-
-testContext :: ParserContext
-testContext = ParserContext UnknownDocument "ATranslationUnitTests"
 
 aTranslationTests :: Test
 aTranslationTests = TestList 

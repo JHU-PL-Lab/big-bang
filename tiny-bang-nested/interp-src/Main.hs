@@ -3,8 +3,8 @@ module Main where
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Display
-import Language.TinyBangNested.ATranslation.Translator
+import Language.TinyBang.Utils.Display
+import Language.TinyBangNested.ATranslator
 
 import Language.TinyBang.Toploop
 import Data.List.Split
@@ -36,16 +36,13 @@ testConfig = InterpreterConfiguration True True Simple
 interpName :: String
 interpName = "Interpreter"
 
-interpContext :: ParserContext
-interpContext = ParserContext UnknownDocument "Interpreter"
-
 -- | Wrapper for evaluation
 eval :: String -> IO String
 eval input = 
   do 
-    let transResult = performTranslation =<< parseTinyBangNested interpContext =<< lexTinyBangNested "" input
+    let transResult = return . aTranslate =<< parseTinyBangNested UnknownDocument =<< lexTinyBangNested "" input
     case transResult of 
       Left x -> return x
       Right _ -> do  
                    let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
-                   return $ "\nTranslationn:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult
+                   return $ "\nTranslation:\n" ++  display transResult ++ "\n\nEvaluation:\n" ++ interpretResult

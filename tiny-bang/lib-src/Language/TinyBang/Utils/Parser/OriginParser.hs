@@ -9,10 +9,12 @@ module Language.TinyBang.Utils.Parser.OriginParser
 , origConstr2
 , origConstr3
 , origConstr4
+, origLeftAssocBinOp
 , originParser
 ) where
 
-import Control.Monad.Trans.Class
+import Control.Applicative hiding (many)
+import Control.Monad.Trans
 import Text.Parsec
 
 import Language.TinyBang.Ast.Origin
@@ -41,6 +43,19 @@ origConstr4 :: (PositionalParserConstraints s u m c t)
             -> ParsecT s u m (a1,a2,a3,a4)
             -> ParsecT s u m r
 origConstr4 constr = _origConstr (\o (a1,a2,a3,a4) -> constr o a1 a2 a3 a4)
+
+-- |Parses a left-associative binary operator.  The origin at each constructor
+--  call is the span covering that constructor's operands and operator.
+origLeftAssocBinOp :: (PositionalParserConstraints s u m c t)
+                   => (Origin -> a -> b -> a -> a)
+                   -> ParsecT s u m a
+                   -> ParsecT s u m b
+                   -> ParsecT s u m a
+origLeftAssocBinOp constr operand operator = do
+  firstOperand <- operand
+  operations <- many1 $ originParser $ (,) <$> operator <*> operand
+  return $ foldl (\op1 (o,(arg,op2)) -> constr o op1 arg op2)
+                 firstOperand operations
   
 _origConstr :: (PositionalParserConstraints s u m c t)
             => (Origin -> x -> r)
