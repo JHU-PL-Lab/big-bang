@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs, ExistentialQuantification, LambdaCase #-}
 
 {-|
-  This module loads the source file tests.
+  This Test.TinyBang.SourceFilefile tests.
 -}
 module Test.TinyBang.SourceFile
 ( tests
@@ -24,7 +24,7 @@ import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Parser
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.TypeInference
-import Test.TestUtils.ExpectDsl
+import Test.TinyBang.TestUtils.ExpectDsl
 
 testsPath :: FilePath
 testsPath = "tests"

@@ -4,7 +4,7 @@
   This module handles command-line options for the TinyBang unit test system.
 -}
 
-module Options
+module Test.TinyBang.Options
 ( parseOptions
 , TinyBangTestOptions(..)
 ) where

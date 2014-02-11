@@ -17,7 +17,7 @@ import Test.Framework.Providers.HUnit
 
 import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Logger
-import Options
+import Test.TinyBang.Options
 import qualified Test.TinyBang.TypeSystem.NFA as NFA
 import qualified Test.TinyBang.TypeSystem.Contours as Contours
 import qualified Test.TinyBang.SourceFile as SourceFile

@@ -23,8 +23,7 @@ library
                    bytestring,
                    aeson,
                    stable-memo,
-                   void,
-                   optparse-applicative
+                   void
   ghc-options:     -Wall
   exposed-modules: 
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
@@ -122,29 +121,3 @@ executable tiny-bang
                    aeson,
                    optparse-applicative
   ghc-options:     -Wall
-
-executable tests
-  hs-source-dirs:  test-src
-  main-is:         Main.hs
-  build-depends:   base >= 4,
-                   tiny-bang,
-                   containers,
-                   HUnit >= 1.2 && < 2,
-                   QuickCheck >= 2.4,
-                   test-framework >= 0.4.1,
-                   test-framework-quickcheck2,
-                   test-framework-hunit,
-                   mtl,
-                   filepath,
-                   directory,
-                   cmdargs,
-                   parsec,
-                   split,
-                   wl-pprint,
-                   errors,
-                   hslogger,
-                   bytestring,
-                   aeson,
-                   either
-  ghc-options:     -Wall
-  other-modules:   Options

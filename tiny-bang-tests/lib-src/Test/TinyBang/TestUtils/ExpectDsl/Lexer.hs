@@ -2,7 +2,7 @@
   This module provides a Parsec lexer for the value DSL.
 -}
 
-module Test.TestUtils.ExpectDsl.Lexer
+module Test.TinyBang.TestUtils.ExpectDsl.Lexer
 ( lexValueDsl
 , Token(..)
 , PositionalToken(..)

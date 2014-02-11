@@ -1,0 +1,41 @@
+name:           tiny-bang-tests
+version:        0.1
+cabal-version:  >= 1.8
+build-type:     Simple
+author:         Zachary Palmer
+
+library
+  hs-source-dirs:  lib-src
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   parsec,
+                   containers,
+                   mtl,
+                   HUnit,
+                   filepath,
+                   directory,
+                   split,
+                   test-framework,
+                   hslogger,
+                   either
+  ghc-options:     -Wall
+  exposed-modules: Test.TinyBang.Options,
+                   Test.TinyBang.SourceFile,
+                   Test.TinyBang.TestUtils.ExpectDsl.Data,
+                   Test.TinyBang.TestUtils.ExpectDsl.Lexer,
+                   Test.TinyBang.TestUtils.ExpectDsl.Parser,
+                   Test.TinyBang.TestUtils.ExpectDsl,
+                   Test.TinyBang.TypeSystem.Contours,
+                   Test.TinyBang.TypeSystem.NFA
+
+executable tiny-bang-tests
+  hs-source-dirs:  test-src
+  main-is:         Main.hs
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   tiny-bang-tests,
+                   test-framework,
+                   test-framework-hunit,
+                   containers,
+                   mtl
+  ghc-options:     -Wall
