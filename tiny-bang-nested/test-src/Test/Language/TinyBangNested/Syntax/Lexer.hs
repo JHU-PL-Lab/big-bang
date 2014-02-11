@@ -5,6 +5,7 @@ module Test.Language.TinyBangNested.Syntax.Lexer
 ( lexerTests
 ) where
 
+import Language.TinyBang.Syntax.Location
 import Language.TinyBangNested.Syntax.Lexer
 import Test.HUnit
 
@@ -23,7 +24,7 @@ createLexerTest name input expected =
   TestCase $ assertBool name $ boolResult
     where boolResult = compareTokenStreams expected lexerResult
           lexerResult = 
-            case (lexTinyBangNested "" input) of
+            case (lexTinyBangNested UnknownDocument input) of
               Left s -> error $ "Lexer unit test fail: " ++ s
               Right x -> x                     
 

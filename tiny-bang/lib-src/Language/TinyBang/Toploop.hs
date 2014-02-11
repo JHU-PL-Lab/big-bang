@@ -3,11 +3,15 @@
 module Language.TinyBang.Toploop
 ( stringyInterpretSource
 , interpretSource
+, interpretAst
 , InterpreterConfiguration(..)
+, InterpreterResult(..)
 , ConstraintDatabaseType(..)
+, emptyDatabaseFromType
 ) where
 
 import Control.Monad
+import Data.Either.Combinators
 import Data.List
 import Data.Map (Map)
 import qualified Data.Set as Set
@@ -39,11 +43,20 @@ data InterpreterResult
       (Map Var Value)
   deriving (Eq, Ord, Show)
 
+instance Display InterpreterResult where
+  makeDoc (InterpreterResult x vs) =
+    case deepOnion vs x of
+      Left failure -> case failure of
+        UnboundVariable ux -> text "Unbound variable" <+> makeDoc ux <+>
+                                text "in result!"
+      Right value -> makeDoc value
+
 -- TODO: perhaps this should go somewhere else.  The unit tests would like to
 --       use these as well and unit tests shouldn't need the toploop, right?
 data ConstraintDatabaseType
   = Simple
   | Indexed
+  deriving (Show)
 
 data InterpreterConfiguration
   = InterpreterConfiguration
@@ -58,24 +71,25 @@ data InterpreterConfiguration
 interpretSource :: (CDb.ConstraintDatabase db, Display db)
                 => db -> InterpreterConfiguration
                 -> String -> Either (InterpreterError db) InterpreterResult
-interpretSource _ interpConf src = do
+interpretSource dummy interpConf src = do
   let doc = UnknownDocument
-  tokens <- doStep LexerFailure $ lexTinyBang doc src
-  ast <- doStep ParserFailure $ parseTinyBang doc tokens
+  tokens <- mapLeft LexerFailure $ lexTinyBang doc src
+  ast <- mapLeft ParserFailure $ parseTinyBang doc tokens
+  interpretAst dummy interpConf ast
+
+-- |Interprets the provided TinyBang AST.
+interpretAst :: (CDb.ConstraintDatabase db, Display db)
+                => db -> InterpreterConfiguration
+                -> Expr -> Either (InterpreterError db) InterpreterResult
+interpretAst _ interpConf ast = do
   when (typechecking interpConf) $
-    void $ doStep TypecheckFailure $ TI.typecheck ast
+    void $ mapLeft TypecheckFailure $ TI.typecheck ast
   if evaluating interpConf
     then do
-      (env,var) <- doStep evalFail $ I.eval ast
+      (env,var) <- mapLeft (uncurry EvaluationFailure) $ I.eval ast
       return $ InterpreterResult var (I.varMap env)
     else
       Left EvaluationDisabled
-  where
-    doStep errConstr computation =
-      case computation of
-        Left err -> Left $ errConstr err
-        Right ans -> Right ans
-    evalFail (err,cls) = EvaluationFailure err cls
     
 instance (Display db) => Display (InterpreterError db) where
   makeDoc ierr = case ierr of
@@ -164,12 +178,7 @@ stringyInterpretSource interpConf exprSrc =
     CDb.SomeDisplayableConstraintDatabase dummy ->
       case interpretSource dummy interpConf exprSrc of
         Left err -> display err
-        Right (InterpreterResult x vs) ->
-          case deepOnion vs x of
-            Left failure -> case failure of
-              UnboundVariable ux ->
-                "Unbound variable " ++ display ux ++ " in result!"
-            Right value -> display value
+        Right result -> display result
 
 -- |Creates an empty database of a recognized type.
 emptyDatabaseFromType :: ConstraintDatabaseType

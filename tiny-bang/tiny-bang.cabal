@@ -23,7 +23,8 @@ library
                    bytestring,
                    aeson,
                    stable-memo,
-                   void
+                   void,
+                   optparse-applicative
   ghc-options:     -Wall
   exposed-modules: 
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
@@ -99,7 +100,9 @@ library
                    Data.IndexedSet.Common,
                    Data.IndexedSet.TemplateHaskell,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed,
-                   Language.TinyBang.Utils.Assertions
+                   Language.TinyBang.Utils.Assertions,
+                   Utils.TinyBang.Options,
+                   Utils.GetOpt
 
 executable tiny-bang
   hs-source-dirs:  interp-src
@@ -116,7 +119,8 @@ executable tiny-bang
                    errors,
                    hslogger,
                    bytestring,
-                   aeson
+                   aeson,
+                   optparse-applicative
   ghc-options:     -Wall
 
 executable tests

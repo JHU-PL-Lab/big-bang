@@ -6,8 +6,9 @@
 -}
 
 module Utils.Toploop.Logging
-( configureLogging
-, configureLoggingHandlers
+( Utils.Toploop.Logging.configureLogging
+, configureLoggingInstruction
+, Utils.Toploop.Logging.configureLoggingHandlers
 ) where
 
 import Control.Applicative ((<$>))
@@ -16,6 +17,8 @@ import System.Log
 import System.Log.Formatter
 import System.Log.Handler.Simple
 import System.Log.Logger
+
+import Language.TinyBang.Utils.Logger
 
 -- | Configures logging from a set of logging level strings.  Returns True if
 --   configuration was successful; returns False if something went wrong.  If
@@ -27,14 +30,15 @@ configureLogging configs =
       putStrLn $ "Logging configuration error: " ++ err
       return False
     Right steps -> do
-      mapM_ configure steps
+      mapM_ configureLoggingInstruction steps
       return True
-  where
-    configure :: (String, Priority) -> IO ()
-    configure (loggerName, prio) =
-      updateGlobalLogger loggerName $ setLevel prio
+
+-- |Configures logging given the provided instruction.
+configureLoggingInstruction :: LoggingInstruction -> IO ()
+configureLoggingInstruction (loggerName, prio) =
+  updateGlobalLogger loggerName $ setLevel prio
   
-parseConfig :: String -> Either String (String, Priority)
+parseConfig :: String -> Either String LoggingInstruction
 parseConfig str =
   let elems = splitOn ":" str in
   case elems of

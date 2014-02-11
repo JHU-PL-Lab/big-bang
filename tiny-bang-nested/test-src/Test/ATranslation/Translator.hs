@@ -37,7 +37,7 @@ runTest input expected = if (verbose && not boolAnswer)
                           else boolAnswer 
                            where
                            doc = UnknownDocument
-                           result = (render $ makeDoc $ return . aTranslate =<< parseTinyBangNested doc =<< lexTinyBangNested "" input)
+                           result = (render $ makeDoc $ return . aTranslate =<< parseTinyBangNested doc =<< lexTinyBangNested UnknownDocument input)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 

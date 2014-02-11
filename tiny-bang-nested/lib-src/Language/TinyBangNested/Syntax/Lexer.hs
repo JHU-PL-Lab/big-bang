@@ -16,9 +16,9 @@ type Lexer a = Parsec String () a
 -- | A function to lex a @String@ containing TinyBangNested code.  On error, the
 --   result is a left error string; otherwise, it is a right positional token
 --   list.
-lexTinyBangNested :: String -> String -> Either String [PositionalToken]
-lexTinyBangNested resourceName src =
-  case parse lexer resourceName src of
+lexTinyBangNested :: SourceDocument -> String -> Either String [PositionalToken]
+lexTinyBangNested resourceDoc src =
+  case parse lexer (nameOfDocument resourceDoc) src of
     Left x -> Left $ show x
     Right x -> Right x
 

@@ -9,6 +9,7 @@ module Language.TinyBang.Utils.Logger.Config
 , parseInstruction
 , configureLoggingHandlers
 , configureByInstruction
+, LoggingInstruction
 ) where
 
 import Control.Applicative ((<$>))
@@ -17,6 +18,8 @@ import System.Log
 import System.Log.Formatter
 import System.Log.Handler.Simple
 import System.Log.Logger
+
+type LoggingInstruction = (String, Priority)
 
 -- | Configures logging from a set of logging level strings.  These strings are
 --   expected to be of the form "PRIO" or "PRIO:NAME" where PRIO is a logging
@@ -36,11 +39,11 @@ configureLogging configs =
       
 -- | Given a module name and a priority, sets that module to log only messages
 --   of that priority and higher.
-configureByInstruction :: (String, Priority) -> IO ()
+configureByInstruction :: LoggingInstruction -> IO ()
 configureByInstruction (loggerName, prio) =
   updateGlobalLogger loggerName $ setLevel prio
   
-parseInstruction :: String -> Either String (String, Priority)
+parseInstruction :: String -> Either String LoggingInstruction
 parseInstruction str =
   let elems = splitOn ":" str in
   case elems of
