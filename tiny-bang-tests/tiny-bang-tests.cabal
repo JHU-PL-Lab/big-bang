@@ -26,7 +26,8 @@ library
                    Test.TinyBang.TestUtils.ExpectDsl.Parser,
                    Test.TinyBang.TestUtils.ExpectDsl,
                    Test.TinyBang.TypeSystem.Contours,
-                   Test.TinyBang.TypeSystem.NFA
+                   Test.TinyBang.TypeSystem.NFA,
+                   Test.Utils.TestFramework.Options
 
 executable tiny-bang-tests
   hs-source-dirs:  test-src

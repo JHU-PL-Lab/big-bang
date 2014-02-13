@@ -9,6 +9,7 @@ module Utils.GetOpt
 
 , mapOptDescr
 , mapArgDescr
+, mergeOpts
 
 , updaterParse
 , updaterParsePure
@@ -34,6 +35,9 @@ mapArgDescr f descr = case descr of
   ReqArg g name -> ReqArg (f . g) name
   OptArg g name -> OptArg (f . g) name
 
+mergeOpts :: [OptDescr a] -> [OptDescr b] -> [OptDescr (Either a b)]
+mergeOpts as bs = map (mapOptDescr Left) as ++ map (mapOptDescr Right) bs
+
 -- |Parses the command-line arguments using a parser for option updaters.  If
 --  the parse fails, the program halts.
 updaterParse :: [OptDescr (OptionUpdater a)]
@@ -54,10 +58,10 @@ updaterParsePure args opts defaults =
   let (out :: [a -> Either String a], nonOptArgs, errs) = getOpt RequireOrder opts args in
   case () of
     _ | not $ null errs ->
-          throwError $ usageInfo (concat (intersperse "," errs)) opts
+          throwError $ usageInfo (intercalate "," errs) opts
     _ | not $ null nonOptArgs ->
           throwError $ usageInfo ("Extra trailing args: " ++
-                                      concat (intersperse " " nonOptArgs)) opts
-    _ -> case foldM (flip ($)) (defaults) out of
+                                      unwords nonOptArgs) opts
+    _ -> case foldM (flip ($)) defaults out of
             Left err -> throwError $ usageInfo err opts
             Right ans -> return ans
