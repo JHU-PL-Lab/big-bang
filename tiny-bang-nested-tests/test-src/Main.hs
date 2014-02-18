@@ -1,5 +1,5 @@
 {-|
-  The primary test module for TinyBang.
+  The primary test module for TinyBangNested.
 -}
 
 module Main
@@ -16,15 +16,10 @@ import Test.Framework.Providers.HUnit
 import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Logger
 import Test.TinyBang.Options
-import qualified Test.TinyBang.TypeSystem.NFA as NFA
-import qualified Test.TinyBang.TypeSystem.Contours as Contours
-import qualified Test.TinyBang.SourceFile as SourceFile
+import qualified Test.TinyBangNested.SourceFile as SourceFile
 import Test.Utils.TestFramework.Options
 
--- |The main for the TinyBang unit tests.  We accept more options than the
---  default test runner, so we have to bolt into the side of test-framework and
---  parse its options.  This is accomplished by the @defaultMainWithCustomOpts@
---  from @Test.Utils.TestFramework.Options@.
+-- |The main for the TinyBangNested unit tests.
 main :: IO ()
 main =
   defaultMainWithCustomOpts tinyBangTestOptDescrs $
@@ -43,9 +38,9 @@ main =
             putStrLn "Assertions enabled!"
           -- Build the source file options
           let sfOpts =
-                SourceFile.TinyBangSourceFileTestConfig
-                  { SourceFile.tbsftFilter = sourceFileOnlyByName options
-                  , SourceFile.tbsftDatabase = emptyDatabase options
+                SourceFile.TinyBangNestedSourceFileTestConfig
+                  { SourceFile.tbnsftFilter = sourceFileOnlyByName options
+                  , SourceFile.tbnsftDatabase = emptyDatabase options
                   }
           -- Construct the appropriate source file tests
           let sfTests =
@@ -54,11 +49,8 @@ main =
                       SourceFile.generateTests sfOpts
                   ]
           -- Construct the other tests
-          let otherTests = return
-                  [ testGroup "NFA tests" $ hUnitTestToTests NFA.tests
-                  , testGroup "Contour tests" $ hUnitTestToTests Contours.tests
-                  ]
+          -- TODO: other tests
           -- Build the test list
-          case sourceFileOnlyByName options of
-            Nothing -> concat <$> sequence [otherTests, sfTests]
+          case SourceFile.tbnsftFilter sfOpts of
+            Nothing -> concat <$> sequence [sfTests]
             Just _ -> sfTests

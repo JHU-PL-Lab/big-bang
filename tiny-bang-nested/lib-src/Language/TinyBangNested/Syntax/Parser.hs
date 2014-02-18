@@ -2,6 +2,7 @@
 
 module Language.TinyBangNested.Syntax.Parser
 ( parseTinyBangNested
+, parseTinyBangNestedPattern
 , ParseErr
 ) where
 
@@ -26,10 +27,24 @@ import Language.TinyBangNested.Ast
 parseTinyBangNested :: SourceDocument
                     -> [PositionalToken]
                     -> Either ParseErr Expr
-parseTinyBangNested doc toks =
-  let x = runParserT pProgram mempty (nameOfDocument doc) toks in
-  either (Left . show) Right $ runReader (unParserM x) (ParserContext doc)
+parseTinyBangNested = parseTinyBangNestedRule pProgram
     
+-- |A function to parse TinyBangNested code tokens into an @Expr@.  If this is
+--  successful, the result is a right @Expr@; otherwise, the result is a left
+--  error message.
+parseTinyBangNestedPattern :: SourceDocument
+                           -> [PositionalToken]
+                           -> Either ParseErr Pattern
+parseTinyBangNestedPattern = parseTinyBangNestedRule pPattern
+
+parseTinyBangNestedRule :: TBNParser a
+                        -> SourceDocument
+                        -> [PositionalToken]
+                        -> Either ParseErr a
+parseTinyBangNestedRule parser doc toks =
+  let x = runParserT parser mempty (nameOfDocument doc) toks in
+  either (Left . show) Right $ runReader (unParserM x) (ParserContext doc)
+        
 -- * Supporting data types
 
 -- |Defines the type of error for the TBN parser.

@@ -10,6 +10,7 @@ module Utils.GetOpt
 , mapOptDescr
 , mapArgDescr
 , mergeOpts
+, mapUpdaterOptDescr
 
 , updaterParse
 , updaterParsePure
@@ -18,6 +19,7 @@ module Utils.GetOpt
 ) where
 
 import Control.Monad.Error
+import Data.Either.Combinators
 import Data.List
 import System.Console.GetOpt
 import System.Environment
@@ -37,6 +39,10 @@ mapArgDescr f descr = case descr of
 
 mergeOpts :: [OptDescr a] -> [OptDescr b] -> [OptDescr (Either a b)]
 mergeOpts as bs = map (mapOptDescr Left) as ++ map (mapOptDescr Right) bs
+
+mapUpdaterOptDescr :: (a -> b) -> (a -> b -> a) -> OptDescr (OptionUpdater b) -> OptDescr (OptionUpdater a)
+mapUpdaterOptDescr extract replace =
+  mapOptDescr (\f x -> mapRight (replace x) $ f $ extract x)
 
 -- |Parses the command-line arguments using a parser for option updaters.  If
 --  the parse fails, the program halts.

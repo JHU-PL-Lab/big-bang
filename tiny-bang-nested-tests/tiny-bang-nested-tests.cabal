@@ -1,4 +1,4 @@
-name:           tiny-bang-tests
+name:           tiny-bang-nested-tests
 version:        0.1
 cabal-version:  >= 1.8
 build-type:     Simple
@@ -8,6 +8,8 @@ library
   hs-source-dirs:  lib-src
   build-depends:   base >= 4,
                    tiny-bang,
+                   tiny-bang-nested,
+                   tiny-bang-tests,
                    parsec,
                    containers,
                    mtl,
@@ -19,23 +21,18 @@ library
                    hslogger,
                    either
   ghc-options:     -Wall
-  exposed-modules: Test.TinyBang.Options,
-                   Test.TinyBang.SourceFile,
-                   Test.TinyBang.TestUtils.ExpectDsl.Data,
-                   Test.TinyBang.TestUtils.ExpectDsl.Lexer,
-                   Test.TinyBang.TestUtils.ExpectDsl.Parser,
-                   Test.TinyBang.TestUtils.ExpectDsl,
-                   Test.TinyBang.TypeSystem.Contours,
-                   Test.TinyBang.TypeSystem.NFA,
-                   Test.Utils.TestFramework.Options,
-                   Test.TinyBang.TestUtils.SourceFileTest
+  exposed-modules: Test.TinyBangNested.Options,
+                   Test.TinyBangNested.SourceFile,
+                   Test.TinyBangNested.SourceFile.Expectation
 
-executable tiny-bang-tests
+executable tiny-bang-nested-tests
   hs-source-dirs:  test-src
   main-is:         Main.hs
   build-depends:   base >= 4,
                    tiny-bang,
                    tiny-bang-tests,
+                   tiny-bang-nested,
+                   tiny-bang-nested-tests,
                    test-framework,
                    test-framework-hunit,
                    containers,

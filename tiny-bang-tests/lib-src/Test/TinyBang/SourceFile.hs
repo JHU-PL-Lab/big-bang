@@ -1,18 +1,14 @@
-{-# LANGUAGE GADTs, ExistentialQuantification, LambdaCase #-}
-
 {-|
   This Test.TinyBang.SourceFilefile tests.
 -}
 module Test.TinyBang.SourceFile
-( tests
-, generateTests
-, SourceFileTestConfig(..)
+( generateTests
+, TinyBangSourceFileTestConfig(..)
 ) where
 
 import Data.List
 import Data.List.Split (splitOn)
-import System.Directory
-import System.FilePath
+import Data.Maybe
 import Test.HUnit
 
 import Language.TinyBang.Ast
@@ -25,140 +21,106 @@ import Language.TinyBang.Syntax.Parser
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.TypeInference
 import Test.TinyBang.TestUtils.ExpectDsl
-
-testsPath :: FilePath
-testsPath = "tests"
+import Test.TinyBang.TestUtils.SourceFileTest
 
 {- |Defines the configuration of source file tests.
       * @sftFilter@ is an optional string that the name of the source file must
         match.
       * @sftDatabase@ is an empty database of the type which should be used.
 -} 
-data SourceFileTestConfig
-  = SourceFileTestConfig
-      { sftFilter :: Maybe String
-      , sftDatabase :: SomeDisplayableConstraintDatabase
+data TinyBangSourceFileTestConfig
+  = TinyBangSourceFileTestConfig
+      { tbsftFilter :: Maybe String
+      , tbsftDatabase :: SomeDisplayableConstraintDatabase
       }
       
-defaultSourceFileTestConfig :: SourceFileTestConfig
-defaultSourceFileTestConfig =
-  SourceFileTestConfig
-    { sftFilter = Nothing
-    , sftDatabase = SomeDisplayableConstraintDatabase $
-                      (CDb.empty :: IndexedConstraintDatabase)
-    }
+testsPath :: FilePath
+testsPath = "tests"
 
-tests :: IO Test
-tests = generateTests defaultSourceFileTestConfig
-
--- |Generates source file tests.  
-generateTests :: SourceFileTestConfig -> IO Test
--- Unpacking the config in the arguments to get the existentials
-generateTests
-    (SourceFileTestConfig
-      { sftFilter = configFilter
-      , sftDatabase = SomeDisplayableConstraintDatabase configDatabase
-      }) =
-  do
-    dirContents <- getDirectoryContents testsPath
-    let paths = map ((testsPath ++ [pathSeparator]) ++) $ 
-                  filter dirFilter dirContents
-    mtests <- mapM makeTestFromPath paths
-    return $ TestList mtests
-    where
-      dirFilter :: String -> Bool
-      dirFilter pathname =
-        case configFilter of
-          Nothing -> ".tb" `isSuffixOf` pathname
-          Just str -> pathname == str ++ ".tb"
-      failure :: String -> Test
-      failure = TestCase . assertFailure
-      makeTestFromPath :: FilePath -> IO Test
-      makeTestFromPath filepath = do
-        source <- readFile filepath
-        -- get the possible expectations
-        let mexpectations = map toExpectation $ splitOn "\n" source
-        -- filter out acceptable errors
-        let mexpectations' = sequence $
-              filter (\case {Left NoExpectationFound -> False; _ -> True})
-                mexpectations
-        -- if there are still errors, report them
-        case mexpectations' of
-          Left noExpectation -> case noExpectation of
-            NoExpectationFound ->
-              error "Test.TinyBang.SourceFile: didn't we just filter this out?"
-            BadExpectationParse src err ->
-              return $ failure $
-                filepath ++ ": could not parse expectation " ++ src ++ ": " ++ err
-          Right expectations ->
-            let doc = NamedDocument filepath in
-            case expectations of
-              [] -> return $ failure $ filepath ++ ": no expectation found"
-              _:_:_ -> return $ failure $
-                        filepath ++ ": multiple expectations found"
-              [expectation] -> return $ case lexTinyBang doc source of
-                Left err -> failure $ filepath ++ ": Lexer failure: " ++ err
-                Right tokens ->
-                  case parseTinyBang doc tokens of
-                    Left err -> failure $ filepath ++ ": Parser failure: " ++ err
-                    Right ast -> createTest filepath expectation ast
-      toExpectation :: String -> Either NoExpectation Expectation
-      toExpectation str =
-        case afterPart "# EXPECT:" str of
-          Just src ->
-            let src' = trim src in
-            case parseExpectDslPredicate src' of
-              Left err -> Left $ BadExpectationParse src' err
-              Right expectation -> Right expectation
-          Nothing -> Left NoExpectationFound
-      trim :: String -> String
-      trim str = reverse $ trimFront $ reverse $ trimFront str
-        where
-          trimFront :: String -> String
-          trimFront = dropWhile (== ' ')
-      afterPart :: String -> String -> Maybe String
-      afterPart pfx str = if pfx `isPrefixOf` str
-                            then Just $ drop (length pfx) str
-                            else Nothing
-      -- |A typechecking routine whose sole purpose is to allow input-driven
-      --  control of the output type.
-      typecheck' :: (ConstraintDatabase db, Display db)
-                 => db -> Expr -> Either (TypecheckingError db) db
-      typecheck' _ = typecheck
-      createTest :: FilePath -> Expectation -> Expr -> Test
-      createTest filepath expectation expr =
-        let tcResult = typecheck' configDatabase expr in
-        let result = eval expr in
-        case expectation of
-          Pass predicate predSrc -> TestLabel filepath $ TestCase $
-            case (tcResult, result) of
-              (Left err, _) ->
-                assertString $ "Expected " ++ display predSrc
-                  ++ " but type error occurred: " ++ display err
-              (_, Left (err,_)) ->
-                assertString $ "Expected " ++ display predSrc
-                  ++ " but error occurred: " ++ display err
-              (_, Right (env,var)) ->
-                let monion = deepOnion (varMap env) var in
-                case monion of
-                  Left err ->
-                    error $ "Evaluator produced a result which did not " ++ 
-                            "convert to an onion!  " ++ display err
-                  Right onion ->
-                    assertBool ("Expected " ++ display predSrc
-                        ++ " but evaluation produced: " ++ display onion) $
-                      predicate onion
-          TypeFailure -> TestLabel filepath $ TestCase $
-            case tcResult of
-              Left _ -> assert True
-              Right db ->
-                assertString $ "Expected type failure but typechecking produced "
-                            ++ "a valid database: " ++ display db
-
-data NoExpectation
-  = NoExpectationFound
-  | BadExpectationParse
-      String -- ^ The source string for the predicate.
-      String -- ^ The error message from the lexer/parser.
-  deriving (Eq, Ord, Show)
-
+generateTests :: TinyBangSourceFileTestConfig -> IO Test
+generateTests (TinyBangSourceFileTestConfig
+                { tbsftFilter = configFilter
+                , tbsftDatabase =
+                    SomeDisplayableConstraintDatabase configDatabase
+                }) =
+  let sftConfig = SourceFileTestConfig
+                    { sftDirectory = testsPath
+                    , sftFilenameFilter =
+                        case configFilter of
+                          Nothing -> (".tb" `isSuffixOf`)
+                          Just name -> (== (name ++ ".tb"))
+                    , sftExpect = getExpectation
+                    , sftExecute = execute
+                    }
+  in
+  createSourceFileTests sftConfig
+  where
+    getExpectation :: FilePath -> String -> Either String Expectation
+    getExpectation _ source =
+      case mapM toExpectation $ splitOn "\n" source of
+        Left (expectationText, errMsg) ->
+          Left $ "Failed to parse expectation \"" ++ expectationText ++
+                 ": " ++ errMsg
+        Right mexps ->
+          case catMaybes mexps of
+            [] -> Left "no expectation found"
+            _:_:_ -> Left "multiple expectations found"
+            [expectation] -> Right expectation
+      where
+        -- |Parses an expectation from a source line.  The result is a
+        --  @Right Nothing@ if the line has no expectation; it is a @Left@ if
+        --  there is an expectation but it did not parse successfully.  The
+        --  error reported includes the original string as well as the parser
+        --  message.
+        toExpectation :: String
+                      -> Either (String, String) (Maybe Expectation)
+        toExpectation lin =
+          let pfx = "# EXPECT:" in
+          let lin' = strip lin in
+          if pfx `isPrefixOf` strip lin'
+            then
+              let expectText = drop (length pfx) lin' in
+              case parseExpectDslPredicate expectText of
+                Left err -> Left (expectText, err)
+                Right expectation -> Right $ Just expectation
+            else
+              Right Nothing
+    execute :: FilePath -> String -> Expectation -> Either String ()
+    execute filename source expectation = do
+      -- We should always be able to parse successfully and get a result from
+      -- the typechecker
+      let doc = NamedDocument filename
+      tokens <- lexTinyBang doc source
+      ast <- parseTinyBang doc tokens
+      let tcResult = typecheck' configDatabase ast
+      case expectation of
+        Pass predicate predSrc ->
+          case (tcResult, eval ast) of
+            (Left err, _) ->
+              Left $ "Expected " ++ display predSrc ++
+                     " but type error occurred: " ++ display err
+            (_, Left (err,_)) ->
+              Left $ "Expected " ++ display predSrc ++
+                     " but error occurred: " ++ display err
+            (_, Right (env,var)) ->
+              let monion = deepOnion (varMap env) var in
+              case monion of
+                Left err ->
+                  error $ "Evaluator produced a result which did not " ++ 
+                          "convert to an onion!  " ++ display err
+                Right onion ->
+                  if predicate onion then Right () else
+                    Left $ "Expected " ++ display predSrc ++
+                           " but evaluation produced: " ++ display onion
+        TypeFailure ->
+          case tcResult of
+            Left _ -> Right ()
+            Right db ->
+              Left $ "Expected type failure but typechecking produced a " ++
+                     "valid database: " ++ display db
+      where
+        typecheck' :: (ConstraintDatabase db, Display db)
+                   => db -> Expr -> Either (TypecheckingError db) db
+        typecheck' _ = typecheck
+    strip :: String -> String
+    strip = reverse . dropWhile (== ' ') . reverse . dropWhile (== ' ')

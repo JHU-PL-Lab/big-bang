@@ -6,8 +6,6 @@ module Test.ATranslation.Translator
 ) where
 
 import Debug.Trace
-import qualified Language.TinyBangNested.Ast.Data as TBN
-import qualified Language.TinyBang.Ast.Data as TBA
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Toploop
 import Language.TinyBang.Utils.Display
@@ -19,6 +17,8 @@ import Test.HUnit
 -- | Display unit tests?
 verbose :: Bool
 verbose = True
+
+-- TODO: fix this module and link it in with the overall unit tests
 
 -- | Utility functions for ATranslation unit tests:
 
