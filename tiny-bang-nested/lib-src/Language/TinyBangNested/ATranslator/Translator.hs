@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Language.TinyBangNested.ATranslator.Translator
 ( aTranslate
 ) where
@@ -5,8 +7,12 @@ module Language.TinyBangNested.ATranslator.Translator
 import Control.Applicative
 
 import Language.TinyBang.Ast as TBA
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger
 import Language.TinyBangNested.Ast as TBN
 import Language.TinyBangNested.ATranslator.Monad
+
+$(loggingFunctions)
 
 -- TODO: some early failure mechanism for stuff that this translation can
 --       detect (e.g. open expressions)
@@ -14,7 +20,13 @@ import Language.TinyBangNested.ATranslator.Monad
 -- |Performs A-translation of a TinyBang Nested expression.
 aTranslate :: TBN.Expr -> TBA.Expr
 aTranslate expr =
-  TBA.Expr generated $ fst $ runATranslationM $ innerATranslate expr
+  postLog _debugI
+    (\tbaAst -> display $
+        text "A-translation completed:" <> line <>
+        indent 2 (align $
+          text "Original AST:  " <+> makeDoc expr <> line <>
+          text "Translated AST:" <+> makeDoc tbaAst)
+    ) $ TBA.Expr generated $ fst $ runATranslationM $ innerATranslate expr
 
 -- PERF: define expressions using Seq instead of [] so tail append is cheaper
 

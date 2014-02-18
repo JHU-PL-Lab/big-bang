@@ -119,7 +119,7 @@ pOnionExpr = "onion expression" <@>
 -- |"application" priority is either an application or "label" priority
 pApplExpr :: TBNParser Expr
 pApplExpr = "application expression" <@>
-      try (origLeftAssocBinOp appl pLabelExpr $% consume TokOnion)
+      try (origLeftAssocBinOp appl pLabelExpr $% return ())
   <|> pLabelExpr
   where
     appl o e1 () e2 = ExprAppl o e1 e2
@@ -127,7 +127,7 @@ pApplExpr = "application expression" <@>
 -- |"label" priority is either a label construction or "primary" priority
 pLabelExpr :: TBNParser Expr
 pLabelExpr = "label expression" <@>
-      origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pPrimaryExpr
+      origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pLabelExpr
   <|> pPrimaryExpr
 
 -- |"primary" priority is a variable, a primitive literal, an empty onion, or

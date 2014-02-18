@@ -17,6 +17,8 @@ import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Logger
 import Test.TinyBang.Options
 import qualified Test.TinyBangNested.SourceFile as SourceFile
+import Test.TinyBangNested.Syntax.Lexer
+import Test.TinyBangNested.Syntax.Parser
 import Test.Utils.TestFramework.Options
 
 -- |The main for the TinyBangNested unit tests.
@@ -52,5 +54,13 @@ main =
           -- TODO: other tests
           -- Build the test list
           case SourceFile.tbnsftFilter sfOpts of
-            Nothing -> concat <$> sequence [sfTests]
+            Nothing -> concat <$> sequence
+                        [ return
+                            [ testGroup "lexer tests" $
+                                hUnitTestToTests lexerTests
+                            , testGroup "parser tests" $
+                                hUnitTestToTests parserTests
+                            ]
+                        , sfTests
+                        ]
             Just _ -> sfTests

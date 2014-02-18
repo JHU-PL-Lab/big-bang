@@ -79,11 +79,7 @@ operators = map (\(s,t) -> string s *> pure t)
 reservedWords :: [Parser Token]
 reservedWords =
   map (\(s, t) -> string s *> notFollowedBy identChar *> pure t)
-    [ ("throws", TokThrows)
-    , ("immut" , TokImmut)
-    , ("final" , TokFinal)
-    , ("exn"   , TokExn)
-    , ("fun"   , TokFun)
+    [ ("fun"   , TokFun)
     , ("int"   , TokInt)
     , ("let"   , TokLet)
     , ("in"    , TokIn)

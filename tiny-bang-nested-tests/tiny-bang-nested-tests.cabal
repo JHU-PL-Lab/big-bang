@@ -1,7 +1,7 @@
 name:           tiny-bang-nested-tests
 version:        0.1
 cabal-version:  >= 1.8
-build-type:     Simple
+build-type:     Configure
 author:         Zachary Palmer
 
 library
@@ -23,7 +23,9 @@ library
   ghc-options:     -Wall
   exposed-modules: Test.TinyBangNested.Options,
                    Test.TinyBangNested.SourceFile,
-                   Test.TinyBangNested.SourceFile.Expectation
+                   Test.TinyBangNested.SourceFile.Expectation,
+                   Test.TinyBangNested.Syntax.Lexer,
+                   Test.TinyBangNested.Syntax.Parser
 
 executable tiny-bang-nested-tests
   hs-source-dirs:  test-src

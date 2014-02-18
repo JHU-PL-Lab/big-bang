@@ -1,7 +1,7 @@
-{-
+{-|
   This module tests the TinyBangNested Lexer.
 -}
-module Test.Language.TinyBangNested.Syntax.Lexer
+module Test.TinyBangNested.Syntax.Lexer
 ( lexerTests
 ) where
 
@@ -15,16 +15,14 @@ import Test.HUnit
 --   tests for equality.
 compareTokenStreams :: [Token] -> [PositionalToken] -> Bool
 compareTokenStreams tokens posTokens = 
- tokens == map convertToToken posTokens
-   where
-    convertToToken p = posToken p
+ tokens == map posToken posTokens
 
 createLexerTest :: String -> String -> [Token] -> Test
 createLexerTest name input expected =
-  TestCase $ assertBool name $ boolResult
+  TestLabel name $ TestCase $ assertBool "token stream mismatch" boolResult
     where boolResult = compareTokenStreams expected lexerResult
           lexerResult = 
-            case (lexTinyBangNested UnknownDocument input) of
+            case lexTinyBangNested UnknownDocument input of
               Left s -> error $ "Lexer unit test fail: " ++ s
               Right x -> x                     
 
@@ -52,8 +50,3 @@ testOperators :: Test
 testOperators = createLexerTest "Lexing operators" "= -> & () ( ) + - == >= <=" testOperatorsExpected
 testOperatorsExpected :: [Token]
 testOperatorsExpected = [TokIs, TokArrow, TokOnion, TokEmptyOnion, TokOpenParen, TokCloseParen, TokPlus, TokMinus, TokEq, TokGreaterEq, TokLessEq]
-
-
-
-
-
