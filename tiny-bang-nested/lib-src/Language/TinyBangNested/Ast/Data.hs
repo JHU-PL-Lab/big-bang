@@ -27,6 +27,7 @@ data Expr
   | ExprOnion Origin Expr Expr
   | ExprAppl Origin Expr Expr
   | ExprLabelExp Origin LabelName Expr
+  | ExprRef Origin Expr
   | ExprVar Origin Var
   | ExprValInt Origin Integer
   | ExprValEmptyOnion Origin 
@@ -87,6 +88,7 @@ instance HasOrigin Expr where
     ExprOnion orig _ _ -> orig
     ExprAppl orig _ _ -> orig
     ExprLabelExp orig _ _-> orig
+    ExprRef orig _ -> orig
     ExprVar orig _ -> orig
     ExprValInt orig _ -> orig
     ExprValEmptyOnion orig -> orig
@@ -118,6 +120,7 @@ instance Display Expr where
    ExprOnion _ e1 e2 -> text "(" <> makeDoc e1 <> text ") & (" <> makeDoc e2 <> text ")"
    ExprAppl _ e1 e2 -> text "(" <> makeDoc e1 <> text ") apply (" <> makeDoc e2 <> text ")"
    ExprLabelExp _ l e -> text "(" <> makeDoc l <+> makeDoc e <> text ")"
+   ExprRef _ e -> text "(" <> text "ref" <+> makeDoc e <> text ")"
    ExprVar _ v -> makeDoc v 
    ExprValInt _ i -> text $ show i
    ExprValEmptyOnion _ -> text "()"

@@ -80,6 +80,15 @@ innerATranslate e =
                ]
              , x'
              )
+    ExprRef _ e' -> do
+      (cls,x) <- innerATranslate e'
+      x' <- freshVar
+      return ( cls ++
+               [ TBA.Clause generated x' $ TBA.Def generated $
+                    VRef generated x
+               ]
+             , x'
+             )
     ExprValInt _ n -> do
       x <- freshVar
       return ( [ TBA.Clause generated x $ TBA.Def generated $

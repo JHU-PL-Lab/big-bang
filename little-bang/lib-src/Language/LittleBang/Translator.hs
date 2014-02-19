@@ -8,6 +8,12 @@ import qualified Language.TinyBangNested.Ast as TBN
 import Control.Applicative
 import Control.Monad.State
 
+{-
+  TODO: this system needs to be restructured.  In general, the translator should
+  make use of a single deep substitution function.  Each of the desugarings
+  should be written as shallow specializations.
+-}
+
 -- | Desugar LittleBang. Do nothing for now
 desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
@@ -31,29 +37,18 @@ data DesugarState = DesugarState { freshVarIdx :: Int }
 -- The expression becomes
 -- ((x1: `True x2:() -> e2') & (x3: `False x4:() -> e3')) e1';;
 desugarIf :: LB.Expr -> DesugarM LB.Expr
-desugarIf expr = case expr of 
-
-    LB.ExprCondition o e1 e2 e3 -> LB.ExprAppl o <$> 
-                                   (LB.ExprOnion o 
-                                        <$> (LB.ExprScape o 
-                                                <$> (LB.OuterPatternLabel o 
-                                                        <$> nextFreshVar 
-                                                        <*> (LB.LabelPattern o 
-                                                                <$> return (LB.LabelDef o "True") 
-                                                                <*> nextFreshVar 
-                                                                <*> return (LB.EmptyOnionPattern o)))        
-                                                <*> desugarIf e2)
-                                        <*> (LB.ExprScape o 
-                                                <$> (LB.OuterPatternLabel o 
-                                                        <$> nextFreshVar
-                                                        <*> (LB.LabelPattern o 
-                                                                <$> return (LB.LabelDef o "False") 
-                                                                <*> nextFreshVar 
-                                                                <*> return (LB.EmptyOnionPattern o))) 
-                                                <*> desugarIf e3)
-                                    )       
-                                    <*> desugarIf e1
-    
+desugarIf expr =
+  case expr of
+    LB.ExprCondition o e1 e2 e3 ->
+      LB.ExprAppl o <$>
+        (LB.ExprOnion o <$>
+          (LB.ExprScape o 
+            (LB.LabelPattern o (LB.LabelName o "True") (LB.EmptyPattern o))
+            <$> desugarIf e2) <*>
+          (LB.ExprScape o 
+            (LB.LabelPattern o (LB.LabelName o "False") (LB.EmptyPattern o))
+            <$> desugarIf e3)) <*>
+        (desugarIf e1)    
     LB.ExprDef o var e1 e2 -> LB.ExprDef o 
                                     <$> return var 
                                     <*> desugarIf e1 

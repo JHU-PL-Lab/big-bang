@@ -65,6 +65,9 @@ instance Display Token where
     TokLitInt n -> text "int#" <> dquotes (text $ show n)
     TokLitChar c -> text "char#" <> dquotes (text [c])
     TokLabel n -> text "label#" <> dquotes (text n)
+    TokIf -> text "if"
+    TokThen -> text "then"
+    TokElse -> text "else"
 
 instance Display PositionalToken where
   makeDoc pt =
