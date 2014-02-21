@@ -1,7 +1,7 @@
 name:           tiny-bang-nested-tests
 version:        0.1
 cabal-version:  >= 1.8
-build-type:     Configure
+build-type:     Simple
 author:         Zachary Palmer
 
 library
