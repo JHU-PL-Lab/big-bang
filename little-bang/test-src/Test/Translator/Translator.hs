@@ -8,14 +8,14 @@ module Test.Translator.Translator
 import Debug.Trace
 import qualified Language.TinyBangNested.Ast as TBN
 import qualified Language.LittleBang.Ast as LB
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location
 import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Translator
 import Language.LittleBang.TBNConversion
-import Language.TinyBangNested.ATranslation.Translator
+import Language.TinyBangNested.ATranslator.Translator
 import Test.HUnit
 
 -- TODO: rewrite these unit tests for LittleBang
@@ -40,7 +40,10 @@ runTest input expected = if (verbose && not boolAnswer)
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           result = (render $ makeDoc $ performTranslation =<< convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang testContext =<< lexLittleBang "" input)
+                           r1 = (convertToTBNExpr =<< desugarLittleBang =<< parseLittleBangNested UnknownDocument =<< lexLittleBang UnknownDocument input)
+                           result = case r1 of
+                             Left x -> error $ show x -- TODO do something else
+                             Right y -> (render $ makeDoc $ aTranslate y)
                            eval = getEvaluatedResult result
                            boolAnswer = (filterWhiteSpace eval) == (filterWhiteSpace expected)  
 
@@ -55,8 +58,8 @@ filterWhiteSpace s = filter keepChar s
 testConfig :: InterpreterConfiguration
 testConfig = InterpreterConfiguration True True Simple
 
-testContext :: ParserContext
-testContext = ParserContext UnknownDocument "ATranslationUnitTests"
+-- testContext :: ParserContext
+-- testContext = ParserContext UnknownDocument "ATranslationUnitTests"
 
 aTranslationTests :: Test
 aTranslationTests = TestList 

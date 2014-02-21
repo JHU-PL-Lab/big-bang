@@ -10,7 +10,7 @@ import Debug.Trace
 import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Display (render, makeDoc)
+import Language.TinyBang.Utils.Display (render, makeDoc)
 import Test.HUnit
 
 -- | Utility functions for Lexer unit tests:
@@ -20,8 +20,8 @@ verbose :: Bool
 verbose = True
 
 -- | Function for automating calls to lexTinyBangNested and unwrapping result
-testContext :: ParserContext
-testContext = ParserContext UnknownDocument "UnitTestDoc"
+-- testContext :: ParserContext
+-- testContext = ParserContext UnknownDocument "UnitTestDoc"
 
 -- | Takes a label, input, expected ouput and generates a TestCase for these values
 genUnitTest :: String -> String -> String -> Test
@@ -30,7 +30,7 @@ genUnitTest label input expected =
     then trace ("Test " ++ label ++ " parsed\n" ++ result ++ "\nInstead of\n" ++ expected ++ "\n") $ testCase
     else testCase
       where
-       result = render $ makeDoc $ parseLittleBang testContext =<< lexLittleBang "" input
+       result = render $ makeDoc $ parseLittleBangNested UnknownDocument =<< lexLittleBang UnknownDocument input
        boolAnswer = result == expected
        testCase = TestCase $ assertBool label boolAnswer
 
