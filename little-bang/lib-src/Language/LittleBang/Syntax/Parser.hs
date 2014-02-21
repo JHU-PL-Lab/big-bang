@@ -115,9 +115,11 @@ pCondExpr = "conditional expression" <@>
 
 -- |"arithmetic" priority is either a binary arithmetic expression or "onion" priority
 pBinaryArithExpr :: TBNParser Expr
-pBinaryArithExpr = "binary arithmetic expression" <@>
-      try (origLeftAssocBinOp ExprBinaryOp pOnionExpr pBinaryArithOp)
-  <|> pOnionExpr
+pBinaryArithExpr = do
+    exp1 <- ("binary arithmetic expression" <@>
+             try (origLeftAssocBinOp ExprBinaryOp pOnionExpr pBinaryArithOp)
+             <|> pOnionExpr)
+    option exp1 (origConstr3 ExprChain $% (,) <$ consume TokSemi <*> pExpr)
 
 -- |"onion" priority is either an onion or "application" priority
 pOnionExpr :: TBNParser Expr
