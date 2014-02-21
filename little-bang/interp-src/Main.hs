@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import Control.Monad
@@ -17,10 +19,14 @@ import Language.TinyBang.Utils.Display
 import Language.TinyBangNested.ATranslator
 import Language.TinyBang.Toploop
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop
 import Utils.Toploop.Logging
+
+$(loggingFunctions)
 
 versionStr :: String
 versionStr = "LittleBang Interpreter version " ++ showVersion version
@@ -36,17 +42,39 @@ makeEval opts = do
                     , databaseType = dtype }
   return $ \src ->
     let result =
-          do
-            tokens <- lexLittleBang UnknownDocument src
-            lbAst <- parseLittleBang UnknownDocument tokens
-            dlbAst <- desugarLittleBang lbAst
-            tbnAst <- convertToTBNExpr dlbAst 
-            let tbAst = aTranslate tbnAst
+          do -- Either
+            tokens <-
+              postLog _debugI
+                ( \tokens -> display $
+                    text "LittleBang tokens:" <+> makeDoc tokens)
+                $ lexLittleBang UnknownDocument src
+            lbAst <-
+              postLog _debugI
+                ( \lbAst -> display $
+                    text "Parsed LittleBang AST:" <> lineNest lbAst)
+                $ parseLittleBang UnknownDocument tokens
+            dlbAst <-
+              postLog _debugI
+                ( \dlbAst -> display $
+                    text "Desugared LittleBang AST:" <> lineNest dlbAst)
+                $ desugarLittleBang lbAst
+            tbnAst <-
+              postLog _debugI
+                ( \tbnAst -> display $
+                    text "Converted to TBN AST:" <> lineNest tbnAst)
+                $ convertToTBNExpr dlbAst 
+            let tbAst =
+                  postLog _debugI
+                    (\tbAst' -> display $
+                        text "A-translated AST:" <> lineNest tbAst')
+                    $ aTranslate tbnAst
             case emptyDatabaseFromType dtype of
               SomeDisplayableConstraintDatabase db ->
                 mapLeft display $ interpretAst db config tbAst
     in
     return $ either id display result
+  where
+    lineNest x = line <> indent 2 (align $ makeDoc x)
     
 main :: IO ()
 main = do
