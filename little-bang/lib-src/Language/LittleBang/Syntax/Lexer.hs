@@ -74,6 +74,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("=" , TokIs)
     , ("(" , TokOpenParen)
     , (")" , TokCloseParen)
+    , (";" , TokSemi)
     ]
 
 -- | This group of lexers matches all reserved words.

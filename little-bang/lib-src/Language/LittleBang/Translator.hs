@@ -17,12 +17,14 @@ import Control.Monad.State
 -- | Desugar LittleBang. Do nothing for now
 desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
-  runDesugarM $ foldl (>>=) (return expr) desugars
+  runDesugarM ((return expr) >>= walkTree)
+  {-
   where
     desugars :: [LB.Expr -> DesugarM LB.Expr]
     desugars =
       [ desugarIf
       ]
+  -}
 
 runDesugarM :: DesugarM a -> Either DesugarError a
 runDesugarM x = fst <$> runStateT x (DesugarState 0)
@@ -31,6 +33,63 @@ type DesugarM = StateT DesugarState (Either DesugarError)
 type DesugarError = String
 
 data DesugarState = DesugarState { freshVarIdx :: Int }
+
+-- Get a desugaring function based on an AST node
+getDesugarer :: LB.Expr -> (LB.Expr -> DesugarM LB.Expr)
+getDesugarer expr =
+  case expr of
+    LB.ExprCondition _ _ _ _ -> desugarIf
+    _ -> desugarIdentity
+
+-- Apply desugarers to the entire AST
+-- Makes one pass, applying only appropriate desugarers
+-- TODO: pull out the >>= f
+walkTree :: LB.Expr -> DesugarM LB.Expr
+walkTree expr = 
+  let f = getDesugarer expr in
+  case expr of 
+    LB.ExprLet o var e1 e2 -> (LB.ExprLet o 
+                                    <$> return var
+                                    <*> walkTree e1
+                                    <*> walkTree e2)
+                                    >>= f
+                                    
+    LB.ExprScape o outerPattern e -> (LB.ExprScape o 
+                                    <$> return outerPattern 
+                                    <*> walkTree e)
+                                    >>= f
+                                    
+    LB.ExprBinaryOp o e1 op e2 -> (LB.ExprBinaryOp o 
+                                    <$> walkTree e1 
+                                    <*> return op
+                                    <*> walkTree e2)
+                                    >>= f
+                                    
+    LB.ExprOnion o e1 e2 -> (LB.ExprOnion o 
+                                    <$> walkTree e1 
+                                    <*> walkTree e2)
+                                    >>= f
+                                    
+    LB.ExprAppl o e1 e2 -> (LB.ExprAppl o 
+                                    <$> walkTree e1 
+                                    <*> walkTree e2)
+                                    >>= f
+                                    
+    LB.ExprLabelExp o label e1 -> (LB.ExprLabelExp o 
+                                    <$> return label 
+                                    <*> walkTree e1)
+                                    >>= f
+                                    
+    LB.ExprRef o e -> (LB.ExprRef o <$> walkTree e) >>= f
+    LB.ExprVar o var -> (LB.ExprVar o <$> return var) >>= f
+    LB.ExprValInt o int -> (LB.ExprValInt o <$> return int) >>= f
+    LB.ExprValEmptyOnion o -> (return $ LB.ExprValEmptyOnion o) >>= f
+
+    LB.ExprCondition o e1 e2 e3 -> (LB.ExprCondition o
+                                    <$> walkTree e1
+                                    <*> walkTree e2
+                                    <*> walkTree e3)
+                                    >>= f
 
 -- Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -44,40 +103,48 @@ desugarIf expr =
         (LB.ExprOnion o <$>
           (LB.ExprScape o 
             (LB.LabelPattern o (LB.LabelName o "True") (LB.EmptyPattern o))
-            <$> desugarIf e2) <*>
+            <$> return e2) <*>
           (LB.ExprScape o 
             (LB.LabelPattern o (LB.LabelName o "False") (LB.EmptyPattern o))
-            <$> desugarIf e3)) <*>
-        (desugarIf e1)    
+            <$> return e3)) <*>
+        (return e1)    
+    _ -> return expr
+
+-- An identity desugarer which does nothing
+-- This is applied to all elements of LB that are also in TBN
+desugarIdentity :: LB.Expr -> DesugarM LB.Expr
+desugarIdentity expr = 
+  case expr of
     LB.ExprLet o var e1 e2 -> LB.ExprLet o 
                                     <$> return var 
-                                    <*> desugarIf e1 
-                                    <*> desugarIf e2
+                                    <*> return e1 
+                                    <*> return e2
                                     
     LB.ExprScape o outerPattern e -> LB.ExprScape o 
                                     <$> return outerPattern 
-                                    <*> desugarIf e
+                                    <*> return e
                                     
     LB.ExprBinaryOp o e1 op e2 -> LB.ExprBinaryOp o 
-                                    <$> desugarIf e1 
+                                    <$> return e1 
                                     <*> return op
-                                    <*> desugarIf e2
+                                    <*> return e2
                                     
     LB.ExprOnion o e1 e2 -> LB.ExprOnion o 
-                                    <$> desugarIf e1 
-                                    <*> desugarIf e2
+                                    <$> return e1 
+                                    <*> return e2
                                     
     LB.ExprAppl o e1 e2 -> LB.ExprAppl o 
-                                    <$> desugarIf e1 
-                                    <*> desugarIf e2
+                                    <$> return e1 
+                                    <*> return e2
                                     
     LB.ExprLabelExp o label e1 -> LB.ExprLabelExp o 
                                     <$> return label 
-                                    <*> desugarIf e1
+                                    <*> return e1
                                     
+    LB.ExprRef o e -> LB.ExprRef o <$> return e
     LB.ExprVar o var -> LB.ExprVar o <$> return var
     LB.ExprValInt o int -> LB.ExprValInt o <$> return int
-    LB.ExprValEmptyOnion o -> return $ (LB.ExprValEmptyOnion o)
+    LB.ExprValEmptyOnion o -> return (LB.ExprValEmptyOnion o)
           
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do

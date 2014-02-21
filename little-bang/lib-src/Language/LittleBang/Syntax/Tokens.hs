@@ -20,6 +20,7 @@ data Token
   | TokLet -- ^@let@
   | TokIn -- ^@in@
   | TokFun -- ^@fun@
+  | TokRef -- ^@ref@
   | TokInt -- ^@int@
   | TokOpenParen -- ^@(@
   | TokCloseParen -- ^@)@
@@ -32,7 +33,6 @@ data Token
   | TokThen -- ^@then@
   | TokElse -- ^@else@
   | TokSemi -- ^@;@
-  | TokRef -- ^@ref@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.

@@ -113,7 +113,7 @@ pCondExpr = "conditional expression" <@>
              <* consume TokElse <*> pExpr
   <|> pBinaryArithExpr
 
--- |"arithmetic" priority is either a scape expression or "onion" priority
+-- |"arithmetic" priority is either a binary arithmetic expression or "onion" priority
 pBinaryArithExpr :: TBNParser Expr
 pBinaryArithExpr = "binary arithmetic expression" <@>
       try (origLeftAssocBinOp ExprBinaryOp pOnionExpr pBinaryArithOp)

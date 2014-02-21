@@ -29,6 +29,7 @@ data Expr
   | ExprValEmptyOnion Origin 
   -- LittleBang-specific
   | ExprCondition Origin Expr Expr Expr
+  | ExprChain Origin Expr Expr
   deriving (Eq,Ord,Show)
 
 data BinaryOperator
