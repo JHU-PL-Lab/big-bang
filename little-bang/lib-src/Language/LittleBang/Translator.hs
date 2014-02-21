@@ -49,14 +49,9 @@ desugarIf expr =
             (LB.LabelPattern o (LB.LabelName o "False") (LB.EmptyPattern o))
             <$> desugarIf e3)) <*>
         (desugarIf e1)    
-    LB.ExprDef o var e1 e2 -> LB.ExprDef o 
+    LB.ExprLet o var e1 e2 -> LB.ExprLet o 
                                     <$> return var 
                                     <*> desugarIf e1 
-                                    <*> desugarIf e2
-                                    
-    LB.ExprVarIn o var e1 e2 -> LB.ExprVarIn o 
-                                    <$> return var 
-                                    <*> desugarIf e1
                                     <*> desugarIf e2
                                     
     LB.ExprScape o outerPattern e -> LB.ExprScape o 
@@ -67,11 +62,6 @@ desugarIf expr =
                                     <$> desugarIf e1 
                                     <*> return op
                                     <*> desugarIf e2
-                                    
-    LB.ExprOnionOp o e onionOp projector -> LB.ExprOnionOp o 
-                                    <$> desugarIf e 
-                                    <*> return onionOp
-                                    <*> return projector
                                     
     LB.ExprOnion o e1 e2 -> LB.ExprOnion o 
                                     <$> desugarIf e1 
@@ -87,8 +77,7 @@ desugarIf expr =
                                     
     LB.ExprVar o var -> LB.ExprVar o <$> return var
     LB.ExprValInt o int -> LB.ExprValInt o <$> return int
-    LB.ExprValChar o char -> LB.ExprValChar o <$> return char
-    LB.ExprValUnit o -> return $ LB.ExprValUnit o
+    LB.ExprValEmptyOnion o -> return $ (LB.ExprValEmptyOnion o)
           
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do

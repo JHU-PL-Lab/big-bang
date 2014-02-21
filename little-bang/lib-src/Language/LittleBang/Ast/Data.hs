@@ -23,6 +23,7 @@ data Expr
   | ExprOnion Origin Expr Expr
   | ExprAppl Origin Expr Expr
   | ExprLabelExp Origin LabelName Expr
+  | ExprRef Origin Expr
   | ExprVar Origin Var
   | ExprValInt Origin Integer
   | ExprValEmptyOnion Origin 

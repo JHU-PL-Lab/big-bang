@@ -26,14 +26,9 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.ExprCondition _ _ _ _ ->
       undefined -- TODO: generate correct error for untranslated node
     
-    LB.ExprDef o var e1 e2 -> TBN.ExprDef o 
+    LB.ExprLet o var e1 e2 -> TBN.ExprLet o 
                                     <$> toTBN var 
                                     <*> toTBN e1 
-                                    <*> toTBN e2
-                                    
-    LB.ExprVarIn o var e1 e2 -> TBN.ExprVarIn o 
-                                    <$> toTBN var 
-                                    <*> toTBN e1
                                     <*> toTBN e2
                                     
     LB.ExprScape o outerPattern e -> TBN.ExprScape o 
@@ -44,11 +39,6 @@ instance TBNConvertible LB.Expr TBN.Expr where
                                     <$> toTBN e1 
                                     <*> toTBN op
                                     <*> toTBN e2
-                                    
-    LB.ExprOnionOp o e onionOp projector -> TBN.ExprOnionOp o 
-                                    <$> toTBN e 
-                                    <*> toTBN onionOp
-                                    <*> toTBN projector
                                     
     LB.ExprOnion o e1 e2 -> TBN.ExprOnion o 
                                     <$> toTBN e1 
@@ -61,66 +51,43 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.ExprLabelExp o label e1 -> TBN.ExprLabelExp o 
                                     <$> toTBN label 
                                     <*> toTBN e1
+
+    LB.ExprRef o e1 -> TBN.ExprRef o <$> toTBN e1
                                     
     LB.ExprVar o var -> TBN.ExprVar o <$> toTBN var
     LB.ExprValInt o int -> return $ TBN.ExprValInt o int
-    LB.ExprValChar o char -> return $ TBN.ExprValChar o char
-    LB.ExprValUnit o -> return $ TBN.ExprValUnit o
+    LB.ExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
         
--- | Convert a LittleBang outer pattern to a TinyBang Nested outer pattern       
-instance TBNConvertible LB.OuterPattern TBN.OuterPattern where
-  toTBN outerPattern = case outerPattern of
-    LB.OuterPatternLabel o var pattern ->
-      TBN.OuterPatternLabel o <$> toTBN var <*> toTBN pattern  
-
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         
 instance TBNConvertible LB.Pattern TBN.Pattern where
   toTBN pattern = case pattern of   
         LB.PrimitivePattern o primitive ->
           TBN.PrimitivePattern o <$> toTBN primitive
-        LB.LabelPattern o label var p ->
-          TBN.LabelPattern o <$> toTBN label <*> toTBN var <*> toTBN p
+        LB.LabelPattern o label p ->
+          TBN.LabelPattern o <$> toTBN label <*> toTBN p
         LB.ConjunctionPattern o p1 p2 ->
           TBN.ConjunctionPattern o <$> toTBN p1 <*> toTBN p2
-        LB.ScapePattern o -> return $ TBN.ScapePattern o
-        LB.EmptyOnionPattern o -> return $ TBN.EmptyOnionPattern o      
-
--- | Convert a LittleBang projector to a TinyBang Nested projector       
-instance TBNConvertible LB.Projector TBN.Projector where
-  toTBN projector = case projector of
-        LB.PrimitiveProjector o primitive ->
-          TBN.PrimitiveProjector o <$> toTBN primitive
-        LB.LabelProjector o label ->
-          TBN.LabelProjector o <$> toTBN label
-        LB.FunProjector o -> return $ TBN.FunProjector o 
-
--- | Convert a LittleBang onion operator to a TinyBang Nested onion operator        
-instance TBNConvertible LB.OnionOperator TBN.OnionOperator where
-  toTBN onionOperator = return $ case onionOperator of
-        LB.OpOnionSub o -> TBN.OpOnionSub o       
-        LB.OpOnionProj o -> TBN.OpOnionProj o 
+        LB.EmptyPattern o -> return $ TBN.EmptyPattern o      
+        LB.VariablePattern o var -> TBN.VariablePattern o <$> toTBN var
 
 -- | Convert a LittleBang binary operator to a TinyBang Nested binary operator      
 instance TBNConvertible LB.BinaryOperator TBN.BinaryOperator where
   toTBN binaryOperator = return $ case binaryOperator of
-        LB.OpPlus o -> TBN.OpPlus o
-        LB.OpMinus o -> TBN.OpMinus o
-        LB.OpEqual o -> TBN.OpEqual o 
-        LB.OpGreater o -> TBN.OpGreater o 
-        LB.OpGreaterEq o -> TBN.OpGreaterEq o
-        LB.OpLesser o -> TBN.OpLesser o 
-        LB.OpLesserEq o -> TBN.OpLesserEq o
+        LB.OpIntPlus o -> TBN.OpIntPlus o
+        LB.OpIntMinus o -> TBN.OpIntMinus o
+        LB.OpIntEq o -> TBN.OpIntEq o 
+        LB.OpIntGreaterEq o -> TBN.OpIntGreaterEq o
+        LB.OpIntLessEq o -> TBN.OpIntLessEq o
 
 -- | Convert a LittleBang primitive to a TinyBang Nested primitive         
-instance TBNConvertible LB.Primitive TBN.Primitive where
+instance TBNConvertible LB.PrimitiveType TBN.PrimitiveType where
   toTBN primitive = return $ case primitive of
-        LB.TInt o -> TBN.TInt o 
-        LB.TChar o -> TBN.TChar o 
+        LB.PrimInt -> TBN.PrimInt
 
 -- | Convert a LittleBang label to a TinyBang label      
-instance TBNConvertible LB.Label TBN.Label where
+instance TBNConvertible LB.LabelName TBN.LabelName where
   toTBN label = return $ case label of
-        LB.LabelDef o string -> TBN.LabelDef o string
+        LB.LabelName o string -> TBN.LabelName o string
 
 -- | Convert a LittleBang var to a TinyBang Nested var               
 instance TBNConvertible LB.Var TBN.Var where

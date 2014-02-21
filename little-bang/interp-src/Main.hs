@@ -5,10 +5,10 @@ import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Toploop
 
-import Language.TinyBangNested.ATranslation.Translator
+import Language.TinyBangNested.ATranslator.Translator
 
 import Data.List.Split
 import System.IO

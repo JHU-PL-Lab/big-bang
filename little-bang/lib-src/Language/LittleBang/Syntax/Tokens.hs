@@ -31,6 +31,8 @@ data Token
   | TokIf -- ^@if@
   | TokThen -- ^@then@
   | TokElse -- ^@else@
+  | TokSemi -- ^@;@
+  | TokRef -- ^@ref@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
