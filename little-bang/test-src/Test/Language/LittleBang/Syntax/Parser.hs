@@ -30,7 +30,7 @@ genUnitTest label input expected =
     then trace ("Test " ++ label ++ " parsed\n" ++ result ++ "\nInstead of\n" ++ expected ++ "\n") $ testCase
     else testCase
       where
-       result = render $ makeDoc $ parseLittleBangNested UnknownDocument =<< lexLittleBang UnknownDocument input
+       result = render $ makeDoc $ parseLittleBang UnknownDocument =<< lexLittleBang UnknownDocument input
        boolAnswer = result == expected
        testCase = TestCase $ assertBool label boolAnswer
 

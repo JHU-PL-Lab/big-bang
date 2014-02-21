@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns, TemplateHaskell, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
 
 module Language.LittleBang.Syntax.Parser
-( parseLittleBangNested
-, parseLittleBangNestedPattern
+( parseLittleBang
+, parseLittleBangPattern
 , ParseErr
 , ParserContext(..)
 ) where
@@ -25,24 +25,24 @@ import Language.LittleBang.Syntax.Lexer
 -- |A function to parse TinyBangNested code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
 --  error message.
-parseLittleBangNested :: SourceDocument
+parseLittleBang :: SourceDocument
                       -> [PositionalToken]
                       -> Either ParseErr Expr
-parseLittleBangNested = parseLittleBangNestedRule pProgram
+parseLittleBang = parseLittleBangRule pProgram
     
 -- |A function to parse TinyBangNested code tokens into an @Expr@.  If this is
 --  successful, the result is a right @Expr@; otherwise, the result is a left
 --  error message.
-parseLittleBangNestedPattern :: SourceDocument
+parseLittleBangPattern :: SourceDocument
                              -> [PositionalToken]
                              -> Either ParseErr Pattern
-parseLittleBangNestedPattern = parseLittleBangNestedRule pPattern
+parseLittleBangPattern = parseLittleBangRule pPattern
 
-parseLittleBangNestedRule :: TBNParser a
+parseLittleBangRule :: TBNParser a
                         -> SourceDocument
                         -> [PositionalToken]
                         -> Either ParseErr a
-parseLittleBangNestedRule parser doc toks =
+parseLittleBangRule parser doc toks =
   let x = runParserT parser mempty (nameOfDocument doc) toks in
   either (Left . show) Right $ runReader (unParserM x) (ParserContext doc)
         

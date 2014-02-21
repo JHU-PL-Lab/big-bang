@@ -40,7 +40,7 @@ runTest input expected = if (verbose && not boolAnswer)
                           then trace (result ++ "\nGave\n" ++ eval ++ "\nInstead of\n" ++ expected) $ boolAnswer 
                           else boolAnswer 
                            where
-                           r1 = (convertToTBNExpr =<< desugarLittleBang =<< parseLittleBangNested UnknownDocument =<< lexLittleBang UnknownDocument input)
+                           r1 = (convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang UnknownDocument =<< lexLittleBang UnknownDocument input)
                            result = case r1 of
                              Left x -> error $ show x -- TODO do something else
                              Right y -> (render $ makeDoc $ aTranslate y)
