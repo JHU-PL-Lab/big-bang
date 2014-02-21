@@ -97,8 +97,9 @@ innerATranslate e =
              , x
              )
     ExprVar _ x -> do
-      x' <- transVar x
-      return ( [ ]
+      x' <- freshVar
+      x'' <- transVar x
+      return ( [ TBA.Clause generated x' $ TBA.Copy generated x'' ]
              , x'
              )
     ExprValEmptyOnion _ -> do
