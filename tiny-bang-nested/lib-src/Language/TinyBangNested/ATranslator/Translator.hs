@@ -36,9 +36,9 @@ innerATranslate e =
   -- TODO: propagate origin data from TBN expression to TBA expression
   case e of
     ExprLet _ x e1 e2 -> do
-      x' <- transVar x
       (cls1,x1) <- innerATranslate e1
-      (cls2,x2) <- innerATranslate e2
+      (x', (cls2,x2)) <- bracketScope $
+                            (,) <$> transVar x <*> innerATranslate e2
       return ( cls1 ++
                [ TBA.Clause generated x' $ TBA.Copy generated x1 ] ++
                cls2
@@ -46,8 +46,10 @@ innerATranslate e =
              )
     ExprScape _ pat expr -> do
       x <- freshVar
-      pcls <- fst <$> innerATranslatePat pat
-      ecls <- fst <$> innerATranslate expr
+      (pcls, ecls) <- bracketScope $
+                            (,) <$>
+                              (fst <$> innerATranslatePat pat) <*>
+                              (fst <$> innerATranslate expr)
       let pat' = TBA.Pattern generated pcls
       let expr' = TBA.Expr generated ecls
       return ( [ TBA.Clause generated x $ TBA.Def generated $

@@ -7,6 +7,7 @@ module Language.TinyBangNested.ATranslator.Monad
 
 , freshVar
 , transVar
+, bracketScope
 ) where
 
 import Control.Applicative
@@ -28,7 +29,7 @@ newtype ATranslationM a
 data ATranslationState
   = ATranslationState
       { freshVarIndex :: Int
-      , varMap :: Map TBN.Var TBA.Var
+      , varMaps :: [Map TBN.Var TBA.Var]
       , usedVars :: Set TBA.Var
       }
 
@@ -38,7 +39,7 @@ runATranslationM x =
   let initialState =
         ATranslationState
           { freshVarIndex = 0
-          , varMap = Map.empty
+          , varMaps = [Map.empty]
           , usedVars = Set.empty
           }
   in
@@ -66,17 +67,48 @@ newVar ident = do
 freshVar :: ATranslationM TBA.Var
 freshVar = newVar "a_"
 
+-- |Retrieves a mapping of all bound variables.
+curVarMap :: ATranslationM (Map TBN.Var TBA.Var)
+curVarMap = Map.unions <$> varMaps <$> get 
+
+-- TODO: separate between transVar for definitions and for uses; this way,
+--       we refuse to A-translate open expressions
 -- |Obtains an A-translation variable mapped from the provided TBN variable.
 --  This mapping is stable; the same result is returned for a given TBN variable
 --  throughout the course of an A-translation.
 transVar :: TBN.Var -> ATranslationM TBA.Var
 transVar x = do
-  s <- get
-  let mv = Map.lookup x $ varMap s
+  mv <- Map.lookup x <$> curVarMap
   case mv of
     Just x' -> return x'
     Nothing -> do
       let (TBN.Var _ ident) = x
       x' <- newVar ident
-      modify $ \s' -> s' { varMap = Map.insert x x' $ varMap s'  }
+      maps <- varMaps <$> get
+      maps' <- case maps of
+                [] -> error "Empty variable stack!" -- TODO: monadic failure
+                m:maps' -> return $ Map.insert x x' m : maps'
+      modify $ \s' -> s' { varMaps = maps' }
       return x'
+      
+-- |Performs the provided A-translation in a new scope.
+bracketScope :: ATranslationM x -> ATranslationM x
+bracketScope computation = do
+  startScope
+  result <- computation
+  stopScope
+  return result
+
+-- |Begins a new scope in the A-translation.  This is used to ensure that
+--  variable scoping and shadowing work correctly.
+startScope :: ATranslationM ()
+startScope = modify $ \s -> s { varMaps = Map.empty : varMaps s }
+
+-- |Ends the current scope in the A-translation.
+stopScope :: ATranslationM ()
+stopScope = do
+  maps <- varMaps <$> get
+  case maps of
+    [] -> error "Empty variable stack!" -- TODO: monadic failure
+    _:[] -> error "Tried to pop top-level frame!" -- TODO: monadic failure
+    _:maps' -> modify $ \s -> s { varMaps = maps' }
