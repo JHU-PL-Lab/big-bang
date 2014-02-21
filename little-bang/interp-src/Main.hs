@@ -40,18 +40,18 @@ interpName :: String
 interpName = "Interpreter"
 
 interpContext :: ParserContext
-interpContext = ParserContext UnknownDocument "Interpreter"
+interpContext = ParserContext UnknownDocument
 
 -- | Wrapper for evaluation
 eval :: String -> IO String
 eval input = 
   do
-    let transResult = performTranslation =<< convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang interpContext =<< lexLittleBang "" input
-    case transResult of 
+    let convResult = convertToTBNExpr =<< desugarLittleBang =<< parseLittleBangNested UnknownDocument =<< lexLittleBang UnknownDocument input
+    case convResult of 
       Left x -> return x
-      Right _ -> do  
-                   let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
-                   return $ "\nTranslation::\n" ++  display transResult ++ "\n\nEvaluation::\n" ++ interpretResult
+      Right y -> do  
+                   let interpretResult = stringyInterpretSource testConfig (render $ makeDoc $ aTranslate y)
+                   return $ "\nTranslation::\n" ++  display y ++ "\n\nEvaluation::\n" ++ interpretResult
       
       
       

@@ -4,6 +4,7 @@ module Language.LittleBang.Syntax.Parser
 ( parseLittleBangNested
 , parseLittleBangNestedPattern
 , ParseErr
+, ParserContext(..)
 ) where
 
 import Control.Applicative hiding ((<|>))
