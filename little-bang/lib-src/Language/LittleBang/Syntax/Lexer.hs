@@ -85,6 +85,10 @@ reservedWords =
     , ("int"   , TokInt)
     , ("let"   , TokLet)
     , ("in"    , TokIn)
+    , ("if"    , TokIf)
+    , ("then"  , TokThen)
+    , ("else"  , TokElse)
+    , ("ref"   , TokRef)
     ]
 
 -- | This group of lexers matches parametric tokens.

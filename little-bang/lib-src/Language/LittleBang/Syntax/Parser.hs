@@ -119,7 +119,7 @@ pBinaryArithExpr = do
     exp1 <- ("binary arithmetic expression" <@>
              try (origLeftAssocBinOp ExprBinaryOp pOnionExpr pBinaryArithOp)
              <|> pOnionExpr)
-    option exp1 (origConstr2 ExprChain $% (,) <$> pExpr <* consume TokSemi <*> pExpr)
+    option exp1 (origConstr2 ExprSequence $% (,) <$> return exp1 <* consume TokSemi <*> pExpr)
 
 -- |"onion" priority is either an onion or "application" priority
 pOnionExpr :: TBNParser Expr
@@ -149,6 +149,7 @@ pPrimaryExpr :: TBNParser Expr
 pPrimaryExpr = "primary expression" <@>
       origConstr1 ExprVar pVar
   <|> pLiteral
+  <|> origConstr1 ExprRef (consume TokRef >> pExpr)
   <|> try (consume TokOpenParen >> pExpr <* consume TokCloseParen)
   
 -- |Parses literal value expressions.

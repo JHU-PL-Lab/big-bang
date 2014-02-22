@@ -60,6 +60,7 @@ instance Display Token where
     TokLet -> dquotes $ text "let"
     TokIn -> dquotes $ text "in"
     TokFun -> dquotes $ text "fun"
+    TokRef -> dquotes $ text "ref"
     TokInt -> dquotes $ text "int"
     TokOpenParen -> dquotes $ text "("
     TokCloseParen -> dquotes $ text ")"
@@ -70,6 +71,7 @@ instance Display Token where
     TokIf -> text "if"
     TokThen -> text "then"
     TokElse -> text "else"
+    TokSemi -> text ";"
 
 instance Display PositionalToken where
   makeDoc pt =

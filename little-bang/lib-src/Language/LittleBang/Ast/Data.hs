@@ -29,7 +29,7 @@ data Expr
   | ExprValEmptyOnion Origin 
   -- LittleBang-specific
   | ExprCondition Origin Expr Expr Expr
-  | ExprChain Origin Expr Expr
+  | ExprSequence Origin Expr Expr
   deriving (Eq,Ord,Show)
 
 data BinaryOperator
@@ -77,6 +77,8 @@ instance HasOrigin Expr where
     ExprValInt orig _ -> orig
     ExprValEmptyOnion orig -> orig
     ExprCondition orig _ _ _ -> orig
+    ExprRef orig _ -> orig
+    ExprSequence orig _ _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of
@@ -105,11 +107,13 @@ instance Display Expr where
    ExprOnion _ e1 e2 -> text "(" <> makeDoc e1 <> text ") & (" <> makeDoc e2 <> text ")"
    ExprAppl _ e1 e2 -> text "(" <> makeDoc e1 <> text ") apply (" <> makeDoc e2 <> text ")"
    ExprLabelExp _ l e -> text "(" <> makeDoc l <+> makeDoc e <> text ")"
+   ExprRef _ e -> text "ref " <> makeDoc e
    ExprVar _ v -> makeDoc v 
    ExprValInt _ i -> text $ show i
    ExprValEmptyOnion _ -> text "()"
    ExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                makeDoc e2 <+> text "else" <+> makeDoc e3
+   ExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
 
 instance Display BinaryOperator where
   makeDoc x = case x of

@@ -39,6 +39,7 @@ getDesugarer :: LB.Expr -> (LB.Expr -> DesugarM LB.Expr)
 getDesugarer expr =
   case expr of
     LB.ExprCondition _ _ _ _ -> desugarIf
+    LB.ExprSequence _ _ _ -> desugarSeq
     _ -> desugarIdentity
 
 -- Apply desugarers to the entire AST
@@ -90,8 +91,12 @@ walkTree expr =
                                     <*> walkTree e2
                                     <*> walkTree e3)
                                     >>= f
+    LB.ExprSequence o e1 e2 -> (LB.ExprSequence o
+                                    <$> walkTree e1
+                                    <*> walkTree e2)
+                                    >>= f
 
--- Desugar (if e1 then e2 else e3)
+-- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
 -- The expression becomes
 -- ((x1: `True x2:() -> e2') & (x3: `False x4:() -> e3')) e1';;
@@ -110,7 +115,20 @@ desugarIf expr =
         (return e1)    
     _ -> return expr
 
--- An identity desugarer which does nothing
+desugarSeq :: LB.Expr -> DesugarM LB.Expr
+desugarSeq expr =
+  case expr of
+    LB.ExprSequence o e1 e2 -> 
+      LB.ExprAppl o <$>
+        (LB.ExprScape o
+          (LB.LabelPattern o (LB.LabelName o "Seq") (LB.EmptyPattern o))
+          <$> return e2) <*>
+        (LB.ExprLabelExp o <$>
+          return (LB.LabelName o "Seq") <*>
+          return e1)
+    _ -> return expr
+
+-- |An identity desugarer which does nothing
 -- This is applied to all elements of LB that are also in TBN
 desugarIdentity :: LB.Expr -> DesugarM LB.Expr
 desugarIdentity expr = 
@@ -145,6 +163,7 @@ desugarIdentity expr =
     LB.ExprVar o var -> LB.ExprVar o <$> return var
     LB.ExprValInt o int -> LB.ExprValInt o <$> return int
     LB.ExprValEmptyOnion o -> return (LB.ExprValEmptyOnion o)
+    _ -> return expr
           
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do
