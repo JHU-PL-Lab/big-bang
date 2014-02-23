@@ -111,6 +111,7 @@ pCondExpr = "conditional expression" <@>
         (,,) <$ consume TokIf <*> pExpr
              <* consume TokThen <*> pExpr
              <* consume TokElse <*> pExpr
+  <|> pListExpr
   <|> pBinaryArithExpr
 
 -- |"arithmetic" priority is either a binary arithmetic expression or "onion" priority
@@ -157,6 +158,15 @@ pLiteral :: TBNParser Expr
 pLiteral = "literal expression" <@>
       origConstr1 ExprValInt pInt
   <|> try $% ExprValEmptyOnion <$> (fst <$> originParser (consume TokEmptyOnion))
+
+pListExpr :: TBNParser Expr
+pListExpr = "list expression" <@>
+      origConstr1 ExprList ( do 
+        consume TokOpenBracket 
+        e <- pExpr `sepBy` (return TokComma)
+        consume TokCloseBracket
+        return e
+        )
 
 -- ** Pattern parsers
 

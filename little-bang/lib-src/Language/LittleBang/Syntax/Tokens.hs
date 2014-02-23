@@ -33,6 +33,9 @@ data Token
   | TokThen -- ^@then@
   | TokElse -- ^@else@
   | TokSemi -- ^@;@
+  | TokOpenBracket -- ^@[@
+  | TokCloseBracket -- ^@]@
+  | TokComma -- ^@,@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -72,6 +75,9 @@ instance Display Token where
     TokThen -> text "then"
     TokElse -> text "else"
     TokSemi -> text ";"
+    TokOpenBracket -> text "["
+    TokCloseBracket -> text "]"
+    TokComma -> text ","
 
 instance Display PositionalToken where
   makeDoc pt =

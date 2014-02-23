@@ -30,6 +30,7 @@ data Expr
   -- LittleBang-specific
   | ExprCondition Origin Expr Expr Expr
   | ExprSequence Origin Expr Expr
+  | ExprList Origin [Expr]
   deriving (Eq,Ord,Show)
 
 data BinaryOperator
@@ -114,6 +115,7 @@ instance Display Expr where
    ExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                makeDoc e2 <+> text "else" <+> makeDoc e3
    ExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
+   ExprList _ e -> text "[" <+> (foldl (<+>) (text "") $ map makeDoc e) <+> text "]"
 
 instance Display BinaryOperator where
   makeDoc x = case x of

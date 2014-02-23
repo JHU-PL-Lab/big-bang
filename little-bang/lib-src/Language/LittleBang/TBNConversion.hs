@@ -25,6 +25,10 @@ instance TBNConvertible LB.Expr TBN.Expr where
   toTBN expr = case expr of 
     LB.ExprCondition _ _ _ _ ->
       undefined -- TODO: generate correct error for untranslated node
+    LB.ExprSequence _ _ _ ->
+      undefined
+    LB.ExprList _ _ ->
+      undefined
     
     LB.ExprLet o var e1 e2 -> TBN.ExprLet o 
                                     <$> toTBN var 

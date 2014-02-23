@@ -40,6 +40,7 @@ getDesugarer expr =
   case expr of
     LB.ExprCondition _ _ _ _ -> desugarIf
     LB.ExprSequence _ _ _ -> desugarSeq
+    LB.ExprList _ _ -> desugarList
     _ -> desugarIdentity
 
 -- Apply desugarers to the entire AST
@@ -95,11 +96,14 @@ walkTree expr =
                                     <$> walkTree e1
                                     <*> walkTree e2)
                                     >>= f
+    LB.ExprList o e -> (LB.ExprList o
+                                    <$> mapM walkTree e)
+                                    >>= f
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
 -- The expression becomes
--- ((x1: `True x2:() -> e2') & (x3: `False x4:() -> e3')) e1';;
+-- ((`True () -> e2') & (`False () -> e3')) e1';;
 desugarIf :: LB.Expr -> DesugarM LB.Expr
 desugarIf expr =
   case expr of
@@ -127,6 +131,19 @@ desugarSeq expr =
           return (LB.LabelName o "Seq") <*>
           return e1)
     _ -> return expr
+
+desugarList :: LB.Expr -> DesugarM LB.Expr
+desugarList expr = 
+  case expr of
+    LB.ExprList o list -> toHTList o list
+    _ -> return expr
+    where
+    toHTList :: TB.Origin -> [LB.Expr] -> DesugarM LB.Expr
+    toHTList o lst = case lst of
+      [] -> return (LB.ExprLabelExp o (LB.LabelName o "Nil") (LB.ExprValEmptyOnion o))
+      e:t -> LB.ExprOnion o
+                <$> return (LB.ExprLabelExp o (LB.LabelName o "Hd") e)
+                <*> (LB.ExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
 -- |An identity desugarer which does nothing
 -- This is applied to all elements of LB that are also in TBN
