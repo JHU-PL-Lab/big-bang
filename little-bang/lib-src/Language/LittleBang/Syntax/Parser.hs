@@ -161,9 +161,9 @@ pLiteral = "literal expression" <@>
 
 pListExpr :: TBNParser Expr
 pListExpr = "list expression" <@>
-      origConstr1 ExprList ( do 
+      origConstr1 ExprList ( try $ do 
         consume TokOpenBracket 
-        e <- pExpr `sepBy` (return TokComma)
+        e <- pExpr `sepBy` (consume TokComma)
         consume TokCloseBracket
         return e
         )
@@ -179,6 +179,7 @@ pConjPattern :: TBNParser Pattern
 pConjPattern = "conjunction pattern" <@>
       origConstr2 ConjunctionPattern $%
         (,) <$> pLabelPattern <* consume TokOnion ?=> pConjPattern
+  <|> pListPattern
   <|> pLabelPattern
 
 -- |"label" priority is either a label pattern or "primary" priority
@@ -197,6 +198,15 @@ pPrimaryPattern = "primary pattern" <@>
   <|> try (consume TokOpenParen >> pPattern <* consume TokCloseParen)
 
 -- ** Supporting non-terminal parsers
+
+pListPattern :: TBNParser Pattern
+pListPattern = "list pattern" <@>
+    origConstr1 ListPattern ( try $ do
+      consume TokOpenBracket
+      e <- pPattern `sepBy` (consume TokComma)
+      consume TokCloseBracket
+      return e
+      )
 
 -- |Parses variables.
 pVar :: TBNParser Var

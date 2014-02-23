@@ -47,6 +47,8 @@ data Pattern
   | ConjunctionPattern Origin Pattern Pattern
   | EmptyPattern Origin
   | VariablePattern Origin Var
+  -- LittleBang-specific
+  | ListPattern Origin [Pattern]
   deriving (Eq,Ord,Show)
 
 data Var
@@ -80,6 +82,7 @@ instance HasOrigin Expr where
     ExprCondition orig _ _ _ -> orig
     ExprRef orig _ -> orig
     ExprSequence orig _ _ -> orig
+    ExprList orig _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of
@@ -92,6 +95,7 @@ instance HasOrigin Pattern where
    PrimitivePattern orig _ -> orig
    EmptyPattern orig -> orig
    VariablePattern orig _ -> orig
+   ListPattern orig _ -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of
@@ -115,7 +119,7 @@ instance Display Expr where
    ExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                makeDoc e2 <+> text "else" <+> makeDoc e3
    ExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
-   ExprList _ e -> text "[" <+> (foldl (<+>) (text "") $ map makeDoc e) <+> text "]"
+   ExprList _ e -> text "[" <> (foldl (<+>) (text "") $ map makeDoc e) <> text "]"
 
 instance Display BinaryOperator where
   makeDoc x = case x of
@@ -132,6 +136,7 @@ instance Display Pattern where
    ConjunctionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
+   ListPattern _ p -> text "[" <> (foldl (<+>) (text "") $ map makeDoc p) <> text "]"
 
 instance Display Var where
   makeDoc x = case x of

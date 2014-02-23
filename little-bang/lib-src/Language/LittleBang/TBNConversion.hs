@@ -65,6 +65,8 @@ instance TBNConvertible LB.Expr TBN.Expr where
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         
 instance TBNConvertible LB.Pattern TBN.Pattern where
   toTBN pattern = case pattern of   
+        LB.ListPattern _ _ ->
+          undefined
         LB.PrimitivePattern o primitive ->
           TBN.PrimitivePattern o <$> toTBN primitive
         LB.LabelPattern o label p ->
