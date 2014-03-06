@@ -78,6 +78,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("[" , TokOpenBracket)
     , ("]" , TokCloseBracket)
     , ("," , TokComma)
+    , ("...", TokEllipse)
     ]
 
 -- | This group of lexers matches all reserved words.

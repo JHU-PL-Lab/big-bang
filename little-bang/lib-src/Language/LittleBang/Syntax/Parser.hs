@@ -200,13 +200,16 @@ pPrimaryPattern = "primary pattern" <@>
 -- ** Supporting non-terminal parsers
 
 pListPattern :: TBNParser Pattern
-pListPattern = "list pattern" <@>
-    origConstr1 ListPattern ( try $ do
-      consume TokOpenBracket
-      e <- pPattern `sepBy` (consume TokComma)
-      consume TokCloseBracket
-      return e
-      )
+pListPattern = 
+    "list pattern" <@> do 
+              consume TokOpenBracket
+              all <- (pPattern `sepEndBy` (consume TokComma))
+              let ltop = init all
+              let lbot = last all
+              end <- optionMaybe (consume TokEllipse >> consume TokCloseBracket)
+              case end of
+                Nothing -> consume TokCloseBracket >> (origConstr2 ListPattern $% (,) <$> return all <*> return Nothing)
+                Just _ -> origConstr2 ListPattern $% (,) <$> return ltop <*> return (Just lbot)
 
 -- |Parses variables.
 pVar :: TBNParser Var

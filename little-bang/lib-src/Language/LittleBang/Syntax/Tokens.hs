@@ -36,6 +36,7 @@ data Token
   | TokOpenBracket -- ^@[@
   | TokCloseBracket -- ^@]@
   | TokComma -- ^@,@
+  | TokEllipse -- ^@...@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -78,6 +79,7 @@ instance Display Token where
     TokOpenBracket -> text "["
     TokCloseBracket -> text "]"
     TokComma -> text ","
+    TokEllipse -> text "..."
 
 instance Display PositionalToken where
   makeDoc pt =

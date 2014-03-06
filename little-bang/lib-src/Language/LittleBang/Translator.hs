@@ -49,7 +49,7 @@ getExprDesugarer expr =
 getPatDesugarer :: LB.Pattern -> DesugarFunction LB.Pattern
 getPatDesugarer pat = 
   case pat of
-    LB.ListPattern _ _ -> desugarPatList
+    LB.ListPattern _ _ _ -> desugarPatList
     _ -> desugarPatIdentity
 
 -- | Apply desugarers to the entire AST
@@ -127,8 +127,12 @@ walkPatTree pat =
                                     >>= f
     LB.EmptyPattern o -> (return $ LB.EmptyPattern o) >>= f
     LB.VariablePattern o var -> (LB.VariablePattern o <$> return var) >>= f
-    LB.ListPattern o p -> (LB.ListPattern o
+    LB.ListPattern o p t -> (LB.ListPattern o
                                     <$> mapM walkPatTree p)
+                                    <*> (case t of
+                                            Just p' -> Just <$> walkPatTree p'
+                                            Nothing -> return Nothing
+                                        )
                                     >>= f
 
 -- |Desugar (if e1 then e2 else e3)
@@ -216,15 +220,20 @@ desugarExprIdentity expr =
 desugarPatList :: LB.Pattern -> DesugarM LB.Pattern
 desugarPatList pat = 
   case pat of
-    LB.ListPattern o list -> toHTList o list
+    LB.ListPattern o list end -> toHTList o list end
     _ -> return pat
     where
-    toHTList :: TB.Origin -> [LB.Pattern] -> DesugarM LB.Pattern
-    toHTList o lst = case lst of
-      [] -> return (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))
+    toHTList :: TB.Origin -> [LB.Pattern] -> (Maybe LB.Pattern) -> DesugarM LB.Pattern
+    toHTList o lst end = case lst of
+      [] -> getListContinuation o end
       p:t -> LB.ConjunctionPattern o
                 <$> return (LB.LabelPattern o (LB.LabelName o "Hd") p)
-                <*> (LB.LabelPattern o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
+                <*> (LB.LabelPattern o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t end)
+    getListContinuation :: TB.Origin -> (Maybe LB.Pattern) -> DesugarM LB.Pattern
+    getListContinuation o end = case end of
+      Nothing -> return (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))
+      Just p -> return p
+      
 
 desugarPatIdentity :: LB.Pattern -> DesugarM LB.Pattern
 desugarPatIdentity pat = 

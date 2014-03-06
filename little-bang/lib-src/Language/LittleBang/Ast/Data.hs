@@ -48,7 +48,7 @@ data Pattern
   | EmptyPattern Origin
   | VariablePattern Origin Var
   -- LittleBang-specific
-  | ListPattern Origin [Pattern]
+  | ListPattern Origin [Pattern] (Maybe Pattern)
   deriving (Eq,Ord,Show)
 
 data Var
@@ -95,7 +95,7 @@ instance HasOrigin Pattern where
    PrimitivePattern orig _ -> orig
    EmptyPattern orig -> orig
    VariablePattern orig _ -> orig
-   ListPattern orig _ -> orig
+   ListPattern orig _ _ -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of
@@ -136,7 +136,7 @@ instance Display Pattern where
    ConjunctionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
-   ListPattern _ p -> text "[" <> (foldl (<+>) (text "") $ map makeDoc p) <> text "]"
+   ListPattern _ p _ -> text "[" <> (foldl (<+>) (text "") $ map makeDoc p) <> text "]"
 
 instance Display Var where
   makeDoc x = case x of
