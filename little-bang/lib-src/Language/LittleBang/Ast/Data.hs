@@ -39,6 +39,7 @@ data BinaryOperator
   | OpIntEq Origin 
   | OpIntGreaterEq Origin
   | OpIntLessEq Origin
+  | OpSet Origin
   deriving (Eq,Ord,Show)
 
 data Pattern
@@ -91,13 +92,13 @@ instance HasOrigin Var where
 
 instance HasOrigin Pattern where
   originOf x = case x of
-   ConjunctionPattern orig _ _ -> orig
-   LabelPattern orig _ _ -> orig
-   RefPattern orig _ -> orig
-   PrimitivePattern orig _ -> orig
-   EmptyPattern orig -> orig
-   VariablePattern orig _ -> orig
-   ListPattern orig _ _ -> orig
+    ConjunctionPattern orig _ _ -> orig
+    LabelPattern orig _ _ -> orig
+    RefPattern orig _ -> orig
+    PrimitivePattern orig _ -> orig
+    EmptyPattern orig -> orig
+    VariablePattern orig _ -> orig
+    ListPattern orig _ _ -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of
@@ -130,6 +131,7 @@ instance Display BinaryOperator where
    OpIntEq _ -> text "=="
    OpIntGreaterEq _ -> text ">="
    OpIntLessEq _ -> text "<="
+   OpSet _ -> text "<-"
 
 instance Display Pattern where
   makeDoc pat = case pat of

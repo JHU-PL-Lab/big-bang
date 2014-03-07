@@ -86,6 +86,7 @@ instance TBNConvertible LB.BinaryOperator TBN.BinaryOperator where
         LB.OpIntEq o -> TBN.OpIntEq o 
         LB.OpIntGreaterEq o -> TBN.OpIntGreaterEq o
         LB.OpIntLessEq o -> TBN.OpIntLessEq o
+        LB.OpSet o -> TBN.OpSet o
 
 -- | Convert a LittleBang primitive to a TinyBang Nested primitive         
 instance TBNConvertible LB.PrimitiveType TBN.PrimitiveType where

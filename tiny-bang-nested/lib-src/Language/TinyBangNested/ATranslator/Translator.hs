@@ -65,6 +65,7 @@ innerATranslate e =
                     TBN.OpIntEq _ -> TBA.OpIntEq
                     TBN.OpIntGreaterEq _ -> TBA.OpIntGreaterEq
                     TBN.OpIntLessEq _ -> TBA.OpIntLessEq
+                    TBN.OpSet _ -> TBA.OpSet
         in
         TBA.Builtin generated op' [x1,x2]
     ExprOnion _ e1 e2 ->

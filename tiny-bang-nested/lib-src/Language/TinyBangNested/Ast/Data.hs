@@ -39,6 +39,7 @@ data BinaryOperator
   | OpIntEq Origin 
   | OpIntGreaterEq Origin
   | OpIntLessEq Origin
+  | OpSet Origin
   deriving (Show)
 
 data Pattern
@@ -134,6 +135,7 @@ instance Display BinaryOperator where
    OpIntEq _ -> text "=="
    OpIntGreaterEq _ -> text ">="
    OpIntLessEq _ -> text "<="
+   OpSet _ -> text "<-"
 
 instance Display Pattern where
   makeDoc pat = case pat of

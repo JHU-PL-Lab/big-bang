@@ -14,6 +14,7 @@ data Token
   | TokEq -- ^@==@
   | TokLessEq -- ^@<=@
   | TokGreaterEq -- ^@>=@
+  | TokLeftArrow -- ^@<-@
   | TokEmptyOnion -- ^@()@
   | TokOnion -- ^@&@
   | TokArrow -- ^@->@
@@ -48,6 +49,7 @@ instance Display Token where
     TokMinus -> dquotes $ text "-"
     TokLessEq -> dquotes $ text "<="
     TokGreaterEq -> dquotes $ text ">="
+    TokLeftArrow -> dquotes $ text "<-"
     TokEq -> dquotes $ text "=="
     TokEmptyOnion -> dquotes $ text "()"
     TokOnion -> dquotes $ text "&"

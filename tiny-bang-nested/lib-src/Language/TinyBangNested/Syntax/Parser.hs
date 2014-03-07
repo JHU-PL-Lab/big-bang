@@ -223,6 +223,7 @@ pBinaryArithOp = (do
                     TokEq -> Just OpIntEq
                     TokLessEq -> Just OpIntLessEq
                     TokGreaterEq -> Just OpIntGreaterEq
+                    TokLeftArrow -> Just OpSet
                     _ -> Nothing)
     return $ constr origin
   ) <?> "built-in operator"

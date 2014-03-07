@@ -63,6 +63,7 @@ identStartChar = letter <|> char '_'
 operators :: [Lexer Token]
 operators = map (\(s,t) -> string s *> pure t)
     [ ("->", TokArrow)
+    , ("<-", TokLeftArrow)
     , ("==", TokEq)
     , ("()", TokEmptyOnion)
     , ("+" , TokPlus)
