@@ -4,7 +4,6 @@ module Language.LittleBang.Translator
 
 import qualified Language.LittleBang.Ast as LB
 import qualified Language.TinyBang.Ast as TB
-import qualified Language.TinyBangNested.Ast as TBN
 import Control.Applicative
 import Control.Monad.State
 
@@ -17,7 +16,7 @@ import Control.Monad.State
 -- | Desugar LittleBang. Do nothing for now
 desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
-  runDesugarM ((return expr) >>= walkExprTree)
+  runDesugarM (return expr >>= walkExprTree)
   {-
   where
     desugars :: [LB.Expr -> DesugarM LB.Expr]
@@ -121,6 +120,9 @@ walkPatTree pat =
                                     <$> return label
                                     <*> walkPatTree p)
                                     >>= f
+    LB.RefPattern o p -> (LB.RefPattern o
+                            <$> walkPatTree p)
+                            >>= f
     LB.ConjunctionPattern o p1 p2 -> (LB.ConjunctionPattern o
                                     <$> walkPatTree p1
                                     <*> walkPatTree p2)

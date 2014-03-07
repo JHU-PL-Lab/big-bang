@@ -14,13 +14,12 @@ import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Utils.Assertions
-import Language.TinyBang.Utils.Display
-import Language.TinyBangNested.ATranslator
 import Language.TinyBang.Toploop
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
+import Language.TinyBangNested.ATranslator
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop

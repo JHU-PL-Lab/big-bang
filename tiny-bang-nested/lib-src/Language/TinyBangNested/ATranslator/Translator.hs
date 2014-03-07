@@ -145,6 +145,12 @@ innerATranslatePat pat =
                     PLabel generated (aTransLabel n) x ]
              , x'
              )
+    RefPattern _ p -> do
+      (pcls, x) <- innerATranslatePat p
+      x' <- freshVar
+      return ( pcls ++ [ PatternClause generated x' $ PRef generated x ]
+             , x'
+             )
     ConjunctionPattern _ p1 p2 -> do
       (pcls1, x1) <- innerATranslatePat p1
       (pcls2, x2) <- innerATranslatePat p2

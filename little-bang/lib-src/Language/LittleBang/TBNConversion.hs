@@ -71,6 +71,8 @@ instance TBNConvertible LB.Pattern TBN.Pattern where
           TBN.PrimitivePattern o <$> toTBN primitive
         LB.LabelPattern o label p ->
           TBN.LabelPattern o <$> toTBN label <*> toTBN p
+        LB.RefPattern o p ->
+          TBN.RefPattern o <$> toTBN p
         LB.ConjunctionPattern o p1 p2 ->
           TBN.ConjunctionPattern o <$> toTBN p1 <*> toTBN p2
         LB.EmptyPattern o -> return $ TBN.EmptyPattern o      
