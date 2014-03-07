@@ -111,7 +111,6 @@ pCondExpr = "conditional expression" <@>
         (,,) <$ consume TokIf <*> pExpr
              <* consume TokThen <*> pExpr
              <* consume TokElse <*> pExpr
-  <|> pListExpr
   <|> pBinaryArithExpr
 
 -- |"arithmetic" priority is either a binary arithmetic expression or "onion" priority
@@ -150,6 +149,7 @@ pPrimaryExpr :: TBNParser Expr
 pPrimaryExpr = "primary expression" <@>
       origConstr1 ExprVar pVar
   <|> pLiteral
+  <|> pListExpr
   <|> origConstr1 ExprRef (consume TokRef >> pExpr)
   <|> try (consume TokOpenParen >> pExpr <* consume TokCloseParen)
   

@@ -6,6 +6,7 @@ FuncExpr ::= CondExpr
 CondExpr ::= if Expr then Expr else Expr
 CondExpr ::= BinaryArithExpr
 BinaryArithExpr ::= OnionExpr ArithOp BinaryArithExpr
+BinaryArithExpr ::= Expr ; Expr
 BinaryArithExpr ::= OnionExpr
 OnionExpr ::= ApplExpr & OnionExpr
 OnionExpr ::= ApplExpr
@@ -16,6 +17,8 @@ LabelExpr ::= PrimaryExpr
 PrimaryExpr ::= Var
 PrimaryExpr ::= PrimitiveLiteral
 PrimaryExpr ::= ( Expr )
+PrimaryExpr ::= ref Expr
+PrimaryExpr ::= [ (Expr , )* ]
 PrimitiveLiteral ::= EmptyOnion
 PrimitiveLiteral ::= Integer
 
@@ -28,4 +31,4 @@ PrimaryPattern ::= PrimitiveType
 PrimaryPattern ::= EmptyOnion
 PrimaryPattern ::= Var
 PrimaryPattern ::= ( Pattern )
-
+PrimaryPattern ::= [ (Pattern , )* [Pattern ...] ]
