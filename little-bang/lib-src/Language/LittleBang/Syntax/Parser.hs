@@ -188,15 +188,6 @@ pConjPattern = "conjunction pattern" <@>
   <|> pListPattern
   <|> pPrefixPattern
 
-pListPattern :: TBNParser Pattern
-pListPattern = "list pattern" <@>
-    origConstr1 ListPattern ( try $ do
-      consume TokOpenBracket
-      e <- pPattern `sepBy` (consume TokComma)
-      consume TokCloseBracket
-      return e
-      )
-
 -- |"prefix" priority is either a label pattern, a ref pattern, or "primary"
 --  priority
 pPrefixPattern :: TBNParser Pattern
@@ -221,6 +212,18 @@ pEmptyPattern = EmptyPattern <$> (fst <$> originParser (consume TokEmptyOnion))
 
 pVarPattern :: TBNParser Pattern
 pVarPattern = origConstr1 VariablePattern pVar
+
+pListPattern :: TBNParser Pattern
+pListPattern = 
+    "list pattern" <@> do 
+              consume TokOpenBracket
+              all <- (pPattern `sepEndBy` (consume TokComma))
+              let ltop = init all
+              let lbot = last all
+              end <- optionMaybe (consume TokEllipse >> consume TokCloseBracket)
+              case end of
+                Nothing -> consume TokCloseBracket >> (origConstr2 ListPattern $% (,) <$> return all <*> return Nothing)
+                Just _ -> origConstr2 ListPattern $% (,) <$> return ltop <*> return (Just lbot)
 
 -- ** Supporting non-terminal parsers
 
