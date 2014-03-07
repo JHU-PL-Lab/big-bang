@@ -6,8 +6,6 @@ module Test.Translator.Translator
 ) where
 
 import Debug.Trace
-import qualified Language.TinyBangNested.Ast as TBN
-import qualified Language.LittleBang.Ast as LB
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Toploop
 import Language.TinyBang.Syntax.Location

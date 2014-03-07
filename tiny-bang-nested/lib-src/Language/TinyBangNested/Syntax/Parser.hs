@@ -116,18 +116,19 @@ pOnionExpr = "onion expression" <@>
   where
     onion o e1 () e2 = ExprOnion o e1 e2
 
--- |"application" priority is either an application or "label" priority
+-- |"application" priority is either an application or "prefix" priority
 pApplExpr :: TBNParser Expr
 pApplExpr = "application expression" <@>
-      try (origLeftAssocBinOp appl pLabelExpr $% return ())
-  <|> pLabelExpr
+      try (origLeftAssocBinOp appl pPrefixExpr $% return ())
+  <|> pPrefixExpr
   where
     appl o e1 () e2 = ExprAppl o e1 e2
 
--- |"label" priority is either a label construction or "primary" priority
-pLabelExpr :: TBNParser Expr
-pLabelExpr = "label expression" <@>
-      origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pLabelExpr
+-- |"prefix" priority is a label, a ref, or "primary" priority
+pPrefixExpr :: TBNParser Expr
+pPrefixExpr = "prefix expression" <@>
+      origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pPrefixExpr
+  <|> origConstr1 ExprRef (consume TokRef >> pPrefixExpr) 
   <|> pPrimaryExpr
 
 -- |"primary" priority is a variable, a primitive literal, an empty onion, or
@@ -150,17 +151,19 @@ pLiteral = "literal expression" <@>
 pPattern :: TBNParser Pattern
 pPattern = pConjPattern
 
--- |"conjunction" priority is either a pattern conjunction or "label" priority
+-- |"conjunction" priority is either a pattern conjunction or "prefix" priority
 pConjPattern :: TBNParser Pattern
 pConjPattern = "conjunction pattern" <@>
       origConstr2 ConjunctionPattern $%
-        (,) <$> pLabelPattern <* consume TokOnion ?=> pConjPattern
-  <|> pLabelPattern
+        (,) <$> pPrefixPattern <* consume TokOnion ?=> pConjPattern
+  <|> pPrefixPattern
 
--- |"label" priority is either a label pattern or "primary" priority
-pLabelPattern :: TBNParser Pattern
-pLabelPattern = "label pattern" <@>
-      origConstr2 LabelPattern $% (,) <$> pLabel ?=> pLabelPattern
+-- |"prefix" priority is either a label pattern, a ref pattern, or "primary"
+--  priority
+pPrefixPattern :: TBNParser Pattern
+pPrefixPattern = "prefix pattern" <@>
+      origConstr2 LabelPattern $% (,) <$> pLabel ?=> pPrefixPattern
+  <|> origConstr1 RefPattern (consume TokRef >> pNonDestructivePattern)
   <|> pPrimaryPattern
 
 -- |"primary" priority is a primitive type, an empty onion, a variable, or a
@@ -168,9 +171,17 @@ pLabelPattern = "label pattern" <@>
 pPrimaryPattern :: TBNParser Pattern
 pPrimaryPattern = "primary pattern" <@>
       origConstr1 PrimitivePattern pPrimitiveType
-  <|> EmptyPattern <$> (fst <$> originParser (consume TokEmptyOnion))
-  <|> origConstr1 VariablePattern pVar
+  <|> pNonDestructivePattern
   <|> try (consume TokOpenParen >> pPattern <* consume TokCloseParen)
+
+pNonDestructivePattern :: TBNParser Pattern
+pNonDestructivePattern = pEmptyPattern <|> pVarPattern
+
+pEmptyPattern :: TBNParser Pattern
+pEmptyPattern = EmptyPattern <$> (fst <$> originParser (consume TokEmptyOnion))
+
+pVarPattern :: TBNParser Pattern
+pVarPattern = origConstr1 VariablePattern pVar
 
 -- ** Supporting non-terminal parsers
 

@@ -21,16 +21,13 @@ data Token
   | TokIn -- ^@in@
   | TokFun -- ^@fun@
   | TokInt -- ^@int@
+  | TokRef -- ^@ref@
   | TokOpenParen -- ^@(@
   | TokCloseParen -- ^@)@
   | TokIdentifier String
   | TokLitInt Integer
   | TokLitChar Char
   | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
-  {- LittleBang-specific -}
-  | TokIf -- ^@if@
-  | TokThen -- ^@then@
-  | TokElse -- ^@else@
   deriving (Eq, Ord, Show)
   
 -- |An annotation for tokens which describes their source position.
@@ -59,15 +56,13 @@ instance Display Token where
     TokIn -> dquotes $ text "in"
     TokFun -> dquotes $ text "fun"
     TokInt -> dquotes $ text "int"
+    TokRef -> dquotes $ text "ref"
     TokOpenParen -> dquotes $ text "("
     TokCloseParen -> dquotes $ text ")"
     TokIdentifier s -> text "id#" <> dquotes (text s)
     TokLitInt n -> text "int#" <> dquotes (text $ show n)
     TokLitChar c -> text "char#" <> dquotes (text [c])
     TokLabel n -> text "label#" <> dquotes (text n)
-    TokIf -> text "if"
-    TokThen -> text "then"
-    TokElse -> text "else"
 
 instance Display PositionalToken where
   makeDoc pt =

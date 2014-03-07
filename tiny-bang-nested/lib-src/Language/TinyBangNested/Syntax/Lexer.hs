@@ -81,11 +81,9 @@ reservedWords =
   map (\(s, t) -> string s *> notFollowedBy identChar *> pure t)
     [ ("fun"   , TokFun)
     , ("int"   , TokInt)
+    , ("ref"   , TokRef)
     , ("let"   , TokLet)
     , ("in"    , TokIn)
-    , ("if"    , TokIf)
-    , ("then"  , TokThen)
-    , ("else"  , TokElse)
     ]
 
 -- | This group of lexers matches parametric tokens.

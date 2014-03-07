@@ -44,6 +44,7 @@ data BinaryOperator
 data Pattern
   = PrimitivePattern Origin PrimitiveType
   | LabelPattern Origin LabelName Pattern
+  | RefPattern Origin Pattern
   | ConjunctionPattern Origin Pattern Pattern
   | EmptyPattern Origin
   | VariablePattern Origin Var
@@ -92,6 +93,7 @@ instance HasOrigin Pattern where
   originOf x = case x of
    ConjunctionPattern orig _ _ -> orig
    LabelPattern orig _ _ -> orig
+   RefPattern orig _ -> orig
    PrimitivePattern orig _ -> orig
    EmptyPattern orig -> orig
    VariablePattern orig _ -> orig
@@ -119,7 +121,7 @@ instance Display Expr where
    ExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                makeDoc e2 <+> text "else" <+> makeDoc e3
    ExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
-   ExprList _ e -> text "[" <> (foldl (<+>) (text "") $ map makeDoc e) <> text "]"
+   ExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"
 
 instance Display BinaryOperator where
   makeDoc x = case x of
@@ -132,11 +134,12 @@ instance Display BinaryOperator where
 instance Display Pattern where
   makeDoc pat = case pat of
    PrimitivePattern _ prim -> makeDoc prim
-   LabelPattern _ l p -> text "(" <> makeDoc l <+> makeDoc p <> text ")" 
+   LabelPattern _ l p -> text "(" <> makeDoc l <+> makeDoc p <> text ")"
+   RefPattern _ p -> text "ref" <+> parens (makeDoc p )
    ConjunctionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
-   ListPattern _ p _ -> text "[" <> (foldl (<+>) (text "") $ map makeDoc p) <> text "]"
+   ListPattern _ p _ -> text "[" <> foldl (<+>) (text "") (map makeDoc p) <> text "]"  -- TODO: include ... form
 
 instance Display Var where
   makeDoc x = case x of
