@@ -9,7 +9,7 @@ all: build install
 $(SANDBOX_DIR):
 	mkdir -p $(SANDBOX_DIR)
 
-.PHONY: buld
+.PHONY: build
 build: $(SANDBOX_DIR)
 	$(CABAL_CMD) install-deps
 	$(CABAL_CMD) configure
