@@ -29,6 +29,8 @@ instance TBNConvertible LB.Expr TBN.Expr where
       undefined
     LB.ExprList _ _ ->
       undefined
+    LB.ExprRecord _ _ ->
+      undefined
     
     LB.ExprLet o var e1 e2 -> TBN.ExprLet o 
                                     <$> toTBN var 

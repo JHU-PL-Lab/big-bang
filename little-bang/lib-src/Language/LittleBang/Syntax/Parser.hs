@@ -148,10 +148,12 @@ pPrefixExpr = "prefix expression" <@>
 --  a parenthesized expression
 pPrimaryExpr :: TBNParser Expr
 pPrimaryExpr = "primary expression" <@>
-      origConstr1 ExprVar pVar
+      try(origConstr1 ExprVar pVar)
+  <|> pObjectExpr
   <|> pLiteral
   <|> pListExpr
   <|> origConstr1 ExprRef (consume TokRef >> pExpr)
+  <|> try pRecordExpr
   <|> try (consume TokOpenParen >> pExpr <* consume TokCloseParen)
   
 -- |Parses literal value expressions.
@@ -160,19 +162,63 @@ pLiteral = "literal expression" <@>
       origConstr1 ExprValInt pInt
   <|> try $% ExprValEmptyOnion <$> (fst <$> originParser (consume TokEmptyOnion))
 
+-- ** LittleBang-specific parsers
+
 pListExpr :: TBNParser Expr
 pListExpr = "list expression" <@>
-  {-
-      origConstr1 ExprList ( try $ do 
-        consume TokOpenBracket 
-        e <- pExpr `sepBy` consume TokComma
-        consume TokCloseBracket
-        return e
-        )
-  -}
   origConstr1 ExprList $% (consume TokOpenBracket *> try (
                            pExpr `sepBy` consume TokComma <*
                            consume TokCloseBracket))
+
+pRecordExpr :: TBNParser Expr
+pRecordExpr = "record expression" <@>
+    try (origConstr1 ExprRecord $% (
+           consume TokOpenParen >>
+           (pRecordTerm `sepBy` (consume TokComma))
+           <* consume TokCloseParen))
+
+pObjectExpr :: TBNParser Expr
+pObjectExpr = "object expression" <@>
+    try (origConstr1 ExprObject $% (
+           consume TokObject >> pRecordExpr))
+
+-- ** Extra parsers for record elements
+
+pRecordTerm :: TBNParser RecordTerm
+pRecordTerm = "generic record element" <@>
+    pRecordScapeTerm <|> pRecordIdentTerm -- <|> pRecordAnonymousTerm
+
+pRecordIdentTerm :: TBNParser RecordTerm
+pRecordIdentTerm = "inline record element" <@>
+    try ( do
+        l <- origConstr1 LabelName pIdent
+        consume TokIs
+        e <- pExpr
+        origConstr2 TermIdent $% (,) <$> (return l) ?=> (return e)
+        )
+
+pRecordScapeTerm :: TBNParser RecordTerm
+pRecordScapeTerm = "labeled record function" <@>
+    try ( do
+        l <- origConstr1 LabelName pIdent
+        args <- (consume TokOpenParen >> (pRecordArg `sepBy` (consume TokComma)) <* consume TokCloseParen)
+        consume TokIs
+        e <- pExpr
+        origConstr3 TermScape $% (,,) <$> (return l) <*> (return args) <*> (return e)
+        )
+
+{-
+pRecordAnonymousTerm :: TBNParser Expr
+pRecordAnonymousTerm = "anonymous record function" <@>
+-}
+
+pRecordArg :: TBNParser RecordTerm
+pRecordArg = "generic record function arg" <@>
+    pRecordIdentArg
+
+pRecordIdentArg :: TBNParser RecordTerm
+pRecordIdentArg = "record ident arg" <@>
+    origConstr1 TermArgIdent $% (origConstr1 LabelName pIdent)
 
 -- ** Pattern parsers
 

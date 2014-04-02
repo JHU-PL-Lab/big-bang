@@ -80,6 +80,7 @@ operators = map (\(s,t) -> string s *> pure t)
     , ("]" , TokCloseBracket)
     , ("," , TokComma)
     , ("...", TokEllipse)
+    , ("\\", TokBackslash)
     ]
 
 -- | This group of lexers matches all reserved words.
@@ -94,6 +95,7 @@ reservedWords =
     , ("then"  , TokThen)
     , ("else"  , TokElse)
     , ("ref"   , TokRef)
+    , ("object", TokObject)
     ]
 
 -- | This group of lexers matches parametric tokens.
