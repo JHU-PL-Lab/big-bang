@@ -139,10 +139,15 @@ pApplExpr = "application expression" <@>
 
 -- |"prefix" priority is a label, a ref, or "primary" priority
 pPrefixExpr :: TBNParser Expr
-pPrefixExpr = "prefix expression" <@>
-      origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pPrefixExpr
-  <|> origConstr1 ExprRef (consume TokRef >> pPrefixExpr) 
-  <|> pPrimaryExpr
+pPrefixExpr = do
+    exp1 <- ("prefix expression" <@>
+              origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pPrefixExpr
+          <|> origConstr1 ExprRef (consume TokRef >> pPrefixExpr) 
+          <|> pPrimaryExpr)
+    option exp1 (origConstr2 ExprProjection $% (,)
+                 <$> return exp1
+                 <*  consume TokDot
+                 <*> (origConstr1 ExprVar pVar))
 
 -- |"primary" priority is a variable, a primitive literal, an empty onion, or
 --  a parenthesized expression
@@ -153,7 +158,7 @@ pPrimaryExpr = "primary expression" <@>
   <|> pLiteral
   <|> pListExpr
   <|> origConstr1 ExprRef (consume TokRef >> pExpr)
-  <|> try pRecordExpr
+  <|> pRecordExpr
   <|> try (consume TokOpenParen >> pExpr <* consume TokCloseParen)
   
 -- |Parses literal value expressions.
@@ -172,21 +177,26 @@ pListExpr = "list expression" <@>
 
 pRecordExpr :: TBNParser Expr
 pRecordExpr = "record expression" <@>
-    try (origConstr1 ExprRecord $% (
-           consume TokOpenParen >>
-           (pRecordTerm `sepBy` (consume TokComma))
-           <* consume TokCloseParen))
+    try (origConstr1 ExprRecord $% pRecordTerms)
 
 pObjectExpr :: TBNParser Expr
 pObjectExpr = "object expression" <@>
-    try (origConstr1 ExprObject $% (
-           consume TokObject >> pRecordExpr))
+    try (origConstr1 ExprObject $% (consume TokObject *> pRecordTerms))
+
+pProjectionExpr :: TBNParser Expr
+pProjectionExpr = "projection expression" <@>
+    try (origConstr2 ExprProjection $% (,) <$> (origConstr1 ExprVar pVar)
+        <* consume TokDot <*> (origConstr1 ExprVar pVar))
+
 
 -- ** Extra parsers for record elements
-
 pRecordTerm :: TBNParser RecordTerm
 pRecordTerm = "generic record element" <@>
-    pRecordScapeTerm <|> pRecordIdentTerm -- <|> pRecordAnonymousTerm
+    pRecordScapeTerm <|> pRecordIdentTerm <|> pRecordAnonymousTerm
+
+pRecordTerms :: TBNParser [RecordTerm]
+pRecordTerms = "set of record elements" <@>
+    consume TokOpenParen >> (pRecordTerm `sepBy` (consume TokComma)) <* consume TokCloseParen
 
 pRecordIdentTerm :: TBNParser RecordTerm
 pRecordIdentTerm = "inline record element" <@>
@@ -201,24 +211,43 @@ pRecordScapeTerm :: TBNParser RecordTerm
 pRecordScapeTerm = "labeled record function" <@>
     try ( do
         l <- origConstr1 LabelName pIdent
-        args <- (consume TokOpenParen >> (pRecordArg `sepBy` (consume TokComma)) <* consume TokCloseParen)
+        args <- pRecordArgs
         consume TokIs
         e <- pExpr
         origConstr3 TermScape $% (,,) <$> (return l) <*> (return args) <*> (return e)
         )
 
-{-
-pRecordAnonymousTerm :: TBNParser Expr
+pRecordAnonymousTerm :: TBNParser RecordTerm
 pRecordAnonymousTerm = "anonymous record function" <@>
--}
+    try ( do
+        consume TokBackslash
+        args <- pRecordArgs
+        consume TokIs
+        e <- pExpr
+        origConstr2 TermAnon $% (,) <$> (return args) <*> (return e)
+        )
 
-pRecordArg :: TBNParser RecordTerm
+-- ** Arguments
+pRecordArg :: TBNParser RecordArgument
 pRecordArg = "generic record function arg" <@>
-    pRecordIdentArg
+    try pRecordPatArg <|> pRecordIdentArg
 
-pRecordIdentArg :: TBNParser RecordTerm
+pRecordArgs :: TBNParser [RecordArgument]
+pRecordArgs =
+  try (consume TokOpenParen >> (pRecordArg `sepBy` (consume TokComma)) <* consume TokCloseParen)
+  <|> (consume TokEmptyOnion *> return [])
+
+pRecordIdentArg :: TBNParser RecordArgument
 pRecordIdentArg = "record ident arg" <@>
-    origConstr1 TermArgIdent $% (origConstr1 LabelName pIdent)
+    origConstr1 ArgIdent $% (origConstr1 LabelName pIdent)
+
+pRecordPatArg :: TBNParser RecordArgument
+pRecordPatArg = "record pat arg" <@>
+    do
+        l <- origConstr1 LabelName pIdent
+        consume TokColon
+        p <- pPattern
+        origConstr2 ArgPat $% (,) <$> (return l) <*> (return p)
 
 -- ** Pattern parsers
 

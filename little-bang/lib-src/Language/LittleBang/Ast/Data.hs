@@ -5,6 +5,7 @@ module Language.LittleBang.Ast.Data
 , Var(..)
 , LabelName(..)
 , RecordTerm(..)
+, RecordArgument(..)
 , unLabelName
 , PrimitiveType(..)
 ) where
@@ -33,7 +34,8 @@ data Expr
   | ExprSequence Origin Expr Expr
   | ExprList Origin [Expr]
   | ExprRecord Origin [RecordTerm]
-  | ExprObject Origin Expr
+  | ExprProjection Origin Expr Expr
+  | ExprObject Origin [RecordTerm]
   deriving (Eq,Ord,Show)
 
 data BinaryOperator
@@ -59,12 +61,15 @@ data Pattern
 -- LittleBang object/record terms
 data RecordTerm
   = TermIdent Origin LabelName Expr
-  | TermScape Origin LabelName [RecordTerm] Expr
-  | TermAnon Origin [RecordTerm] Expr
-  | TermArgIdent Origin LabelName
-  | TermArgPat Origin LabelName Pattern
+  | TermScape Origin LabelName [RecordArgument] Expr
+  | TermAnon Origin [RecordArgument] Expr
   | TermNativeExpr Origin Expr -- TODO is this too much of a hack maybe? Used as an adapter to Expr
-  | TermNativePat Origin Pattern
+  deriving (Eq,Ord,Show)
+
+data RecordArgument
+  = ArgIdent Origin LabelName
+  | ArgPat Origin LabelName Pattern
+  | ArgNativePat Origin Pattern -- TODO
   deriving (Eq,Ord,Show)
 
 data Var
@@ -120,10 +125,13 @@ instance HasOrigin RecordTerm where
    TermIdent orig _ _ -> orig
    TermScape orig _ _ _ -> orig
    TermAnon orig _ _ -> orig
-   TermArgIdent orig _ -> orig
-   TermArgPat orig _ _ -> orig
    TermNativeExpr orig _ -> orig
-   TermNativePat orig _ -> orig
+
+instance HasOrigin RecordArgument where
+  originOf x = case x of
+   ArgIdent orig _ -> orig
+   ArgPat orig _ _ -> orig
+   ArgNativePat orig _  -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of
@@ -137,7 +145,7 @@ instance Display Expr where
    ExprScape _ op e -> text "(" <> makeDoc op <> text ") -> (" <> makeDoc e <> text ")"
    ExprBinaryOp _ e1 ao e2 -> text "(" <> makeDoc e1 <> text ") " <> makeDoc ao <> text " (" <> makeDoc e2 <> text ")"
    ExprOnion _ e1 e2 -> text "(" <> makeDoc e1 <> text ") & (" <> makeDoc e2 <> text ")"
-   ExprAppl _ e1 e2 -> text "(" <> makeDoc e1 <> text ") apply (" <> makeDoc e2 <> text ")"
+   ExprAppl _ e1 e2 -> text "(" <> makeDoc e1 <> text ") (" <> makeDoc e2 <> text ")"
    ExprLabelExp _ l e -> text "(" <> makeDoc l <+> makeDoc e <> text ")"
    ExprRef _ e -> text "ref " <> makeDoc e
    ExprVar _ v -> makeDoc v 
@@ -149,6 +157,7 @@ instance Display Expr where
    ExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"
    ExprRecord _ e -> text "record (" <> foldl (<+>) (text "") (map makeDoc e) <> text ")"
    ExprObject _ e -> text "object (" <> (makeDoc e) <> text ")"
+   ExprProjection _ e1 e2 -> makeDoc e1 <> text "." <> makeDoc e2
 
 instance Display BinaryOperator where
   makeDoc x = case x of
@@ -174,10 +183,13 @@ instance Display RecordTerm where
    TermIdent _ l e -> makeDoc l <> text "=" <> makeDoc e
    TermScape _ l e1 e2 -> makeDoc l <+> text "(" <> makeDoc e1 <> text ") =" <+> makeDoc e2
    TermAnon _ e1 e2 -> text "\\(" <> makeDoc e1 <> text ") =" <+> makeDoc e2
-   TermArgIdent _ l -> makeDoc l
-   TermArgPat _ l p -> makeDoc l <> text ":" <> makeDoc p
    TermNativeExpr _ e -> text "record from" <+> makeDoc e
-   TermNativePat _ p -> text "record pat from" <+> makeDoc p
+
+instance Display RecordArgument where
+  makeDoc arg = case arg of
+   ArgIdent _ l -> makeDoc l
+   ArgPat _ l p -> makeDoc l <> text ":" <> makeDoc p
+   ArgNativePat _ p -> text "arg pat from" <+> makeDoc p
 
 instance Display Var where
   makeDoc x = case x of

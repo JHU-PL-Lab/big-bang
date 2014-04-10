@@ -4,9 +4,10 @@ module Language.TinyBangNested.ATranslator.Monad
 ( ATranslationM(..)
 , ATranslationState(..)
 , runATranslationM
-
 , freshVar
-, transVar
+--, transVar
+, bindVar
+, useVar
 , bracketScope
 ) where
 
@@ -76,6 +77,7 @@ curVarMap = Map.unions <$> varMaps <$> get
 -- |Obtains an A-translation variable mapped from the provided TBN variable.
 --  This mapping is stable; the same result is returned for a given TBN variable
 --  throughout the course of an A-translation.
+{-
 transVar :: TBN.Var -> ATranslationM TBA.Var
 transVar x = do
   mv <- Map.lookup x <$> curVarMap
@@ -90,6 +92,26 @@ transVar x = do
                 m:maps' -> return $ Map.insert x x' m : maps'
       modify $ \s' -> s' { varMaps = maps' }
       return x'
+-}
+
+-- |Looks up a variable in the variable map, assuming it is defined.
+useVar :: TBN.Var -> ATranslationM TBA.Var
+useVar x = do
+  mv <- Map.lookup x <$> curVarMap
+  case mv of
+    Just x' -> return x'
+    Nothing -> error "Undefined variable!" -- TODO: monadic failure
+
+bindVar :: TBN.Var -> ATranslationM TBA.Var
+bindVar x = do
+  let (TBN.Var _ ident) = x
+  x' <- newVar ident
+  maps <- varMaps <$> get
+  maps' <- case maps of
+            [] -> error "Empty variable stack!" -- TODO: monadic failure
+            m:maps' -> return $ Map.insert x x' m : maps'
+  modify $ \s' -> s' { varMaps = maps' }
+  return x'
       
 -- |Performs the provided A-translation in a new scope.
 bracketScope :: ATranslationM x -> ATranslationM x

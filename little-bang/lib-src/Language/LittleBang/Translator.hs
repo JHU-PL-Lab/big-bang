@@ -4,8 +4,13 @@ module Language.LittleBang.Translator
 
 import qualified Language.LittleBang.Ast as LB
 import qualified Language.TinyBang.Ast as TB
+import Language.LittleBang.Syntax.Lexer
+import Language.LittleBang.Syntax.Parser
+import Language.TinyBang.Syntax.Location (SourceDocument(UnknownDocument))
 import Control.Applicative
 import Control.Monad.State
+import Control.Monad.Reader
+import Data.Either
 
 {-
   TODO: this system needs to be restructured.  In general, the translator should
@@ -16,25 +21,44 @@ import Control.Monad.State
 -- | Desugar LittleBang. Do nothing for now
 desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
-  runDesugarM (return expr >>= walkExprTree)
-  {-
+  let desugarAllExpr = foldl1 (>=>) exprDesugarers in -- Note: there is a monoid alternative
+  let desugarAllArg = foldl1 (>=>) argDesugarers in
+  let desugarContext = DesugarContext
+        { desugarExprFn = desugarAllExpr,
+          desugarArgFn  = desugarAllArg
+        } in
+  runDesugarM desugarContext $ walkExprTree expr
+  --runDesugarM (return expr >>= walkExprTree)
   where
-    desugars :: [LB.Expr -> DesugarM LB.Expr]
-    desugars =
-      [ desugarExprIf
+    exprDesugarers :: [DesugarFunction LB.Expr]
+    exprDesugarers =
+      [
+        desugarExprIf
+      , desugarExprObject
+      , desugarExprSeq
+      , desugarExprList
+      , desugarExprRecord
+      , desugarExprProjection
       ]
-  -}
+    argDesugarers :: [DesugarFunction LB.RecordArgument]
+    argDesugarers =
+      [
+        desugarArgIdent
+      , desugarArgPat
+      ]
 
-runDesugarM :: DesugarM a -> Either DesugarError a
-runDesugarM x = fst <$> runStateT x (DesugarState 0)
+runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
+runDesugarM ctx x = fst <$> runStateT (runReaderT x ctx) (DesugarState 0)
 
-type DesugarM = StateT DesugarState (Either DesugarError)
+type DesugarM = ReaderT (DesugarContext) (StateT DesugarState (Either DesugarError))
 type DesugarError = String
 
 type DesugarFunction a = a -> DesugarM a
 
 data DesugarState = DesugarState { freshVarIdx :: Int }
+data DesugarContext = DesugarContext { desugarExprFn :: DesugarFunction LB.Expr, desugarArgFn :: DesugarFunction LB.RecordArgument }
 
+{-
 -- | Get an expr desugaring function based on an AST node
 getExprDesugarer :: LB.Expr -> DesugarFunction LB.Expr
 getExprDesugarer expr =
@@ -43,8 +67,15 @@ getExprDesugarer expr =
     LB.ExprSequence _ _ _ -> desugarExprSeq
     LB.ExprList _ _ -> desugarExprList
     LB.ExprRecord _ _ -> desugarExprRecord
-    {-LB.ExprObject _ _ -> seal . desugarExprRecord . desugarExprObject-}
+    LB.ExprObject o _ -> desugarObj o
+    LB.ExprProjection _ _ _ -> desugarExprProjection
     _ -> desugarExprIdentity
+    where -- TODO why didn't this work inline?
+    desugarObj o e = do
+        e1 <- desugarExprObject e
+        e2 <- desugarExprRecord e1
+        seal o e2
+-}
 
 -- | Get a pat desugaring function based on an AST node
 getPatDesugarer :: LB.Pattern -> DesugarFunction LB.Pattern
@@ -59,15 +90,14 @@ getTermDesugarer tm =
     LB.TermIdent _ _ _ -> desugarTermIdent
     LB.TermScape _ _ _ _ -> desugarTermScape
     LB.TermAnon _ _ _ -> desugarTermAnon
-    LB.TermArgIdent _ _ -> desugarTermArgIdent
-    LB.TermArgPat _ _ _ -> desugarTermArgPat
+    _ -> desugarTermIdentity
 
 -- | Apply desugarers to the entire AST
 -- Makes one pass, applying only appropriate desugarers
 -- TODO: pull out the >>= f
 walkExprTree :: LB.Expr -> DesugarM LB.Expr
-walkExprTree expr = 
-  let f = getExprDesugarer expr in
+walkExprTree expr = do
+  f <- desugarExprFn <$> ask
   case expr of 
     LB.ExprLet o var e1 e2 -> (LB.ExprLet o 
                                     <$> return var
@@ -121,8 +151,12 @@ walkExprTree expr =
     LB.ExprRecord o e -> (LB.ExprRecord o
                                     <$> mapM walkTermTree e)
                                     >>= f
-    LB.ExprObject o e -> (LB.ExprObject o
-                                    <$> walkExprTree e)
+    LB.ExprObject o tms -> (LB.ExprObject o
+                                    <$> mapM walkTermTree tms)
+                                    >>= f
+    LB.ExprProjection o e1 e2 -> (LB.ExprProjection o
+                                    <$> walkExprTree e1
+                                    <*> walkExprTree e2)
                                     >>= f
 
 -- |Walk the tree of patterns, applying desugarers
@@ -165,19 +199,24 @@ walkTermTree tm =
                                     >>= f
     LB.TermScape o l ts e -> (LB.TermScape o
                                     <$> return l
-                                    <*> mapM walkTermTree ts
+                                    <*> mapM walkArgTree ts
                                     <*> walkExprTree e)
                                     >>= f
     LB.TermAnon o ts e -> (LB.TermAnon o
-                                    <$> mapM walkTermTree ts
+                                    <$> mapM walkArgTree ts
                                     <*> walkExprTree e)
                                     >>= f
-    LB.TermArgIdent o l -> (LB.TermArgIdent o <$> return l) >>= f
-    LB.TermArgPat o l p -> (LB.TermArgPat o
+    _ -> return tm
+
+walkArgTree :: DesugarFunction LB.RecordArgument
+walkArgTree arg = do
+  f <- desugarArgFn <$> ask
+  case arg of
+    LB.ArgIdent o label -> (LB.ArgIdent o <$> return label) >>= f
+    LB.ArgPat o l p -> (LB.ArgPat o
                                     <$> return l
                                     <*> walkPatTree p)
                                     >>= f
-    _ -> return tm
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -224,12 +263,67 @@ desugarExprList expr =
                 <$> return (LB.ExprLabelExp o (LB.LabelName o "Hd") e)
                 <*> (LB.ExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
+buildRecord :: TB.Origin -> [LB.RecordTerm] -> LB.Expr
+buildRecord o terms = foldl (\a b -> LB.ExprOnion o b a) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
+
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
 desugarExprRecord expr =
   case expr of
-    LB.ExprRecord o list ->
-        let val = foldl (\a b -> LB.ExprOnion o b a) (unTermExpr $ head list) (map unTermExpr $ tail list) in return val
+    LB.ExprRecord o list -> return $ buildRecord o list
     _ -> return expr
+
+desugarExprObject :: LB.Expr -> DesugarM LB.Expr
+desugarExprObject expr =
+  case expr of
+    LB.ExprObject o tms -> seal o $ buildRecord o (map (addSelf o) tms)
+    _ -> return expr
+  where
+  addSelf :: TB.Origin -> LB.RecordTerm -> LB.RecordTerm
+  addSelf o tm =
+    let selfPart = LB.LabelPattern o (LB.LabelName o "self") (LB.VariablePattern o (LB.Var o "self")) in
+    let e = unTermExpr tm in
+    case e of
+      LB.ExprScape o pat z -> LB.TermNativeExpr o (LB.ExprScape o
+        (LB.ConjunctionPattern o selfPart pat) z)
+      _ -> tm
+
+desugarExprProjection :: LB.Expr -> DesugarM LB.Expr
+desugarExprProjection expr =
+    case expr of
+        LB.ExprProjection o e1 e2 ->
+            let (LB.ExprVar _ (LB.Var _ n)) = e2 in 
+            return $
+            LB.ExprAppl o
+                (LB.ExprOnion o
+                    (LB.ExprScape o
+                        (LB.LabelPattern o
+                            (LB.LabelName o n)
+                            (LB.VariablePattern o (LB.Var o n))
+                        )
+                        (LB.ExprVar o (LB.Var o n))
+                    )
+                    (LB.ExprScape o
+                        (LB.EmptyPattern o)
+                        (LB.ExprScape o
+                            (LB.VariablePattern o (LB.Var o "arg"))
+                            (LB.ExprAppl o
+                                e1
+                                (LB.ExprOnion o
+                                    (LB.ExprLabelExp o
+                                        (LB.LabelName o "_msg")
+                                        (LB.ExprLabelExp o
+                                            (LB.LabelName o n)
+                                            (LB.ExprValEmptyOnion o)
+                                        )
+                                    )
+                                    (LB.ExprVar o (LB.Var o "arg"))
+                                )
+                            )
+                        )
+                    )
+                )
+                e1
+        _ -> return expr
 
 -- |An identity desugarer which does nothing
 -- This is applied to all elements of LB that are also in TBN
@@ -307,12 +401,18 @@ desugarTermIdent tm =
     LB.TermIdent o label expr -> LB.TermNativeExpr o <$> (LB.ExprLabelExp o <$> return label <*> return expr)
     _ -> return tm
 
+buildArguments :: TB.Origin -> [LB.RecordArgument] -> LB.Pattern
+buildArguments o args = 
+  case args of
+    [] -> LB.EmptyPattern o
+    _  -> foldl (\a b -> LB.ConjunctionPattern o b a) (unArgPat $ head args) (map unArgPat $ tail args)
+
 desugarTermScape :: LB.RecordTerm -> DesugarM LB.RecordTerm
 desugarTermScape tm = 
   case tm of
     LB.TermScape o label args body -> 
         let identPart = LB.LabelPattern o (LB.LabelName o "_msg") (LB.LabelPattern o label (LB.EmptyPattern o)) in
-        let argPart = foldl (\a b -> LB.ConjunctionPattern o b a) (unTermPat $ head args) (map unTermPat $ tail args) in
+        let argPart = buildArguments o args in
         let pat = LB.ConjunctionPattern o identPart argPart in
         return $ LB.TermNativeExpr o (LB.ExprScape o pat body)
     _ -> return tm
@@ -320,13 +420,16 @@ desugarTermScape tm =
 desugarTermAnon :: LB.RecordTerm -> DesugarM LB.RecordTerm
 desugarTermAnon tm = 
   case tm of
-    LB.TermAnon _ _ _ -> return tm -- TODO
+    LB.TermAnon o args body -> 
+        let pat = buildArguments o args in
+        return $ LB.TermNativeExpr o (LB.ExprScape o pat body)
     _ -> return tm
 
-desugarTermArgIdent :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermArgIdent tm = 
-  case tm of
-    LB.TermArgIdent o l -> LB.TermNativePat o <$> (LB.LabelPattern o <$>
+-- |desugarers for RecordArgument
+desugarArgIdent :: DesugarFunction LB.RecordArgument
+desugarArgIdent arg = 
+  case arg of
+    LB.ArgIdent o l -> LB.ArgNativePat o <$> (LB.LabelPattern o <$>
                                                 return l
                                                 <*> (LB.VariablePattern o
                                                         <$> (LB.Var o
@@ -334,26 +437,32 @@ desugarTermArgIdent tm =
                                                         )
                                                     )
                                                 )
-    _ -> return tm
+    _ -> return arg
 
-desugarTermArgPat :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermArgPat tm = 
-  case tm of
-    LB.TermArgPat _ _ _ -> return tm -- TODO
-    _ -> return tm
+desugarArgPat :: DesugarFunction LB.RecordArgument
+desugarArgPat arg = 
+  case arg of
+    LB.ArgPat o label p -> 
+        let var = LB.VariablePattern o (LB.Var o (LB.unLabelName label)) in
+            LB.ArgNativePat o <$> (LB.LabelPattern o
+                <$> return label
+                <*> (LB.ConjunctionPattern o <$> return var <*> return p))
+    _ -> return arg
 
 desugarTermIdentity :: LB.RecordTerm -> DesugarM LB.RecordTerm
 desugarTermIdentity tm = return tm
 
-unTermExpr :: LB.RecordTerm -> LB.Expr
 unTermExpr (LB.TermNativeExpr _ e) = e
-unTermPat  (LB.TermNativePat  _ p) = p
+unArgPat  (LB.ArgNativePat  _ p) = p
 
 -- seal function
-{-
-seal :: LB.Expr -> LB.Expr
-seal e = 
- -}   
+seal :: TB.Origin -> LB.Expr -> DesugarM LB.Expr
+seal o e = -- parse this function directly until we have a prelude/stdlib for seal to load from
+    let src = "(f -> (g -> x -> g g x) (h -> y -> f (h h) y)) (seal -> obj -> (msg -> obj (msg & `self (seal obj))) & obj)" in
+    let eitherAst = do -- Either
+            tokens <- lexLittleBang UnknownDocument src
+            parseLittleBang UnknownDocument tokens
+    in return $ either (const e) (const (LB.ExprAppl o (head $ rights [eitherAst]) e)) eitherAst
           
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do

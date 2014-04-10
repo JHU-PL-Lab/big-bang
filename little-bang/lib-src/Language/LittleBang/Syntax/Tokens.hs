@@ -34,12 +34,14 @@ data Token
   | TokThen -- ^@then@
   | TokElse -- ^@else@
   | TokSemi -- ^@;@
+  | TokColon -- ^@:@
   | TokOpenBracket -- ^@[@
   | TokCloseBracket -- ^@]@
   | TokComma -- ^@,@
   | TokEllipse -- ^@...@
   | TokBackslash -- ^@\@
   | TokObject -- ^@object@
+  | TokDot -- ^@.@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -80,11 +82,14 @@ instance Display Token where
     TokThen -> text "then"
     TokElse -> text "else"
     TokSemi -> text ";"
+    TokColon -> text ":"
     TokOpenBracket -> text "["
     TokCloseBracket -> text "]"
     TokComma -> text ","
     TokEllipse -> text "..."
     TokObject -> text "object"
+    TokBackslash -> text "\\"
+    TokDot -> text "."
 
 instance Display PositionalToken where
   makeDoc pt =

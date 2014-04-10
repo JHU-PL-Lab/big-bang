@@ -38,7 +38,7 @@ innerATranslate e =
     ExprLet _ x e1 e2 -> do
       (cls1,x1) <- innerATranslate e1
       (x', (cls2,x2)) <- bracketScope $
-                            (,) <$> transVar x <*> innerATranslate e2
+                            (,) <$> bindVar x <*> innerATranslate e2
       return ( cls1 ++
                [ TBA.Clause generated x' $ TBA.Copy generated x1 ] ++
                cls2
@@ -101,7 +101,7 @@ innerATranslate e =
              )
     ExprVar _ x -> do
       x' <- freshVar
-      x'' <- transVar x
+      x'' <- useVar x
       return ( [ TBA.Clause generated x' $ TBA.Copy generated x'' ]
              , x'
              )
@@ -168,7 +168,7 @@ innerATranslatePat pat =
              , x'
              )
     VariablePattern _ x -> do
-      x' <- transVar x
+      x' <- bindVar x
       return ( [ PatternClause generated x' $ PEmptyOnion generated ]
              , x'
              )
