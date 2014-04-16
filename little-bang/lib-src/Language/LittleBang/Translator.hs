@@ -264,7 +264,7 @@ desugarExprList expr =
                 <*> (LB.ExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
 buildRecord :: TB.Origin -> [LB.RecordTerm] -> LB.Expr
-buildRecord o terms = foldl (\a b -> LB.ExprOnion o b a) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
+buildRecord o terms = foldl (\a b -> LB.ExprOnion o a b) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
 
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
 desugarExprRecord expr =
@@ -405,7 +405,7 @@ buildArguments :: TB.Origin -> [LB.RecordArgument] -> LB.Pattern
 buildArguments o args = 
   case args of
     [] -> LB.EmptyPattern o
-    _  -> foldl (\a b -> LB.ConjunctionPattern o b a) (unArgPat $ head args) (map unArgPat $ tail args)
+    _  -> foldl (\a b -> LB.ConjunctionPattern o a b) (unArgPat $ head args) (map unArgPat $ tail args)
 
 desugarTermScape :: LB.RecordTerm -> DesugarM LB.RecordTerm
 desugarTermScape tm = 

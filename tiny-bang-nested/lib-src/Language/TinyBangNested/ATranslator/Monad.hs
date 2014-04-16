@@ -53,7 +53,7 @@ newVar ident = do
   --       the resulting TBA AST
   s <- get
   let i = freshVarIndex s
-  let x = TBA.Var generated (TBA.IdentifierVar $ "a_" ++ show i) Nothing
+  let x = TBA.Var generated (TBA.IdentifierVar $ ident ++ "_" ++ show i) Nothing
   if x `Set.member` usedVars s
     then do
       put $ s { freshVarIndex = i + 1 }
@@ -66,7 +66,7 @@ newVar ident = do
 
 -- |Obtains an A-translation fresh variable.
 freshVar :: ATranslationM TBA.Var
-freshVar = newVar "a_"
+freshVar = newVar "a"
 
 -- |Retrieves a mapping of all bound variables.
 curVarMap :: ATranslationM (Map TBN.Var TBA.Var)
