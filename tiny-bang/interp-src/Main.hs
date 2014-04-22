@@ -11,7 +11,7 @@ import Language.TinyBang.Utils.Assertions
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop
-import Utils.Toploop.Logging
+import Utils.CLI.Args.Logging
 
 --import Lanugage.TinyBang.ToploopBM
 --import Language.TinyBang.Communicator

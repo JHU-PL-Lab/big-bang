@@ -20,10 +20,10 @@ import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
 import Language.TinyBangNested.ATranslator
+import Utils.CLI.Args.Logging
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop
-import Utils.Toploop.Logging
 
 $(loggingFunctions)
 

@@ -15,10 +15,10 @@ import Language.TinyBang.Utils.Display
 import Language.TinyBangNested.ATranslator
 import Language.TinyBang.Toploop
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Utils.CLI.Args.Logging
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop
-import Utils.Toploop.Logging
 
 versionStr :: String
 versionStr = "TinyBangNested Interpreter version " ++ showVersion version

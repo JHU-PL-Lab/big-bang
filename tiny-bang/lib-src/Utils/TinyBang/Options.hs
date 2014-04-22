@@ -14,6 +14,7 @@ import Control.Monad.Error
 import Language.TinyBang.Toploop
 import Language.TinyBang.Utils.Logger
 import Utils.GetOpt
+import Utils.CLI.Args.Logging
 
 data TinyBangOptions = TinyBangOptions
   { noTypecheck :: Bool

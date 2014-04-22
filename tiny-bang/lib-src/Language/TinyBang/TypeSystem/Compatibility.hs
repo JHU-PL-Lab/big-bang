@@ -148,11 +148,11 @@ internalCompatibility :: (CompatibilityConstraints db)
 internalCompatibility tov0 a0' =
   bracketLogM _debugI
     (display $ text "Checking type compatibility of" <+>
-                  makeDoc tov0 <+> text "with pattern" <+> makeDoc a0')
+                  makeDoc tov0 </> text "with pattern" <+> makeDoc a0')
     (\((sliceType, mcs), _) -> display $
       text "Type compatibility of" <+>
-        makeDoc tov0 <+> text "with pattern" <+> makeDoc a0' <+>
-        text "at slice" <+> makeDoc sliceType <+>
+        makeDoc tov0 </> text "with pattern" <+> makeDoc a0' </>
+        text "at slice" <+> makeDoc sliceType </>
         case mcs of
           Just cs -> text "gave binding constraints" <+> makeDoc cs
           Nothing -> text "was unsuccessful") $
@@ -179,12 +179,12 @@ internalCompatibilityFixedPatternType
     -> CompatibilityM db (InternalCompatibilityResult db)
 internalCompatibilityFixedPatternType tov0 a0' t0' =
   bracketLogM _debugI
-    (display $ text "Checking type compatibility of" <+> makeDoc tov0 <+>
+    (display $ text "Checking type compatibility of" <+> makeDoc tov0 </>
                text "with pattern" <+> makeDoc t0')
     (\r -> display $
         text "Type compatibility of" <+>
-          makeDoc tov0 <+> text "with pattern" <+> makeDoc t0' <+>
-          text "at slice" <+> makeDoc (fst $ fst r) <+>
+          makeDoc tov0 </> text "with pattern" <+> makeDoc t0' </>
+          text "at slice" <+> makeDoc (fst $ fst r) </>
           case (snd $ fst r) of
             Just cs -> text "gave binding constraints" <+> makeDoc cs
             Nothing -> text "was unsuccessful")

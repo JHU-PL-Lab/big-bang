@@ -5,27 +5,30 @@
   for the interpreter.
 -}
 
-module Utils.Toploop.Logging
-( Utils.Toploop.Logging.configureLogging
-, configureLoggingInstruction
-, Utils.Toploop.Logging.configureLoggingHandlers
+module Utils.CLI.Args.Logging
+( configureLoggingByStrings
+, parseInstruction
+, parsePriority
+, L.configureLoggingInstruction
+, L.configureLoggingHandlers
 ) where
 
 import Control.Applicative ((<$>))
 import Data.List.Split
 import System.Log
-import System.Log.Formatter
-import System.Log.Handler.Simple
 import System.Log.Logger
 
-import Language.TinyBang.Utils.Logger
+import Language.TinyBang.Utils.Logger as L
 
--- | Configures logging from a set of logging level strings.  Returns True if
+-- | Configures logging from a set of logging level strings.  These strings are
+--   expected to be of the form "PRIO" or "PRIO:NAME" where PRIO is a logging
+--   priority (one of debug, info, notice, warning, error, critical, alert, or
+--   emergency) and NAME is the name of a module subtree.  Returns True if
 --   configuration was successful; returns False if something went wrong.  If
 --   an error occurs, a message is printed before False is returned.
-configureLogging :: [String] -> IO Bool
-configureLogging configs =
-  case mapM parseConfig configs of
+configureLoggingByStrings :: [String] -> IO Bool
+configureLoggingByStrings configs =
+  case mapM parseInstruction configs of
     Left err -> do
       putStrLn $ "Logging configuration error: " ++ err
       return False
@@ -33,13 +36,8 @@ configureLogging configs =
       mapM_ configureLoggingInstruction steps
       return True
 
--- |Configures logging given the provided instruction.
-configureLoggingInstruction :: LoggingInstruction -> IO ()
-configureLoggingInstruction (loggerName, prio) =
-  updateGlobalLogger loggerName $ setLevel prio
-  
-parseConfig :: String -> Either String LoggingInstruction
-parseConfig str =
+parseInstruction :: String -> Either String LoggingInstruction
+parseInstruction str =
   let elems = splitOn ":" str in
   case elems of
     _:_:_:_ -> Left $ "Too many colons: " ++ str
@@ -66,16 +64,3 @@ parsePriority prioStr =
     "alert" -> Just ALERT
     "emergency" -> Just EMERGENCY
     _ -> Nothing
-
--- | Configures logging handlers for the interpreter.
-configureLoggingHandlers :: IO ()
-configureLoggingHandlers =
-  updateGlobalLogger rootLoggerName $ setHandlers [handler]
-  where
-    handler = GenericHandler
-      { priority = DEBUG
-      , privData = ()
-      , writeFunc = const putStrLn
-      , closeFunc = const $ return ()
-      , formatter = simpleLogFormatter "($prio): $msg"
-      }

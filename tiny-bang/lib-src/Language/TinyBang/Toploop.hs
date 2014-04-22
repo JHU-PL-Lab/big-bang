@@ -146,7 +146,7 @@ instance (Display db) => Display (InterpreterError db) where
             (
               text "At application site" <+> makeDoc csa </>
               text "we have scape variable" <+> makeDoc sa </>
-              text "and argument variable" <+> makeDoc aa <+>
+              text "and argument variable" <+> makeDoc aa </>
               text "but argument slice" <+> makeDoc as </>
               text "does not apply."
             )

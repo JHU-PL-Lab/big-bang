@@ -5,74 +5,27 @@
   logging system.
 -}
 module Language.TinyBang.Utils.Logger.Config
-( configureLogging
-, parseInstruction
-, configureLoggingHandlers
-, configureByInstruction
+( configureLoggingHandlers
+, configureLoggingInstruction
 , LoggingInstruction
 ) where
 
-import Control.Applicative ((<$>))
+import Data.List
 import Data.List.Split
 import System.Log
-import System.Log.Formatter
 import System.Log.Handler.Simple
 import System.Log.Logger
 
 type LoggingInstruction = (String, Priority)
-
--- | Configures logging from a set of logging level strings.  These strings are
---   expected to be of the form "PRIO" or "PRIO:NAME" where PRIO is a logging
---   priority (one of debug, info, notice, warning, error, critical, alert, or
---   emergency) and NAME is the name of a module subtree.  Returns True if
---   configuration was successful; returns False if something went wrong.  If
---   an error occurs, a message is printed before False is returned.
-configureLogging :: [String] -> IO Bool
-configureLogging configs =
-  case mapM parseInstruction configs of
-    Left err -> do
-      putStrLn $ "Logging configuration error: " ++ err
-      return False
-    Right steps -> do
-      mapM_ configureByInstruction steps
-      return True
       
 -- | Given a module name and a priority, sets that module to log only messages
 --   of that priority and higher.
-configureByInstruction :: LoggingInstruction -> IO ()
-configureByInstruction (loggerName, prio) =
+configureLoggingInstruction :: LoggingInstruction -> IO ()
+configureLoggingInstruction (loggerName, prio) =
   updateGlobalLogger loggerName $ setLevel prio
   
-parseInstruction :: String -> Either String LoggingInstruction
-parseInstruction str =
-  let elems = splitOn ":" str in
-  case elems of
-    _:_:_:_ -> Left $ "Too many colons: " ++ str
-    [] -> Left "Invalid logging configuration"
-    [prioStr] ->
-      (rootLoggerName,) <$> nameToPrio prioStr
-    [name, prioStr] ->
-      (name,) <$> nameToPrio prioStr
-  where
-    nameToPrio :: String -> Either String Priority
-    nameToPrio prioStr =
-      maybe (Left $ "Invalid priority: " ++ prioStr) Right $
-        parsePriority prioStr
-
-parsePriority :: String -> Maybe Priority
-parsePriority prioStr =
-  case prioStr of
-    "debug" -> Just DEBUG
-    "info" -> Just INFO
-    "notice" -> Just NOTICE
-    "warning" -> Just WARNING
-    "error" -> Just ERROR
-    "critical" -> Just CRITICAL
-    "alert" -> Just ALERT
-    "emergency" -> Just EMERGENCY
-    _ -> Nothing
-
--- | Configures logging handlers for the interpreter.
+-- | Configures initial logging handlers.  Should be called before any logging
+--   occurs.
 configureLoggingHandlers :: IO ()
 configureLoggingHandlers =
   updateGlobalLogger rootLoggerName $ setHandlers [handler]
@@ -82,5 +35,10 @@ configureLoggingHandlers =
       , privData = ()
       , writeFunc = const putStrLn
       , closeFunc = const $ return ()
-      , formatter = simpleLogFormatter "($prio): $msg"
+      , formatter = format --simpleLogFormatter "($prio:$loggername): $msg"
       }
+    format :: a -> (Priority,String) -> String -> IO String
+    format = \_ (prio,msg) name ->
+      return $
+        "(" ++ show prio ++ ":" ++ name ++ "):\n" ++
+        (concat $ intersperse "\n" $ map ("    "++) $ splitOn "\n" msg)
