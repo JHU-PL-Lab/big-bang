@@ -15,7 +15,6 @@ module Language.TinyBang.Utils.Display
 , makeListDoc
 , indentSize
 , module Text.PrettyPrint.Leijen
-, delimSepDoc
 , sepDoc
 , binaryOpDoc
 , denseDisplay
@@ -53,34 +52,19 @@ class Display a where
     makeListDoc :: [a] -> Doc
     display = render . makeDoc
     displayList = render . makeListDoc
-    makeListDoc = delimSepDoc lbracket rbracket comma . map makeDoc
+    makeListDoc = encloseSep lbracket rbracket comma . map makeDoc
     displayMap :: (Display k, Display v) => (a -> [(k, v)]) -> a -> Doc
     displayMap toList =
-        delimSepDoc lbrace rbrace comma . map mappingToDoc . toList
+        encloseSep lbrace rbrace comma . map mappingToDoc . toList
       where mappingToDoc (k,v) = makeDoc k <> char ':' <+> makeDoc v
 
 ---- Utility functions ------------------------------------
 
--- |Defines a utility function for loose concatenation of elements.  The given
---  list will be concatenated by a separator and surrounded in delimiters such
---  that (1) the elements will either be on different lines or the same line,
---  (2) the elements will be aligned, and (3) the left delimiter will appear to
---  the left of the alignment.  This is similar to @encloseSep@ but makes
---  different decisions regarding delimiter placement and indentation.
-delimSepDoc :: Doc -> Doc -> Doc -> [Doc] -> Doc
-delimSepDoc l r delim xs =
-  let ds =
-        if null xs
-          then []
-          else (map (<> delim) $ init xs) ++ [last xs]
-  in
-  l <> group (align (vsep ds)) <> r
-  
--- |A simpler version of @delimSepDoc@ which uses empty delimiters.  This is
+-- |A simpler version of @encloseSep@ which uses empty delimiters.  This is
 --  still useful for grouping elements by a delimiter and having the all-or-
 --  nothing newline property.
 sepDoc :: Doc -> [Doc] -> Doc
-sepDoc = delimSepDoc empty empty
+sepDoc = encloseSep empty empty
 
 -- |A binary version of @sepDoc@ which does makeDoc translation.
 binaryOpDoc :: (Display x, Display y, Display z) => x -> y -> z -> Doc
@@ -131,7 +115,7 @@ instance (Display a) => Display [a] where
     makeDoc = makeListDoc
 
 instance (Display a) => Display (Set a) where
-    makeDoc = delimSepDoc lbrace rbrace comma . map makeDoc . Set.toList
+    makeDoc = encloseSep lbrace rbrace comma . map makeDoc . Set.toList
 
 instance (Display a) => Display (Maybe a) where
     makeDoc = maybe (text "Nothing") ((text "Just" <+>) . makeDoc)
@@ -167,7 +151,7 @@ $(
                     tvars
                 makeDocFunClauses = [clause ([tupP $ map return params])
                     (normalB [|
-                        delimSepDoc lparen rparen comma $(return lstExpr)
+                        encloseSep lparen rparen comma $(return lstExpr)
                         |])
                     []]
                 makeDocFun = funD (mkName "makeDoc") makeDocFunClauses
