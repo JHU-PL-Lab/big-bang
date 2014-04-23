@@ -11,6 +11,7 @@ module Language.TinyBang.TypeSystem.Compatibility
 
 import Control.Applicative
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -22,6 +23,7 @@ import Language.TinyBang.TypeSystem.Monad.Trans.NonDet
 import Language.TinyBang.TypeSystem.Types
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger
+import Utils.Monad.Writer
 
 $(loggingFunctions)
 
@@ -66,18 +68,19 @@ compatibility :: (CompatibilityConstraints db)
               -> db
               -> [CompatibilityResult db]
 compatibility ccc argTypeOrVarVar argDb patVar patDb =
-  map fst $ runCompatibilityM ccc argDb patDb $
-    captureBindings argTypeOrVarVar patVar
+  runCompatibilityM ccc argDb patDb $ captureBindings argTypeOrVarVar patVar
 
 newtype CompatibilityM db a
   = CompatibilityM
       { unCompatibilityM ::
-          (NonDetT
-            (Reader (CompatibilityContext db)))
+          (WriterT CompatibilityAccumulation
+            (NonDetT
+              (Reader (CompatibilityContext db))))
           a
       }
   deriving ( Monad, Functor, Applicative
            , MonadReader (CompatibilityContext db)
+           , MonadWriter CompatibilityAccumulation
            , MonadNonDet
            )
 
@@ -94,10 +97,14 @@ runCompatibilityM :: CompatibilityCallContext db
                   -> CompatibilityM db a
                   -> [a]
 runCompatibilityM ccc db db' x =
-  runReader (runNonDetT (unCompatibilityM x))
+  runReader (runNonDetT (fst <$> runWriterT (unCompatibilityM x)))
     (CompatibilityContext db db' ccc)
 
-type InternalCompatibilityResult db = (CompatibilityResult db, Set TVar)
+newtype CompatibilityAccumulation =
+  CompatibilityAccumulation
+    { openBindings :: Set TVar
+    }
+  deriving (Monoid)
 
 {-|
   Captures the open bindings to the result type.  This is used to allow a sort
@@ -107,17 +114,17 @@ type InternalCompatibilityResult db = (CompatibilityResult db, Set TVar)
 captureBindings :: forall db. (CompatibilityConstraints db)
                 => TypeOrVar db
                 -> TVar
-                -> CompatibilityM db (InternalCompatibilityResult db)
+                -> CompatibilityM db (CompatibilityResult db)
 captureBindings tov0 a0' = do
-  ((t,f),vars) <- internalCompatibility tov0 a0'
+  ((t,f),acc) <- capture $ internalCompatibility tov0 a0'
   ccc <- callContext <$> ask
   let h = CompatibilityWiring
             (cxtCallScapeTypeOrVar ccc)
             (cxtCallArgTypeOrVar ccc)
             (cxtCallSiteVar ccc)
-  let newBindings = map ((.: h) . (t <:)) $ Set.toList vars
+  let newBindings = map ((.: h) . (t <:)) $ Set.toList $ openBindings acc
   let f' = CDb.union (CDb.fromList newBindings) <$> f
-  return ((t, f'), Set.empty)
+  return (t, f')
 
 {-|
   Defines an internal compatibility function.  This routine addresses a number
@@ -144,12 +151,12 @@ captureBindings tov0 a0' = do
 internalCompatibility :: (CompatibilityConstraints db)
                       => TypeOrVar db
                       -> TVar
-                      -> CompatibilityM db (InternalCompatibilityResult db)
+                      -> CompatibilityM db (CompatibilityResult db)
 internalCompatibility tov0 a0' =
   bracketLogM _debugI
     (display $ text "Checking type compatibility of" <+>
                   makeDoc tov0 </> text "with pattern" <+> makeDoc a0')
-    (\((sliceType, mcs), _) -> display $
+    (\(sliceType, mcs) -> display $
       text "Type compatibility of" <+>
         makeDoc tov0 </> text "with pattern" <+> makeDoc a0' </>
         text "at slice" <+> makeDoc sliceType </>
@@ -176,7 +183,7 @@ internalCompatibilityFixedPatternType
     => TypeOrVar db
     -> TVar
     -> Type db
-    -> CompatibilityM db (InternalCompatibilityResult db)
+    -> CompatibilityM db (CompatibilityResult db)
 internalCompatibilityFixedPatternType tov0 a0' t0' =
   bracketLogM _debugI
     (display $ text "Checking type compatibility of" <+> makeDoc tov0 </>
@@ -184,8 +191,8 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     (\r -> display $
         text "Type compatibility of" <+>
           makeDoc tov0 </> text "with pattern" <+> makeDoc t0' </>
-          text "at slice" <+> makeDoc (fst $ fst r) </>
-          case (snd $ fst r) of
+          text "at slice" <+> makeDoc (fst r) </>
+          case snd r of
             Just cs -> text "gave binding constraints" <+> makeDoc cs
             Nothing -> text "was unsuccessful")
     $
@@ -193,24 +200,25 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     case t0' of
       TOnion tov1' tov2' -> do
         -- A conjunction pattern.  We must match both sides.
-        ((t1,f1),vs1) <- internalCompatibility tov0 (insistVar tov1')
-        ((t2,f2),vs2) <- internalCompatibility (mktov t1) (insistVar tov2')
-        return ((t2, CDb.union <$> f1 <*> f2), vs1 `Set.union` vs2)
+        (t1,f1) <- internalCompatibility tov0 (insistVar tov1')
+        (t2,f2) <- internalCompatibility (mktov t1) (insistVar tov2')
+        return (t2, CDb.union <$> f1 <*> f2)
       _ -> do
         -- It's not a conjunction pattern, so we can select a concrete lower bound
         -- now.
         t0 <- choose =<< queryLowerBoundsOfTypeOrVar <$> (argdb <$> ask) <*>
                 return tov0
-        let failure = return ((t0, Nothing), Set.empty)
+        let failure = return (t0, Nothing)
         case (t0, t0') of
           (_, TOnion _ _) ->
             error "TOnion pattern should have been captured in previous case!"
-          (_, TEmptyOnion) ->
-            return ((t0, Just CDb.empty), Set.singleton a0')
+          (_, TEmptyOnion) -> do
+            tell CompatibilityAccumulation { openBindings = Set.singleton a0' }
+            return (t0, Just CDb.empty)
           (TEmptyOnion, _) ->
             failure
           (TPrimitive p, TPrimitive p') | p == p' ->
-            return ((t0, Just CDb.empty), Set.empty)
+            return (t0, Just CDb.empty)
           (TPrimitive _, _) ->
             failure
           (TLabel n tov1, TLabel n' tov1') | n == n' ->
@@ -222,13 +230,13 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
             -- TODO: update this part if/when the model of state changes
             --   Currently, this code is just discarding the slice of the type
             --   under the cell.
-            ((_,mdb),cs) <- captureBindings (mktov a1) a1'
-            return ((TRef a1, mdb), cs)
+            (_,mdb) <- captureBindings (mktov a1) a1'
+            return (TRef a1, mdb)
           (TRef _, _) ->
             failure
           (TOnion tov1 tov2, _) -> do
             r <- internalCompatibilityFixedPatternType tov1 a0' t0'
-            if isJust $ snd $ fst r
+            if isJust $ snd r
               then mapSlice (flip TOnion tov2 . mktov) <$> return r
               else mapSlice (TOnion tov1 . mktov) <$>
                       internalCompatibilityFixedPatternType tov2 a0' t0'
@@ -243,6 +251,6 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     insistVar (unTypeOrVar -> Right a) = a
     insistVar x = error $ "insistVar failure: " ++ display x
     mapSlice :: (Type db -> Type db)
-             -> InternalCompatibilityResult db
-             -> InternalCompatibilityResult db
-    mapSlice f ((t,mdb),vs) = ((f t, mdb),vs)
+             -> CompatibilityResult db
+             -> CompatibilityResult db
+    mapSlice f (t,mdb) = (f t, mdb)

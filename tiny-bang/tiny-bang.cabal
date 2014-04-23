@@ -101,7 +101,8 @@ library
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Indexed,
                    Language.TinyBang.Utils.Assertions,
                    Utils.TinyBang.Options,
-                   Utils.GetOpt
+                   Utils.GetOpt,
+                   Utils.Monad.Writer
 
 executable tiny-bang
   hs-source-dirs:  interp-src
