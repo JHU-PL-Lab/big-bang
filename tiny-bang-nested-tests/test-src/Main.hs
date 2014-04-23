@@ -32,7 +32,7 @@ main =
           exitWith $ ExitFailure $ -1
         Right options -> do
           -- First, configure logging instructions
-          mconcat <$> mapM configureByInstruction (loggerInstructions options)
+          mconcat <$> mapM configureLoggingInstruction (loggerInstructions options)
           configureLoggingHandlers
           -- Assertion options next
           when (staticAssertions options) $ do

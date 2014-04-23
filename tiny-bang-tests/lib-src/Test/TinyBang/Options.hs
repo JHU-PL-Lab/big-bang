@@ -15,6 +15,7 @@ import System.Console.GetOpt
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.Utils.Logger
+import Utils.CLI.Args.Logging
 import Utils.GetOpt
 
 data TinyBangTestOptions =
