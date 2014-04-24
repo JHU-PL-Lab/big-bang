@@ -6,6 +6,7 @@
 -}
 module Language.TinyBang.TypeSystem.Compatibility
 ( compatibility
+, CompatibilityResult(..)
 , CompatibilityCallContext(..)
 ) where
 
@@ -27,7 +28,11 @@ import Utils.Monad.Writer
 
 $(loggingFunctions)
 
-type CompatibilityResult db = (Type db, Maybe db)
+data CompatibilityResult db =
+  CompatibilityResult
+    { compatibilitySlice :: Type db
+    , compatibilityBindings :: Maybe db
+    }
 
 type CompatibilityConstraints db = (ConstraintDatabase db, Display db)
 
@@ -116,7 +121,10 @@ captureBindings :: forall db. (CompatibilityConstraints db)
                 -> TVar
                 -> CompatibilityM db (CompatibilityResult db)
 captureBindings tov0 a0' = do
-  ((t,f),acc) <- capture $ internalCompatibility tov0 a0'
+  (result,acc) <- capture $ internalCompatibility tov0 a0'
+  let CompatibilityResult
+        { compatibilitySlice = t
+        , compatibilityBindings = f } = result
   ccc <- callContext <$> ask
   let h = CompatibilityWiring
             (cxtCallScapeTypeOrVar ccc)
@@ -124,7 +132,9 @@ captureBindings tov0 a0' = do
             (cxtCallSiteVar ccc)
   let newBindings = map ((.: h) . (t <:)) $ Set.toList $ openBindings acc
   let f' = CDb.union (CDb.fromList newBindings) <$> f
-  return (t, f')
+  return CompatibilityResult
+            { compatibilitySlice = t
+            , compatibilityBindings = f' }
 
 {-|
   Defines an internal compatibility function.  This routine addresses a number
@@ -156,13 +166,18 @@ internalCompatibility tov0 a0' =
   bracketLogM _debugI
     (display $ text "Checking type compatibility of" <+>
                   makeDoc tov0 </> text "with pattern" <+> makeDoc a0')
-    (\(sliceType, mcs) -> display $
-      text "Type compatibility of" <+>
-        makeDoc tov0 </> text "with pattern" <+> makeDoc a0' </>
-        text "at slice" <+> makeDoc sliceType </>
-        case mcs of
-          Just cs -> text "gave binding constraints" <+> makeDoc cs
-          Nothing -> text "was unsuccessful") $
+    (\result ->
+      let CompatibilityResult
+            { compatibilitySlice = sliceType
+            , compatibilityBindings = mcs
+            } = result in 
+      display $
+        text "Type compatibility of" <+>
+          makeDoc tov0 </> text "with pattern" <+> makeDoc a0' </>
+          text "at slice" <+> makeDoc sliceType </>
+          case mcs of
+            Just cs -> text "gave binding constraints" <+> makeDoc cs
+            Nothing -> text "was unsuccessful") $
     do
       -- Get a concrete lower bound for the pattern.  We do this first because
       -- conjunction patterns are always split before the arguments.
@@ -191,8 +206,8 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     (\r -> display $
         text "Type compatibility of" <+>
           makeDoc tov0 </> text "with pattern" <+> makeDoc t0' </>
-          text "at slice" <+> makeDoc (fst r) </>
-          case snd r of
+          text "at slice" <+> makeDoc (compatibilitySlice r) </>
+          case compatibilityBindings r of
             Just cs -> text "gave binding constraints" <+> makeDoc cs
             Nothing -> text "was unsuccessful")
     $
@@ -200,25 +215,43 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     case t0' of
       TOnion tov1' tov2' -> do
         -- A conjunction pattern.  We must match both sides.
-        (t1,f1) <- internalCompatibility tov0 (insistVar tov1')
-        (t2,f2) <- internalCompatibility (mktov t1) (insistVar tov2')
-        return (t2, CDb.union <$> f1 <*> f2)
+        CompatibilityResult
+          { compatibilitySlice = t1
+          , compatibilityBindings = f1
+          } <- internalCompatibility tov0 (insistVar tov1')
+        CompatibilityResult
+          { compatibilitySlice = t2
+          , compatibilityBindings = f2
+          } <- internalCompatibility (mktov t1) (insistVar tov2')
+        return CompatibilityResult
+          { compatibilitySlice = t2
+          , compatibilityBindings = CDb.union <$> f1 <*> f2
+          }
       _ -> do
         -- It's not a conjunction pattern, so we can select a concrete lower bound
         -- now.
         t0 <- choose =<< queryLowerBoundsOfTypeOrVar <$> (argdb <$> ask) <*>
                 return tov0
-        let failure = return (t0, Nothing)
+        let failure = return CompatibilityResult
+                                { compatibilitySlice = t0
+                                , compatibilityBindings = Nothing
+                                }
         case (t0, t0') of
           (_, TOnion _ _) ->
             error "TOnion pattern should have been captured in previous case!"
           (_, TEmptyOnion) -> do
             tell CompatibilityAccumulation { openBindings = Set.singleton a0' }
-            return (t0, Just CDb.empty)
+            return CompatibilityResult
+                      { compatibilitySlice = t0
+                      , compatibilityBindings = Just CDb.empty
+                      }
           (TEmptyOnion, _) ->
             failure
           (TPrimitive p, TPrimitive p') | p == p' ->
-            return (t0, Just CDb.empty)
+            return CompatibilityResult
+                      { compatibilitySlice = t0
+                      , compatibilityBindings = Just CDb.empty
+                      }
           (TPrimitive _, _) ->
             failure
           (TLabel n tov1, TLabel n' tov1') | n == n' ->
@@ -230,13 +263,16 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
             -- TODO: update this part if/when the model of state changes
             --   Currently, this code is just discarding the slice of the type
             --   under the cell.
-            (_,mdb) <- captureBindings (mktov a1) a1'
-            return (TRef a1, mdb)
+            mdb <- compatibilityBindings <$> captureBindings (mktov a1) a1'
+            return CompatibilityResult
+                      { compatibilitySlice = TRef a1
+                      , compatibilityBindings = mdb
+                      }
           (TRef _, _) ->
             failure
           (TOnion tov1 tov2, _) -> do
             r <- internalCompatibilityFixedPatternType tov1 a0' t0'
-            if isJust $ snd r
+            if isJust $ compatibilityBindings r
               then mapSlice (flip TOnion tov2 . mktov) <$> return r
               else mapSlice (TOnion tov1 . mktov) <$>
                       internalCompatibilityFixedPatternType tov2 a0' t0'
@@ -253,4 +289,4 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     mapSlice :: (Type db -> Type db)
              -> CompatibilityResult db
              -> CompatibilityResult db
-    mapSlice f (t,mdb) = (f t, mdb)
+    mapSlice f r = r { compatibilitySlice = f (compatibilitySlice r) }

@@ -118,7 +118,10 @@ matchesInternal tov0 tov1 =
                         s { visitedScapes = Set.insert t $ visitedScapes s }
             ccc <- CompatibilityCallContext tov0 tov1 <$>
                       (matchesCallSiteVar <$> ask)
-            (argt,mbinds) <- choose $ compatibility ccc tov1 db a' patdb
+            CompatibilityResult
+              { compatibilitySlice = argt
+              , compatibilityBindings = mbinds
+              } <- choose $ compatibility ccc tov1 db a' patdb
             return (mktov argt, (t,) <$> (a,) . CDb.union bodydb <$> mbinds) 
           TOnion a2 a3 -> do
             {- PERF: do something to prevent duplicate work
