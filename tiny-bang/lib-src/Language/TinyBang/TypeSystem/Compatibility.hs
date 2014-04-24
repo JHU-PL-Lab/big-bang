@@ -13,9 +13,11 @@ module Language.TinyBang.TypeSystem.Compatibility
 import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Data.List.Split
 import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Tree
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.ConstraintHistory
@@ -32,7 +34,37 @@ data CompatibilityResult db =
   CompatibilityResult
     { compatibilitySlice :: Type db
     , compatibilityBindings :: Maybe db
+    , compatibilityProof :: Proof db
     }
+
+-- TODO: update this data structure from the formal thesis presentation?
+data ProofRule db
+  = CPPatternMatchFailure (Type db) (Type db)
+    -- ^Represents an immediate pattern match failure.
+  | CPPatternMatchSuccess (Type db) (Type db)
+    -- ^Represents an immediate pattern match success.
+  | CPLabel (Type db) (Type db) (Proof db)
+    -- ^Represents a local label success.  The nested proof shows compatibility
+    --  (or incompatibility) of the label contents, but this step asserts that
+    --  the labels themselves match.
+  | CPRef (Type db) (Type db) (Proof db)
+    -- ^Represents a local ref success (as per label success).
+  | CPConjunction (TypeOrVar db) (Type db) (Proof db) (Proof db)
+    -- ^Represents a conjunction pattern proof.  The two subproofs show each
+    --  side of the conjunction.
+  | CPOnionLeft (Type db) (Type db) (Proof db)
+    -- ^Represents an onion proof in which the left side matches.
+  | CPOnionRight (Type db) (Type db) (Proof db) (Proof db)
+    -- ^Represents an onion proof in which the left side does not match and so
+    --  the proof result relies upon the right side.
+
+data Proof db
+  = CPStep
+      { cpStepAnswer :: Bool
+      , _cpStepRule :: ProofRule db
+      }
+    -- ^ Indicates a proof step.  The boolean indicates whether this subtree
+    --   is a proof of success or a proof of failure.
 
 type CompatibilityConstraints db = (ConstraintDatabase db, Display db)
 
@@ -65,15 +97,80 @@ data CompatibilityCallContext db
   This function also accepts a 'CompatibilityCallContext' for history recording
   purposes.
 -}
-compatibility :: (CompatibilityConstraints db)
+compatibility :: forall db. (CompatibilityConstraints db)
               => CompatibilityCallContext db
               -> TypeOrVar db
               -> db
               -> TVar
               -> db
               -> [CompatibilityResult db]
-compatibility ccc argTypeOrVarVar argDb patVar patDb =
-  runCompatibilityM ccc argDb patDb $ captureBindings argTypeOrVarVar patVar
+compatibility ccc argTypeOrVar argDb patVar patDb =
+  let rs = runCompatibilityM ccc argDb patDb $
+              captureBindings argTypeOrVar patVar in
+  showProofsAndReturn rs
+  where
+    showProofsAndReturn :: [CompatibilityResult db] -> [CompatibilityResult db]
+    showProofsAndReturn rs =
+      _debugI
+        (display $ text "Compatibility check:" </>
+                      indent 2 (align $
+                        text "Argument:" <+> makeDoc argTypeOrVar </>
+                        text "Pattern:" <+> makeDoc patVar <+>
+                          text "\\" <+> makeDoc patDb </>
+                        text "Proofs:" </>
+                          indent 2 (align $ vcat $
+                            map (makeDocFrom2DString . drawTree .
+                                    fmap display . treeFromProof .
+                                    compatibilityProof) rs)))
+        rs
+    makeDocFrom2DString :: String -> Doc
+    makeDocFrom2DString s = align $ vcat $ map text $ splitOn "\n" s
+    treeFromProof :: Proof db -> Tree Doc
+    treeFromProof (CPStep success rule) =
+      let t = treeFromProofRule rule in
+      let tag = if success then "(compat)" else "(incompat)" in
+      t { rootLabel = text tag <+> rootLabel t }
+    treeFromProofRule :: ProofRule db -> Tree Doc
+    treeFromProofRule rule = case rule of
+      CPPatternMatchFailure t0 t0' ->
+        Node {
+          rootLabel = stdtag "Immediate failure:" t0 t0',
+          subForest = []
+          }
+      CPPatternMatchSuccess t0 t0' ->
+        Node {
+          rootLabel = stdtag "Immediate success:" t0 t0',
+          subForest = []
+          }
+      CPLabel t0 t0' p ->
+        Node {
+          rootLabel = stdtag "Label success:" t0 t0',
+          subForest = [treeFromProof p]
+          }
+      CPRef t0 t0' p ->
+        Node {
+          rootLabel = stdtag "Ref success:" t0 t0',
+          subForest = [treeFromProof p]
+          }
+      CPConjunction t0 t0' p1 p2 ->
+        Node {
+          rootLabel = stdtag "Conjunctive proof:" t0 t0',
+          subForest = map treeFromProof [p1,p2]
+          }
+      CPOnionLeft t0 t0' p ->
+        Node {
+          rootLabel = stdtag "Onion left proof:" t0 t0',
+          subForest = [treeFromProof p]
+          }
+      CPOnionRight t0 t0' p1 p2 ->
+        Node {
+          rootLabel = stdtag "Onion right proof:" t0 t0',
+          subForest = map treeFromProof [p1,p2]
+          }
+      where
+        stdtag :: (Display a, Display b) => String -> a -> b -> Doc
+        stdtag pfx t0 t0' =
+          text pfx <+> makeDoc t0 <+> text "with" <+> makeDoc t0'
 
 newtype CompatibilityM db a
   = CompatibilityM
@@ -132,9 +229,7 @@ captureBindings tov0 a0' = do
             (cxtCallSiteVar ccc)
   let newBindings = map ((.: h) . (t <:)) $ Set.toList $ openBindings acc
   let f' = CDb.union (CDb.fromList newBindings) <$> f
-  return CompatibilityResult
-            { compatibilitySlice = t
-            , compatibilityBindings = f' }
+  return result { compatibilityBindings = f' }
 
 {-|
   Defines an internal compatibility function.  This routine addresses a number
@@ -218,14 +313,19 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
         CompatibilityResult
           { compatibilitySlice = t1
           , compatibilityBindings = f1
+          , compatibilityProof = p1
           } <- internalCompatibility tov0 (insistVar tov1')
         CompatibilityResult
           { compatibilitySlice = t2
           , compatibilityBindings = f2
+          , compatibilityProof = p2
           } <- internalCompatibility (mktov t1) (insistVar tov2')
         return CompatibilityResult
           { compatibilitySlice = t2
           , compatibilityBindings = CDb.union <$> f1 <*> f2
+          , compatibilityProof =
+              CPStep (cpStepAnswer p1 && cpStepAnswer p2) $
+                CPConjunction tov0 t0' p1 p2
           }
       _ -> do
         -- It's not a conjunction pattern, so we can select a concrete lower bound
@@ -235,6 +335,8 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
         let failure = return CompatibilityResult
                                 { compatibilitySlice = t0
                                 , compatibilityBindings = Nothing
+                                , compatibilityProof =
+                                    CPStep False $ CPPatternMatchFailure t0 t0'
                                 }
         case (t0, t0') of
           (_, TOnion _ _) ->
@@ -244,6 +346,8 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
             return CompatibilityResult
                       { compatibilitySlice = t0
                       , compatibilityBindings = Just CDb.empty
+                      , compatibilityProof =
+                          CPStep True $ CPPatternMatchSuccess t0 t0'
                       }
           (TEmptyOnion, _) ->
             failure
@@ -251,31 +355,60 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
             return CompatibilityResult
                       { compatibilitySlice = t0
                       , compatibilityBindings = Just CDb.empty
+                      , compatibilityProof =
+                          CPStep True $ CPPatternMatchSuccess t0 t0'
                       }
           (TPrimitive _, _) ->
             failure
-          (TLabel n tov1, TLabel n' tov1') | n == n' ->
-            mapSlice (TLabel n . mktov) <$>
-              captureBindings tov1 (insistVar tov1')
+          (TLabel n tov1, TLabel n' tov1') | n == n' -> do
+            r <- captureBindings tov1 (insistVar tov1')
+            return r { compatibilitySlice =
+                          TLabel n $ mktov $ compatibilitySlice r
+                     , compatibilityProof =
+                          CPStep (isJust $ compatibilityBindings r) $
+                            CPLabel t0 t0' $ compatibilityProof r
+                     }
           (TLabel _ _, _) ->
             failure
           (TRef a1, TRef a1') -> do
             -- TODO: update this part if/when the model of state changes
             --   Currently, this code is just discarding the slice of the type
             --   under the cell.
-            mdb <- compatibilityBindings <$> captureBindings (mktov a1) a1'
+            r <- captureBindings (mktov a1) a1'
+            let mdb = compatibilityBindings r 
             return CompatibilityResult
                       { compatibilitySlice = TRef a1
                       , compatibilityBindings = mdb
+                      , compatibilityProof =
+                          CPStep (isJust mdb) $ CPRef t0 t0' $
+                            compatibilityProof r
                       }
           (TRef _, _) ->
             failure
           (TOnion tov1 tov2, _) -> do
             r <- internalCompatibilityFixedPatternType tov1 a0' t0'
             if isJust $ compatibilityBindings r
-              then mapSlice (flip TOnion tov2 . mktov) <$> return r
-              else mapSlice (TOnion tov1 . mktov) <$>
-                      internalCompatibilityFixedPatternType tov2 a0' t0'
+              then
+                return CompatibilityResult
+                       { compatibilitySlice =
+                            flip TOnion tov2 $ mktov $ compatibilitySlice r
+                        , compatibilityBindings = compatibilityBindings r
+                       , compatibilityProof =
+                            CPStep (cpStepAnswer $ compatibilityProof r) $
+                              CPOnionLeft t0 t0' $ compatibilityProof r
+                       }
+              else do
+                r' <- internalCompatibilityFixedPatternType tov2 a0' t0'
+                return CompatibilityResult
+                          { compatibilitySlice =
+                              TOnion (mktov $ compatibilitySlice r)
+                                     (mktov $ compatibilitySlice r')
+                          , compatibilityBindings = compatibilityBindings r'
+                          , compatibilityProof =
+                              CPStep (cpStepAnswer $ compatibilityProof r) $
+                                CPOnionRight t0 t0' (compatibilityProof r)
+                                                    (compatibilityProof r')
+                          } 
           (TScape{}, _) ->
             -- At the moment, the only thing which can match a scape is the empty
             -- onion pattern.
@@ -286,7 +419,3 @@ internalCompatibilityFixedPatternType tov0 a0' t0' =
     insistVar :: (Display db) => TypeOrVar db -> TVar
     insistVar (unTypeOrVar -> Right a) = a
     insistVar x = error $ "insistVar failure: " ++ display x
-    mapSlice :: (Type db -> Type db)
-             -> CompatibilityResult db
-             -> CompatibilityResult db
-    mapSlice f r = r { compatibilitySlice = f (compatibilitySlice r) }
