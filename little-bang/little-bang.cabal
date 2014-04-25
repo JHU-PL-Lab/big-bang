@@ -46,19 +46,3 @@ executable little-bang
                    either,
                    parsec
   ghc-options:     -Wall
-
-executable testlb
-  hs-source-dirs:  test-src                   
-                   
-  main-is:         Main.hs
-  build-depends:   base >= 4,
-                   tiny-bang,
-                   tiny-bang-nested,
-                   little-bang,
-                   HUnit >= 1.2 && < 2,
-                   test-framework >= 0.4.1,
-                   test-framework-hunit,
-                   split,
-                   either,
-                   parsec
-  ghc-options:     -Wall
