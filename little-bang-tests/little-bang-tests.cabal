@@ -1,0 +1,44 @@
+name:           little-bang-tests
+version:        0.1
+cabal-version:  >= 1.8
+build-type:     Simple
+author:         Zachary Palmer
+
+library
+  hs-source-dirs:  lib-src
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   little-bang,
+                   tiny-bang-tests,
+                   tiny-bang-nested,
+                   parsec,
+                   containers,
+                   mtl,
+                   HUnit,
+                   filepath,
+                   directory,
+                   split,
+                   test-framework,
+                   hslogger,
+                   either
+  ghc-options:     -Wall
+  exposed-modules: Test.LittleBang.Options,
+                   Test.LittleBang.SourceFile,
+                   Test.LittleBang.SourceFile.Expectation,
+                   Test.LittleBang.Syntax.Lexer,
+                   Test.LittleBang.Syntax.Parser
+
+executable little-bang-tests
+  hs-source-dirs:  test-src
+  main-is:         Main.hs
+  build-depends:   base >= 4,
+                   tiny-bang,
+                   tiny-bang-tests,
+                   tiny-bang-nested,
+                   little-bang,
+                   little-bang-tests,
+                   test-framework,
+                   test-framework-hunit,
+                   containers,
+                   mtl
+  ghc-options:     -Wall
