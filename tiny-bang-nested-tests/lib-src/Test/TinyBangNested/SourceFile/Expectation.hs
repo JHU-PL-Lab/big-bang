@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, TemplateHaskell #-}
 
 {-|
   Parses expectations for TBN test files.  These expectations are comparatively
@@ -20,9 +20,12 @@ import Data.Either.Combinators
 import Data.List
 
 import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Logger
 import Language.TinyBangNested.Ast
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
+
+$(loggingFunctions)
 
 -- TODO: add an "EXPECT-EQUIV" for value equivalence checks
 data Expectation
@@ -42,11 +45,11 @@ parseExpectation src =
   where
     trim = dropWhile (== ' ') . reverse . dropWhile (== ' ') . reverse
     parsers =
-      [ ("EXPECT-MATCH:", parseExpectMatch)
-      , ("EXPECT-TYPEFAIL", const $ Right ExpectTypeFail)
+      [ ("# EXPECT-MATCH:", parseExpectMatch)
+      , ("# EXPECT-TYPEFAIL", const $ Right ExpectTypeFail)
       ]
     parseExpectMatch :: String -> Either String Expectation
     parseExpectMatch str =
       liftM (flip ExpectMatches str) $
-        lexTinyBangNested UnknownDocument src >>=
+        lexTinyBangNested UnknownDocument str >>=
         parseTinyBangNestedPattern UnknownDocument

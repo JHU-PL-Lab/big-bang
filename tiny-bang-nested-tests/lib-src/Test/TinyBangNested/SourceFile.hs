@@ -60,7 +60,7 @@ generateTests (TinyBangNestedSourceFileTestConfig
       case mapM parseExpectation $ splitOn "\n" source of
         Left (expectationText, errMsg) ->
           Left $ "Failed to parse expectation \"" ++ expectationText ++
-                 ": " ++ errMsg
+                 "\": " ++ errMsg
         Right mexps ->
           case catMaybes mexps of
             [] -> Left "no expectation found"
