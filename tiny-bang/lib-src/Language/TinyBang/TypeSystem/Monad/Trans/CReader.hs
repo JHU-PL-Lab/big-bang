@@ -9,12 +9,15 @@ module Language.TinyBang.TypeSystem.Monad.Trans.CReader
 where
 
 import Control.Applicative
-import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.List (ListT, mapListT)
-import Control.Monad.Reader (ReaderT, runReaderT, ask, local)
-import Control.Monad.Trans (MonadTrans, lift)
+import Control.Monad
+import Control.Monad.Identity
+import Control.Monad.List
+import Control.Monad.Reader
+import Control.Monad.State
 import Control.Monad.Trans.Either
-import Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
+import Control.Monad.Trans.Maybe
+import Control.Monad.Writer
+import Data.Set (Set)
 
 import Language.TinyBang.TypeSystem.ConstraintDatabase
 
@@ -29,24 +32,39 @@ runCReaderT (CReaderT m) = runReaderT m
 newtype CReaderT db m a = CReaderT (ReaderT db m a)
   deriving (Monad, Functor, MonadTrans, Applicative, Alternative)
 
-class (Monad m, ConstraintDatabase db) => MonadCReader db m | m -> db where
+class (Monad m, Functor m, ConstraintDatabase db)
+    => MonadCReader db m | m -> db where
   askDb :: m db
   localDb :: (db -> db) -> m a -> m a
+  queryDb :: ConstraintQuery db r -> m (Set r)
+  queryDb q = (query `liftM` askDb) `ap` return q
 
-instance (Monad m, ConstraintDatabase db) => MonadCReader db (CReaderT db m) where
+instance (Monad m, Functor m, ConstraintDatabase db)
+    => MonadCReader db (CReaderT db m) where
   askDb = CReaderT ask
   localDb f (CReaderT m) = CReaderT $ local f m
 
 instance MonadCReader r m => MonadCReader r (ListT m) where
-    askDb   = lift askDb
-    localDb = mapListT . localDb
-    --readerDb = lift . readerDb
+  askDb   = lift askDb
+  localDb = mapListT . localDb
 
 instance MonadCReader r m => MonadCReader r (MaybeT m) where
-    askDb   = lift askDb
-    localDb = mapMaybeT . localDb
-    --readerDb = lift . readerDb
+  askDb   = lift askDb
+  localDb = mapMaybeT . localDb
 
 instance MonadCReader r m => MonadCReader r (EitherT e m) where
-    askDb   = lift askDb
-    localDb = mapEitherT . localDb
+  askDb   = lift askDb
+  localDb = mapEitherT . localDb
+
+instance MonadCReader r m => MonadCReader r (ReaderT r' m) where
+  askDb = lift askDb
+  localDb = mapReaderT . localDb
+
+instance MonadCReader r m => MonadCReader r (StateT s m) where
+  askDb = lift askDb
+  localDb = mapStateT . localDb
+
+instance (MonadCReader r m, Monoid w) => MonadCReader r (WriterT w m) where
+  askDb = lift askDb
+  localDb = mapWriterT . localDb
+

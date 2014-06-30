@@ -1,81 +1,101 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
+
+import Control.Monad
+import Data.Either.Combinators
+import System.IO
+
+import Paths_little_bang (version)
+import Data.Version (showVersion)
 
 import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Display
-import Language.TinyBang.Logging
 import Language.TinyBang.Toploop
-import Utils.Toploop.Logging
+import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.Utils.Assertions
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
+import Language.TinyBangNested.ATranslator
+import Utils.CLI.Args.Logging
+import Utils.GetOpt
+import Utils.TinyBang.Options
+import Utils.Toploop
 
-import Language.TinyBangNested.ATranslation.Translator
+$(loggingFunctions)
 
-import Control.Monad
-import Data.Either.Combinators
-import Data.List.Split
-import System.IO
+versionStr :: String
+versionStr = "LittleBang Interpreter version " ++ showVersion version
 
-import Paths_little_bang (version)
-import Data.Version (showVersion)
-
+-- |Creates an evaluation routine for a single expression.  Requires an initial
+--  configuration.
+makeEval :: TinyBangOptions -> IO (String -> IO String)
+makeEval opts = do
+  let dtype = databaseConfigType opts
+  let config = InterpreterConfiguration
+                    { typechecking = not $ noTypecheck opts
+                    , evaluating = not $ noEval opts
+                    , databaseType = dtype }
+  return $ \src ->
+    let result =
+          do -- Either
+            tokens <-
+              postLog _debugI
+                ( \tokens -> display $
+                    text "LittleBang tokens:" <+> makeDoc tokens)
+                $ lexLittleBang UnknownDocument src
+            lbAst <-
+              postLog _debugI
+                ( \lbAst -> display $
+                    text "Parsed LittleBang AST:" <> lineNest lbAst)
+                $ parseLittleBang UnknownDocument tokens
+            dlbAst <-
+              postLog _debugI
+                ( \dlbAst -> display $
+                    text "Desugared LittleBang AST:" <> lineNest dlbAst)
+                $ desugarLittleBang lbAst
+            tbnAst <-
+              postLog _debugI
+                ( \tbnAst -> display $
+                    text "Converted to TBN AST:" <> lineNest tbnAst)
+                $ convertToTBNExpr dlbAst 
+            let tbAst =
+                  postLog _debugI
+                    (\tbAst' -> display $
+                        text "A-translated AST:" <> lineNest tbAst')
+                    $ aTranslate tbnAst
+            case emptyDatabaseFromType dtype of
+              SomeDisplayableConstraintDatabase db ->
+                mapLeft display $ interpretAst db config tbAst
+    in
+    return $ either id display result
+  where
+    lineNest x = line <> indent 2 (align $ makeDoc x)
+    
 main :: IO ()
 main = do
-  putStrLn $ "LittleBang interpreter version " ++ showVersion version
-  putStrLn ""
-  putStrLn "###"
-  inp <- getContents
-  let exprSrcs = filter (not . null) $ splitOn ";;" inp
-  mapM_ doEvalPrint exprSrcs
-  where
-    doEvalPrint :: String -> IO ()
-    doEvalPrint exprSrc = do
-      putStrLn =<< eval exprSrc
+  opts <- updaterParse tinyBangOptionDescriptors tinyBangDefaultOptions
+
+  mapM_ configureLoggingInstruction $ loggingInstructions opts
+  configureLoggingHandlers
+  
+  when (assertions opts) $ do
+    enableAssertions
+    putStrLn "Assertions enabled!"
+  
+  if batchMode opts     
+    then do 
+      -- TODO: batch mode for LB
+      ioError $ userError "No batch mode yet implemented for LittleBang!"
+    else do 
+      putStrLn versionStr
+      putStrLn ""
       putStrLn "###"
       hFlush stdout
-
--- | Configuration
-
-testConfig :: InterpreterConfiguration
-testConfig = InterpreterConfiguration True True Simple
-
-interpName :: String
-interpName = "Interpreter"
-
-interpContext :: ParserContext
-interpContext = ParserContext UnknownDocument "Interpreter"
-
--- | Wrapper for evaluation
-eval :: String -> IO String
-eval input =
- -- configureLogging ["debug"] >>
-  let answer =
-          do -- Either String String
-            tokens <- lexLittleBang "" input
-            lbAst <- parseLittleBang interpContext tokens
-            lbAst' <- mapLeft show $ desugarLittleBang lbAst
-            tbnAst <- convertToTBNExpr lbAst'
-            tbAst <- mapLeft show $ performTranslation tbnAst
-            let interpretResult = stringyInterpretSource testConfig (render $ makeDoc tbAst)
-            return $ "\nDesugaring::\n" ++ display tbnAst ++
-                     "\n\nTranslation::\n" ++  display tbAst ++
-                     "\n\nEvaluation::\n" ++ interpretResult
-  in return $ either id id answer
   
-{-     
-    let transResult = performTranslation =<< convertToTBNExpr =<< desugarLittleBang =<< parseLittleBang interpContext =<< lexLittleBang "" input
-    case transResult of 
-      Left x -> return x
-      Right _ -> do  
-                   let interpretResult = stringyInterpretSource testConfig (render $ makeDoc transResult)
-                   return $ "\nTranslation::\n" ++  display transResult ++ "\n\nEvaluation::\n" ++ interpretResult
--}      
-      
-      
-      
-      
-      
-      
-      
-      
+      eval <- makeEval opts
+      toploop eval
+

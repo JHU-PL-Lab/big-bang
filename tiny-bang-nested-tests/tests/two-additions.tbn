@@ -1,0 +1,4 @@
+# EXPECT-MATCH: `True _
+
+(1 + 2 + 3) == 6
+

@@ -1,31 +1,38 @@
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances, TemplateHaskell #-}
 
+{-|
+  This module defines polymorphic contours in TinyBang.
+-}
 module Language.TinyBang.TypeSystem.Contours
-( ContourElement(..)
-, ContourPart(..)
-, ContourStrand(..)
-, Contour
-, contour
-, unContour
-, unContourStrand
+( Contour
+
 , PossibleContour(..)
-, subsumedBy
-, overlap
+, unPossibleContour
+
 , initialContour
 , noContour
+
+, subsumedBy
+, overlap
+, extend
+, union
 ) where
 
+import Data.Function
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.StableMemo
 
-import qualified Data.NFA as NFA
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
-import Language.TinyBang.Logging
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger
+import qualified Language.TinyBang.Utils.Data.NFA as NFA
 
 $(loggingFunctions)
 
-newtype ContourElement = ContourElement FlowVar
+-- * Contour structures
+
+newtype ContourElement = ContourElement Var
   deriving (Eq, Ord, Show)
 
 data ContourPart
@@ -33,29 +40,66 @@ data ContourPart
   | SetPart (Set ContourElement)
   deriving (Eq, Ord, Show)
   
-newtype ContourStrand = ContourStrand [ContourPart]
-  deriving (Eq, Ord, Show)
+data ContourStrand =
+  ContourStrand
+    { contourParts :: [ContourPart]
+    , appearingElements :: Set ContourElement
+    }
+instance Eq ContourStrand where
+  (==) = (==) `on` contourParts
+instance Ord ContourStrand where
+  compare = compare `on` contourParts
+instance Show ContourStrand where
+  show = show . contourParts
 
-data Contour = Contour (Set ContourStrand) ContourNfa
+data Contour =
+  Contour
+    { contourStrands :: Set ContourStrand
+    , contourNfa :: NFA.Nfa ContourElement
+    }
 
+instance Eq Contour where
+  a == b = compare a b == EQ
+instance Ord Contour where
+  compare = compare `on` contourStrands
+instance Show Contour where
+  show = show . contourStrands
+  
 newtype PossibleContour = PossibleContour (Maybe Contour)
   deriving (Eq, Ord, Show)
+  
+unPossibleContour :: PossibleContour -> Maybe Contour
+unPossibleContour (PossibleContour mcntr) = mcntr
 
-data ContourNfa
-  = forall a. (Eq a, Ord a, Show a) => ContourNfa (NFA.Nfa a ContourElement)
-  
-instance Eq Contour where
-  (Contour s _) == (Contour s' _) = s == s'
-instance Ord Contour where
-  (Contour s _) `compare` (Contour s' _) = s `compare` s'
-instance Show Contour where
-  show (Contour s _) = show s
-  
+-- * Contour contents
+
+-- | The initial contour.
+initialContour :: Contour
+initialContour =
+  Contour
+    { contourStrands = Set.singleton
+        ContourStrand
+          { contourParts = []
+          , appearingElements = Set.empty
+          }
+    , contourNfa = NFA.emptyString
+    }
+
+-- | The non-contour.
+noContour :: PossibleContour
+noContour = PossibleContour Nothing
+
+-- * Contour operations
+
 -- | Defines contour subsumption as specified in the TinyBang language document.
+--   In particular, this routine asks if the first argument is subsumed by the
+--   second.
 subsumedBy :: Contour -> Contour -> Bool
-subsumedBy cn1@(Contour _ (ContourNfa nfa1)) cn2@(Contour _ (ContourNfa nfa2)) =
-  let answer = 
-        NFA.isEmpty $ NFA.subtract nfa1 nfa2
+subsumedBy = memo2 subsumedBy'
+subsumedBy' :: Contour -> Contour -> Bool
+subsumedBy' cn1 cn2 =
+  let answer =
+        NFA.isEmpty $ NFA.subtract (contourNfa cn1) (contourNfa cn2)
       message = "Contour subsumption check: " ++ display cn2 ++
         (if answer then " subsumes " else " does not subsume ") ++ display cn1
   in
@@ -63,51 +107,90 @@ subsumedBy cn1@(Contour _ (ContourNfa nfa1)) cn2@(Contour _ (ContourNfa nfa2)) =
 
 -- | Defines contour overlap as specified in the TinyBang language document.
 overlap :: Contour -> Contour -> Bool
-overlap (Contour _ (ContourNfa nfa1)) (Contour _ (ContourNfa nfa2)) =
-  not $ NFA.isEmpty $ NFA.intersect nfa1 nfa2
-
--- | The initial contour.
-initialContour :: Contour
-initialContour = contour $ Set.singleton $ ContourStrand []
-
--- | The non-contour.
-noContour :: PossibleContour
-noContour = PossibleContour Nothing
-
--- | Creates a type contour from just a set of strands.  This function is the
---   normal constructor for type contours; it generates an NFA from the strands
---   provided.
-contour :: Set ContourStrand -> Contour
-contour strands = Contour strands $
-    foldr (contourNfaUnion . nfaFromContourStrand) (ContourNfa NFA.empty)
-      (Set.toList strands)
+overlap = memo2 overlap'
+overlap' :: Contour -> Contour -> Bool
+overlap' cn1 cn2 =
+  not $ NFA.isEmpty $ NFA.intersect (contourNfa cn1) (contourNfa cn2)
+  
+-- | Extends a contour with a single variable element.  If this causes the
+--   contour to become ill-formed, it is then folded into the least well-formed
+--   contour.
+extend :: Var -> Contour -> Contour
+extend = memo2 extend'
+extend' :: Var -> Contour -> Contour
+extend' x cntr =
+  let newStrands = Set.map extendStrand $ contourStrands cntr in
+  if any (elmt `Set.member`) $ map appearingElements $ Set.toList $
+        contourStrands cntr
+    then
+      Contour
+        { contourStrands = newStrands
+        , contourNfa = nfaFromContourStrands newStrands
+        }
+    else
+      Contour
+        { contourStrands = newStrands
+        , contourNfa = NFA.addSuffix elmt $ contourNfa cntr
+        }
   where
-    contourNfaUnion :: ContourNfa -> ContourNfa -> ContourNfa
-    contourNfaUnion (ContourNfa nfa1) (ContourNfa nfa2) =
-      ContourNfa $ NFA.union nfa1 nfa2
+    elmt = ContourElement x
+    extendStrand :: ContourStrand -> ContourStrand
+    extendStrand strand =
+      if elmt `Set.member` appearingElements strand
+        then
+          ContourStrand
+            { contourParts =
+                reverse $ collapse $ reverse $ contourParts strand
+            , appearingElements = appearingElements strand
+            }
+        else
+          ContourStrand
+            { contourParts = contourParts strand ++ [SinglePart elmt]
+            , appearingElements = Set.insert elmt $ appearingElements strand
+            }
+    collapse :: [ContourPart] -> [ContourPart]
+    collapse = f Set.empty
+      where
+        f vars parts =
+          case parts of
+            [] -> [SetPart vars]
+            part:parts' ->
+              if elmt `Set.member` elmtsOf part
+                then SetPart (vars `Set.union` elmtsOf part):parts'
+                else f (vars `Set.union` elmtsOf part) parts'
+          where
+            elmtsOf (SinglePart e) = Set.singleton e
+            elmtsOf (SetPart es) = es
+    nfaFromContourStrands :: Set ContourStrand -> NFA.Nfa ContourElement
+    nfaFromContourStrands strands =
+      let nfas = map nfaFromContourStrand $ Set.toList strands in
+      if null nfas then NFA.empty else foldl1 NFA.union nfas
+      where
+        nfaFromContourStrand :: ContourStrand -> NFA.Nfa ContourElement
+        nfaFromContourStrand strand =
+          let nfas = map nfaFromContourPart $ contourParts strand in
+          if null nfas then NFA.emptyString else foldl1 NFA.concatenate nfas
+          where
+            nfaFromContourPart :: ContourPart -> NFA.Nfa ContourElement
+            nfaFromContourPart part = case part of
+              SinglePart e -> NFA.singleton e
+              SetPart es -> NFA.kleeneStar $ NFA.oneOf $ Set.toList es
+  
+-- | Unions a contour with another contour.
+union :: Contour -> Contour -> Contour
+union cntr1 cntr2 =
+  case () of
+    _ | cntr1 `subsumedBy` cntr2 -> cntr2
+    _ | cntr2 `subsumedBy` cntr1 -> cntr1
+    _ ->
+      -- PERF: introduce a notion of subsumption on individual strands so we can
+      --       eliminate redundant strands 
+      Contour
+        { contourStrands = contourStrands cntr1 `Set.union` contourStrands cntr2
+        , contourNfa = contourNfa cntr1 `NFA.union` contourNfa cntr2
+        }
 
--- | Retrieves the strands from a type contour.
-unContour :: Contour -> Set ContourStrand
-unContour (Contour strands _) = strands
-
--- | A convenience function for unwrapping a contour strand.
-unContourStrand :: ContourStrand -> [ContourPart]
-unContourStrand (ContourStrand parts) = parts
-
--- | Builds an NFA from a contour strand.
-nfaFromContourStrand :: ContourStrand -> ContourNfa
-nfaFromContourStrand (ContourStrand parts) =
-  ContourNfa $ NFA.createFromDataWithEpsilon 0 edges [length parts]
-  where
-    edges :: [(Int,Maybe ContourElement,Int)]
-    edges = concatMap edgesFromPart (zip [0 ..] parts)
-    edgesFromPart :: (Int,ContourPart) -> [(Int, Maybe ContourElement, Int)]
-    edgesFromPart (idx,part) =
-      case part of
-        SinglePart e -> [(idx,Just e,idx+1)]
-        SetPart es ->
-          (idx, Nothing, idx + 1) :
-            map (\ e -> (idx, Just e, idx)) (Set.toList es)
+-- * Display instances
 
 instance Display PossibleContour where
   makeDoc pc = case pc of
@@ -116,13 +199,13 @@ instance Display PossibleContour where
     
 instance Display Contour where
   makeDoc cn =
-    let strands = unContour cn in
+    let strands = contourStrands cn in
     if Set.size strands == 1
       then let [strand] = Set.toList strands in makeDoc strand
       else makeDoc strands
 
 instance Display ContourStrand where
-  makeDoc (ContourStrand parts) = makeDoc parts
+  makeDoc (ContourStrand parts _) = makeDoc parts
   
 instance Display ContourPart where
   makeDoc part = case part of

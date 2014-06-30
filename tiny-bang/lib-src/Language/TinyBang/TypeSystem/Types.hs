@@ -1,140 +1,93 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-} 
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, StandaloneDeriving #-} 
 
 {-|
-  This module contains the Haskell data types for basic types, type variables,
-  and constraints in TinyBang.  This module's constructors overlap with the
-  constructors in @Language.TinyBang.Ast@ and are expected to be qualified on
-  import.
+  This module contains the Haskell data types for basic types and type variables
+  in TinyBang.
 -}
-
 module Language.TinyBang.TypeSystem.Types
-( Type(..)
-, PatternType(..)
-, InnerPatternType(..)
-, CellTVar(..)
-, FlowTVar(..)
-, AnyTVar(..)
+( TypeOrVar(..)
+, unTypeOrVar
+, mktov
+, Type(..)
+, TVar(..)
+, contourOfVar
 ) where
 
-import qualified Language.TinyBang.Ast as A
-import Language.TinyBang.Display
-  ( Display(..)
-  , (<>)
-  , (<+>)
-  , text
-  , char
-  , parens
-  , lbrace
-  , rbrace
-  , comma
-  , delimFillSep
-  , Doc)
+import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Contours
-import Language.TinyBang.TypeSystem.Utils.DocumentContainer
+import Language.TinyBang.Utils.Display
 
--- |Represents TinyBang types.  Parametric in the type of constraint database
---  used to store scape constraints.
+newtype TypeOrVar db = TypeOrVar (Either (Type db) TVar)
+  deriving (Show)
+  
+unTypeOrVar :: TypeOrVar db -> Either (Type db) TVar
+unTypeOrVar (TypeOrVar x) = x
+
+class TypeOrVarContents a db where
+  mktov :: a -> TypeOrVar db
+instance TypeOrVarContents (Type db) db where
+  mktov = TypeOrVar . Left
+instance TypeOrVarContents TVar db where
+  mktov = TypeOrVar . Right
+
+-- |The Haskell data type representing TinyBang types.  This type is
+--  parameterized in the type of constraint database which appears in scapes.
 data Type db
-  = Primitive A.PrimitiveType
-  | EmptyOnion
-  | Label A.LabelName CellTVar
-  | Onion FlowTVar FlowTVar
-  | OnionFilter FlowTVar A.OnionOp A.AnyProjector
-  | Scape PatternType FlowTVar db 
+  = TPrimitive PrimitiveType
+  | TEmptyOnion
+  | TLabel LabelName (TypeOrVar db)
+  | TRef TVar
+  | TOnion (TypeOrVar db) (TypeOrVar db)
+  | TScape TVar db TVar db
+  deriving (Show)
+  
+-- |The Haskell data type representing TinyBang type variables.
+data TVar
+  = TVar Var PossibleContour
   deriving (Eq, Ord, Show)
 
--- |Represents TinyBang pattern types.
-data PatternType
-  = ValuePattern CellTVar InnerPatternType
-  | ExnPattern CellTVar InnerPatternType
-  deriving (Eq, Ord, Show)
+-- |Retrieves the contour of a variable (if it has one).
+contourOfVar :: TVar -> Maybe Contour
+contourOfVar (TVar _ pcntr) = unPossibleContour pcntr
 
--- |Represents TinyBang inner pattern types.
-data InnerPatternType
-  = PrimitivePattern A.PrimitiveType
-  | LabelPattern A.LabelName CellTVar InnerPatternType
-  | ConjunctivePattern InnerPatternType InnerPatternType
-  | ScapePattern
-  | EmptyOnionPattern
-  deriving (Eq, Ord, Show)
+-- * Display instances
 
--- |Represents cell type variables.
-data CellTVar
-  = CellTVar A.CellVar PossibleContour
-      -- ^ Standard cell type variables
-  | GenCellTVar A.FlowVar PossibleContour
-      -- ^ Cell type variables modeling the @CVar@ function in the TinyBang spec
-  deriving (Eq, Ord, Show)
-  
--- |Represents flow type variables.
-data FlowTVar
-  = FlowTVar A.FlowVar PossibleContour
-      -- ^ Standard flow type variables
-  | GenFlowTVar A.FlowVar PossibleContour
-      -- ^ Flow type variables modeling the @FVar@ function in the TinyBang spec
-  deriving (Eq, Ord, Show)
-  
--- |A wrapper for any type variable.
-data AnyTVar
-  = SomeCellTVar CellTVar
-  | SomeFlowTVar FlowTVar
-  deriving (Eq, Ord, Show)
-  
-instance Display PatternType where
-  makeDoc tpat = case tpat of
-    ValuePattern a tipat -> makeDoc a <> char '~' <> makeDoc tipat
-    ExnPattern a tipat -> text "exn" <+> makeDoc a <> char '~' <> makeDoc tipat
-    
-instance Display InnerPatternType where
-  makeDoc = makeDoc'
+instance (Display db) => Display (TypeOrVar db) where
+  makeDoc = either makeDoc makeDoc . unTypeOrVar
+
+instance (Display db) => Display (Type db) where
+  makeDoc t =
+    case t of
+      TPrimitive pt -> makeDoc pt
+      TEmptyOnion -> text "()"
+      TLabel n tov -> makeDoc n <+> recurse tov
+      TRef a -> text "ref" <+> makeDoc a
+      TOnion tov1 tov2 -> recurse tov1 <+> char '&' <+> recurse tov2
+      TScape a' cs' a cs ->
+        makeDoc a' <> char '\\' <> makeDoc cs' <+> text "->" <+>
+          makeDoc a <> char '\\' <> makeDoc cs
     where
-      makeDoc' tipat = case tipat of
-        PrimitivePattern p -> makeDoc p
-        LabelPattern n b tipat' -> makeDoc n <+> makeDoc b <> char '~'
-                                      <> recurse tipat'
-        ConjunctivePattern tipat1 tipat2 -> recurse tipat1 <+> char '&'
-                                              <+> recurse tipat2
-        ScapePattern -> text "fun"
-        EmptyOnionPattern -> text "()"
-        where
-          precedence :: InnerPatternType -> Int
-          precedence tipat' = case tipat' of
-            PrimitivePattern _ -> atom
-            LabelPattern _ _ _ -> 9
-            ConjunctivePattern _ _ -> 4
-            ScapePattern -> atom
-            EmptyOnionPattern ->  atom
-            where
-              atom = -9999
-          recurse :: InnerPatternType -> Doc
-          recurse tipat' =
-            (if precedence tipat > precedence tipat'
-              then parens
-              else id)
-                $ makeDoc tipat'
+      recurse tov =
+        case unTypeOrVar tov of
+          Left t' ->
+            (if prio t > prio t' then parens else id) $ makeDoc t'
+          Right a -> makeDoc a
+      prio :: Type db -> Int
+      prio t' = case t' of
+        TPrimitive _ -> atom
+        TEmptyOnion -> atom
+        TLabel{} -> 8
+        TRef{} -> 8
+        TOnion{} -> 4
+        TScape{} -> 0
+        where atom = 9999
 
-instance Display FlowTVar where
-  makeDoc a = case a of
-    FlowTVar x pc -> makeDoc x <> char '^' <> makeDoc pc
-    GenFlowTVar x pc -> makeDoc x <> text "#F^" <> makeDoc pc
+instance Display TVar where
+  makeDoc (TVar x pc) =
+    char 'α' <> makeDoc x <> char '^' <>
+      maybe (char '*') makeDoc (unPossibleContour pc)
 
-instance Display CellTVar where
-  makeDoc b = case b of
-    CellTVar y pc -> makeDoc y <> char '^' <> makeDoc pc
-    GenCellTVar x pc -> makeDoc x <> text "#C^" <> makeDoc pc
-
-instance Display AnyTVar where
-  makeDoc v = case v of
-    SomeFlowTVar a -> makeDoc a
-    SomeCellTVar b -> makeDoc b
-  
-instance (DocumentContainer db) => Display (Type db) where
-  makeDoc typ = case typ of
-    Primitive p -> makeDoc p
-    EmptyOnion -> text "()"
-    Label n b -> makeDoc n <+> makeDoc b
-    Onion a1 a2 -> makeDoc a1 <+> char '&' <+> makeDoc a2
-    OnionFilter a op proj -> makeDoc a <+> makeDoc op <+> makeDoc proj
-    Scape tpat a cs -> makeDoc tpat <+> text "->" <+> makeDoc a <+> char '\\'
-                          <+> delimFillSep lbrace rbrace comma
-                                (getContainedDocuments cs)
+deriving instance (Eq db) => Eq (Type db)
+deriving instance (Ord db) => Ord (Type db)
+deriving instance (Eq db) => Eq (TypeOrVar db)
+deriving instance (Ord db) => Ord (TypeOrVar db)

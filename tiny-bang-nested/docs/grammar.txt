@@ -1,28 +1,32 @@
-Expr ::= def Var = Expr in Expr
-Expr ::= Var = Expr in Expr
-Expr ::= Expr1
-Expr1 ::= OuterPattern -> Expr1
-Expr1 ::= Expr2
-Expr2 ::= Expr3 ArithOp Expr2
-Expr2 ::= Expr3
-Expr3 ::= Expr3 OnionOp Projector
-Expr3 ::= Expr4
-Expr4 ::= Expr4 & Expr5
-Expr4 ::= Expr5
-Expr5 ::= Expr5 Expr6
-Expr5 ::= Expr6
-Expr6 ::= Label Expr6
-Expr6 ::= Expr7
-Expr7 ::= Var
-Expr7 ::= Integer
-Expr7 ::= Char
-Expr7 ::= Unit
-Expr7 ::= ( Expr )
-OuterPattern ::= Var : Pattern
-Pattern ::= Pattern & Pattern1
-Pattern ::= Pattern1
-Pattern1 ::= Label Var : Pattern1
-Pattern1 ::= Pattern2
-Pattern2 ::= Primitive
-Pattern2 ::= fun
-Pattern2 ::= ( Pattern )
+Expr ::= LetExpr
+LetExpr ::= let Var = LetExpr in LetExpr
+LetExpr ::= FuncExpr
+FuncExpr ::= Pattern -> LetExpr
+FuncExpr ::= BinaryArithExpr
+BinaryArithExpr ::= OnionExpr ArithOp BinaryArithExpr
+BinaryArithExpr ::= OnionExpr
+OnionExpr ::= ApplExpr & OnionExpr
+OnionExpr ::= ApplExpr
+ApplExpr ::= PrefixExpr ApplExpr
+ApplExpr ::= PrefixExpr
+PrefixExpr ::= Label PrefixExpr
+PrefixExpr ::= ref PrefixExpr
+PrefixExpr ::= PrimaryExpr
+PrimaryExpr ::= Var
+PrimaryExpr ::= PrimitiveLiteral
+PrimaryExpr ::= ( Expr )
+PrimitiveLiteral ::= EmptyOnion
+PrimitiveLiteral ::= Integer
+
+Pattern ::= ConjPattern
+ConjPattern ::= PrefixPattern & ConjPattern
+ConjPattern ::= PrefixPattern
+PrefixPattern ::= Label PrefixPattern
+PrefixPattern ::= ref EmptyOnion
+PrefixPattern ::= ref Var
+PrefixPattern ::= PrimaryPattern
+PrimaryPattern ::= PrimitiveType
+PrimaryPattern ::= EmptyOnion
+PrimaryPattern ::= Var
+PrimaryPattern ::= ( Pattern )
+

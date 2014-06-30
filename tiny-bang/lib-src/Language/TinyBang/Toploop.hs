@@ -3,151 +3,170 @@
 module Language.TinyBang.Toploop
 ( stringyInterpretSource
 , interpretSource
+, interpretAst
 , InterpreterConfiguration(..)
+, InterpreterResult(..)
 , ConstraintDatabaseType(..)
+, emptyDatabaseFromType
 ) where
 
 import Control.Monad
+import Data.Either.Combinators
+import Data.List
 import Data.Map (Map)
+import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
-import Language.TinyBang.Interpreter as I
+import qualified Language.TinyBang.Interpreter as I
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Parser
-import Language.TinyBang.TypeSystem.Closure
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
-import Language.TinyBang.TypeSystem.ConstraintDatabase.Simple
-import Language.TinyBang.TypeSystem.ConstraintHistory
-import Language.TinyBang.TypeSystem.Inconsistency as In
-import Language.TinyBang.TypeSystem.InitialDerivation as ID
-import Language.TinyBang.TypeSystem.Relations
-import Language.TinyBang.TypeSystem.TypeInference as TI
+import qualified Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.TypeSystem.Constraints
+import qualified Language.TinyBang.TypeSystem.InitialDerivation as ID
+import qualified Language.TinyBang.TypeSystem.TypeInference as TI
+import Language.TinyBang.Utils.Display
 
 data InterpreterError db
   = LexerFailure String
   | ParserFailure String
-  | TypecheckFailure (TypecheckingError db)
-  | EvaluationFailure EvalError [Clause]
+  | TypecheckFailure (TI.TypecheckingError db)
+  | EvaluationFailure I.EvalError [Clause]
   | EvaluationDisabled
 
 data InterpreterResult
   = InterpreterResult
       -- |The variable containing the result of computation.
-      FlowVar
+      Var
       -- |The mapping from flow variables to their values.
-      (Map FlowVar Value)
-      -- |The mapping from cell variables to their contents.
-      (Map CellVar FlowVar)
+      (Map Var Value)
   deriving (Eq, Ord, Show)
-  
+
+instance Display InterpreterResult where
+  makeDoc (InterpreterResult x vs) =
+    case deepOnion vs x of
+      Left failure -> case failure of
+        UnboundVariable ux -> text "Unbound variable" <+> makeDoc ux <+>
+                                text "in result!"
+      Right value -> makeDoc value
+
+-- TODO: perhaps this should go somewhere else.  The unit tests would like to
+--       use these as well and unit tests shouldn't need the toploop, right?
 data ConstraintDatabaseType
   = Simple
-  
-data DummyDatabase where
-  DummyDatabase :: forall db. (ConstraintDatabase db, Display db, Ord db)
-                => db -> DummyDatabase
-  
+  | Indexed
+  deriving (Show)
+
 data InterpreterConfiguration
   = InterpreterConfiguration
     { typechecking :: Bool
     , evaluating :: Bool
-    , databaseType :: ConstraintDatabaseType }
+    , databaseType :: ConstraintDatabaseType
+    }
   
 -- |Interprets the provided String as a TinyBang expression.  This value will be
 --  lexed, parsed, typechecked, and executed.  This function takes a dummy
 --  constraint database to drive the database type used by type inference.
-interpretSource :: (ConstraintDatabase db, Display db, Ord db)
+interpretSource :: (CDb.ConstraintDatabase db, Display db)
                 => db -> InterpreterConfiguration
                 -> String -> Either (InterpreterError db) InterpreterResult
-interpretSource _ interpConf src = do
-  tokens <- doStep LexerFailure $ lexTinyBang "<stdin>" src
-  ast <- doStep ParserFailure $ parseTinyBang 
-              ParserContext { contextDocument = UnknownDocument
-                            , contextDocumentName = "<stdin>" }
-              tokens
+interpretSource dummy interpConf src = do
+  let doc = UnknownDocument
+  tokens <- mapLeft LexerFailure $ lexTinyBang doc src
+  ast <- mapLeft ParserFailure $ parseTinyBang doc tokens
+  interpretAst dummy interpConf ast
+
+-- |Interprets the provided TinyBang AST.
+interpretAst :: (CDb.ConstraintDatabase db, Display db)
+                => db -> InterpreterConfiguration
+                -> Expr -> Either (InterpreterError db) InterpreterResult
+interpretAst _ interpConf ast = do
   when (typechecking interpConf) $
-    void $ doStep TypecheckFailure $ typecheck ast
+    void $ mapLeft TypecheckFailure $ TI.typecheck ast
   if evaluating interpConf
     then do
-      (env,var) <- doStep evalFail $ eval ast
-      return $ InterpreterResult var (flowVarMap env) (cellVarMap env)
+      (env,var) <- mapLeft (uncurry EvaluationFailure) $ I.eval ast
+      return $ InterpreterResult var (I.varMap env)
     else
       Left EvaluationDisabled
-  where
-    doStep errConstr computation =
-      case computation of
-        Left err -> Left $ errConstr err
-        Right ans -> Right ans
-    evalFail (err,cls) = EvaluationFailure err cls
     
-instance (ConstraintDatabase db, Display db)
-      => Display (InterpreterError db) where
+instance (Display db) => Display (InterpreterError db) where
   makeDoc ierr = case ierr of
     LexerFailure msg -> text "Lexer error:" <+> text msg
     ParserFailure msg -> text "Parser error:" <+> text msg
     TypecheckFailure typeFail -> text "Type error:" <+> case typeFail of
-      InitialDerivationFailed initDerivErr -> case initDerivErr of
-        ID.IllFormedExpression ill -> text "Ill-formed expression:" <+>
-          case ill of
-            DuplicateFlowBinding x -> text "Duplicate variable definition:"
-              <+> makeDoc x
-            DuplicateFlowUse x -> text "Duplicate variable use:"
-              <+> makeDoc x
-            DuplicateCellBinding y -> text "Duplicate variable definition:"
-              <+> makeDoc y
-            InvalidExpressionEnd cl ->
-              text "Invalid clause terminating expression:" <+> makeDoc cl
-            EmptyExpression ->
-              text "Source contains an empty expression"
-        ID.OpenExpression vs -> text "Open variables in expression:" <+>
-          makeDoc vs
-      ClosureFailed (ClosureFailedProjection projErr) -> msgForProjErr projErr
-      InconsistencyFailed projErr -> msgForProjErr projErr
-      ClosureInconsistent incons db ->
+      TI.InitialDerivationFailed initDerivErr -> case initDerivErr of
+        ID.IllFormedExpression ills -> text "Ill-formed expression:" </>
+          indent 2 (align $ foldl1 (</>) $ flip map (Set.toList ills) $ \ill ->
+            case ill of
+              DuplicateDefinition x ->
+                text "Duplicate variable definition:" <+> makeDoc x
+              OpenExpression xs ->
+                text "Expression is open in the variables" <+> makeDoc xs
+              EmptyExpression o ->
+                text "Source contains an empty expression at" <+> makeDoc o
+              EmptyPattern o ->
+                text "Source contains an empty pattern at" <+> makeDoc o
+            )
+      TI.ClosureInconsistent incons db ->
         text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
-        <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon incons))
+        <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon $
+                                          Set.toList incons))
     EvaluationFailure evalErr _ -> text "Evaluation error:" <+> case evalErr of
-      I.IllFormedExpression ill -> text "Ill-formed expression:" <+> case ill of
-        DuplicateFlowBinding x -> text "Duplicate flow variable binding:"
-                                  <+> makeDoc x
-        DuplicateFlowUse x -> text "Duplicate flow variable use:"
-                              <+> makeDoc x
-        DuplicateCellBinding y -> text "Duplicate cell variable binding:"
-                                  <+> makeDoc y
-        InvalidExpressionEnd cl -> text "Invalid ending clause for expression:"
-                                   <+> makeDoc cl
-        EmptyExpression -> text "Empty subexpression"
-      I.OpenExpression vs -> text "Open variables in expression:" <+> makeDoc vs
-      FlowVarNotClosed x -> text "Flow variable not closed:" <+> makeDoc x
-      CellVarNotClosed y -> text "Cell variable not closed:" <+> makeDoc y
-      ProjectionFailure x proj -> text "Could not project" <+> makeDoc proj
-                                      <+> text "from" <+> makeDoc x
+      I.IllFormedExpression ills -> text "Ill-formed expression:" </>
+        indent 2 (align $ foldl1 (</>) $
+          map (\ill -> case ill of
+            DuplicateDefinition x -> text "Duplicate variable definition:"
+                                      <+> makeDoc x
+            OpenExpression xs -> text "Expression is open in variables: "
+                                      <+> foldl1 (<>) (intersperse (char ',') $
+                                            map makeDoc $ Set.toList xs)
+            EmptyExpression o -> text "Empty expression at " <+> makeDoc o
+            EmptyPattern o -> text "Empty pattern at " <+> makeDoc o
+            ) $ Set.toList ills)
       I.ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
                                       <+> text "to" <+> makeDoc x2
+      I.BuiltinBadOperandCount o bop n n' ->
+        text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
+          makeDoc bop <+> text "had an invalid operand count (had" <+>
+          text (show n) <> char ',' <+> text "expected" <+> text (show n') <>
+          text ")"
+      I.BuiltinBadOperandType o bop n x ->
+        text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
+          makeDoc bop <+> text "had an invalid operand type in position" <+>
+          text (show n) <+> text "(variable" <+> makeDoc x <+> text ")"
     EvaluationDisabled -> text "(evaluation disabled)"
     where
-      msgForProjErr (NonContractiveType proj typ vars) =
-        text "Non-contractive type projecting" <+> makeDoc proj
-          <+> text "with type" <+> makeDoc typ <+> text "through variables"
-          <+> makeDoc vars
-      docForIncon :: (ConstraintDatabase db, Display db)
-                  => Inconsistency db -> Doc
+      docForIncon :: (Display db) => Inconsistency db -> Doc
       docForIncon incon = case incon of
-        In.ApplicationFailure ac _
-            (ApplicationCompatibilityResult arg scapes _ fib) ->
+        Language.TinyBang.TypeSystem.Constraints.ApplicationFailure
+            sa aa csa as ->
           text "Application failure:" </> nest 2
             (
-              text "At application site" <+> makeDoc ac </>
-              text "we have scapes" <+> makeDoc scapes </>
-              text "and argument" <+> makeDoc arg <+>
-              text "but fibration" <+> makeDoc fib </>
-              text "produces a type which does not apply."
+              text "At application site" <+> makeDoc csa </>
+              text "we have scape variable" <+> makeDoc sa </>
+              text "and argument variable" <+> makeDoc aa </>
+              text "but argument slice" <+> makeDoc as </>
+              text "does not apply."
             )
-        In.IntegerOperationFailure oc _ _ ->
-          text "Integer operation failure at " <+> makeDoc oc
+        Language.TinyBang.TypeSystem.Constraints.BuiltinBadOperandCount
+            site op expected actual ->
+          text "Bad built-in operand count:" </> nest 2
+            (
+              text "At site" <+> makeDoc site <> text "," <+> makeDoc actual <+>
+              text "operands appeared for operator" <+> makeDoc op <+>
+              text "when" <+> makeDoc expected <+>
+              text "operands were expected"
+            )
+        Language.TinyBang.TypeSystem.Constraints.BuiltinBadOperandType
+            site op index a ->
+          text "Bad built-in operand type:" </> nest 2
+            ( text "At site" <+> makeDoc site <> text "," <+> text "operand" <+>
+              makeDoc index <+> text "for operator" <+> makeDoc op <+>
+              text "had an incorrect type (original variable" <+> makeDoc a <>
+              char ')'
+            )
 
 -- |Interprets the provided String as a TinyBang expression.  This routine is
 --  similar to @interpretSource@ but converts the result to a user-readable
@@ -156,20 +175,19 @@ instance (ConstraintDatabase db, Display db)
 stringyInterpretSource :: InterpreterConfiguration -> String -> String
 stringyInterpretSource interpConf exprSrc =
   case emptyDatabaseFromType $ databaseType interpConf of
-    DummyDatabase dummy ->
+    CDb.SomeDisplayableConstraintDatabase dummy ->
       case interpretSource dummy interpConf exprSrc of
         Left err -> display err
-        Right (InterpreterResult x fvs cvs) ->
-          case deepOnion fvs cvs x of
-            Left failure -> case failure of
-              UnboundFlowVariable ux ->
-                "Unbound flow variable " ++ display ux ++ " in result!"
-              UnboundCellVariable uy ->
-                "Unbound cell variable " ++ display uy ++ " in result!"
-            Right value -> display value
+        Right result -> display result
 
 -- |Creates an empty database of a recognized type.
-emptyDatabaseFromType :: ConstraintDatabaseType -> DummyDatabase
+emptyDatabaseFromType :: ConstraintDatabaseType
+                      -> CDb.SomeDisplayableConstraintDatabase
 emptyDatabaseFromType dbt = case dbt of
-  Simple -> DummyDatabase (CDb.empty :: SimpleConstraintDatabase)
+  Simple ->
+    CDb.SomeDisplayableConstraintDatabase
+      (CDb.empty :: CDb.SimpleConstraintDatabase)
+  Indexed ->
+    CDb.SomeDisplayableConstraintDatabase
+      (CDb.empty :: CDb.IndexedConstraintDatabase)
 

@@ -6,9 +6,8 @@ author:         Zachary Palmer
 
 library
   hs-source-dirs:  lib-src
-  build-depends:   base >= 4,
-                   tiny-bang,
-                   tiny-bang-nested,
+  build-depends:   
+                   base >= 4,
                    containers,
                    mtl,
                    wl-pprint,
@@ -17,7 +16,9 @@ library
                    template-haskell,
                    split,
                    either,
-                   parsec
+                   parsec,
+                   tiny-bang,
+                   tiny-bang-nested
   ghc-options:     -Wall
   exposed-modules: 
                    Language.LittleBang.Ast,
@@ -26,6 +27,7 @@ library
                    Language.LittleBang.Syntax.Parser,
                    Language.LittleBang.Translator,
                    Language.LittleBang.TBNConversion
+  other-modules:   Language.LittleBang.Syntax.Tokens
 
 executable little-bang
   hs-source-dirs:  interp-src
@@ -40,22 +42,6 @@ executable little-bang
                    transformers,
                    hslogger,
                    template-haskell,
-                   split,
-                   either,
-                   parsec
-  ghc-options:     -Wall
-
-executable testlb
-  hs-source-dirs:  test-src                   
-                   
-  main-is:         Main.hs
-  build-depends:   base >= 4,
-                   tiny-bang,
-                   tiny-bang-nested,
-                   little-bang,
-                   HUnit >= 1.2 && < 2,
-                   test-framework >= 0.4.1,
-                   test-framework-hunit,
                    split,
                    either,
                    parsec

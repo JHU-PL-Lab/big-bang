@@ -1,0 +1,42 @@
+# EXPECT: 21
+
+Y = { pbody = ()
+    } ->
+    { xwrapper = { pthis = ();
+                 } ->
+                 { xwrapperL2 = { parg = ();
+                                } ->
+                                { tt = pthis pthis;
+                                  btt = pbody tt;
+                                  btta = btt parg
+                                };
+                 };
+      Yr = xwrapper xwrapper;
+    };
+
+summateS = { pself = ();
+           } ->
+           { summateR = { p1 = ();
+                        } ->
+                        { x1 = 0;
+                          x2 = == p1 x1;
+                          x3 = { p2 = ();
+                                 p3 = `True p2;
+                               } ->
+                               { x4 = 0;
+                               };
+                          x5 = { p4 = ();
+                                 p5 = `False p4;
+                               } ->
+                               { x6 = 1;
+                                 x7 = - p1 x6;
+                                 x8 = pself x7;
+                                 x9 = + p1 x8;
+                               };
+                          x10 = x3 & x5;
+                          x11 = x10 x2;
+                        };
+           };
+summate = Y summateS;
+n = 6;
+result = summate n;

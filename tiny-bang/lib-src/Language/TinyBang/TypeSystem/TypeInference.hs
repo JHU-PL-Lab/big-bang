@@ -9,26 +9,25 @@ module Language.TinyBang.TypeSystem.TypeInference
 , typecheck
 ) where
 
+import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
-import Language.TinyBang.Logging  
-import Language.TinyBang.TypeSystem.ConstraintDatabase
+import Language.TinyBang.Interpreter.Builtins
+import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.TypeSystem.Constraints
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Closure
-import Language.TinyBang.TypeSystem.Inconsistency
 import Language.TinyBang.TypeSystem.InitialDerivation
-import Language.TinyBang.TypeSystem.Relations
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Logger  
 
 $(loggingFunctions)
 
 -- |A data structure defining typechecking errors.
 data TypecheckingError db
   = InitialDerivationFailed InitialDerivationError
-  | ClosureFailed (ClosureError db)
-  | InconsistencyFailed (ProjectionError db)
-  | ClosureInconsistent [Inconsistency db] db
+  | ClosureInconsistent (Set (Inconsistency db)) db
   deriving (Eq, Ord, Show)
 
 instance (ConstraintDatabase db, Display db)
@@ -36,10 +35,6 @@ instance (ConstraintDatabase db, Display db)
   makeDoc err = case err of
     InitialDerivationFailed err' ->
       text "InitialDerivationFailed" <+> makeDoc err'
-    ClosureFailed err' ->
-      text "ClosureFailed" <+> makeDoc err'
-    InconsistencyFailed err' ->
-      text "InconsistencyFailed" <+> makeDoc err'
     ClosureInconsistent incons db ->
       text "ClosureInconsistent" <+> nest 2
         (linebreak <> makeDoc incons <$$> makeDoc db)
@@ -50,18 +45,26 @@ instance (ConstraintDatabase db, Display db)
 --  successful) or an error containing as much information as was obtained.
 typecheck :: forall db. (ConstraintDatabase db, Display db, Ord db)
           => Expr -> Either (TypecheckingError db) db
-typecheck expr = do
-  _debug $ "Typechecking expression: " ++ display expr
-  derivDb::db <- bailWith "Initial derivation" InitialDerivationFailed $
-                    initialDerivation expr
-  _debug $ "Initial derivation produced: " ++ display derivDb
-  let startDb = instantiateContours Set.empty initialContour derivDb
-  _debug $ "After initial instantiation: " ++ display startDb
-  closedDb <- bailWith "Closure" ClosureFailed $ calculateClosure startDb
-  _debug $ "After closure: " ++ display closedDb
-  inconsistencies <- bailWith "Inconsistency check" InconsistencyFailed $
-                        determineInconsistencies closedDb
-  if null inconsistencies
+typecheck (Expr o cls) = do
+  let expr = Expr o $ builtinEnv ++ cls
+  derivDb::db <-
+    bracketLogM _debugI
+      ("Typechecking expression: " ++ display expr)
+      (\db -> "Initial derivation produced: " ++ display db) $
+        bailWith "Initial derivation" InitialDerivationFailed $
+          initialDerivation expr
+  let startDb = polyinstantiate initialContour derivDb
+  let closedDb =
+        bracketLog _debugI
+          ("Performing constraint closure on " ++ display startDb)
+          (\db -> "Completed constraint closure: " ++ display db) $
+            calculateClosure startDb
+  let inconsistencies =
+        bracketLog _debugI
+          ("Checking for inconsistencies in " ++ display closedDb)
+          (\incon -> "Inconsistencies follow: " ++ display incon) $
+            query closedDb QueryAllInconsistencies
+  if Set.null inconsistencies
     then _debugI "Typechecking complete." $ Right closedDb
     else Left $ ClosureInconsistent inconsistencies closedDb
   where
@@ -70,4 +73,3 @@ typecheck expr = do
              -> Either (TypecheckingError db) b
     bailWith msg f = either (Left . f . withMsg) Right
       where withMsg x = _debugI (msg ++ " failed: " ++ display x) x
-          

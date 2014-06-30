@@ -6,7 +6,7 @@ module Language.TinyBang.TypeSystem.Utils.DocumentContainer
 ( DocumentContainer(..)
 ) where
 
-import Language.TinyBang.Display
+import Language.TinyBang.Utils.Display
 
 class DocumentContainer a where
   getContainedDocuments :: a -> [Doc]

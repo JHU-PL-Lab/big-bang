@@ -1,249 +1,160 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, ViewPatterns,
-             TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+
+{-|
+  The master module for the TinyBang parser.  This module re-exports the
+  appropriate contents of the submodules to other modules to form the parser's
+  interface.
+-}
 
 module Language.TinyBang.Syntax.Parser
-( ParserContext (..) 
-, parseTinyBang
+( parseTinyBang
+, ParseErr
 ) where
 
-import Control.Applicative           ((*>), (<$>), (<*), (<*>))
-import Control.Monad.Trans.Class     (lift)
-import Control.Monad.Trans.Reader
-import Text.Parsec.Combinator
-import Text.Parsec.Prim
-import Text.Parsec.Pos
+import Control.Applicative ((<$),(<*),(<$>),(<*>))
+import Control.Monad.Reader
+import Data.Monoid
+import Text.Parsec
 
 import Language.TinyBang.Ast
-import Language.TinyBang.Display
-import Language.TinyBang.Logging
-import Language.TinyBang.Syntax.Lexer
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Utils.Parsec
-import Utils.ParserUtils
+import Language.TinyBang.Syntax.Tokens
+import Language.TinyBang.Utils.Parser.OriginParser
+import Language.TinyBang.Utils.Parser.Parsec
+import Language.TinyBang.Utils.Parser.PositionalParser
 
-$(loggingFunctions)
+parseTinyBang :: SourceDocument -> [PositionalToken] -> Either ParseErr Expr
+parseTinyBang doc toks =
+  let x = runParserT pProgram mempty (nameOfDocument doc) toks in
+  either (Left . show) Right $ runReader (unParserM x) (ParserContext doc)
 
--- |A function to parse TinyBang code tokens into an @Expr@.  If this is
---  successful, the result is a right @Expr@; otherwise, the result is a left
---  error message.
-parseTinyBang :: ParserContext -> [PositionalToken] -> Either String Expr
-parseTinyBang context ts =
-  _debugI ("Parsing TinyBang source with tokens: " ++
-            (display $ map posToken ts)) $
-  let parseResult =
-        runParserT programParser () (contextDocumentName context) ts
-  in
-  case runReader parseResult context of
-    Left err -> Left $ show err
-    Right expr -> Right expr
--- |The context in which parsing occurs.
-data ParserContext = ParserContext
-                      { contextDocument :: SourceDocument
-                      , contextDocumentName :: String }
+type ParseErr = String
 
--- |A type alias for the monad in which parsing occurs.
-type ParserMonad = Reader ParserContext
+newtype ParserContext = ParserContext SourceDocument
 
--- |A type alias for the TinyBang parser.
-type Parser a = ParsecT [PositionalToken] () ParserMonad a
+newtype ParserM a
+  = ParserM
+      { unParserM :: Reader ParserContext a
+      }
+  deriving (Monad, MonadReader ParserContext)
 
-programParser :: Parser Expr
-programParser =  "ProgramParser" <@> expressionParser <* eof
-
-expressionParser :: Parser Expr
-expressionParser = "Expression" <@> do
-  cls <- sepBy1 clauseParser $ consume TokSemi
-  return $ Expr (SourceOrigin $ coverRegion (head cls) (last cls)) cls
-
-clauseParser :: Parser Clause
-clauseParser = "Clausess" <@> 
-      Evaluated <$> evaluatedClauseParser
-  <|> argorig2 CellSet <$> cellVarParser <* consume TokGets ?=> flowVarParser
-  <|> argorig2 CellGet <$> flowVarParser <* consume TokIs <* consume TokBang ?=> cellVarParser
-  <|> argorig2 Throws <$> flowVarParser <* consume TokThrows ?=> flowVarParser
-  <|> argorig2 RedexDef <$> flowVarParser <* consume TokIs ?=> redexParser
-
-evaluatedClauseParser :: Parser EvaluatedClause
-evaluatedClauseParser = "Evaluated Clause" <@>
-      argorig2 ValueDef <$> flowVarParser <* consume TokIs <*> valueParser
-        ?+> eps
-  <|> argorig3 CellDef <$> cellQualifierParser <*> cellVarParser <*
-        consume TokDef ?=> flowVarParser
-  <|> argorig3 Flow <$> flowVarParser <*> flowKindParser ?=> flowVarParser
-
-redexParser :: Parser Redex
-redexParser = "Redex" <@>
-      argorig2 Appl <$> flowVarParser <*> flowVarParser ?+> eps
-  <|> argorig3 BinOp <$> flowVarParser <*> binaryOperatorParser
-                          ?=> flowVarParser
-  <|> argorig1 Define <$> flowVarParser ?+> eps
-
-valueParser :: Parser Value
-valueParser = "Value" <@>
-      argorig2 VScape <$> patternParser <* consume TokArrow ?+>
-        consume TokOpenBrace <*> expressionParser <* consume TokCloseBrace
-  <|> VInt <$&> require matchIntLit
-  <|> VChar <$&> require matchCharLit
-  <|> requirex TokEmptyOnion VEmptyOnion
-  <|> argorig2 VLabel <$> labelNameParser ?=> cellVarParser
-  <|> argorig2 VOnion <$> flowVarParser <* consume TokOnion ?=> flowVarParser
-  <|> argorig3 VOnionFilter <$> flowVarParser <*> onionOpParser ?=> projectorParser
-        
-flowKindParser :: Parser FlowKind
-flowKindParser = "FlowKind" <@> snd <$> require matchFlows
-  where
-    matchFlows :: Token -> Maybe FlowKind
-    matchFlows tok = case tok of
-      TokFlows c -> case c of
-        'x' -> Just FlowExn
-        _ ->  Nothing
-      _ -> Nothing
-
-patternParser :: Parser Pattern
-patternParser = "Pattern" <@>
-      argorig2 ValuePattern <$> cellVarParser <*
-        consume TokColon <*> innerPatternParser ?+> eps
-  <|> argorig2 ValuePattern <$> (consume TokExn *> cellVarParser) ?+>
-        consume TokColon <*> innerPatternParser
-
-innerPatternParser :: Parser InnerPattern
-innerPatternParser = "Inner Pattern" <@>
-      argorig2 ConjunctionPattern <$> basicInnerPatternParser <*
-        consume TokOnion ?=> innerPatternParser
-  <|> basicInnerPatternParser
+instance PositionalParserMonad ParserM ParserContext where
+  parserContext = ask
+  parserSourceDocument = do
+    ParserContext doc <- ask
+    return doc
+  runPositionalParser x = runReader (unParserM x)
   
--- |A parser for non-onion patterns
-basicInnerPatternParser :: Parser InnerPattern
-basicInnerPatternParser = "Basic Inner Pattern" <@>
-      consume TokOpenParen *> innerPatternParser ?+> consume TokCloseParen
-  <|> argorig1 PrimitivePattern <$> primitiveTypeParser ?+> eps
-  <|> argorig3 LabelPattern <$> labelNameParser ?=> cellVarParser <*
-        consume TokColon <*> basicInnerPatternParser
-  <|> requirex TokFun ScapePattern
-  <|> requirex TokEmptyOnion EmptyOnionPattern
+-- |The type of the TinyBang parser.
+type TBParser a =
+  ParsecT [PositionalToken] (SimplePositionalState PositionalToken) ParserM a
 
-onionOpParser :: Parser OnionOp
-onionOpParser =
-      requirex TokOnionSub OpOnionSub
-  <|> requirex TokOnionProj OpOnionProj
+-- * Non-leaf definitions
 
-binaryOperatorParser :: Parser BinaryOperator
-binaryOperatorParser =
-      requirex TokPlus OpPlus
-  <|> requirex TokMinus OpMinus
-  <|> requirex TokMult OpMult
-  <|> requirex TokEq OpEqual
-  <|> requirex TokLT OpLess
-  <|> requirex TokGT OpGreater
+pProgram :: TBParser Expr
+pProgram = pExpr <* eof
 
-cellQualifierParser :: Parser CellQualifier
-cellQualifierParser =
-      requirex TokFinal QualFinal
-  <|> requirex TokImmut QualImmutable
-  <|> QualNone . SourceOrigin <$> (SourceRegion <$> parserLocation <*> parserLocation)
+pExpr :: TBParser Expr
+pExpr = "expression" <@>
+  origConstr1 Expr $% sepEndBy1 pClause (consume TokSemi)
 
-projectorParser :: Parser AnyProjector
-projectorParser =
-      SomeProjector <$> argorig1 ProjPrim <$> primitiveTypeParser
-  <|> SomeProjector <$> argorig1 ProjLabel <$> labelNameParser
-  <|> SomeProjector <$> requirex TokFun ProjFun
+pClause :: TBParser Clause
+pClause = "clause" <@>
+      origConstr2 Clause $% (,) <$> pVar <* consume TokIs <*> pRedex ?+> eps
 
-primitiveTypeParser :: Parser PrimitiveType
-primitiveTypeParser =
-      requirex TokInt PrimInt
-  <|> requirex TokChar PrimChar
+pRedex :: TBParser Redex
+pRedex = "redex" <@>
+      origConstr2 Appl $% (,) <$> pVar <*> pVar ?+> eps
+  <|> origConstr2 Builtin $% (,) <$> pOp ?=> pVars
+  <|> origConstr1 Def pValue
+  <|> origConstr1 Copy pVar
 
-labelNameParser :: Parser LabelName
-labelNameParser = LabelName <$&> require matchLabel
+pVar :: TBParser Var
+pVar = "variable" <@> origConstr1 mkvar pIdent ?+> eps
 
-flowVarParser :: Parser FlowVar
-flowVarParser = FlowVar <$&> require matchIdent
+pVars :: TBParser [Var]
+pVars = "variable list" <@> many pVar
 
-cellVarParser :: Parser CellVar
-cellVarParser = CellVar <$&> require matchIdent
+pValue :: TBParser Value
+pValue = "value" <@>
+      origConstr1 VPrimitive $% origConstr1 VInt $% pInt
+  <|> requirex TokEmptyOnion VEmptyOnion
+  <|> origConstr2 VLabel $% (,) <$> pLabel ?=> pVar
+  <|> origConstr1 VRef $% (consume TokRef >> pVar)
+  <|> origConstr2 VOnion $% (,) <$> pVar <* consume TokOnion ?=> pVar
+  <|> origConstr2 VScape $%
+        (,) <$ consume TokStartBlock <*> pPattern <* consume TokStopBlock
+            <* consume TokArrow
+            <* consume TokStartBlock <*> pExpr <* consume TokStopBlock
 
--- |A matching function for integer literals.
-matchIntLit :: Token -> Maybe Integer
-matchIntLit x =
-  case x of
-    TokLitInt n -> Just n
-    _ -> Nothing
+pPattern :: TBParser Pattern
+pPattern = "pattern" <@>
+      origConstr1 Pattern $% sepEndBy1 pPatternClause (consume TokSemi)
 
--- |A matching function for character literals.
-matchCharLit :: Token -> Maybe Char
-matchCharLit x =
-  case x of
-    TokLitChar c -> Just c
-    _ -> Nothing
+pPatternClause :: TBParser PatternClause
+pPatternClause = "pattern clause" <@>
+  origConstr2 PatternClause $% (,) <$> pVar <* consume TokIs <*> pPatternValue
 
--- |A matching function which produces a string for identifier tokens and
---  nothing for all other tokens.
-matchIdent :: Token -> Maybe String
-matchIdent x =
-  case x of
-    TokIdentifier s -> Just s
-    _ -> Nothing
+pPatternValue :: TBParser PatternValue
+pPatternValue = "pattern value" <@>
+      requirex TokInt $% flip PPrimitive PrimInt
+  <|> requirex TokEmptyOnion PEmptyOnion
+  <|> origConstr2 PLabel $% (,) <$> pLabel ?=> pVar
+  <|> origConstr1 PRef $% (consume TokRef >> pVar)
+  <|> origConstr2 PConjunction $% (,) <$> pVar <* consume TokOnion ?=> pVar
 
--- |A matching function which produces a string for label tokens and
---  nothing for all other tokens.
-matchLabel :: Token -> Maybe String
-matchLabel x =
-  case x of
-    TokLabel s -> Just s
-    _ -> Nothing
+-- * Terminal definitions
 
--- |This parser is a specialization of @requirex@ which produces a unit for all
---  matched input.
-consume :: Token -> Parser ()
-consume t = display t <@> requirex t (const ())
+pIdent :: TBParser String
+pIdent = require (\t ->
+            case posToken t of
+              TokIdentifier s -> Just s
+              _ -> Nothing)
+      <?> "identifier"
 
--- |This parser is a specialization of the @token@ parser with the necessary
---  pretty-printing and location-calculating routines embedded.
-require :: forall a. (Token -> Maybe a) -> Parser (Origin, a)
-require f = do
-    context <- parserContext
-    document <- parserDocument
-    tokenPrim show (nextPos context) (matchToken document)
-    where
-     nextPos :: ParserContext
-                -> SourcePos
-                -> PositionalToken
-                -> [PositionalToken]
-                -> SourcePos
-     nextPos context _ tok toks =
-        case runReader (uncons toks) context of
-                  Nothing -> startPos tok
-                  Just (tok',_) -> startPos tok'
-     textPos :: SourceDocument -> SourcePos -> SourceLocation
-     textPos document p = TextSource document (sourceLine p) (sourceColumn p)
-     matchToken :: SourceDocument -> PositionalToken -> Maybe (Origin, a)
-     matchToken doc ptok = do -- Maybe
-      result <- f $ posToken ptok
-      let reg = SourceRegion (textPos doc $ startPos ptok)
-                             (textPos doc $ stopPos ptok)
-      return (SourceOrigin reg, result)
+pInt :: TBParser Integer
+pInt = require (\t ->
+            case posToken t of
+              TokLitInt n -> Just n
+              _ -> Nothing)
+      <?> "integer literal"
+
+pLabel :: TBParser LabelName
+pLabel = origConstr1 LabelName $% require (\t ->
+            case posToken t of
+              TokLabel n -> Just n
+              _ -> Nothing)
+      <?> "label name"
+
+pOp :: TBParser BuiltinOp
+pOp = require (\t ->
+            case posToken t of
+              TokPlus -> Just OpIntPlus
+              TokMinus -> Just OpIntMinus
+              TokEq -> Just OpIntEq
+              TokLessEq -> Just OpIntLessEq
+              TokGreaterEq -> Just OpIntGreaterEq
+              TokSet -> Just OpSet
+              _ -> Nothing)
+      <?> "built-in operator"
+
+-- * Utility definitions
 
 -- |This parser is a specialization of @require@ which demands exact token
 --  equality.  If it is matched, the second argument is applied to the origin
 --  of the token and the result is returned.
-requirex :: Token -> (Origin -> a) -> Parser a
-requirex t f = do
-  (orig,_) <- require $ \t' -> if t == t' then Just () else Nothing
-  return $ f orig
+requirex :: Token -> (Origin -> a) -> TBParser a
+requirex t f =
+  (
+    f <$> fst <$> originParser
+          (require $ \pt' -> if t == posToken pt' then Just () else Nothing)
+  ) <?> display t
 
--- |Determines the current parser location.
-parserLocation :: Parser SourceLocation
-parserLocation = do
-  doc <- parserDocument
-  pos <- getPosition
-  return $ TextSource doc (sourceLine pos) (sourceColumn pos)
-
--- |A mechanism to retrieve the parser context.
-parserContext :: Parser ParserContext
-parserContext = lift ask
-
--- |A simple mechanism for retrieving the resource name for the current parse
---  context.
-parserDocument :: Parser SourceDocument  
-parserDocument = lift (contextDocument <$> ask)
+-- |Consumes a single token.  This is a specialization of @requirex@ which
+--  always returns unit.
+-- |This parser is a specialization of @requirex@ which produces a unit for all
+--  matched input.
+consume :: Token -> TBParser ()
+consume t = display t <@> requirex t (const ())
 

@@ -5,6 +5,7 @@ module Test.Language.LittleBang.Syntax.Lexer
 ( lexerTests
 ) where
 
+import Language.TinyBang.Syntax.Location
 import Language.LittleBang.Syntax.Lexer
 import Test.HUnit
 
@@ -23,7 +24,7 @@ createLexerTest name input expected =
   TestCase $ assertBool name $ boolResult
     where boolResult = compareTokenStreams expected lexerResult
           lexerResult = 
-            case (lexLittleBang "" input) of
+            case (lexLittleBang UnknownDocument input) of
               Left s -> error $ "Lexer unit test fail: " ++ s
               Right x -> x                     
 
@@ -36,7 +37,7 @@ testEmpty = createLexerTest "Lexing empty string" "" []
 
 -- | Reserved Words
 testReservedWords :: Test
-testReservedWords = createLexerTest  "Lexing reserved words" "char int fun def in" [TokChar, TokInt, TokFun, TokDef, TokIn]
+testReservedWords = createLexerTest  "Lexing reserved words" "int fun ref let in" [TokInt, TokFun, TokRef, TokLet, TokIn]
 
 -- | Identifiers
 testIdentifiers :: Test
@@ -48,9 +49,9 @@ testLiterals = createLexerTest "Lexing literals" "123 'a'" [TokLitInt 123, TokLi
 
 -- | Operators
 testOperators :: Test
-testOperators = createLexerTest "Lexing operators" "= -> & () ( ) &- &. &! + - == > >= < <= :" testOperatorsExpected
+testOperators = createLexerTest "Lexing operators" "= -> & () ( ) + - == > >= < <=" testOperatorsExpected
 testOperatorsExpected :: [Token]
-testOperatorsExpected = [TokIs, TokArrow, TokOnion, TokEmptyOnion, TokOpenParen, TokCloseParen, TokOnionSub, TokOnionProj, TokOnionSym, TokPlus, TokMinus, TokEq, TokGT, TokGTE, TokLT, TokLTE, TokColon]
+testOperatorsExpected = [TokIs, TokArrow, TokOnion, TokEmptyOnion, TokOpenParen, TokCloseParen, TokPlus, TokMinus, TokEq, TokGreaterEq, TokLessEq]
 
 
 

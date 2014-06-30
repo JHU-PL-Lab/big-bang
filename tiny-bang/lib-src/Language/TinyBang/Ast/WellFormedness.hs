@@ -1,236 +1,165 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, FlexibleInstances, GeneralizedNewtypeDeriving #-}
 
 module Language.TinyBang.Ast.WellFormedness
-( IllFormedness(..)
-, VarCount(..)
-, checkWellFormed
-, openVariables
-, isClosed
+( checkWellFormed
+, IllFormedness(..)
 ) where
 
-import Control.Applicative ((<$>), (<*>), (<*),)
-import Control.Monad.RWS (RWS, evalRWS, modify, gets, get, put, tell)
-import Control.Monad (unless)
-import Data.Monoid (Monoid, mappend, mconcat, mempty)
+import Control.Applicative
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Monoid
+import Language.Haskell.TH (mkName)
 
 import Language.TinyBang.Ast.Data
-import Language.TinyBang.Display
+import Language.TinyBang.Ast.Origin
+import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.TemplateHaskell.Reduce
 
--- |A result for the well-formedness check.
+-- |A data structure representing types of ill-formed expressions.
 data IllFormedness
-  = DuplicateFlowBinding FlowVar
-  | DuplicateFlowUse FlowVar
-  | DuplicateCellBinding CellVar
-  | InvalidExpressionEnd Clause
-  | EmptyExpression
+  = DuplicateDefinition Var
+      -- ^Generated when a variable is declared twice.
+  | OpenExpression (Set Var)
+      -- ^Generated when the expression is not closed.
+  | EmptyExpression Origin
+      -- ^Generated when an empty expression (an expression with no clauses) is
+      --  encountered
+  | EmptyPattern Origin
+      -- ^Generated when an empty pattern (a pattern with no clauses) is
+      --  encountered.
   deriving (Eq, Ord, Show)
-instance Display IllFormedness where makeDoc = text . show
 
--- |Determines whether or not the provided expression is well-formed.  The
---  result is either an ill-formedness complaint or a set of used variable
---  names; the latter indicates that the expression is well-formed.
-checkWellFormed :: Expr -> Either IllFormedness VarCount
-checkWellFormed = countVar
+instance Display IllFormedness where
+  makeDoc ill = case ill of
+    DuplicateDefinition x -> text "Duplicate definition:" <+> makeDoc x
+    OpenExpression xs -> text "Expression is open in:" <+> makeDoc xs
+    EmptyExpression o -> text "Empty expression at:" <+> makeDoc o
+    EmptyPattern o -> text "Empty pattern at:" <+> makeDoc o
 
--- |Represents a variable appearance counting result.
-data VarCount = VarCount
-                  (Set FlowVar) -- ^ Flow variable definitions
-                  (Set FlowVar) -- ^ Flow variable uses
-                  (Set CellVar) -- ^ Cell variable definitions
-  deriving (Eq,Ord,Show)
+checkWellFormed :: Expr -> Set IllFormedness
+checkWellFormed e =
+  Set.unions checks
+  where
+    checks :: [Set IllFormedness]
+    checks =
+      [
+        -- Check to see if any variables are defined as duplicates
+        Set.map DuplicateDefinition $
+          Set.fromList (map fst $ filter ((> 1) . snd) $
+            Map.toList $ unVarCountMap $ countVariableBindings e)
+      , -- Check to see if any variables are free
+        let free = findFreeVariables e in
+        if Set.null free then Set.empty else Set.singleton $ OpenExpression free
+      ]
 
--- VarCount is not a monoid because union can fail.
-                  
--- |A monad in which variable counting takes place.  This monad contains the
---  failure modes for that counting operation.
-type VarCountM a = Either IllFormedness a
-                  
-instance Monoid (VarCountM VarCount) where
-  mempty = return $ VarCount Set.empty Set.empty Set.empty
-  mappend v1 v2 = do
-    (VarCount a1 a2 a3) <- v1
-    (VarCount b1 b2 b3) <- v2
-    VarCount
-      <$> vcjoin a1 b1 DuplicateFlowBinding
-      <*> vcjoin a2 b2 DuplicateFlowUse
-      <*> vcjoin a3 b3 DuplicateCellBinding
-    where
-      vcjoin :: Ord a
-             => Set a -> Set a -> (a -> IllFormedness) -> VarCountM (Set a)
-      vcjoin a b f =
-        let intersection = a `Set.intersection` b in
-        if Set.null intersection
-          then return $ a `Set.union` b
-          else Left $ f $ Set.findMin intersection
+-- |A routine to locate all variables bound by the provided expression.
+countVariableBindings :: Expr -> VarCountMap
+countVariableBindings = reduce CountVariableBindings
 
--- |Creates a singleton @VarCount@ containing one defined flow variable.
-singDefFlowVarCount :: FlowVar -> VarCountM VarCount
-singDefFlowVarCount x = return $ VarCount (Set.singleton x) Set.empty Set.empty
+data CountVariableBindings = CountVariableBindings
+newtype VarCountMap = VarCountMap (Map Var Int)
+unVarCountMap :: VarCountMap -> Map Var Int
+unVarCountMap (VarCountMap m) = m
 
--- |Creates a singleton @VarCount@ containing one used flow variable.
-singUseFlowVarCount :: FlowVar -> VarCountM VarCount
-singUseFlowVarCount x = return $ VarCount Set.empty (Set.singleton x) Set.empty
+-- |A routine to locate variables free in the provided expression.
+findFreeVariables :: Expr -> Set Var
+findFreeVariables e = fvdFree $ reduce FindFreeVariables e
 
--- |Creates a singleton @VarCount@ containing one defined cell variable.
-singDefCellVarCount :: CellVar -> VarCountM VarCount
-singDefCellVarCount y = return $ VarCount Set.empty Set.empty $ Set.singleton y
+data FindFreeVariables = FindFreeVariables
+data FreeVarData = FreeVarData
+  { fvdBound :: Set Var
+  , fvdFree :: Set Var
+  }
 
--- |Calculates the variable appearances within a given construct.
-class VarCountable a where
-  countVar :: a -> Either IllFormedness VarCount
-  
-instance VarCountable Expr where
-  countVar arg = case arg of
-    Expr _ cs ->
-      if null cs
-        then Left EmptyExpression
-        else
-          let valid = mconcat $ map countVar cs in
-          case last cs of
-            RedexDef _ _ _ -> valid
-            CellGet _ _ _ -> valid
-            Evaluated (ValueDef _ _ _) -> valid
-            x -> Left $ InvalidExpressionEnd x
+-- == Template Haskell jiggery-pokery begins here == ---------------------------
 
-instance VarCountable Clause where
-  countVar arg = case arg of
-    RedexDef _ x r -> singDefFlowVarCount x `mappend` countVar r
-    CellSet _ _ x -> singUseFlowVarCount x
-    CellGet _ x _ -> singDefFlowVarCount x 
-    Throws _ x x' -> singDefFlowVarCount x `mappend` singUseFlowVarCount x'
-    Evaluated cl -> countVar cl
+-- For countVariableBindings ---------------------------------------------------
 
-instance VarCountable EvaluatedClause where
-  countVar arg = case arg of
-    ValueDef _ x v -> singDefFlowVarCount x `mappend` countVar v
-    CellDef _ _ y x -> singDefCellVarCount y `mappend` singUseFlowVarCount x
-    Flow _ _ _ _ -> mempty
+instance Monoid VarCountMap where
+  mempty = VarCountMap Map.empty
+  mappend (VarCountMap m1) (VarCountMap m2) =
+    VarCountMap $ Map.unionWith (+) m1 m2
 
-instance VarCountable Redex where
-  countVar arg = case arg of
-    Define _ x -> singUseFlowVarCount x
-    Appl _ x x' -> singUseFlowVarCount x `mappend` singUseFlowVarCount x'
-    BinOp _ x _ x' -> singUseFlowVarCount x `mappend` singUseFlowVarCount x'
+$(concat <$> mapM (defineCatInstance [t|VarCountMap|] ''CountVariableBindings)
+                  [ ''Expr
+                  , ''Pattern
+                  ])
+$(concat <$> mapM (defineReduceEmptyInstance [t|VarCountMap|] ''CountVariableBindings)
+                  [ ''Origin
+                  ])
+$(defineCommonCatInstances [t|VarCountMap|] ''CountVariableBindings)
 
-instance VarCountable Value where
-  countVar arg = case arg of
-    VInt _ _ -> mempty
-    VChar _ _ -> mempty
-    VEmptyOnion _ -> mempty
-    VLabel _ _ _ -> mempty
-    VOnion _ x x' -> singUseFlowVarCount x `mappend` singUseFlowVarCount x'
-    VOnionFilter _ x _ _ -> singUseFlowVarCount x
-    VScape _ pat e -> countVar pat `mappend` countVar e
+instance Reduce CountVariableBindings Clause (VarCountMap) where
+  reduce CountVariableBindings (Clause _ x v) =
+    VarCountMap (Map.singleton x 1) `mappend` reduce CountVariableBindings v
 
-instance VarCountable Pattern where
-  countVar arg = case arg of
-    ValuePattern _ y ipat -> singDefCellVarCount y `mappend` countVar ipat
-    ExnPattern _ y ipat -> singDefCellVarCount y `mappend` countVar ipat
+instance Reduce CountVariableBindings Redex (VarCountMap) where
+  reduce CountVariableBindings redex =
+    case redex of
+      Def _ (VScape _ pattern expr) ->
+        reduce CountVariableBindings pattern `mappend`
+        reduce CountVariableBindings expr
+      _ -> VarCountMap Map.empty
 
-instance VarCountable InnerPattern where
-  countVar arg = case arg of
-    PrimitivePattern _ _ -> mempty
-    LabelPattern _ _ y ipat -> singDefCellVarCount y `mappend` countVar ipat
-    ConjunctionPattern _ ipat ipat' -> countVar ipat `mappend` countVar ipat'
-    ScapePattern _ -> mempty
-    EmptyOnionPattern _ -> mempty
+instance Reduce CountVariableBindings PatternClause VarCountMap where
+  reduce CountVariableBindings (PatternClause _ x _) =
+    VarCountMap (Map.singleton x 1)
 
--- | Given an expression returns the set of open variables in it.
-openVariables :: Expr -> Set AnyVar
-openVariables arg = snd $ evalRWS (checkClosed arg) () Set.empty
+-- For findFreeVariables -------------------------------------------------------
 
--- | Given an expression returns @True@ if and only if it has no open
---   variables.
-isClosed :: Expr -> Bool
-isClosed = Set.null . openVariables
+-- FIXME: this incorrectly assumes that anything bound within the pattern is
+--        also bound outside of the pattern
 
-class VarCloseable a where
-  checkClosed :: a -> CloseM ()
+instance Monoid FreeVarData where
+  mempty = FreeVarData Set.empty Set.empty
+  mappend fvd1 fvd2 =
+    FreeVarData
+      (fvdBound fvd1 `Set.union` fvdBound fvd2)
+      (fvdFree fvd1 `Set.union` (fvdFree fvd2 Set.\\ fvdBound fvd1))
 
--- | CloseM is the monad used in determining whether or not an expression is
---   closed.  It has three operations, which are described below.
-type CloseM = RWS () (Set AnyVar) (Set AnyVar)
+$(concat <$> mapM (defineCatInstance [t|FreeVarData|] ''FindFreeVariables)
+    [ ''Expr
+    , ''Redex
+    , ''Pattern
+    , ''PatternValue
+    ]
+ )
+$(concat <$> mapM (defineReduceEmptyInstance [t|FreeVarData|] ''FindFreeVariables)
+    [ ''Origin
+    , ''LabelName
+    , ''PrimitiveValue
+    , ''PrimitiveType
+    , ''BuiltinOp
+    ]
+ )
+$(defineCommonCatInstances [t|FreeVarData|] ''FindFreeVariables)
 
--- | Adds a variable to the set of variables bound in the current scope.
-addVar :: IsVar v => v -> CloseM ()
-addVar = modify . Set.insert . someVar
+instance Reduce FindFreeVariables Clause FreeVarData where
+  reduce FindFreeVariables (Clause _ x r) =
+    FreeVarData (Set.singleton x) Set.empty `mappend`
+      reduce FindFreeVariables r
 
--- | Checks if a variable is bound in the current scope; if it's not, it @tell@s it.
-checkVar :: IsVar v => v -> CloseM ()
-checkVar x = do
-  b <- gets . Set.member $ someVar x
-  unless b $ tell . Set.singleton $ someVar x
+instance Reduce FindFreeVariables PatternClause FreeVarData where
+  reduce FindFreeVariables pcl =
+    case pcl of
+      PatternClause _ x pv ->
+        FreeVarData (Set.singleton x) Set.empty `mappend`
+          reduce FindFreeVariables pv
 
--- | Performs an operation in a new scope; variables bound during the operation
---   will be unbound outside of this call.
-bracket :: CloseM a -> CloseM a
-bracket m = do
-  frame <- get
-  m <* put frame
+instance Reduce FindFreeVariables Var FreeVarData where
+  reduce FindFreeVariables x = FreeVarData Set.empty $ Set.singleton x
 
--- | Convenience function for running @checkVar@ on two variables of possibly
---   different types.
-checkVars :: (IsVar v1, IsVar v2) => v1 -> v2 -> CloseM ()
-checkVars v1 v2 = checkVar v1 >> checkVar v2
+$(defineCatFunc [t|FreeVarData|] (mkName "ffvValue") ''FindFreeVariables ''Value) 
 
--- | Convenience function for checking if a term is closed and then adding a
---   variable to the set of bound variables.
-checkAdd :: (VarCloseable c, IsVar v) => c -> v -> CloseM ()
-checkAdd v1 v2 = checkClosed v1 <* addVar v2
-
-instance VarCloseable FlowVar where
-  checkClosed = checkVar
-
-instance VarCloseable CellVar where
-  checkClosed = checkVar
-
-instance VarCloseable Expr where
-  checkClosed arg = case arg of
-    Expr _ cs -> mapM_ checkClosed cs
-
-instance VarCloseable Clause where
-  checkClosed arg = case arg of
-    RedexDef _ x r -> checkAdd r x
-    CellSet _ y x -> checkVars x y
-    CellGet _ x y -> checkAdd y x
-    Throws _ x x' -> checkAdd x' x
-    Evaluated cl -> checkClosed cl
-
-instance VarCloseable EvaluatedClause where
-  checkClosed arg = case arg of
-    ValueDef _ x v -> checkAdd v x
-    CellDef _ _ y x -> checkAdd x y
-    Flow _ x _ x' -> checkVars x x'
-
-instance VarCloseable Redex where
-  checkClosed arg = case arg of
-    Define _ x -> addVar x
-    Appl _ x x' -> checkVars x x'
-    BinOp _ x _ x' -> checkVars x x'
-
-instance VarCloseable Value where
-  checkClosed arg = case arg of
-    VInt _ _ -> yes
-    VChar _ _ -> yes
-    VEmptyOnion _ -> yes
-    VLabel _ _ y -> checkVar y
-    VOnion _ x x' -> checkVars x x'
-    VOnionFilter _ x _ _ -> checkVar x
-    VScape _ pat e -> bracket $ checkClosed pat >> checkClosed e
-    where yes = return ()
-
-instance VarCloseable Pattern where
-  checkClosed arg = case arg of
-    ValuePattern _ y ipat -> checkAdd ipat y
-    ExnPattern _ y ipat -> checkAdd ipat y
-
-instance VarCloseable InnerPattern where
-  checkClosed arg = case arg of
-    PrimitivePattern _ _ -> yes
-    LabelPattern _ _ y ipat -> checkAdd ipat y
-    ConjunctionPattern _ ipat ipat' -> checkClosed ipat >> checkClosed ipat'
-    ScapePattern _ -> yes
-    EmptyOnionPattern _ -> yes
-    where yes = return ()
+instance Reduce FindFreeVariables Value FreeVarData where
+  reduce FindFreeVariables v =
+    case v of
+      VScape _ pat expr ->
+        let inpat = reduce FindFreeVariables pat in
+        let inexpr = reduce FindFreeVariables expr in
+        -- But the bindings don't leave the scope of the scape
+        FreeVarData Set.empty $ fvdFree $ inpat `mappend` inexpr
+      _ -> ffvValue FindFreeVariables v
