@@ -91,7 +91,7 @@ pLetExpr = "let expression" <@>
              <* consume TokIs
              <*> pLetExpr
              <* consume TokIn
-             <*> pLetExpr
+             <*> pExpr
   <|> pFuncExpr
 
 -- |"function" priority is either a scape expression or "conditional" priority

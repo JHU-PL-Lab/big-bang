@@ -13,6 +13,7 @@ module Language.TinyBang.TypeSystem.Compatibility
 import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Control.Monad.State
 import Data.List.Split
 import Data.Maybe
 import Data.Set (Set)
@@ -175,14 +176,16 @@ compatibility ccc argTypeOrVar argDb patVar patDb =
 newtype CompatibilityM db a
   = CompatibilityM
       { unCompatibilityM ::
-          (WriterT CompatibilityAccumulation
-            (NonDetT
-              (Reader (CompatibilityContext db))))
+          (StateT (CompatibilityState db)
+            (WriterT CompatibilityAccumulation
+              (NonDetT
+                (Reader (CompatibilityContext db)))))
           a
       }
   deriving ( Monad, Functor, Applicative
            , MonadReader (CompatibilityContext db)
            , MonadWriter CompatibilityAccumulation
+           , MonadState (CompatibilityState db)
            , MonadNonDet
            )
 
@@ -199,14 +202,27 @@ runCompatibilityM :: CompatibilityCallContext db
                   -> CompatibilityM db a
                   -> [a]
 runCompatibilityM ccc db db' x =
-  runReader (runNonDetT (fst <$> runWriterT (unCompatibilityM x)))
-    (CompatibilityContext db db' ccc)
+  let initialState =
+        CompatibilityState { encounteredLowerBounds = Set.empty } in
+  let initialContext =
+        CompatibilityContext db db' ccc in
+  runReader
+    (runNonDetT
+      (fst <$> runWriterT
+        (evalStateT (unCompatibilityM x)
+          initialState)))
+    initialContext
 
 newtype CompatibilityAccumulation =
   CompatibilityAccumulation
     { openBindings :: Set TVar
     }
   deriving (Monoid)
+
+newtype CompatibilityState db =
+  CompatibilityState
+    { encounteredLowerBounds :: Set (Type db)
+    }
 
 {-|
   Captures the open bindings to the result type.  This is used to allow a sort

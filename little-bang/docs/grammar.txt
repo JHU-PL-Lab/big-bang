@@ -1,5 +1,5 @@
 Expr ::= LetExpr
-LetExpr ::= let Var = LetExpr in LetExpr
+LetExpr ::= let Var = LetExpr in Expr
 LetExpr ::= FuncExpr
 FuncExpr ::= Pattern -> LetExpr
 FuncExpr ::= CondExpr
