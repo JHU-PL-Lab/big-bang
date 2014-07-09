@@ -1,25 +1,26 @@
 CABAL=cabal
-CABAL_DEV=cabal-dev
-SANDBOX_DIR=../cabal-dev-sandbox
-CABAL_CMD=$(CABAL_DEV) -s $(SANDBOX_DIR) --with-cabal-install=$(CABAL)
+SANDBOX_DIR=../cabal-sandbox
 
 .PHONY : all
 all: build install
 
 $(SANDBOX_DIR):
-	mkdir -p $(SANDBOX_DIR)
+	$(CABAL) sandbox --sandbox=$(SANDBOX_DIR) init
 
 .PHONY: build
 build: $(SANDBOX_DIR)
-	$(CABAL_CMD) install-deps
-	$(CABAL_CMD) configure
-	$(CABAL_CMD) build
+	$(CABAL) install --only-dependencies
+	$(CABAL) configure
+	$(CABAL) build
 
 .PHONY: install
 install: build
-	$(CABAL_CMD) install --force-reinstalls  
+	$(CABAL) install --force-reinstalls  
 
 .PHONY: clean
 clean:
-	$(CABAL_CMD) clean
+	$(CABAL) clean
 
+.PHONY: clean-all
+clean-all: clean
+	$(RM) -r $(SANDBOX_DIR)
