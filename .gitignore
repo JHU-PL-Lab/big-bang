@@ -14,3 +14,7 @@ RemoteSystemsTempFiles
 *.aux
 *.log
 *~
+main.pdf
+*.aux
+*.log
+
