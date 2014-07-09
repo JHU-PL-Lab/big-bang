@@ -16,4 +16,4 @@ $(foreach proj,$(PROJECTS),clean_$(proj)): clean_%:
 
 .PHONY : purge
 purge: clean
-	rm -rf cabal-dev-sandbox
+	rm -rf cabal-sandbox
