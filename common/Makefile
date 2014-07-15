@@ -15,13 +15,14 @@ build: cabal.sandbox.config
 
 .PHONY: install
 install: build
-	$(CABAL) install --force-reinstalls  
+	$(CABAL) sandbox add-source .
 
 .PHONY: clean
 clean:
 	$(CABAL) clean
-	$(RM) cabal.sandbox.config
+	$(CABAL) sandbox delete-source .
+	-$(CABAL) sandbox hc-pkg -- unregister --force $(shell basename *.cabal .cabal)
 
 .PHONY: clean-all
 clean-all: clean
-	$(RM) -r $(SANDBOX_DIR)
+	$(CABAL) sandbox delete
