@@ -1,4 +1,5 @@
 {
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 
 module Language.TinyBang.Syntax.Lexer
@@ -6,8 +7,10 @@ module Language.TinyBang.Syntax.Lexer
 )
 where
 
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
+import Data.Maybe
 
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Tokens
@@ -39,12 +42,40 @@ tokens :-
   "{"                          { simply TokStartBlock }
   "}"                          { simply TokStopBlock }
   "+"                          { simply TokPlus }
-  "-"?$digit+                  { wrap $ \s ss -> T.token TokLitInt ss $ read s } -- TODO: fix to use Alex errors
+  "-"?$digit+                  { wrapM $ \s ->
+                                   case readMaybe s of
+                                     Just i ->
+                                        return $ \ss -> T.token TokLitInt ss i
+                                     Nothing ->
+                                       alexError $
+                                         "Invalid integer literal: " ++ s
+                               }
   "-"                          { simply TokMinus }
   $identstart $identcont*      { wrap $ \s ss -> T.token TokIdentifier ss s }
   `$identcont*                 { wrap $ \s ss -> T.token TokLabel ss $ drop 1 s } 
 
 {
+readMaybe :: (Read a) => String -> Maybe a
+readMaybe = listToMaybe . map fst . reads
+
+-- |A utility to create positional tokens for Alex.  The first argument of this
+--  function should be a function which accepts a string from Alex and yields an
+--  appropriate token.  This function will then yield a two-argument function
+--  suitable as an Alex monad wrapper action.
+wrapM :: (String -> Alex (SourceSpan -> Token))
+      -> AlexInput
+      -> Int
+      -> Alex AlexTokenType
+wrapM f inp len = do
+  let (posn, _, _, str) = inp
+  let (AlexPn _ lineNum colNum) = posn
+  g <- f (take len str)
+  let start = DocumentPosition lineNum colNum
+  let stop = DocumentPosition lineNum (colNum + len - 1)
+  let docSpanR = DocumentSpan <$> ask <*> pure start <*> pure stop
+  let tokenR = g <$> docSpanR
+  return $ Just <$> tokenR
+
 -- |A utility to create positional tokens for Alex.  The first argument of this
 --  function should be a function which accepts a string from Alex and yields an
 --  appropriate token.  This function will then yield a two-argument function
@@ -53,21 +84,9 @@ wrap :: (String -> SourceSpan -> Token)
      -> AlexInput
      -> Int
      -> Alex AlexTokenType
-wrap f inp len = do
-  let (posn, _, _, str) = inp
-  let (AlexPn _ lineNum colNum) = posn
-  let start = DocumentPosition lineNum colNum
-  let stop = DocumentPosition lineNum (colNum + len - 1)
-  let g :: String -> Reader SourceDocument Token
-      g s = do
-              doc <- ask
-              let docspan = DocumentSpan doc start stop
-              return $ f s docspan
-  let tokR = g (take len str)
-  return $ do
-    doc <- ask
-    let tok = runReader tokR doc
-    return $ Just tok
+wrap f =
+  let g s = return $ \ss -> f s ss in
+  wrapM g
 
 -- |A utility to create positional tokens for Alex.  The first argument to this
 --  function should be a Token value; it is used regardless of the source text
