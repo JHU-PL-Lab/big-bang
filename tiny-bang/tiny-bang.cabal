@@ -23,7 +23,10 @@ library
                    bytestring,
                    aeson,
                    stable-memo,
-                   void
+                   void,
+                   array
+  build-tools:     happy,
+                   alex
   ghc-options:     -Wall
   exposed-modules: 
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
@@ -59,7 +62,6 @@ library
                    Language.TinyBang.Utils.TemplateHaskell.Utils,
                    Language.TinyBang.Syntax.Tokens,
                    Language.TinyBang.Syntax.Lexer,
-                   Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Utils.Parser.PositionalParser,
                    Language.TinyBang.Utils.Parser.OriginParser,
                    Language.TinyBang.Ast.Origin,
@@ -103,6 +105,7 @@ library
                    Utils.TinyBang.Options,
                    Utils.GetOpt,
                    Utils.Monad.Writer
+  other-modules:   Language.TinyBang.Syntax.Parser
 
 executable tiny-bang
   hs-source-dirs:  interp-src
