@@ -1,31 +1,19 @@
-{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns #-}
+{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns, TypeSynonymInstances, FlexibleInstances #-}
 
 {-|
   Defines the tokens used in the TinyBang parser.
 -}
 
 module Language.TinyBang.Syntax.Tokens
-( Token(..)
-, TokenBody
-, SomeToken(..)
+( Token
 , TokenType(..)
-, token
 ) where
 
-import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Positional
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Syntax.Tokens
 
-data Token
-  = forall a. Token (SomeToken a)
-  
-token :: TokenType a -> SourceSpan -> a -> Token
-token tt ss a = Token (SomeToken tt (spos ss a))
-  
-type TokenBody a = SPositional a
-
-data SomeToken a
-  = SomeToken (TokenType a) (TokenBody a)
+type Token = TypedToken TokenType
 
 data TokenType a where
   TokIs :: TokenType () -- @=@

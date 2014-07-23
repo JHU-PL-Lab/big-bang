@@ -104,6 +104,9 @@ library
                    Utils.TinyBang.Options,
                    Utils.GetOpt,
                    Utils.Monad.Writer
+  other-modules:   
+                   Language.TinyBang.Utils.Syntax.Tokens,
+                   Language.TinyBang.Utils.Syntax
 
 executable tiny-bang
   hs-source-dirs:  interp-src

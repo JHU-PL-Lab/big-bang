@@ -13,7 +13,8 @@ import Language.TinyBang.Ast
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Syntax.Positional 
-import Language.TinyBang.Syntax.Tokens 
+import Language.TinyBang.Syntax.Tokens
+import Language.TinyBang.Utils.Syntax.Tokens 
 }
 
 %name parseTokens

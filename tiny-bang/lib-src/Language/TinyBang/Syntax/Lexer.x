@@ -10,7 +10,8 @@ import Control.Monad
 import Control.Monad.Reader
 
 import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Syntax.Tokens as T
+import Language.TinyBang.Syntax.Tokens
+import Language.TinyBang.Utils.Syntax.Tokens as T
 }
 
 %wrapper "monad"
@@ -44,8 +45,6 @@ tokens :-
   `$identcont*                 { wrap $ \s ss -> T.token TokLabel ss $ drop 1 s } 
 
 {
--- Each right-hand side has type :: String -> Token
-
 -- |A utility to create positional tokens for Alex.  The first argument of this
 --  function should be a function which accepts a string from Alex and yields an
 --  appropriate token.  This function will then yield a two-argument function
