@@ -20,7 +20,7 @@ import Language.TinyBang.Ast
 import qualified Language.TinyBang.Interpreter as I
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Syntax.Parser
 import qualified Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.Constraints

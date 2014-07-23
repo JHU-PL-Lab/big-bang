@@ -9,8 +9,8 @@ module Language.TinyBang.Syntax.Tokens
 , TokenType(..)
 ) where
 
-import Language.TinyBang.Syntax.Positional
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Syntax.Positional
 import Language.TinyBang.Utils.Syntax.Tokens
 
 type Token = TypedToken TokenType

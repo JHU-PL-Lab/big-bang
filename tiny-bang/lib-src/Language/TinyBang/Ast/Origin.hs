@@ -9,7 +9,7 @@ module Language.TinyBang.Ast.Origin
 ) where
 
 import Language.TinyBang.Utils.Display
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 
 -- |The data structure describing AST component origins.
 data Origin

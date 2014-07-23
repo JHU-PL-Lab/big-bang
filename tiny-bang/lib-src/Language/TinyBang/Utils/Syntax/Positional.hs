@@ -1,6 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Language.TinyBang.Syntax.Positional
+{-|
+  This module defines a "positional" functor: a container which may tag data
+  with a source location.
+-}
+module Language.TinyBang.Utils.Syntax.Positional
 ( Positional(..)
 , Void(..)
 , SPositional
@@ -15,7 +19,7 @@ module Language.TinyBang.Syntax.Positional
 
 import Data.Functor.Identity
 
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 
 -- |The type for "positional" data.  Positional data may or may not have a
 --  @SourceSpan@ associated with it.  This association is used to provide spans

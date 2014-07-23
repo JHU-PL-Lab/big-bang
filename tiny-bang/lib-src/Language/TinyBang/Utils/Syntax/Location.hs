@@ -1,7 +1,7 @@
 {-|
   A module defining source locations.
 -}
-module Language.TinyBang.Syntax.Location
+module Language.TinyBang.Utils.Syntax.Location
 ( SourceSpan(..)
 , HasSourceSpan(..)
 , DocumentPosition(..)

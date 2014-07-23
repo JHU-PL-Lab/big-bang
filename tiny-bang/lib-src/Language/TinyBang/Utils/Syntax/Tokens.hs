@@ -25,8 +25,8 @@ module Language.TinyBang.Utils.Syntax.Tokens
 , SomeToken(..)
 ) where
 
-import Language.TinyBang.Syntax.Location
-import Language.TinyBang.Syntax.Positional
+import Language.TinyBang.Utils.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Positional
 
 data TypedToken t
   = forall a. Token (SomeToken t a)
