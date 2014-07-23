@@ -1,8 +1,8 @@
 {
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE GADTs #-}
 
 module Language.TinyBang.Syntax.Parser
-(
+( parseTinyBang
 ) where
 
 import Control.Applicative
@@ -12,35 +12,34 @@ import Data.Functor.Identity
 import Language.TinyBang.Ast
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Syntax.Positional 
 import Language.TinyBang.Syntax.Tokens 
 }
 
 %name parseTokens
 %monad { ParserM }
-%tokentype { PositionalToken }
+%tokentype { Token }
 %error { parseError }
 
 %token
-  'int'         { PositionalToken _ TokInt } 
-  'ref'         { PositionalToken _ TokRef }
-  '->'          { PositionalToken _ TokArrow }
-  '()'          { PositionalToken _ TokEmptyOnion }
-  '=='          { PositionalToken _ TokEq }
-  '<='          { PositionalToken _ TokLessEq }
-  '>='          { PositionalToken _ TokGreaterEq }
-  '<-'          { PositionalToken _ TokSet }
-  '&'           { PositionalToken _ TokOnion }
-  '='           { PositionalToken _ TokIs }
-  '('           { PositionalToken _ TokOpenParen }
-  ')'           { PositionalToken _ TokCloseParen }
-  ';'           { PositionalToken _ TokSemi }
-  '{'           { PositionalToken _ TokStartBlock }
-  '}'           { PositionalToken _ TokStopBlock }
-  '+'           { PositionalToken _ TokPlus }
-  '-'           { PositionalToken _ TokMinus }
-  ident         { PositionalToken _ (TokIdentifier _) }
-  label         { PositionalToken _ (TokLabel _) }
-  litint        { PositionalToken _ (TokLitInt _) }
+  'int'         { Token (SomeToken TokInt $$) } 
+  'ref'         { Token (SomeToken TokRef $$) }
+  '->'          { Token (SomeToken TokArrow $$) }
+  '()'          { Token (SomeToken TokEmptyOnion $$) }
+  '=='          { Token (SomeToken TokEq $$) }
+  '<='          { Token (SomeToken TokLessEq $$) }
+  '>='          { Token (SomeToken TokGreaterEq $$) }
+  '<-'          { Token (SomeToken TokSet $$) }
+  '&'           { Token (SomeToken TokOnion $$) }
+  '='           { Token (SomeToken TokIs $$) }
+  ';'           { Token (SomeToken TokSemi $$) }
+  '{'           { Token (SomeToken TokStartBlock $$) }
+  '}'           { Token (SomeToken TokStopBlock $$) }
+  '+'           { Token (SomeToken TokPlus $$) }
+  '-'           { Token (SomeToken TokMinus $$) }
+  ident         { Token (SomeToken TokIdentifier $$) }
+  label         { Token (SomeToken TokLabel $$) }
+  litint        { Token (SomeToken TokLitInt $$) }
 
 %%
 
@@ -48,59 +47,59 @@ Program
   : Expr                    { $1 }
 
 Expr
-  : Clauses                 { $1 }
+  : Clauses                 { oc1 $1 $> Expr $1 }
 
 Clauses
-  : many(Clause)            { $1 }
+  : many1(Clause)           { $1 }
 
 Clause
-  : Var '=' Redex ';'       { origOver $1 $> $ \o -> posApX2 Clause o $1 $3 }
+  : Var '=' Redex ';'       { oc2 $1 $> Clause $1 $3 }
 
 Redex
-  : Var Var                 { oc2 Appl $1 $2 }
-  | BuiltinOp Vars          { oc2 Builtin $1 $2 }
-  | Var                     { oc1 Copy $1 }
-  | Value                   { oc1 Def $1 }
+  : Var Var                 { oc2 $1 $> Appl $1 $2 }
+  | BuiltinOp Vars          { oc2 $1 $> Builtin $1 $2 }
+  | Var                     { oc1 $1 $> Copy $1 }
+  | Value                   { oc1 $1 $> Def $1 }
   
 Var
-  : Ident                   { oc1 mkvar $1 }
+  : Ident                   { oc1 $1 $> mkvar $1 }
 
 Vars
-  : many(Var)               { $1 }
+  : many1(Var)               { $1 }
 
 Value
-  : LiteralPrimitive        { oc1 VPrimitive $1 }
-  | '()'                    { posOver $1 $> VEmptyOnion }
-  | Label Var               { oc2 VLabel $1 $2 }
-  | 'ref' Var               { origOver $1 $> $ flip VRef $2 }
-  | Var '&' Var             { oc2 VOnion $1 $3 }
+  : LiteralPrimitive        { oc1 $1 $> VPrimitive $1 }
+  | '()'                    { oc0 $1 $> VEmptyOnion }
+  | Label Var               { oc2 $1 $> VLabel $1 $2 }
+  | 'ref' Var               { oc1 $1 $> VRef $2 }
+  | Var '&' Var             { oc2 $1 $> VOnion $1 $3 }
   | '{' Pattern '}' '->' '{' Expr '}'
-                            { origOver $1 $> $ \o -> VScape o $2 $6 }
+                            { oc2 $1 $> VScape $2 $6 }
 
 Pattern
-  : PatternClauses          { oc1 Pattern $1 }
+  : PatternClauses          { oc1 $1 $> Pattern $1 }
 
 PatternClauses
   : many1(PatternClause)    { $1 }
   
 PatternClause
-  : Var '=' PatternValue    { oc2 PatternClause $1 $3 }
+  : Var '=' PatternValue    { oc2 $1 $> PatternClause $1 $3 }
 
 PatternValue
-  : 'int'                   { origOver $1 $> $ flip PPrimitive PrimInt }
-  | '()'                    { origOver $1 $> PEmptyOnion }
-  | Label Var               { oc2 PLabel $1 $2 }
-  | 'ref' Var               { origOver $1 $> $ flip PRef $2 }
-  | Var '&' Var             { oc2 PConjunction $1 $3 }
+  : 'int'                   { oc0 $1 $> (\o -> PPrimitive o PrimInt) }
+  | '()'                    { oc0 $1 $> PEmptyOnion }
+  | Label Var               { oc2 $1 $> PLabel $1 $2 }
+  | 'ref' Var               { oc1 $1 $> PRef $2 }
+  | Var '&' Var             { oc2 $1 $> PConjunction $1 $3 }
 
 Ident
-  : ident                   { posOver $1 $> $1 }
+  : ident                   { posOver $1 $> $ posData $1 }
 
 Label
-  : label                   { posOver $1 $> $ LabelName $ ?????? $1 }
+  : label                   { oc1 $1 $> LabelName $1 }
 
 LiteralPrimitive
-  : litint                  { posOver $1 $> $1 }
+  : litint                  { oc1 $1 $> VInt $1 }
 
 BuiltinOp
   : '+'                     { posOver $1 $> OpIntPlus }
@@ -117,96 +116,56 @@ many1(p)
   | p many1(p)              { posOver $1 $2 $ posData $1 : posData $2 } 
 
 many(p)
-  : many1(p)                { $1 }
+  : many1(p)                { forgetSpan $1 }
   |                         { vpos [] }
-         
 
 {
+
+parseTinyBang :: SourceDocument -> [Token] -> Either String Expr
+parseTinyBang _ toks =
+    posData <$> parseTokens toks
 
 type ParserM a = Either String a
 
 parseError :: [Token] -> ParserM a
-parseError tokens = Left $ "Parse error: " + display tokens
+parseError tokens = Left $ "Parse error: " ++ display tokens
 
--- |The type for "positional" data.  Positional data may or may not have a
---  @SourceSpan@ associated with it.  This association is used to provide spans
---  for the parsed AST nodes.  The expected values for @f@ are either @Identity@
---  or @Void@.
-newtype Positional f a = Positional (f SourceSpan, a)
-
-instance Functor (Positional f) where
-  fmap f (Positional (s,d)) = Positional (s, f d)
-
-instance HasSourceSpan (Positional Identity a) where
-  spanOf = posSpan
-
--- |Used to discard type arguments.
-newtype Void a = Void ()
-
--- |A type alias for spanned positional data.
-type SPositional = Positional Identity 
-
--- |A type alias for unspanned positional data.
-type VPositional = Positional Void
-
--- |Retrieves the payload from a positional value.
-posData :: Positional f a -> a
-posData (Positional (_, d)) = d
-
--- |Retrieves the span from a spanned positional value.
-posSpan :: Positional Identity a -> SourceSpan
-posSpan (Positional (Identity s, _)) = s
-
--- |A smart constructor for spanned positional data.
-spos :: SourceSpan -> a -> SPositional a
-spos s x = Positional (Identity s, x)
-
--- |A smart constructor for unspanned positional data.
-vpos :: a -> VPositional a
-vpos x = Positional (Void, x)
-
--- |A convenience mechanism for creating a positional over two things which have
---  source spans.
-posOver :: (HasSourceSpan s1, HasSourceSpan s2)
-        => s1 -> s2 -> a -> SPositional a
-posOver s1 s2 = spos (spanOf s1 <--> spanOf s2)
-
--- |A convenience mechanism for creating a positional over two source-spanned
---  entities and a constructor which expects an origin.
-origOver :: (HasSourceSpan s1, HasSourceSpan s2)
-         => s1 -> s2 -> (Origin -> a) -> SPositional a
-origOver s1 s2 f =
-  let s = s1 <--> s2 in
-  spos s $ f (SourceOrigin s)
-
--- |Origin-driven value constructor for one argument.  See @oc2@.
-oc1 :: (Origin -> a1 -> r)
-    -> SPositional a1
+-- |A version of @oc2@ for constructors with /no/ additional arguments rather
+--  than two.
+oc0 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> r)
     -> SPositional r
-oc1 f a1 =
-  let s = posSpan a1 in
-  spos s $ f (SourceOrigin s) (posData a1)
+oc0 s1 s2 f =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss)
 
--- |Origin-driven value constructor for two extra arguments.  This function
---  accepts a constructor which expects an origin and two additional arguments.
---  Given those arguments in positional form, it generates an origin spanning
---  their positions and then passes their data as the remaining arguments.
-oc2 :: (Origin -> a1 -> a2 -> r)
-    -> SPositional a1
-    -> SPositional a2
+-- |A version of @oc2@ for constructors with /one/ additional argument rather
+--  than two.
+oc1 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> a1 -> r)
+    -> Positional f1 a1
     -> SPositional r
-oc2 f a1 a2 =
-  let s = posSpan a1 <--> posSpan a2 in
-  spos s $ f (SourceOrigin s) (posData a1) (posData a2)
-  
--- |A function to extract data from two positional arguments during application.
---  Specifically, this function extracts from the /second/ and /third/ arguments
---  under the assumption that the first is not positional (e.g. an origin).
-posApX2 :: (a0 -> a1 -> a2 -> r)
-        -> a0
-        -> Positional f1 a1
-        -> Positional f2 a2
-        -> r
-posApX2 f a0 a1 a2 = f a0 (posData a1) (posData a2)
+oc1 s1 s2 f a1 =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss) (posData a1)
+
+-- |A tool for calling constructors which expect origins within this parser.
+--  This function accepts the first and last token of the parse, a constructor
+--  expecting an @Origin@ argument followed by two other arguments, and the
+--  @Positional@ form of those two arguments.  This function then creates an
+--  @Origin@ based on the provided tokens and calls the constructor with this
+--  and the data parts of the remaining arguments.  The result is the positional
+--  form of the result of the constructor.
+oc2 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> a1 -> a2 -> r)
+    -> Positional f1 a1
+    -> Positional f2 a2
+    -> SPositional r
+oc2 s1 s2 f a1 a2 =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss) (posData a1) (posData a2)
 
 }

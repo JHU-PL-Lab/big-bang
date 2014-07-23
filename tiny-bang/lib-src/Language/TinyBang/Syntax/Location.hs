@@ -5,8 +5,6 @@ module Language.TinyBang.Syntax.Location
 ( SourceSpan(..)
 , HasSourceSpan(..)
 , DocumentPosition(..)
-, HasDocumentPosition(..)
-, HasDocumentStartStopPositions(..)
 , SourceDocument(..)
 , nameOfDocument
 , (<-->)
@@ -14,20 +12,6 @@ module Language.TinyBang.Syntax.Location
 
 import Language.TinyBang.Utils.Display hiding (line)
 
--- |Defines a region of source.
-data SourceSpan
-  = DocumentSpan SourceDocument DocumentPosition DocumentPosition
-      -- ^Defines a span over a given document from beginning to end
-      --  (inclusive).
-  | UnknownSpan
-  deriving (Eq, Ord, Show)
-  
-class HasSourceSpan a where
-  spanOf :: a -> SourceSpan
-
-instance HasSourceSpan SourceSpan where
-  spanOf = id
-  
 -- |Defines positions within textual documents.
 data DocumentPosition
   = DocumentPosition
@@ -36,16 +20,14 @@ data DocumentPosition
       }
   deriving (Eq, Ord, Show)
   
-class HasDocumentPosition a where
-  documentPositionOf :: a -> DocumentPosition
+-- |Defines a region of source.
+data SourceSpan
+  = DocumentSpan SourceDocument DocumentPosition DocumentPosition
+      -- ^Defines a span over a given document from beginning to end
+      --  (inclusive).
+  | UnknownSpan
+  deriving (Eq, Ord, Show)
   
-instance HasDocumentPosition DocumentPosition where
-  documentPositionOf = id
-
-class HasDocumentStartStopPositions a where
-  documentStartPositionOf :: a -> DocumentPosition
-  documentStopPositionOf :: a -> DocumentPosition
-
 -- |Defines a data type describing source code documents.  A source document is
 --  some resource which contains the source code in textual form.
 data SourceDocument
@@ -54,6 +36,12 @@ data SourceDocument
   | UnknownDocument
   deriving (Eq, Ord, Show)
 
+class HasSourceSpan a where
+  spanOf :: a -> SourceSpan
+
+instance HasSourceSpan SourceSpan where
+  spanOf = id
+  
 -- |Defines an operator which extracts and joins source spans.
 (<-->) :: (HasSourceSpan a, HasSourceSpan b) => a -> b -> SourceSpan
 (<-->) a b =

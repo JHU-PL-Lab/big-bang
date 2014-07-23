@@ -32,6 +32,9 @@ library
                    Language.TinyBang.TypeSystem.Monad.Trans.NonDet,
                    Language.TinyBang.Ast,
                    Language.TinyBang.Syntax.Location,
+                   Language.TinyBang.Syntax.Lexer,
+                   Language.TinyBang.Syntax.Parser,
+                   Language.TinyBang.Syntax.Positional,
                    Language.TinyBang.Interpreter,
                    Language.TinyBang.Ast.Data,
                    Language.TinyBang.Interpreter.Compatibility,
@@ -62,11 +65,8 @@ library
                    Language.TinyBang.Utils.TemplateHaskell.Utils,
                    Language.TinyBang.Syntax.Tokens,
                    Language.TinyBang.Syntax.Lexer,
-                   Language.TinyBang.Utils.Parser.PositionalParser,
-                   Language.TinyBang.Utils.Parser.OriginParser,
                    Language.TinyBang.Ast.Origin,
                    Language.TinyBang.Ast.WellFormedness,
-                   Language.TinyBang.Utils.Parser.Parsec,
                    Language.TinyBang.Utils.Display,
                    Language.TinyBang.TypeSystem.ConstraintDatabase,
                    Language.TinyBang.TypeSystem.ConstraintDatabase.Simple,
@@ -105,7 +105,9 @@ library
                    Utils.TinyBang.Options,
                    Utils.GetOpt,
                    Utils.Monad.Writer
-  other-modules:   Language.TinyBang.Syntax.Parser
+  other-modules:   
+                   Language.TinyBang.Syntax.Parser,
+                   Language.TinyBang.Syntax.Positional
 
 executable tiny-bang
   hs-source-dirs:  interp-src
