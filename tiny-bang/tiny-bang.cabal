@@ -64,7 +64,6 @@ library
                    Language.TinyBang.Utils.TemplateHaskell.TransformM,
                    Language.TinyBang.Utils.TemplateHaskell.Utils,
                    Language.TinyBang.Syntax.Tokens,
-                   Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Ast.Origin,
                    Language.TinyBang.Ast.WellFormedness,
                    Language.TinyBang.Utils.Display,
@@ -105,9 +104,6 @@ library
                    Utils.TinyBang.Options,
                    Utils.GetOpt,
                    Utils.Monad.Writer
-  other-modules:   
-                   Language.TinyBang.Syntax.Parser,
-                   Language.TinyBang.Syntax.Positional
 
 executable tiny-bang
   hs-source-dirs:  interp-src
