@@ -18,7 +18,17 @@
   by Alex (e.g. @alexEOF@) must also be defined within the lexer file.  An
   example of such a snippet follows.
   @
-  
+    alexEOF :: Alex (PosAlexReturnType TokenType)
+    alexEOF = genAlexEOF
+    
+    instance Alexy Alex AlexInput AlexPosn TokenType where
+      alexInputPosnStr (p,_,_,s) = (p,s)
+      alexPosnLineCol (AlexPn _ x y) = (x,y)
+      alexMonadDoScan = alexMonadScan
+      runAlexMonad = runAlex
+    
+    lexTinyBang :: SourceDocument -> String -> Either String [Token]
+    lexTinyBang = lexTokens (Proxy :: Proxy Alex) 
   @
 -}
 module Language.TinyBang.Utils.Syntax.Lexer
