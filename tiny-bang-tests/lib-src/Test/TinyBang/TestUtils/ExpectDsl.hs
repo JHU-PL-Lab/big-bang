@@ -10,4 +10,7 @@ import Test.TinyBang.TestUtils.ExpectDsl.Parser
 
 -- | A function to parse a value DSL string into a predicate function.
 parseExpectDslPredicate :: String -> Either String Expectation
-parseExpectDslPredicate str = (`parseValueDsl` str) =<< lexValueDsl str
+parseExpectDslPredicate str = do
+  tokens <- lexValueDsl str
+  result <- parseValueDsl tokens
+  return $ result str

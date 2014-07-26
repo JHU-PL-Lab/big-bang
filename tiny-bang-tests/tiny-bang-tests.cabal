@@ -17,18 +17,23 @@ library
                    split,
                    test-framework,
                    hslogger,
-                   either
+                   either,
+                   array,
+                   tagged
+  build-tools:     alex, happy
   ghc-options:     -Wall
-  exposed-modules: Test.TinyBang.Options,
+  exposed-modules: 
+                   Test.TinyBang.Options,
                    Test.TinyBang.SourceFile,
                    Test.TinyBang.TestUtils.ExpectDsl.Data,
-                   Test.TinyBang.TestUtils.ExpectDsl.Lexer,
-                   Test.TinyBang.TestUtils.ExpectDsl.Parser,
                    Test.TinyBang.TestUtils.ExpectDsl,
                    Test.TinyBang.TypeSystem.Contours,
                    Test.TinyBang.TypeSystem.NFA,
                    Test.Utils.TestFramework.Options,
-                   Test.TinyBang.TestUtils.SourceFileTest
+                   Test.TinyBang.TestUtils.SourceFileTest,
+                   Test.TinyBang.TestUtils.ExpectDsl.Tokens,
+                   Test.TinyBang.TestUtils.ExpectDsl.Lexer
+  other-modules:   Test.TinyBang.TestUtils.ExpectDsl.Parser
 
 executable tiny-bang-tests
   hs-source-dirs:  test-src

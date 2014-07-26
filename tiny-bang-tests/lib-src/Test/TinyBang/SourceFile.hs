@@ -16,7 +16,7 @@ import Language.TinyBang.Utils.Display
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Syntax.Parser
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.TypeInference
