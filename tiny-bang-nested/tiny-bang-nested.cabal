@@ -17,17 +17,20 @@ library
                    split,
                    either,
                    parsec,
-                   tiny-bang
+                   tiny-bang,
+                   array,
+                   tagged
+  build-tools:     alex, happy
   ghc-options:     -Wall
   exposed-modules:
                    Language.TinyBangNested.Ast,
                    Language.TinyBangNested.Ast.Data,
-                   Language.TinyBangNested.Syntax.Lexer,
-                   Language.TinyBangNested.Syntax.Parser,
                    Language.TinyBangNested.Syntax.Tokens,
                    Language.TinyBangNested.ATranslator,
                    Language.TinyBangNested.ATranslator.Monad,
-                   Language.TinyBangNested.ATranslator.Translator
+                   Language.TinyBangNested.ATranslator.Translator,
+                   Language.TinyBangNested.Syntax.Lexer,
+                   Language.TinyBangNested.Syntax.Parser
 
 executable tiny-bang-nested
   hs-source-dirs:  interp-src

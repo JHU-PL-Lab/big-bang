@@ -1,72 +1,66 @@
+{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns, TypeSynonymInstances, FlexibleInstances #-}
+
+{-|
+  Defines the tokens used in the TinyBangNested parser.
+-}
 module Language.TinyBangNested.Syntax.Tokens
-( PositionalToken(..)
-, Token(..)
+( Token
+, TokenType(..)
 ) where
 
-import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Syntax.Positional
+import Language.TinyBang.Utils.Syntax.Tokens
 
--- |The raw tokens of the LittleBang syntax.
-data Token
-  = TokIs -- ^@=@
-  | TokPlus -- ^@+@
-  | TokMinus -- ^@-@
-  | TokEq -- ^@==@
-  | TokLessEq -- ^@<=@
-  | TokGreaterEq -- ^@>=@
-  | TokLeftArrow -- ^@<-@
-  | TokEmptyOnion -- ^@()@
-  | TokOnion -- ^@&@
-  | TokArrow -- ^@->@
-  | TokLet -- ^@let@
-  | TokIn -- ^@in@
-  | TokFun -- ^@fun@
-  | TokInt -- ^@int@
-  | TokRef -- ^@ref@
-  | TokOpenParen -- ^@(@
-  | TokCloseParen -- ^@)@
-  | TokIdentifier String
-  | TokLitInt Integer
-  | TokLitChar Char
-  | TokLabel String -- ^The @String@ is only the name of the label, not the @`@
-  deriving (Eq, Ord, Show)
-  
--- |An annotation for tokens which describes their source position.
-data PositionalToken
-  = PositionalToken { startPos :: DocumentPosition
-                    , stopPos :: DocumentPosition
-                    , posToken :: Token }
-  deriving (Eq, Ord, Show)
+type Token = TypedToken TokenType
 
-instance HasDocumentStartStopPositions PositionalToken where
-  documentStartPositionOf = startPos
-  documentStopPositionOf = stopPos
-  
+data TokenType a where
+  TokIs :: TokenType () -- @=@
+  TokArrow :: TokenType () -- @->@
+  TokStartBlock :: TokenType () -- @{@
+  TokStopBlock :: TokenType () -- @}@
+  TokEmptyOnion :: TokenType () -- @()@
+  TokOnion :: TokenType () -- @&@
+  TokInt :: TokenType () -- @int@
+  TokSemi :: TokenType () -- @;@
+  TokIdentifier :: TokenType String
+  TokLitInt :: TokenType Integer
+  TokLabel :: TokenType String  -- The @String@ is only the name of the label, not the @`@
+  TokPlus :: TokenType () -- @+@
+  TokMinus :: TokenType () -- @-@
+  TokEq :: TokenType () -- @==@
+  TokLessEq :: TokenType () -- @<=@
+  TokGreaterEq :: TokenType () -- @>=@
+  TokSet :: TokenType () -- @<-@
+  TokRef :: TokenType () -- @ref@
+  TokLet :: TokenType () -- @let@
+  TokIn :: TokenType () -- @in@
+  TokLambda :: TokenType () -- @\@
+  TokOpenParen :: TokenType () -- @(@
+  TokCloseParen :: TokenType () -- @)@
+
 instance Display Token where
   makeDoc t = case t of
-    TokIs -> dquotes $ text "="
-    TokPlus -> dquotes $ text "+"
-    TokMinus -> dquotes $ text "-"
-    TokLessEq -> dquotes $ text "<="
-    TokGreaterEq -> dquotes $ text ">="
-    TokLeftArrow -> dquotes $ text "<-"
-    TokEq -> dquotes $ text "=="
-    TokEmptyOnion -> dquotes $ text "()"
-    TokOnion -> dquotes $ text "&"
-    TokArrow -> dquotes $ text "->"
-    TokLet -> dquotes $ text "let"
-    TokIn -> dquotes $ text "in"
-    TokFun -> dquotes $ text "fun"
-    TokInt -> dquotes $ text "int"
-    TokRef -> dquotes $ text "ref"
-    TokOpenParen -> dquotes $ text "("
-    TokCloseParen -> dquotes $ text ")"
-    TokIdentifier s -> text "id#" <> dquotes (text s)
-    TokLitInt n -> text "int#" <> dquotes (text $ show n)
-    TokLitChar c -> text "char#" <> dquotes (text [c])
-    TokLabel n -> text "label#" <> dquotes (text n)
-
-instance Display PositionalToken where
-  makeDoc pt =
-    makeDoc (posToken pt) <+> text "at" <+>
-      makeDoc (startPos pt) <> char '-' <> makeDoc (stopPos pt)
+    Token (SomeToken TokIs _) -> dquotes $ text "="
+    Token (SomeToken TokArrow _) -> dquotes $ text "->"
+    Token (SomeToken TokStartBlock _) -> dquotes $ text "{"
+    Token (SomeToken TokStopBlock _) -> dquotes $ text "}"
+    Token (SomeToken TokEmptyOnion _) -> dquotes $ text "()"
+    Token (SomeToken TokOnion _) -> dquotes $ text "&"
+    Token (SomeToken TokInt _) -> dquotes $ text "int"
+    Token (SomeToken TokSemi _) -> dquotes $ text ";"
+    Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
+    Token (SomeToken TokLitInt (posData -> n)) -> text "int#" <> dquotes (text $ show n)
+    Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
+    Token (SomeToken TokPlus _) -> text "+"
+    Token (SomeToken TokMinus _) -> text "-"
+    Token (SomeToken TokEq _) -> text "=="
+    Token (SomeToken TokLessEq _) -> text "<="
+    Token (SomeToken TokGreaterEq _) -> text ">="
+    Token (SomeToken TokSet _) -> text "<-"
+    Token (SomeToken TokRef _) -> text "ref"
+    Token (SomeToken TokLet _) -> text "let"
+    Token (SomeToken TokIn _) -> text "in"
+    Token (SomeToken TokLambda _) -> text "\\"
+    Token (SomeToken TokOpenParen _) -> text "("
+    Token (SomeToken TokCloseParen _) -> text ")"
