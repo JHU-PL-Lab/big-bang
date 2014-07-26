@@ -33,7 +33,6 @@
 -}
 module Language.TinyBang.Utils.Syntax.Lexer
 ( Alexy(..)
-, readMaybe
 , wrapM
 , wrap
 , simply
@@ -45,7 +44,6 @@ module Language.TinyBang.Utils.Syntax.Lexer
 
 import Control.Applicative
 import Control.Monad.Reader
-import Data.Maybe
 import Data.Proxy
 
 import Language.TinyBang.Utils.Syntax.Location
@@ -63,10 +61,6 @@ class (Monad alex) => Alexy alex alexInput alexPosn tokenType
   alexPosnLineCol :: alexPosn -> (Int,Int)
   runAlexMonad :: String -> alex a -> Either String a
   alexMonadDoScan :: alex (PosAlexReturnType tokenType)
-
--- |A convenient wrapper around @reads@
-readMaybe :: (Read a) => String -> Maybe a
-readMaybe = listToMaybe . map fst . reads
 
 -- |A utility to create positional tokens for Alex.  The first argument of this
 --  function should be a function which accepts a string from Alex and yields an

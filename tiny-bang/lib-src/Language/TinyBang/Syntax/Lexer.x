@@ -11,6 +11,7 @@ import Data.Proxy
 
 import Language.TinyBang.Syntax.Tokens
 import Language.TinyBang.Utils.Syntax as S
+import Utils.Monad.Read
 }
 
 %wrapper "monad"

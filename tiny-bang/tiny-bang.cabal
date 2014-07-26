@@ -94,6 +94,7 @@ library
                    Language.TinyBang.Utils.Syntax,
                    Language.TinyBang.Utils.Syntax.Lexer,
                    Language.TinyBang.Utils.Syntax.Location,
+                   Language.TinyBang.Utils.Syntax.Parser,
                    Language.TinyBang.Utils.Syntax.Positional,
                    Language.TinyBang.Utils.Syntax.Tokens,
                    Language.TinyBang.Utils.TemplateHaskell.Deriving,
@@ -105,10 +106,10 @@ library
                    Utils.CLI.Args.Logging,
                    Utils.GetOpt,
                    Utils.Monad,
+                   Utils.Monad.Read,
                    Utils.Monad.Writer,
                    Utils.TinyBang.Options,
                    Utils.Toploop
-  other-modules:   Language.TinyBang.Utils.Syntax.Parser
 
 executable tiny-bang
   hs-source-dirs:  interp-src
