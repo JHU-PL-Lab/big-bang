@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 module Language.TinyBangNested.Syntax.Parser
 ( parseTinyBangNested
+, parseTinyBangNestedPattern
 ) where
 
 import Control.Applicative
@@ -47,6 +48,9 @@ import Language.TinyBangNested.Syntax.Tokens
 %right '<-'
 %left '+' '-'
 %left '&'
+
+%name parseProgram Program
+%name parsePattern Pattern
 
 %%
 
@@ -120,7 +124,11 @@ many(p)
 
 parseTinyBangNested :: SourceDocument -> [Token] -> Either String Expr
 parseTinyBangNested _ toks =
-    posData <$> parseTokens toks
+    posData <$> parseProgram toks
+
+parseTinyBangNestedPattern :: SourceDocument -> [Token] -> Either String Pattern
+parseTinyBangNestedPattern _ toks =
+    posData <$> parsePattern toks
 
 type ParserM a = Either String a
 
