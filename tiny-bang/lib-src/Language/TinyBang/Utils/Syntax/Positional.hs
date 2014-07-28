@@ -15,6 +15,7 @@ module Language.TinyBang.Utils.Syntax.Positional
 , vpos
 , forgetSpan
 , posOver
+, at
 ) where
 
 import Data.Functor.Identity
@@ -67,3 +68,7 @@ forgetSpan = vpos . posData
 posOver :: (HasSourceSpan s1, HasSourceSpan s2)
         => s1 -> s2 -> a -> SPositional a
 posOver s1 s2 = spos (spanOf s1 <--> spanOf s2)
+
+-- |Constructs a positional using the positional data from another positional.
+at :: a -> Positional f b -> Positional f a
+at x (Positional (p,_)) = Positional (p,x)

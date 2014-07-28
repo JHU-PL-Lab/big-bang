@@ -7,6 +7,10 @@ module Language.TinyBang.Utils.Syntax.Parser
 ( oc0
 , oc1
 , oc2
+, oc3
+
+, oc1S
+, oat
 ) where
 
 import Language.TinyBang.Ast.Origin
@@ -50,3 +54,26 @@ oc2 :: SPositional s1
 oc2 s1 s2 f a1 a2 =
   let ss = posSpan s1 <--> posSpan s2 in
   spos ss $ f (SourceOrigin ss) (posData a1) (posData a2)
+
+-- |A version of @oc2@ for constructors with /one/ additional argument rather
+--  than two.
+oc3 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> a1 -> a2 -> a3 -> r)
+    -> Positional f1 a1
+    -> Positional f2 a2
+    -> Positional f3 a3
+    -> SPositional r
+oc3 s1 s2 f a1 a2 a3 =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss) (posData a1) (posData a2) (posData a3)
+
+-- |A utility for handling tokens which represent single-token AST subtrees.
+oc1S :: (Origin -> a -> r) -> SPositional a -> SPositional r
+oc1S f a =
+    spos (posSpan a) $ f (SourceOrigin $ posSpan a) (posData a)
+
+-- |A version of @at@ which takes a constructor expecting an origin and no other
+--  arguments.
+oat :: (Origin -> a) -> SPositional b -> SPositional a
+oat f b = spos (posSpan b) $ f (SourceOrigin (posSpan b))

@@ -49,7 +49,9 @@ tokens :-
                                }
   "-"                          { simply TokMinus }
   $identstart $identcont*      { wrap $ \s ss -> S.token TokIdentifier ss s }
-  `$identcont*                 { wrap $ \s ss -> S.token TokLabel ss $ drop 1 s } 
+  `$identcont*                 { wrap $ \s ss ->
+                                    S.token TokLabel ss $ drop 1 s
+                               }
 
 {
 
