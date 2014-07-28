@@ -24,7 +24,7 @@ import Language.TinyBangNested.Syntax.Tokens
   'ref'         { Token (SomeToken TokRef $$) }
   'let'         { Token (SomeToken TokLet $$) }
   'in'          { Token (SomeToken TokIn $$) }
-  '\\'          { Token (SomeToken TokLambda $$) }
+  'fun'         { Token (SomeToken TokLambda $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -56,7 +56,7 @@ Program :: { SPositional Expr }
 Expr :: { SPositional Expr }
   : 'let' Var '=' Expr 'in' Expr
                             { oc3 $1 $> ExprLet $2 $4 $6 }
-  | '\\' Pattern '->' Expr %prec LAM
+  | 'fun' Pattern '->' Expr %prec LAM
                             { oc2 $1 $> ExprScape $2 $4 }
   | Expr '+' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntPlus `oat` $2) $3 }
   | Expr '-' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntMinus `oat` $2) $3 }
