@@ -21,10 +21,10 @@ library
                    hslogger,
                    either
   ghc-options:     -Wall
-  exposed-modules: Test.TinyBangNested.Options,
+  exposed-modules: 
+                   Test.TinyBangNested.Options,
                    Test.TinyBangNested.SourceFile,
                    Test.TinyBangNested.SourceFile.Expectation,
-                   Test.TinyBangNested.Syntax.Lexer,
                    Test.TinyBangNested.Syntax.Parser
 
 executable tiny-bang-nested-tests

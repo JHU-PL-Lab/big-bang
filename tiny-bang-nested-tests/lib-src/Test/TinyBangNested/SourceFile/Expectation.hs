@@ -19,7 +19,7 @@ import Control.Monad
 import Data.Either.Combinators
 import Data.List
 
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Utils.Logger
 import Language.TinyBangNested.Ast
 import Language.TinyBangNested.Syntax.Lexer

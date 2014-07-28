@@ -10,8 +10,8 @@ module Test.TinyBangNested.Syntax.Parser
 import Language.TinyBangNested.Ast
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
-import Language.TinyBang.Syntax.Location
 import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Syntax.Location
 import Test.HUnit
 
 -- |Constructs a positive parser test.  A positive test consists of a source

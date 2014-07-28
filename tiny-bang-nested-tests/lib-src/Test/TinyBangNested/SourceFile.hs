@@ -12,7 +12,7 @@ import Test.HUnit
 import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.TypeInference
 import Language.TinyBang.Utils.Display
