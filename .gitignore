@@ -5,6 +5,8 @@
 .*.swo
 dist
 cabal-dev-sandbox
+cabal-sandbox
+cabal.sandbox.config
 .metadata
 RemoteSystemsTempFiles
 *.prof
@@ -14,3 +16,7 @@ RemoteSystemsTempFiles
 *.aux
 *.log
 *~
+main.pdf
+*.aux
+*.log
+
