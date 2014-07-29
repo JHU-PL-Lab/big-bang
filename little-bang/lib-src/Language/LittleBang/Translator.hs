@@ -39,6 +39,7 @@ desugarLittleBang expr =
       , desugarExprList
       , desugarExprRecord
       , desugarExprProjection
+      , desugarExprDeref
       ]
     argDesugarers :: [DesugarFunction LB.RecordArgument]
     argDesugarers =
@@ -132,6 +133,7 @@ walkExprTree expr = do
                                     >>= f
                                     
     LB.ExprRef o e -> (LB.ExprRef o <$> walkExprTree e) >>= f
+    LB.ExprDeref o e -> (LB.ExprDeref o <$> walkExprTree e) >>= f
     LB.ExprVar o var -> (LB.ExprVar o <$> return var) >>= f
     LB.ExprValInt o int -> (LB.ExprValInt o <$> return int) >>= f
     LB.ExprValEmptyOnion o -> (return $ LB.ExprValEmptyOnion o) >>= f
@@ -325,6 +327,20 @@ desugarExprProjection expr =
                 e1
         _ -> return expr
 
+
+desugarExprDeref :: LB.Expr -> DesugarM LB.Expr
+desugarExprDeref expr =
+  case expr of
+    LB.ExprDeref o e1 -> 
+      return $
+      LB.ExprAppl o
+        (LB.ExprScape o
+          (LB.RefPattern o (LB.VariablePattern o (LB.Var o "n")))
+          (LB.ExprVar o (LB.Var o "n"))
+        )
+        e1
+    _ -> return expr
+
 -- |An identity desugarer which does nothing
 -- This is applied to all elements of LB that are also in TBN
 desugarExprIdentity :: LB.Expr -> DesugarM LB.Expr
@@ -357,6 +373,7 @@ desugarExprIdentity expr =
                                     <*> return e1
                                     
     LB.ExprRef o e -> LB.ExprRef o <$> return e
+    LB.ExprDeref o e -> LB.ExprDeref o <$> return e
     LB.ExprVar o var -> LB.ExprVar o <$> return var
     LB.ExprValInt o int -> LB.ExprValInt o <$> return int
     LB.ExprValEmptyOnion o -> return (LB.ExprValEmptyOnion o)

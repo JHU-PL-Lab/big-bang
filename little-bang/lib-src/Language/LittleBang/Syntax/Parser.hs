@@ -158,6 +158,7 @@ pPrimaryExpr = "primary expression" <@>
   <|> pLiteral
   <|> pListExpr
   <|> origConstr1 ExprRef (consume TokRef >> pExpr)
+  <|> origConstr1 ExprDeref (consume TokDeref >> pExpr)
   <|> pRecordExpr
   <|> try (consume TokOpenParen >> pExpr <* consume TokCloseParen)
   

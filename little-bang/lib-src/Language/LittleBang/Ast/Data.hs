@@ -39,6 +39,7 @@ data Expr
   | ExprRecord Origin [RecordTerm]
   | ExprProjection Origin Expr Expr
   | ExprObject Origin [RecordTerm]
+  | ExprDeref Origin Expr
   deriving (Show)
 
 data BinaryOperator
@@ -124,6 +125,7 @@ instance HasOrigin Expr where
     ExprSequence orig _ _ -> orig
     ExprList orig _ -> orig
     ExprRecord orig _ -> orig
+    ExprDeref orig _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of
@@ -177,6 +179,7 @@ instance Display Expr where
    ExprRecord _ e -> text "record (" <> foldl (<+>) (text "") (map makeDoc e) <> text ")"
    ExprObject _ e -> text "object (" <> makeDoc e <> text ")"
    ExprProjection _ e1 e2 -> makeDoc e1 <> text "." <> makeDoc e2
+   ExprDeref _ e -> text "!" <> makeDoc e
 
 instance Display BinaryOperator where
   makeDoc x = case x of

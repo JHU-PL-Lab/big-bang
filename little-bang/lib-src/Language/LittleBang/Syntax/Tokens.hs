@@ -42,6 +42,7 @@ data Token
   | TokBackslash -- ^@\@
   | TokObject -- ^@object@
   | TokDot -- ^@.@
+  | TokDeref -- ^@!@
   deriving (Eq, Ord, Show)
 
 -- |An annotation for tokens which describes their source position.
@@ -90,6 +91,7 @@ instance Display Token where
     TokObject -> text "object"
     TokBackslash -> text "\\"
     TokDot -> text "."
+    TokDeref -> text "!"
 
 instance Display PositionalToken where
   makeDoc pt =
