@@ -23,37 +23,37 @@ class TBNConvertible a b | a -> b where
 -- | Convert a LittleBang expression to a TinyBang Nested expression
 instance TBNConvertible LB.Expr TBN.Expr where
   toTBN expr = case expr of 
-    LB.ExprLet o var e1 e2 -> TBN.ExprLet o 
+    LB.TExprLet o var e1 e2 -> TBN.ExprLet o 
                                     <$> toTBN var 
                                     <*> toTBN e1 
                                     <*> toTBN e2
                                     
-    LB.ExprScape o outerPattern e -> TBN.ExprScape o 
+    LB.TExprScape o outerPattern e -> TBN.ExprScape o 
                                     <$> toTBN outerPattern 
                                     <*> toTBN e
                                     
-    LB.ExprBinaryOp o e1 op e2 -> TBN.ExprBinaryOp o 
+    LB.TExprBinaryOp o e1 op e2 -> TBN.ExprBinaryOp o 
                                     <$> toTBN e1 
                                     <*> toTBN op
                                     <*> toTBN e2
                                     
-    LB.ExprOnion o e1 e2 -> TBN.ExprOnion o 
+    LB.TExprOnion o e1 e2 -> TBN.ExprOnion o 
                                     <$> toTBN e1 
                                     <*> toTBN e2
                                     
-    LB.ExprAppl o e1 e2 -> TBN.ExprAppl o 
+    LB.TExprAppl o e1 e2 -> TBN.ExprAppl o 
                                     <$> toTBN e1 
                                     <*> toTBN e2
                                     
-    LB.ExprLabelExp o label e1 -> TBN.ExprLabelExp o 
+    LB.TExprLabelExp o label e1 -> TBN.ExprLabelExp o 
                                     <$> toTBN label 
                                     <*> toTBN e1
 
-    LB.ExprRef o e1 -> TBN.ExprRef o <$> toTBN e1
+    LB.TExprRef o e1 -> TBN.ExprRef o <$> toTBN e1
                                     
-    LB.ExprVar o var -> TBN.ExprVar o <$> toTBN var
-    LB.ExprValInt o int -> return $ TBN.ExprValInt o int
-    LB.ExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
+    LB.TExprVar o var -> TBN.ExprVar o <$> toTBN var
+    LB.TExprValInt o int -> return $ TBN.ExprValInt o int
+    LB.TExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
     _ -> undefined -- TODO: get a correct failure mode
         
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         

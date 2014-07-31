@@ -6,7 +6,7 @@ import qualified Language.LittleBang.Ast as LB
 import qualified Language.TinyBang.Ast as TB
 import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Syntax.Parser
-import Language.TinyBang.Syntax.Location (SourceDocument(UnknownDocument))
+import Language.TinyBang.Utils.Syntax.Location (SourceDocument(UnknownDocument))
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Reader
@@ -63,12 +63,12 @@ data DesugarContext = DesugarContext { desugarExprFn :: DesugarFunction LB.Expr,
 getExprDesugarer :: LB.Expr -> DesugarFunction LB.Expr
 getExprDesugarer expr =
   case expr of
-    LB.ExprCondition _ _ _ _ -> desugarExprIf
-    LB.ExprSequence _ _ _ -> desugarExprSeq
-    LB.ExprList _ _ -> desugarExprList
-    LB.ExprRecord _ _ -> desugarExprRecord
-    LB.ExprObject o _ -> desugarObj o
-    LB.ExprProjection _ _ _ -> desugarExprProjection
+    LB.LExprCondition _ _ _ _ -> desugarExprIf
+    LB.LExprSequence _ _ _ -> desugarExprSeq
+    LB.LExprList _ _ -> desugarExprList
+    LB.LExprRecord _ _ -> desugarExprRecord
+    LB.LExprObject o _ -> desugarObj o
+    LB.LExprProjection _ _ _ -> desugarExprProjection
     _ -> desugarExprIdentity
     where -- TODO why didn't this work inline?
     desugarObj o e = do
@@ -99,62 +99,62 @@ walkExprTree :: LB.Expr -> DesugarM LB.Expr
 walkExprTree expr = do
   f <- desugarExprFn <$> ask
   case expr of 
-    LB.ExprLet o var e1 e2 -> (LB.ExprLet o 
+    LB.TExprLet o var e1 e2 -> (LB.TExprLet o 
                                     <$> return var
                                     <*> walkExprTree e1
                                     <*> walkExprTree e2)
                                     >>= f
                                     
-    LB.ExprScape o outerPattern e -> (LB.ExprScape o 
+    LB.TExprScape o outerPattern e -> (LB.TExprScape o 
                                     <$> walkPatTree outerPattern 
                                     <*> walkExprTree e)
                                     >>= f
                                     
-    LB.ExprBinaryOp o e1 op e2 -> (LB.ExprBinaryOp o 
+    LB.TExprBinaryOp o e1 op e2 -> (LB.TExprBinaryOp o 
                                     <$> walkExprTree e1 
                                     <*> return op
                                     <*> walkExprTree e2)
                                     >>= f
                                     
-    LB.ExprOnion o e1 e2 -> (LB.ExprOnion o 
+    LB.TExprOnion o e1 e2 -> (LB.TExprOnion o 
                                     <$> walkExprTree e1 
                                     <*> walkExprTree e2)
                                     >>= f
                                     
-    LB.ExprAppl o e1 e2 -> (LB.ExprAppl o 
+    LB.TExprAppl o e1 e2 -> (LB.TExprAppl o 
                                     <$> walkExprTree e1 
                                     <*> walkExprTree e2)
                                     >>= f
                                     
-    LB.ExprLabelExp o label e1 -> (LB.ExprLabelExp o 
+    LB.TExprLabelExp o label e1 -> (LB.TExprLabelExp o 
                                     <$> return label 
                                     <*> walkExprTree e1)
                                     >>= f
                                     
-    LB.ExprRef o e -> (LB.ExprRef o <$> walkExprTree e) >>= f
-    LB.ExprVar o var -> (LB.ExprVar o <$> return var) >>= f
-    LB.ExprValInt o int -> (LB.ExprValInt o <$> return int) >>= f
-    LB.ExprValEmptyOnion o -> (return $ LB.ExprValEmptyOnion o) >>= f
+    LB.TExprRef o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
+    LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
+    LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
+    LB.TExprValEmptyOnion o -> (return $ LB.TExprValEmptyOnion o) >>= f
 
-    LB.ExprCondition o e1 e2 e3 -> (LB.ExprCondition o
+    LB.LExprCondition o e1 e2 e3 -> (LB.LExprCondition o
                                     <$> walkExprTree e1
                                     <*> walkExprTree e2
                                     <*> walkExprTree e3)
                                     >>= f
-    LB.ExprSequence o e1 e2 -> (LB.ExprSequence o
+    LB.LExprSequence o e1 e2 -> (LB.LExprSequence o
                                     <$> walkExprTree e1
                                     <*> walkExprTree e2)
                                     >>= f
-    LB.ExprList o e -> (LB.ExprList o
+    LB.LExprList o e -> (LB.LExprList o
                                     <$> mapM walkExprTree e)
                                     >>= f
-    LB.ExprRecord o e -> (LB.ExprRecord o
+    LB.LExprRecord o e -> (LB.LExprRecord o
                                     <$> mapM walkTermTree e)
                                     >>= f
-    LB.ExprObject o tms -> (LB.ExprObject o
+    LB.LExprObject o tms -> (LB.LExprObject o
                                     <$> mapM walkTermTree tms)
                                     >>= f
-    LB.ExprProjection o e1 e2 -> (LB.ExprProjection o
+    LB.LExprProjection o e1 e2 -> (LB.LExprProjection o
                                     <$> walkExprTree e1
                                     <*> walkExprTree e2)
                                     >>= f
@@ -225,13 +225,13 @@ walkArgTree arg = do
 desugarExprIf :: LB.Expr -> DesugarM LB.Expr
 desugarExprIf expr =
   case expr of
-    LB.ExprCondition o e1 e2 e3 ->
-      LB.ExprAppl o <$>
-        (LB.ExprOnion o <$>
-          (LB.ExprScape o 
+    LB.LExprCondition o e1 e2 e3 ->
+      LB.TExprAppl o <$>
+        (LB.TExprOnion o <$>
+          (LB.TExprScape o 
             (LB.LabelPattern o (LB.LabelName o "True") (LB.EmptyPattern o))
             <$> return e2) <*>
-          (LB.ExprScape o 
+          (LB.TExprScape o 
             (LB.LabelPattern o (LB.LabelName o "False") (LB.EmptyPattern o))
             <$> return e3)) <*>
         (return e1)    
@@ -240,12 +240,12 @@ desugarExprIf expr =
 desugarExprSeq :: LB.Expr -> DesugarM LB.Expr
 desugarExprSeq expr =
   case expr of
-    LB.ExprSequence o e1 e2 -> 
-      LB.ExprAppl o <$>
-        (LB.ExprScape o
+    LB.LExprSequence o e1 e2 -> 
+      LB.TExprAppl o <$>
+        (LB.TExprScape o
           (LB.LabelPattern o (LB.LabelName o "Seq") (LB.EmptyPattern o))
           <$> return e2) <*>
-        (LB.ExprLabelExp o <$>
+        (LB.TExprLabelExp o <$>
           return (LB.LabelName o "Seq") <*>
           return e1)
     _ -> return expr
@@ -253,29 +253,29 @@ desugarExprSeq expr =
 desugarExprList :: LB.Expr -> DesugarM LB.Expr
 desugarExprList expr = 
   case expr of
-    LB.ExprList o list -> toHTList o list
+    LB.LExprList o list -> toHTList o list
     _ -> return expr
     where
     toHTList :: TB.Origin -> [LB.Expr] -> DesugarM LB.Expr
     toHTList o lst = case lst of
-      [] -> return (LB.ExprLabelExp o (LB.LabelName o "Nil") (LB.ExprValEmptyOnion o))
-      e:t -> LB.ExprOnion o
-                <$> return (LB.ExprLabelExp o (LB.LabelName o "Hd") e)
-                <*> (LB.ExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
+      [] -> return (LB.TExprLabelExp o (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o))
+      e:t -> LB.TExprOnion o
+                <$> return (LB.TExprLabelExp o (LB.LabelName o "Hd") e)
+                <*> (LB.TExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
 buildRecord :: TB.Origin -> [LB.RecordTerm] -> LB.Expr
-buildRecord o terms = foldl (\a b -> LB.ExprOnion o a b) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
+buildRecord o terms = foldl (\a b -> LB.TExprOnion o a b) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
 
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
 desugarExprRecord expr =
   case expr of
-    LB.ExprRecord o list -> return $ buildRecord o list
+    LB.LExprRecord o list -> return $ buildRecord o list
     _ -> return expr
 
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
   case expr of
-    LB.ExprObject o tms -> seal o $ buildRecord o (map (addSelf o) tms)
+    LB.LExprObject o tms -> seal o $ buildRecord o (map (addSelf o) tms)
     _ -> return expr
   where
   addSelf :: TB.Origin -> LB.RecordTerm -> LB.RecordTerm
@@ -283,40 +283,40 @@ desugarExprObject expr =
     let selfPart = LB.LabelPattern o (LB.LabelName o "self") (LB.VariablePattern o (LB.Var o "self")) in
     let e = unTermExpr tm in
     case e of
-      LB.ExprScape o pat z -> LB.TermNativeExpr o (LB.ExprScape o
+      LB.TExprScape o pat z -> LB.TermNativeExpr o (LB.TExprScape o
         (LB.ConjunctionPattern o selfPart pat) z)
       _ -> tm
 
 desugarExprProjection :: LB.Expr -> DesugarM LB.Expr
 desugarExprProjection expr =
     case expr of
-        LB.ExprProjection o e1 e2 ->
-            let (LB.ExprVar _ (LB.Var _ n)) = e2 in 
+        LB.LExprProjection o e1 e2 ->
+            let (LB.TExprVar _ (LB.Var _ n)) = e2 in 
             return $
-            LB.ExprAppl o
-                (LB.ExprOnion o
-                    (LB.ExprScape o
+            LB.TExprAppl o
+                (LB.TExprOnion o
+                    (LB.TExprScape o
                         (LB.LabelPattern o
                             (LB.LabelName o n)
                             (LB.VariablePattern o (LB.Var o n))
                         )
-                        (LB.ExprVar o (LB.Var o n))
+                        (LB.TExprVar o (LB.Var o n))
                     )
-                    (LB.ExprScape o
+                    (LB.TExprScape o
                         (LB.EmptyPattern o)
-                        (LB.ExprScape o
+                        (LB.TExprScape o
                             (LB.VariablePattern o (LB.Var o "arg"))
-                            (LB.ExprAppl o
+                            (LB.TExprAppl o
                                 e1
-                                (LB.ExprOnion o
-                                    (LB.ExprLabelExp o
+                                (LB.TExprOnion o
+                                    (LB.TExprLabelExp o
                                         (LB.LabelName o "_msg")
-                                        (LB.ExprLabelExp o
+                                        (LB.TExprLabelExp o
                                             (LB.LabelName o n)
-                                            (LB.ExprValEmptyOnion o)
+                                            (LB.TExprValEmptyOnion o)
                                         )
                                     )
-                                    (LB.ExprVar o (LB.Var o "arg"))
+                                    (LB.TExprVar o (LB.Var o "arg"))
                                 )
                             )
                         )
@@ -330,36 +330,36 @@ desugarExprProjection expr =
 desugarExprIdentity :: LB.Expr -> DesugarM LB.Expr
 desugarExprIdentity expr = 
   case expr of
-    LB.ExprLet o var e1 e2 -> LB.ExprLet o 
+    LB.TExprLet o var e1 e2 -> LB.TExprLet o 
                                     <$> return var 
                                     <*> return e1 
                                     <*> return e2
                                     
-    LB.ExprScape o outerPattern e -> LB.ExprScape o 
+    LB.TExprScape o outerPattern e -> LB.TExprScape o 
                                     <$> return outerPattern 
                                     <*> return e
                                     
-    LB.ExprBinaryOp o e1 op e2 -> LB.ExprBinaryOp o 
+    LB.TExprBinaryOp o e1 op e2 -> LB.TExprBinaryOp o 
                                     <$> return e1 
                                     <*> return op
                                     <*> return e2
                                     
-    LB.ExprOnion o e1 e2 -> LB.ExprOnion o 
+    LB.TExprOnion o e1 e2 -> LB.TExprOnion o 
                                     <$> return e1 
                                     <*> return e2
                                     
-    LB.ExprAppl o e1 e2 -> LB.ExprAppl o 
+    LB.TExprAppl o e1 e2 -> LB.TExprAppl o 
                                     <$> return e1 
                                     <*> return e2
                                     
-    LB.ExprLabelExp o label e1 -> LB.ExprLabelExp o 
+    LB.TExprLabelExp o label e1 -> LB.TExprLabelExp o 
                                     <$> return label 
                                     <*> return e1
                                     
-    LB.ExprRef o e -> LB.ExprRef o <$> return e
-    LB.ExprVar o var -> LB.ExprVar o <$> return var
-    LB.ExprValInt o int -> LB.ExprValInt o <$> return int
-    LB.ExprValEmptyOnion o -> return (LB.ExprValEmptyOnion o)
+    LB.TExprRef o e -> LB.TExprRef o <$> return e
+    LB.TExprVar o var -> LB.TExprVar o <$> return var
+    LB.TExprValInt o int -> LB.TExprValInt o <$> return int
+    LB.TExprValEmptyOnion o -> return (LB.TExprValEmptyOnion o)
     _ -> return expr
 
 desugarPatList :: LB.Pattern -> DesugarM LB.Pattern
@@ -398,7 +398,7 @@ desugarPatIdentity pat =
 desugarTermIdent :: LB.RecordTerm -> DesugarM LB.RecordTerm
 desugarTermIdent tm = 
   case tm of
-    LB.TermIdent o label expr -> LB.TermNativeExpr o <$> (LB.ExprLabelExp o <$> return label <*> return expr)
+    LB.TermIdent o label expr -> LB.TermNativeExpr o <$> (LB.TExprLabelExp o <$> return label <*> return expr)
     _ -> return tm
 
 buildArguments :: TB.Origin -> [LB.RecordArgument] -> LB.Pattern
@@ -414,7 +414,7 @@ desugarTermScape tm =
         let identPart = LB.LabelPattern o (LB.LabelName o "_msg") (LB.LabelPattern o label (LB.EmptyPattern o)) in
         let argPart = buildArguments o args in
         let pat = LB.ConjunctionPattern o identPart argPart in
-        return $ LB.TermNativeExpr o (LB.ExprScape o pat body)
+        return $ LB.TermNativeExpr o (LB.TExprScape o pat body)
     _ -> return tm
 
 desugarTermAnon :: LB.RecordTerm -> DesugarM LB.RecordTerm
@@ -422,7 +422,7 @@ desugarTermAnon tm =
   case tm of
     LB.TermAnon o args body -> 
         let pat = buildArguments o args in
-        return $ LB.TermNativeExpr o (LB.ExprScape o pat body)
+        return $ LB.TermNativeExpr o (LB.TExprScape o pat body)
     _ -> return tm
 
 -- |desugarers for RecordArgument
@@ -462,7 +462,7 @@ seal o e = -- parse this function directly until we have a prelude/stdlib for se
     let eitherAst = do -- Either
             tokens <- lexLittleBang UnknownDocument src
             parseLittleBang UnknownDocument tokens
-    in return $ either (const e) (const (LB.ExprAppl o (head $ rights [eitherAst]) e)) eitherAst
+    in return $ either (const e) (const (LB.TExprAppl o (head $ rights [eitherAst]) e)) eitherAst
           
 nextFreshVar :: DesugarM LB.Var
 nextFreshVar = do

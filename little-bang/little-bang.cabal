@@ -18,16 +18,19 @@ library
                    either,
                    parsec,
                    tiny-bang,
-                   tiny-bang-nested
+                   tiny-bang-nested,
+                   array,
+                   tagged
+  build-tools:     alex, happy
   ghc-options:     -Wall
   exposed-modules: 
                    Language.LittleBang.Ast,
                    Language.LittleBang.Ast.Data,
-                   Language.LittleBang.Syntax.Lexer,
-                   Language.LittleBang.Syntax.Parser,
                    Language.LittleBang.Translator,
-                   Language.LittleBang.TBNConversion
-  other-modules:   Language.LittleBang.Syntax.Tokens
+                   Language.LittleBang.TBNConversion,
+                   Language.LittleBang.Syntax.Tokens,
+                   Language.LittleBang.Syntax.Lexer,
+                   Language.LittleBang.Syntax.Parser
 
 executable little-bang
   hs-source-dirs:  interp-src
