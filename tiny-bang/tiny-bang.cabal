@@ -129,4 +129,4 @@ executable tiny-bang
                    aeson,
                    optparse-applicative
   ghc-options:     -Wall
--Wall
+
