@@ -22,10 +22,10 @@ library
                    hslogger,
                    either
   ghc-options:     -Wall
-  exposed-modules: Test.LittleBang.Options,
+  exposed-modules: 
+                   Test.LittleBang.Options,
                    Test.LittleBang.SourceFile,
                    Test.LittleBang.SourceFile.Expectation,
-                   Test.LittleBang.Syntax.Lexer,
                    Test.LittleBang.Syntax.Parser
 
 executable little-bang-tests

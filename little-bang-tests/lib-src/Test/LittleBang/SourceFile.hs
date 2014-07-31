@@ -12,7 +12,7 @@ import Test.HUnit
 import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
-import Language.TinyBang.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.TypeSystem.TypeInference
 import Language.TinyBang.Utils.Display
@@ -84,17 +84,17 @@ generateTests (LittleBangSourceFileTestConfig
           -- to typecheck it because it's a catch-all.
           let ast' =
                 let genVar = LB.Var generated "___lbUnitTestValueVar" in
-                LB.ExprAppl generated
-                  (LB.ExprOnion generated
-                    (LB.ExprScape generated pattern $
-                      LB.ExprLabelExp generated
+                LB.TExprAppl generated
+                  (LB.TExprOnion generated
+                    (LB.TExprScape generated pattern $
+                      LB.TExprLabelExp generated
                         (LB.LabelName generated "MatchSuccess") $
-                        LB.ExprValEmptyOnion generated)
-                    (LB.ExprScape generated
+                        LB.TExprValEmptyOnion generated)
+                    (LB.TExprScape generated
                       (LB.VariablePattern generated genVar) $
-                      LB.ExprLabelExp generated
+                      LB.TExprLabelExp generated
                         (LB.LabelName generated "MatchFailure") $
-                        LB.ExprVar generated genVar))
+                        LB.TExprVar generated genVar))
                   ast
           tbAst' <- desugarAll ast'
           let evalResult' = eval tbAst'

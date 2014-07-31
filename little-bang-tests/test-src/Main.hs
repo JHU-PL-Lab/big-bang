@@ -17,7 +17,6 @@ import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Logger
 import Test.TinyBang.Options
 import qualified Test.LittleBang.SourceFile as SourceFile
-import Test.LittleBang.Syntax.Lexer
 import Test.LittleBang.Syntax.Parser
 import Test.Utils.TestFramework.Options
 
@@ -56,9 +55,7 @@ main =
           case SourceFile.lbsftFilter sfOpts of
             Nothing -> concat <$> sequence
                         [ return
-                            [ testGroup "lexer tests" $
-                                hUnitTestToTests lexerTests
-                            , testGroup "parser tests" $
+                            [ testGroup "parser tests" $
                                 hUnitTestToTests parserTests
                             ]
                         , sfTests
