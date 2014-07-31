@@ -1,0 +1,9 @@
+# EXPECT-TYPEFAIL
+# We are expecting this to typefail by fiat; we are excluding non-contractive
+# value matching from our implementation because it performs poorly and isn't
+# really useful for anything.
+
+let Y = body -> (w -> w w) (this -> x -> body (this this) x) in
+( (`A _ -> 0)
+& (int -> 1))   ((Y (this -> n -> if n = 0 then 0 else n & (this (n-1)))) 5) in
+

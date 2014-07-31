@@ -1,0 +1,6 @@
+# EXPECT-MATCH: int
+# This should be fine, since the repeated appearance of f is not non-contractive
+# (as each use of f gets its own type variable).
+let f = (`A x -> x) in
+(f & (f & f)) (`A 0)
+

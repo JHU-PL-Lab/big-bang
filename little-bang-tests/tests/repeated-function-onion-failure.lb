@@ -1,0 +1,5 @@
+# EXPECT-TYPEFAIL
+# This should type error due to the application to the wrong argument type.
+let f = (`A x -> x) in
+(f & (f & f)) (`B 0)
+
