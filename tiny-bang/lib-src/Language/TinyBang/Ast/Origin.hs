@@ -6,6 +6,8 @@ module Language.TinyBang.Ast.Origin
 ( Origin(..)
 , HasOrigin(..)
 , generated
+, mergeOrigins
+, (<==>)
 ) where
 
 import Language.TinyBang.Utils.Display
@@ -44,3 +46,18 @@ instance HasOrigin Origin where
 generated :: Origin
 generated = ComputedOrigin []
 
+-- * Convenient routines for merging origins.
+
+-- |Attempts to merge to origins to create a single origin.  This method will
+--  do its best to generate an origin which spans from the first to the second.
+--  If all else fails, the result is a @ComputedOrigin@ containing the two
+--  inputs.
+mergeOrigins :: Origin -> Origin -> Origin
+mergeOrigins a b =
+  case (a,b) of
+    (SourceOrigin ssa, SourceOrigin ssb) -> SourceOrigin $ ssa <--> ssb
+    _ -> ComputedOrigin [a,b]
+
+(<==>) :: Origin -> Origin -> Origin
+(<==>) = mergeOrigins
+infixl 7 <==>

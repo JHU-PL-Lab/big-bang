@@ -6,6 +6,7 @@ module Language.LittleBang.TBNConversion
 import qualified Language.LittleBang.Ast as LB
 import qualified Language.TinyBangNested.Ast as TBN
 import Control.Applicative
+import Language.TinyBang.Utils.Display
 
 type TBNConvertError = String
 type TBNConvertM = Either TBNConvertError
@@ -54,13 +55,13 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.TExprVar o var -> TBN.ExprVar o <$> toTBN var
     LB.TExprValInt o int -> return $ TBN.ExprValInt o int
     LB.TExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
-    _ -> undefined -- TODO: get a correct failure mode
+    _ -> error $ "Cannot TBN convert: " ++ display expr -- TODO: get a correct failure mode
         
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         
 instance TBNConvertible LB.Pattern TBN.Pattern where
   toTBN pattern = case pattern of   
         LB.ListPattern _ _ _ ->
-          undefined
+          error $ "Cannot TBN convert: " ++ display pattern
         LB.PrimitivePattern o primitive ->
           TBN.PrimitivePattern o <$> toTBN primitive
         LB.LabelPattern o label p ->

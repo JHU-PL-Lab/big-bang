@@ -40,8 +40,8 @@ tokens :-
   "<-"                         { simply TokSet }
   "&"                          { simply TokOnion }
   "="                          { simply TokIs }
-  "{"                          { simply TokOpenParen }
-  "}"                          { simply TokCloseParen }
+  "("                          { simply TokOpenParen }
+  ")"                          { simply TokCloseParen }
   "["                          { simply TokOpenBracket }
   "]"                          { simply TokCloseBracket }
   "+"                          { simply TokPlus }

@@ -143,6 +143,8 @@ instance HasOrigin Expr where
     LExprSequence orig _ _ -> orig
     LExprList orig _ -> orig
     LExprRecord orig _ -> orig
+    LExprProjection orig _ _ -> orig
+    LExprObject orig _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of
@@ -246,7 +248,7 @@ instance Display Var where
 
 instance Display LabelName where
   makeDoc x = case x of
-    LabelName _ l -> text $ "`" ++ l
+    LabelName _ l -> text $ '`' : l
 
 instance Display PrimitiveType where
   makeDoc p = case p of
