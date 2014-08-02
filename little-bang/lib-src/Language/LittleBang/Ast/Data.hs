@@ -6,10 +6,9 @@ module Language.LittleBang.Ast.Data
 , Param(..)
 , Pattern(..)
 , Arg(..)
-, Var(..)
+, Ident(..)
 , LabelName(..)
-, RecordTerm(..)
-, RecordArgument(..)
+, ObjectTerm(..)
 , unLabelName
 , PrimitiveType(..)
 ) where
@@ -25,14 +24,14 @@ import Language.TinyBang.Utils.TemplateHaskell.Deriving
 --   target of translation.
 data Expr
   -- Constructors representing TBN nodes
-  = TExprLet Origin Var Expr Expr
+  = TExprLet Origin Ident Expr Expr
   | TExprScape Origin Pattern Expr
   | TExprBinaryOp Origin Expr BinaryOperator Expr
   | TExprOnion Origin Expr Expr
   | TExprAppl Origin Expr Expr
   | TExprLabelExp Origin LabelName Expr -- TODO: rename
   | TExprRef Origin Expr
-  | TExprVar Origin Var
+  | TExprVar Origin Ident
   | TExprValInt Origin Integer -- TODO: reorganize into TExprPrimLit or similar
   | TExprValEmptyOnion Origin 
   -- Constructors representing LB-specific nodes
@@ -41,9 +40,9 @@ data Expr
   | LExprCondition Origin Expr Expr Expr
   | LExprSequence Origin Expr Expr -- TODO: shouldn't this just be a binop?
   | LExprList Origin [Expr]
-  | LExprRecord Origin [RecordTerm]
+  | LExprRecord Origin [Arg]
   | LExprProjection Origin Expr Expr
-  | LExprObject Origin [RecordTerm]
+  | LExprObject Origin [ObjectTerm]
   deriving (Show)
 
 data BinaryOperator
@@ -56,7 +55,7 @@ data BinaryOperator
   deriving (Show)
 
 data Param
-  = Param Origin Var Pattern
+  = Param Origin Ident Pattern
   deriving (Show)
 
 -- TODO: probably need T and L prefixes on patterns too (like on Expr)
@@ -66,34 +65,26 @@ data Pattern
   | RefPattern Origin Pattern
   | ConjunctionPattern Origin Pattern Pattern
   | EmptyPattern Origin
-  | VariablePattern Origin Var
+  | VariablePattern Origin Ident
   -- LittleBang-specific
   | ListPattern Origin [Pattern] (Maybe Pattern)
   deriving (Show)
 
 data Arg
   = PositionalArg Origin Expr
-  | NamedArg Origin String Expr
+  | NamedArg Origin Ident Expr
+  deriving (Show)
+  
+-- LittleBang object terms
+data ObjectTerm
+  = ObjectMethod Origin Ident [Param] Expr
+  | ObjectField Origin Ident Expr
   deriving (Show)
 
--- LittleBang object/record terms
-data RecordTerm
-  = TermIdent Origin LabelName Expr
-  | TermScape Origin LabelName [RecordArgument] Expr
-  | TermAnon Origin [RecordArgument] Expr
-  | TermNativeExpr Origin Expr -- TODO is this too much of a hack maybe? Used as an adapter to Expr
+data Ident
+  = Ident Origin String
   deriving (Show)
-
-data RecordArgument
-  = ArgIdent Origin LabelName
-  | ArgPat Origin LabelName Pattern
-  | ArgNativePat Origin Pattern -- TODO
-  deriving (Show)
-
-data Var
-  = Var Origin String
-  deriving (Show)
-
+  
 data LabelName
   = LabelName Origin String
   deriving (Show)
@@ -116,9 +107,8 @@ $(concat <$> sequence
       , ''Param
       , ''Pattern
       , ''Arg
-      , ''RecordTerm
-      , ''RecordArgument
-      , ''Var
+      , ''ObjectTerm
+      , ''Ident
       , ''LabelName
       ]
   ])
@@ -146,9 +136,9 @@ instance HasOrigin Expr where
     LExprProjection orig _ _ -> orig
     LExprObject orig _ -> orig
 
-instance HasOrigin Var where
+instance HasOrigin Ident where
   originOf x = case x of
-    Var orig _ -> orig
+    Ident orig _ -> orig
 
 instance HasOrigin Pattern where
   originOf x = case x of
@@ -160,18 +150,10 @@ instance HasOrigin Pattern where
     VariablePattern orig _ -> orig
     ListPattern orig _ _ -> orig
 
-instance HasOrigin RecordTerm where
+instance HasOrigin ObjectTerm where
   originOf x = case x of
-   TermIdent orig _ _ -> orig
-   TermScape orig _ _ _ -> orig
-   TermAnon orig _ _ -> orig
-   TermNativeExpr orig _ -> orig
-
-instance HasOrigin RecordArgument where
-  originOf x = case x of
-   ArgIdent orig _ -> orig
-   ArgPat orig _ _ -> orig
-   ArgNativePat orig _  -> orig
+    ObjectMethod orig _ _ _ -> orig
+    ObjectField orig _ _ -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of
@@ -197,8 +179,10 @@ instance Display Expr where
                                 makeDoc e2 <+> text "else" <+> makeDoc e3
    LExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
    LExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"
-   LExprRecord _ e -> text "record (" <> foldl (<+>) (text "") (map makeDoc e) <> text ")"
-   LExprObject _ e -> text "object (" <> makeDoc e <> text ")"
+   LExprRecord _ args ->
+    encloseSep lbrace rbrace comma $ map makeDoc args
+   LExprObject _ terms ->
+    text "object" <+> encloseSep lbrace rbrace comma (map makeDoc terms)
    LExprProjection _ e1 e2 -> makeDoc e1 <> text "." <> makeDoc e2
 
 instance Display BinaryOperator where
@@ -227,24 +211,20 @@ instance Display Pattern where
 instance Display Arg where
   makeDoc arg = case arg of
     PositionalArg _ expr -> makeDoc expr
-    NamedArg _ name expr -> text name <> char '=' <> makeDoc expr
+    NamedArg _ name expr -> makeDoc name <> char '=' <> makeDoc expr
 
-instance Display RecordTerm where
+instance Display ObjectTerm where
   makeDoc tm = case tm of
-   TermIdent _ l e -> makeDoc l <> text "=" <> makeDoc e
-   TermScape _ l e1 e2 -> makeDoc l <+> text "(" <> makeDoc e1 <> text ") =" <+> makeDoc e2
-   TermAnon _ e1 e2 -> text "\\(" <> makeDoc e1 <> text ") =" <+> makeDoc e2
-   TermNativeExpr _ e -> text "record from" <+> makeDoc e
+    ObjectMethod _ n params e ->
+      text "method" <+> makeDoc n <>
+      encloseSep lparen rparen comma (map makeDoc params) <+> text "=" <+>
+      makeDoc e
+    ObjectField _ n e ->
+      makeDoc n <+> text "=" <+> makeDoc e
 
-instance Display RecordArgument where
-  makeDoc arg = case arg of
-   ArgIdent _ l -> makeDoc l
-   ArgPat _ l p -> makeDoc l <> text ":" <> makeDoc p
-   ArgNativePat _ p -> text "arg pat from" <+> makeDoc p
-
-instance Display Var where
+instance Display Ident where
   makeDoc x = case x of
-    Var _ i -> text i
+    Ident _ i -> text i
 
 instance Display LabelName where
   makeDoc x = case x of

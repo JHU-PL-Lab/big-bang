@@ -30,7 +30,7 @@ newtype ATranslationM a
 data ATranslationState
   = ATranslationState
       { freshVarIndex :: Int
-      , varMaps :: [Map TBN.Var TBA.Var]
+      , varMaps :: [Map TBN.Ident TBA.Var]
       , usedVars :: Set TBA.Var
       }
 
@@ -69,7 +69,7 @@ freshVar :: ATranslationM TBA.Var
 freshVar = newVar "a"
 
 -- |Retrieves a mapping of all bound variables.
-curVarMap :: ATranslationM (Map TBN.Var TBA.Var)
+curVarMap :: ATranslationM (Map TBN.Ident TBA.Var)
 curVarMap = Map.unions <$> varMaps <$> get 
 
 -- TODO: separate between transVar for definitions and for uses; this way,
@@ -95,17 +95,17 @@ transVar x = do
 -}
 
 -- |Looks up a variable in the variable map, assuming it is defined.
-useVar :: TBN.Var -> ATranslationM TBA.Var
+useVar :: TBN.Ident -> ATranslationM TBA.Var
 useVar x = do
   mv <- Map.lookup x <$> curVarMap
   case mv of
     Just x' -> return x'
     Nothing -> error "Undefined variable!" -- TODO: monadic failure
 
-bindVar :: TBN.Var -> ATranslationM TBA.Var
+bindVar :: TBN.Ident -> ATranslationM TBA.Var
 bindVar x = do
-  let (TBN.Var _ ident) = x
-  x' <- newVar ident
+  let (TBN.Ident _ identStr) = x
+  x' <- newVar identStr
   maps <- varMaps <$> get
   maps' <- case maps of
             [] -> error "Empty variable stack!" -- TODO: monadic failure

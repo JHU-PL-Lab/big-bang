@@ -58,7 +58,7 @@ Program :: { SPositional Expr }
   : Expr                    { $1 }
 
 Expr :: { SPositional Expr }
-  : 'let' Var '=' Expr 'in' Expr
+  : 'let' Ident '=' Expr 'in' Expr
                             { oc3 $1 $> ExprLet $2 $4 $6 }
   | 'fun' Pattern '->' Expr %prec LAM
                             { oc2 $1 $> ExprScape $2 $4 }
@@ -81,12 +81,12 @@ PrefixExpr :: { SPositional Expr }
   | PrimaryExpr             { $1 }
 
 PrimaryExpr :: { SPositional Expr }
-  : Var                     { oc1 $1 $> ExprVar $1 }
+  : Ident                   { oc1 $1 $> ExprVar $1 }
   | LiteralExpr             { $1 }
   | '(' Expr ')'            { $2 }
 
-Var :: { SPositional Var }
-  : ident                   { oc1 $1 $> Var $1 }
+Ident :: { SPositional Ident }
+  : ident                   { oc1 $1 $> Ident $1 }
   
 Label :: { SPositional LabelName }
   : label                   { oc1 $1 $> LabelName $1 }
@@ -101,10 +101,10 @@ Pattern :: { SPositional Pattern }
 
 PrimaryPattern :: {SPositional Pattern }
   : Label PrimaryPattern    { oc2 $1 $> LabelPattern $1 $2 }
-  | 'ref' Var               { oc1 $1 $> RefPattern (oc1S VariablePattern $2) }
+  | 'ref' Ident             { oc1 $1 $> RefPattern (oc1S VariablePattern $2) }
   | PrimitiveType           { oc1 $1 $> PrimitivePattern $1 }
   | '()'                    { oc0 $1 $> EmptyPattern }
-  | Var                     { oc1 $1 $> VariablePattern $1 }
+  | Ident                   { oc1 $1 $> VariablePattern $1 }
   | '(' Pattern ')'         { $2 }
 
 PrimitiveType :: { SPositional PrimitiveType }

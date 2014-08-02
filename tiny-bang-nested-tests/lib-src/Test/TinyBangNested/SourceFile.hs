@@ -81,7 +81,7 @@ generateTests (TinyBangNestedSourceFileTestConfig
           -- not the evaluated ast matches the provided pattern.  We won't need
           -- to typecheck it because it's a catch-all.
           let ast' =
-                let genVar = TBN.Var generated "___tbnUnitTestValueVar" in
+                let genVar = TBN.Ident generated "___tbnUnitTestValueVar" in
                 TBN.ExprAppl generated
                   (TBN.ExprOnion generated
                     (TBN.ExprScape generated pattern $

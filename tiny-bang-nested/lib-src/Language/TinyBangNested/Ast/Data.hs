@@ -2,7 +2,7 @@
 
 module Language.TinyBangNested.Ast.Data
 ( Expr(..)
-, Var(..)
+, Ident(..)
 , LabelName(..)
 , BinaryOperator(..)
 , Pattern(..)
@@ -21,14 +21,14 @@ import Language.TinyBang.Utils.TemplateHaskell.Deriving
 -- | AST structure for TinyBangNested
 
 data Expr
-  = ExprLet Origin Var Expr Expr
+  = ExprLet Origin Ident Expr Expr
   | ExprScape Origin Pattern Expr
   | ExprBinaryOp Origin Expr BinaryOperator Expr
   | ExprOnion Origin Expr Expr
   | ExprAppl Origin Expr Expr
   | ExprLabelExp Origin LabelName Expr
   | ExprRef Origin Expr
-  | ExprVar Origin Var
+  | ExprVar Origin Ident
   | ExprValInt Origin Integer
   | ExprValEmptyOnion Origin 
   deriving (Show)
@@ -48,11 +48,11 @@ data Pattern
   | RefPattern Origin Pattern
   | ConjunctionPattern Origin Pattern Pattern
   | EmptyPattern Origin
-  | VariablePattern Origin Var
+  | VariablePattern Origin Ident
   deriving (Show)
 
-data Var
-  = Var Origin String
+data Ident
+  = Ident Origin String
   deriving (Show)
 
 data LabelName
@@ -75,7 +75,7 @@ $(concat <$> sequence
       [ ''Expr
       , ''BinaryOperator
       , ''Pattern
-      , ''Var
+      , ''Ident
       , ''LabelName
       ]
   ])
@@ -95,9 +95,9 @@ instance HasOrigin Expr where
     ExprValInt orig _ -> orig
     ExprValEmptyOnion orig -> orig
 
-instance HasOrigin Var where
+instance HasOrigin Ident where
   originOf x = case x of
-    Var orig _ -> orig
+    Ident orig _ -> orig
 
 instance HasOrigin Pattern where
   originOf x = case x of
@@ -146,9 +146,9 @@ instance Display Pattern where
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
 
-instance Display Var where
+instance Display Ident where
   makeDoc x = case x of
-    Var _ i -> text i
+    Ident _ i -> text i
 
 instance Display LabelName where
   makeDoc x = case x of

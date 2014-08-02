@@ -53,25 +53,24 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.TExprRef o e1 -> TBN.ExprRef o <$> toTBN e1
                                     
     LB.TExprVar o var -> TBN.ExprVar o <$> toTBN var
-    LB.TExprValInt o int -> return $ TBN.ExprValInt o int
+    LB.TExprValInt o i -> return $ TBN.ExprValInt o i
     LB.TExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
     _ -> error $ "Cannot TBN convert: " ++ display expr -- TODO: get a correct failure mode
         
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         
 instance TBNConvertible LB.Pattern TBN.Pattern where
   toTBN pattern = case pattern of   
-        LB.ListPattern _ _ _ ->
-          error $ "Cannot TBN convert: " ++ display pattern
-        LB.PrimitivePattern o primitive ->
-          TBN.PrimitivePattern o <$> toTBN primitive
-        LB.LabelPattern o label p ->
-          TBN.LabelPattern o <$> toTBN label <*> toTBN p
-        LB.RefPattern o p ->
-          TBN.RefPattern o <$> toTBN p
-        LB.ConjunctionPattern o p1 p2 ->
-          TBN.ConjunctionPattern o <$> toTBN p1 <*> toTBN p2
-        LB.EmptyPattern o -> return $ TBN.EmptyPattern o      
-        LB.VariablePattern o var -> TBN.VariablePattern o <$> toTBN var
+    LB.PrimitivePattern o primitive ->
+      TBN.PrimitivePattern o <$> toTBN primitive
+    LB.LabelPattern o label p ->
+      TBN.LabelPattern o <$> toTBN label <*> toTBN p
+    LB.RefPattern o p ->
+      TBN.RefPattern o <$> toTBN p
+    LB.ConjunctionPattern o p1 p2 ->
+      TBN.ConjunctionPattern o <$> toTBN p1 <*> toTBN p2
+    LB.EmptyPattern o -> return $ TBN.EmptyPattern o      
+    LB.VariablePattern o var -> TBN.VariablePattern o <$> toTBN var
+    _ -> error $ "Cannot TBN convert: " ++ display pattern -- TODO: get a correct failure mode
 
 -- | Convert a LittleBang binary operator to a TinyBang Nested binary operator      
 instance TBNConvertible LB.BinaryOperator TBN.BinaryOperator where
@@ -91,9 +90,9 @@ instance TBNConvertible LB.PrimitiveType TBN.PrimitiveType where
 -- | Convert a LittleBang label to a TinyBang label      
 instance TBNConvertible LB.LabelName TBN.LabelName where
   toTBN label = return $ case label of
-        LB.LabelName o string -> TBN.LabelName o string
+        LB.LabelName o str -> TBN.LabelName o str
 
 -- | Convert a LittleBang var to a TinyBang Nested var               
-instance TBNConvertible LB.Var TBN.Var where
+instance TBNConvertible LB.Ident TBN.Ident where
   toTBN var = return $ case var of
-        LB.Var o string -> TBN.Var o string
+        LB.Ident o str -> TBN.Ident o str

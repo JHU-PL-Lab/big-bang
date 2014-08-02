@@ -10,7 +10,6 @@ import Language.TinyBang.Utils.Syntax.Location (SourceDocument(UnknownDocument))
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Reader
-import Data.Either
 
 {-
   TODO: this system needs to be restructured.  In general, the translator should
@@ -22,18 +21,17 @@ import Data.Either
 desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
   let desugarAllExpr = foldl1 (>=>) exprDesugarers in -- Note: there is a monoid alternative
-  let desugarAllArg = foldl1 (>=>) argDesugarers in
+  let desugarAllPat = foldl1 (>=>) patDesugarers in
   let desugarContext = DesugarContext
         { desugarExprFn = desugarAllExpr,
-          desugarArgFn  = desugarAllArg
+          desugarPatFn  = desugarAllPat
         } in
   runDesugarM desugarContext $ walkExprTree expr
   --runDesugarM (return expr >>= walkExprTree)
   where
     exprDesugarers :: [DesugarFunction LB.Expr]
     exprDesugarers =
-      [
-        desugarExprIf
+      [ desugarExprIf
       , desugarExprObject
       , desugarExprSeq
       , desugarExprList
@@ -42,11 +40,9 @@ desugarLittleBang expr =
       , desugarExprLAppl
       , desugarExprProjection
       ]
-    argDesugarers :: [DesugarFunction LB.RecordArgument]
-    argDesugarers =
-      [
-        desugarArgIdent
-      , desugarArgPat
+    patDesugarers :: [DesugarFunction LB.Pattern]
+    patDesugarers =
+      [ desugarPatList
       ]
 
 runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
@@ -58,41 +54,11 @@ type DesugarError = String
 type DesugarFunction a = a -> DesugarM a
 
 data DesugarState = DesugarState { freshVarIdx :: Int }
-data DesugarContext = DesugarContext { desugarExprFn :: DesugarFunction LB.Expr, desugarArgFn :: DesugarFunction LB.RecordArgument }
-
-{-
--- | Get an expr desugaring function based on an AST node
-getExprDesugarer :: LB.Expr -> DesugarFunction LB.Expr
-getExprDesugarer expr =
-  case expr of
-    LB.LExprCondition _ _ _ _ -> desugarExprIf
-    LB.LExprSequence _ _ _ -> desugarExprSeq
-    LB.LExprList _ _ -> desugarExprList
-    LB.LExprRecord _ _ -> desugarExprRecord
-    LB.LExprObject o _ -> desugarObj o
-    LB.LExprProjection _ _ _ -> desugarExprProjection
-    _ -> desugarExprIdentity
-    where -- TODO why didn't this work inline?
-    desugarObj o e = do
-        e1 <- desugarExprObject e
-        e2 <- desugarExprRecord e1
-        seal o e2
--}
-
--- | Get a pat desugaring function based on an AST node
-getPatDesugarer :: LB.Pattern -> DesugarFunction LB.Pattern
-getPatDesugarer pat = 
-  case pat of
-    LB.ListPattern _ _ _ -> desugarPatList
-    _ -> desugarPatIdentity
-
-getTermDesugarer :: LB.RecordTerm -> DesugarFunction LB.RecordTerm
-getTermDesugarer tm = 
-  case tm of
-    LB.TermIdent _ _ _ -> desugarTermIdent
-    LB.TermScape _ _ _ _ -> desugarTermScape
-    LB.TermAnon _ _ _ -> desugarTermAnon
-    _ -> desugarTermIdentity
+data DesugarContext
+  = DesugarContext
+      { desugarExprFn :: DesugarFunction LB.Expr
+      , desugarPatFn :: DesugarFunction LB.Pattern
+      }
 
 -- | Apply desugarers to the entire AST
 -- Makes one pass, applying only appropriate desugarers
@@ -160,11 +126,11 @@ walkExprTree expr = do
     LB.LExprList o e -> (LB.LExprList o
                                     <$> mapM walkExprTree e)
                                     >>= f
-    LB.LExprRecord o e -> (LB.LExprRecord o
-                                    <$> mapM walkTermTree e)
+    LB.LExprRecord o args -> (LB.LExprRecord o
+                                    <$> mapM walkArgTree args)
                                     >>= f
     LB.LExprObject o tms -> (LB.LExprObject o
-                                    <$> mapM walkTermTree tms)
+                                    <$> mapM walkObjTermTree tms)
                                     >>= f
     LB.LExprProjection o e1 e2 -> (LB.LExprProjection o
                                     <$> walkExprTree e1
@@ -184,8 +150,8 @@ walkArgTree a = case a of
 
 -- |Walk the tree of patterns, applying desugarers
 walkPatTree :: LB.Pattern -> DesugarM LB.Pattern
-walkPatTree pat = 
-  let f = getPatDesugarer pat in
+walkPatTree pat = do
+  f <- desugarPatFn <$> ask
   case pat of
     LB.PrimitivePattern o prim -> (LB.PrimitivePattern o
                                     <$> return prim)
@@ -210,36 +176,18 @@ walkPatTree pat =
                                             Nothing -> return Nothing
                                         )
                                     >>= f
-
--- |Walk the tree of record terms, a
-walkTermTree :: LB.RecordTerm -> DesugarM LB.RecordTerm
-walkTermTree tm = 
-  let f = getTermDesugarer tm in
-  case tm of
-    LB.TermIdent o l e -> (LB.TermIdent o
-                                    <$> return l
-                                    <*> walkExprTree e)
-                                    >>= f
-    LB.TermScape o l ts e -> (LB.TermScape o
-                                    <$> return l
-                                    <*> mapM walkRecordArgTree ts
-                                    <*> walkExprTree e)
-                                    >>= f
-    LB.TermAnon o ts e -> (LB.TermAnon o
-                                    <$> mapM walkRecordArgTree ts
-                                    <*> walkExprTree e)
-                                    >>= f
-    _ -> return tm
-
-walkRecordArgTree :: DesugarFunction LB.RecordArgument
-walkRecordArgTree arg = do
-  f <- desugarArgFn <$> ask
-  case arg of
-    LB.ArgIdent o label -> (LB.ArgIdent o <$> return label) >>= f
-    LB.ArgPat o l p -> (LB.ArgPat o
-                                    <$> return l
-                                    <*> walkPatTree p)
-                                    >>= f
+                                    
+-- |Walk the tree of object terms.
+walkObjTermTree :: LB.ObjectTerm -> DesugarM LB.ObjectTerm
+walkObjTermTree term =
+  case term of
+    LB.ObjectMethod o n params e ->
+      LB.ObjectMethod o n
+        <$> mapM walkParamTree params
+        <*> walkExprTree e
+    LB.ObjectField o n e ->
+      LB.ObjectField o n
+        <$> walkExprTree e
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -286,21 +234,36 @@ desugarExprList expr =
                 <$> return (LB.TExprLabelExp o (LB.LabelName o "Hd") e)
                 <*> (LB.TExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
-buildRecord :: TB.Origin -> [LB.RecordTerm] -> LB.Expr
-buildRecord o terms = foldl (\a b -> LB.TExprOnion o a b) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
-
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
 desugarExprRecord expr =
   case expr of
-    LB.LExprRecord o list -> return $ buildRecord o list
+    LB.LExprRecord _ args -> desugarArgs args
     _ -> return expr
 
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
   case expr of
-    LB.LExprObject o tms -> seal o $ buildRecord o (map (addSelf o) tms)
+    LB.LExprObject o tms -> seal o =<< onionExprList <$> mapM objectTermToExpr tms
     _ -> return expr
   where
+    -- |A routine which converts each object term into an onion component.  This
+    --  routine must prepare each object term for sealing; we therefore add a
+    --  `self parameter to methods as well as a parameter identifying them.
+    objectTermToExpr :: LB.ObjectTerm -> DesugarM LB.Expr
+    objectTermToExpr term = case term of
+      LB.ObjectMethod o n params e -> do
+        pat <- desugarParams params
+        let orig = TB.ComputedOrigin [o]
+        let selfPat = LB.LabelPattern orig
+                        (LB.LabelName orig $ internalizeName "self")
+                        (LB.VariablePattern orig $ LB.Ident orig "self")
+        let msgPat = LB.LabelPattern orig
+                        (methodNameToLabelName n) $
+                          conjoinPatterns pat selfPat
+        return $ LB.TExprScape o msgPat e
+      LB.ObjectField o n e ->
+        return $ LB.TExprLabelExp o (paramNameToLabelName n) e
+{-    
   addSelf :: TB.Origin -> LB.RecordTerm -> LB.RecordTerm
   addSelf o tm =
     let selfPart = LB.LabelPattern o (LB.LabelName o "self") (LB.VariablePattern o (LB.Var o "self")) in
@@ -309,12 +272,43 @@ desugarExprObject expr =
       LB.TExprScape o' pat z -> LB.TermNativeExpr o' (LB.TExprScape o'
         (LB.ConjunctionPattern o' selfPart pat) z)
       _ -> tm
+-}
 
-distinguishedParamSymbol :: Char
-distinguishedParamSymbol = '$'
+desugarArgs :: [LB.Arg] -> DesugarM LB.Expr
+desugarArgs args =
+  -- TODO: modify to accept positional arguments
+  onionExprList <$> mapM desugarArg args
+  where
+    desugarArg :: LB.Arg -> DesugarM LB.Expr
+    desugarArg arg =
+      case arg of
+        PositionalArg _ _ ->
+          error "Positional arguments currently not supported!"
+        NamedArg o n e ->
+          return $ LB.TExprLabelExp o (paramNameToLabelName n) e
 
-paramNameToLabelName :: Origin -> String -> LB.LabelName
-paramNameToLabelName o n = LB.LabelName o $ distinguishedParamSymbol : n
+desugarParams :: [LB.Param] -> DesugarM LB.Pattern
+desugarParams params =
+  -- TODO: modify to accept positional parameters
+  conjoinPatternList <$> mapM desugarParam params
+  where
+    desugarParam :: LB.Param -> DesugarM LB.Pattern
+    desugarParam p = case p of
+      Param o n pat ->
+        return $ LB.LabelPattern o (paramNameToLabelName n) $
+          LB.ConjunctionPattern o pat $ LB.VariablePattern (originOf n) n
+
+distinguishedSymbol :: Char
+distinguishedSymbol = '$'
+
+paramNameToLabelName :: Ident -> LB.LabelName
+paramNameToLabelName (Ident o n) = LB.LabelName o $ distinguishedSymbol:n
+
+internalizeName :: String -> String
+internalizeName = (distinguishedSymbol:) . (distinguishedSymbol:)
+
+methodNameToLabelName :: Ident -> LB.LabelName
+methodNameToLabelName (Ident o n) = LB.LabelName o $ internalizeName n
 
 desugarExprLScape :: LB.Expr -> DesugarM LB.Expr
 desugarExprLScape expr =
@@ -322,18 +316,6 @@ desugarExprLScape expr =
     LB.LExprScape o params body ->
       LB.TExprScape o <$> desugarParams params <*> pure body
     _ -> return expr
-  where
-    desugarParams :: [LB.Param] -> DesugarM LB.Pattern
-    desugarParams params =
-      -- TODO: modify to accept positional parameters
-      foldl conjoinPatterns (LB.EmptyPattern TB.generated) <$>
-        mapM desugarParam params
-      where
-        desugarParam :: LB.Param -> DesugarM LB.Pattern
-        desugarParam p = case p of
-          Param o v@(LB.Var o' n) pat ->
-            return $ LB.LabelPattern o (paramNameToLabelName o' n) $
-              LB.ConjunctionPattern o pat $ LB.VariablePattern o' v
 
 desugarExprLAppl :: LB.Expr -> DesugarM LB.Expr
 desugarExprLAppl expr =
@@ -341,40 +323,29 @@ desugarExprLAppl expr =
     LB.LExprAppl o efunc args ->
       LB.TExprAppl o efunc <$> desugarArgs args
     _ -> return expr
-  where
-    desugarArgs :: [LB.Arg] -> DesugarM LB.Expr
-    desugarArgs args =
-      -- TODO: modify to accept positional arguments
-      foldl onionExprs (LB.TExprValEmptyOnion generated) <$>
-        mapM desugarArg args
-      where
-        desugarArg :: LB.Arg -> DesugarM LB.Expr
-        desugarArg arg =
-          case arg of
-            PositionalArg _ _ ->
-              error "Positional arguments currently not supported!"
-            NamedArg o s e ->
-              return $ LB.TExprLabelExp o (paramNameToLabelName o s) e
 
+-- TODO: projection should have different syntax for method invocation and field
+--       access now (since we're going so far as to distinguish them)
 desugarExprProjection :: LB.Expr -> DesugarM LB.Expr
 desugarExprProjection expr =
     case expr of
+      -- TODO: reconsider origins used in this AST
         LB.LExprProjection o e1 e2 ->
-            let (LB.TExprVar _ (LB.Var _ n)) = e2 in 
+            let (LB.TExprVar _ v@(LB.Ident _ n)) = e2 in 
             return $
             LB.TExprAppl o
                 (LB.TExprOnion o
                     (LB.TExprScape o
                         (LB.LabelPattern o
                             (LB.LabelName o n)
-                            (LB.VariablePattern o (LB.Var o n))
+                            (LB.VariablePattern o v)
                         )
-                        (LB.TExprVar o (LB.Var o n))
+                        (LB.TExprVar o v)
                     )
                     (LB.TExprScape o
                         (LB.EmptyPattern o)
                         (LB.TExprScape o
-                            (LB.VariablePattern o (LB.Var o "arg"))
+                            (LB.VariablePattern o (LB.Ident o "arg"))
                             (LB.TExprAppl o
                                 e1
                                 (LB.TExprOnion o
@@ -385,7 +356,7 @@ desugarExprProjection expr =
                                             (LB.TExprValEmptyOnion o)
                                         )
                                     )
-                                    (LB.TExprVar o (LB.Var o "arg"))
+                                    (LB.TExprVar o (LB.Ident o "arg"))
                                 )
                             )
                         )
@@ -393,43 +364,6 @@ desugarExprProjection expr =
                 )
                 e1
         _ -> return expr
-
--- |An identity desugarer which does nothing
--- This is applied to all elements of LB that are also in TBN
-desugarExprIdentity :: LB.Expr -> DesugarM LB.Expr
-desugarExprIdentity expr = 
-  case expr of
-    LB.TExprLet o var e1 e2 -> LB.TExprLet o 
-                                    <$> return var 
-                                    <*> return e1 
-                                    <*> return e2
-                                    
-    LB.TExprScape o outerPattern e -> LB.TExprScape o 
-                                    <$> return outerPattern 
-                                    <*> return e
-                                    
-    LB.TExprBinaryOp o e1 op e2 -> LB.TExprBinaryOp o 
-                                    <$> return e1 
-                                    <*> return op
-                                    <*> return e2
-                                    
-    LB.TExprOnion o e1 e2 -> LB.TExprOnion o 
-                                    <$> return e1 
-                                    <*> return e2
-                                    
-    LB.TExprAppl o e1 e2 -> LB.TExprAppl o 
-                                    <$> return e1 
-                                    <*> return e2
-                                    
-    LB.TExprLabelExp o label e1 -> LB.TExprLabelExp o 
-                                    <$> return label 
-                                    <*> return e1
-                                    
-    LB.TExprRef o e -> LB.TExprRef o <$> return e
-    LB.TExprVar o var -> LB.TExprVar o <$> return var
-    LB.TExprValInt o int -> LB.TExprValInt o <$> return int
-    LB.TExprValEmptyOnion o -> return (LB.TExprValEmptyOnion o)
-    _ -> return expr
 
 desugarPatList :: LB.Pattern -> DesugarM LB.Pattern
 desugarPatList pat = 
@@ -449,101 +383,47 @@ desugarPatList pat =
       Just p -> return p
       
 
-desugarPatIdentity :: LB.Pattern -> DesugarM LB.Pattern
-desugarPatIdentity pat = 
-  case pat of
-    LB.PrimitivePattern o prim -> LB.PrimitivePattern o <$> return prim
-    LB.LabelPattern o label p -> LB.LabelPattern o
-                                    <$> return label
-                                    <*> return p
-    LB.ConjunctionPattern o p1 p2 -> LB.ConjunctionPattern o
-                                    <$> return p1
-                                    <*> return p2
-    LB.EmptyPattern o -> (return $ LB.EmptyPattern o)
-    LB.VariablePattern o v -> LB.VariablePattern o <$> return v
-    _ -> return pat
-
--- |desugarers for RecordTerm
-desugarTermIdent :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermIdent tm = 
-  case tm of
-    LB.TermIdent o label expr -> LB.TermNativeExpr o <$> (LB.TExprLabelExp o <$> return label <*> return expr)
-    _ -> return tm
-
-buildArguments :: TB.Origin -> [LB.RecordArgument] -> LB.Pattern
-buildArguments o args = 
-  case args of
-    [] -> LB.EmptyPattern o
-    _  -> foldl (\a b -> LB.ConjunctionPattern o a b) (unArgPat $ head args) (map unArgPat $ tail args)
-
-desugarTermScape :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermScape tm = 
-  case tm of
-    LB.TermScape o label args body -> 
-        let identPart = LB.LabelPattern o (LB.LabelName o "_msg") (LB.LabelPattern o label (LB.EmptyPattern o)) in
-        let argPart = buildArguments o args in
-        let pat = LB.ConjunctionPattern o identPart argPart in
-        return $ LB.TermNativeExpr o (LB.TExprScape o pat body)
-    _ -> return tm
-
-desugarTermAnon :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermAnon tm = 
-  case tm of
-    LB.TermAnon o args body -> 
-        let pat = buildArguments o args in
-        return $ LB.TermNativeExpr o (LB.TExprScape o pat body)
-    _ -> return tm
-
--- |desugarers for RecordArgument
-desugarArgIdent :: DesugarFunction LB.RecordArgument
-desugarArgIdent arg = 
-  case arg of
-    LB.ArgIdent o l -> LB.ArgNativePat o <$> (LB.LabelPattern o <$>
-                                                return l
-                                                <*> (LB.VariablePattern o
-                                                        <$> (LB.Var o
-                                                            <$> (return $ LB.unLabelName l)
-                                                        )
-                                                    )
-                                                )
-    _ -> return arg
-
-desugarArgPat :: DesugarFunction LB.RecordArgument
-desugarArgPat arg = 
-  case arg of
-    LB.ArgPat o label p -> 
-        let var = LB.VariablePattern o (LB.Var o (LB.unLabelName label)) in
-            LB.ArgNativePat o <$> (LB.LabelPattern o
-                <$> return label
-                <*> (LB.ConjunctionPattern o <$> return var <*> return p))
-    _ -> return arg
-
-desugarTermIdentity :: LB.RecordTerm -> DesugarM LB.RecordTerm
-desugarTermIdentity tm = return tm
-
-unTermExpr (LB.TermNativeExpr _ e) = e
-unArgPat  (LB.ArgNativePat  _ p) = p
-
--- seal function
+-- |Seal a given expression.  This function generates code which will apply the
+--  seal function to the provided expression. 
 seal :: TB.Origin -> LB.Expr -> DesugarM LB.Expr
 seal o e = -- parse this function directly until we have a prelude/stdlib for seal to load from
     let src = "(f -> (g -> x -> g g x) (h -> y -> f (h h) y)) (seal -> obj -> (msg -> obj (msg & `self (seal obj))) & obj)" in
     let eitherAst = do -- Either
             tokens <- lexLittleBang UnknownDocument src
             parseLittleBang UnknownDocument tokens
-    in return $ either (const e) (const (LB.TExprAppl o (head $ rights [eitherAst]) e)) eitherAst
+    in
+    case eitherAst of
+      Left msg ->
+        -- This should never happen.
+        -- TODO: generate an appropriate error once DesugarM supports desugaring
+        --       failures.
+        error $ "Failed to parse seal function: " ++ msg
+      Right sealExpr ->
+        return $ LB.TExprAppl o sealExpr e
           
-nextFreshVar :: DesugarM LB.Var
+nextFreshVar :: DesugarM LB.Ident
 nextFreshVar = do
   s <- get
   let varName = "v" ++ show (freshVarIdx s)
   put $ s { freshVarIdx = freshVarIdx s + 1 }
-  return $ LB.Var (TB.ComputedOrigin []) varName
+  return $ LB.Ident (TB.ComputedOrigin []) varName
 
 conjoinPatterns :: LB.Pattern -> LB.Pattern -> LB.Pattern
 conjoinPatterns p1 p2 =
   LB.ConjunctionPattern (originOf p1 <==> originOf p2) p1 p2
+  
+conjoinPatternList :: [LB.Pattern] -> LB.Pattern
+conjoinPatternList pats =
+  if null pats
+    then LB.EmptyPattern generated
+    else foldl1 conjoinPatterns pats
 
 onionExprs :: LB.Expr -> LB.Expr -> LB.Expr
 onionExprs e1 e2 =
   LB.TExprOnion (originOf e1 <==> originOf e2) e1 e2
+
+onionExprList :: [LB.Expr] -> LB.Expr
+onionExprList exprs =
+  if null exprs
+    then LB.TExprValEmptyOnion generated
+    else foldl1 onionExprs exprs

@@ -83,7 +83,7 @@ generateTests (LittleBangSourceFileTestConfig
           -- not the evaluated ast matches the provided pattern.  We won't need
           -- to typecheck it because it's a catch-all.
           let ast' =
-                let genVar = LB.Var generated "___lbUnitTestValueVar" in
+                let genVar = LB.Ident generated "___lbUnitTestValueVar" in
                 LB.TExprAppl generated
                   (LB.TExprOnion generated
                     (LB.TExprScape generated pattern $

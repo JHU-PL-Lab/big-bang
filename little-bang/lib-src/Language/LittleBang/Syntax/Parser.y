@@ -67,7 +67,7 @@ Program :: { SPositional Expr }
   : Expr                    { $1 }
 
 Expr :: { SPositional Expr }
-  : 'let' Var '=' Expr 'in' Expr
+  : 'let' Ident '=' Expr 'in' Expr
                             { oc3 $1 $> TExprLet $2 $4 $6 }
   | 'fun' ParamList '->' Expr %prec LAM
                             { oc2 $1 $> LExprScape $2 $4 }
@@ -95,11 +95,11 @@ PrimaryExpr :: { SPositional Expr }
   | InvokableExpr           { $1 }
 
 InvokableExpr :: { SPositional Expr }
-  : Var                     { oc1 $1 $> TExprVar $1 }
+  : Ident                   { oc1 $1 $> TExprVar $1 }
   | '(' Expr ')'            { $2 }
 
-Var :: { SPositional Var }
-  : ident                   { oc1 $1 $> Var $1 }
+Ident :: { SPositional Ident }
+  : ident                   { oc1 $1 $> Ident $1 }
   
 Label :: { SPositional LabelName }
   : label                   { oc1 $1 $> LabelName $1 }
@@ -113,8 +113,8 @@ ParamList :: { VPositional [Param] }
                             { $1 }
 
 Param :: { SPositional Param }
-  : Var ':' Pattern         { oc2 $1 $> Param $1 $3 }
-  | Var                     { oc2 $1 $> Param $1 (oc0 $1 $> EmptyPattern) } 
+  : Ident ':' Pattern       { oc2 $1 $> Param $1 $3 }
+  | Ident                   { oc2 $1 $> Param $1 (oc0 $1 $> EmptyPattern) } 
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
@@ -122,10 +122,10 @@ Pattern :: { SPositional Pattern }
 
 PrimaryPattern :: {SPositional Pattern }
   : Label PrimaryPattern    { oc2 $1 $> LabelPattern $1 $2 }
-  | 'ref' Var               { oc1 $1 $> RefPattern (oc1S VariablePattern $2) }
+  | 'ref' Ident             { oc1 $1 $> RefPattern (oc1S VariablePattern $2) }
   | PrimitiveType           { oc1 $1 $> PrimitivePattern $1 }
   | '()'                    { oc0 $1 $> EmptyPattern }
-  | Var                     { oc1 $1 $> VariablePattern $1 }
+  | Ident                   { oc1 $1 $> VariablePattern $1 }
   | '(' Pattern ')'         { $2 }
 
 PrimitiveType :: { SPositional PrimitiveType }
@@ -136,7 +136,7 @@ ArgList :: { VPositional [Arg] }
 
 Arg :: { SPositional Arg }
   : Expr                    { oc1 $1 $> PositionalArg $1 }
-  | ident '=' Expr          { oc2 $1 $> NamedArg $1 $3 }
+  | Ident '=' Expr          { oc2 $1 $> NamedArg $1 $3 }
 
 -- Generalizations of common grammar patterns.
 
