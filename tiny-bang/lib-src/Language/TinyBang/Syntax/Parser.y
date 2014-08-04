@@ -124,9 +124,4 @@ parseTinyBang :: SourceDocument -> [Token] -> Either String Expr
 parseTinyBang _ toks =
     posData <$> parseTokens toks
 
-type ParserM a = Either String a
-
-parseError :: [Token] -> ParserM a
-parseError tokens = Left $ display tokens
-
 }

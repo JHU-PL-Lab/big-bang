@@ -9,8 +9,7 @@ module Language.TinyBangNested.Syntax.Tokens
 ) where
 
 import Language.TinyBang.Utils.Display
-import Language.TinyBang.Utils.Syntax.Positional
-import Language.TinyBang.Utils.Syntax.Tokens
+import Language.TinyBang.Utils.Syntax
 
 type Token = TypedToken TokenType
 
@@ -38,9 +37,9 @@ data TokenType a where
   TokLambda :: TokenType () -- @\@
   TokOpenParen :: TokenType () -- @(@
   TokCloseParen :: TokenType () -- @)@
-
-instance Display Token where
-  makeDoc t = case t of
+  
+instance TokenDisplay TokenType where
+  tokenPayloadDoc t = case t of
     Token (SomeToken TokIs _) -> dquotes $ text "="
     Token (SomeToken TokArrow _) -> dquotes $ text "->"
     Token (SomeToken TokStartBlock _) -> dquotes $ text "{"

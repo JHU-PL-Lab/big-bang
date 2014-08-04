@@ -130,9 +130,4 @@ parseTinyBangNestedPattern :: SourceDocument -> [Token] -> Either String Pattern
 parseTinyBangNestedPattern _ toks =
     posData <$> parsePattern toks
 
-type ParserM a = Either String a
-
-parseError :: [Token] -> ParserM a
-parseError tokens = Left $ display tokens
-
 }

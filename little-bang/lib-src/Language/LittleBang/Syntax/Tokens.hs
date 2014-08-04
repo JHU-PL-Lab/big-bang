@@ -10,8 +10,7 @@ module Language.LittleBang.Syntax.Tokens
 ) where
 
 import Language.TinyBang.Utils.Display
-import Language.TinyBang.Utils.Syntax.Positional
-import Language.TinyBang.Utils.Syntax.Tokens
+import Language.TinyBang.Utils.Syntax
 
 type Token = TypedToken TokenType
 
@@ -45,8 +44,8 @@ data TokenType a where
   TokLitInt :: TokenType Integer
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
 
-instance Display Token where
-  makeDoc t = case t of
+instance TokenDisplay TokenType where
+  tokenPayloadDoc t = case t of
     Token (SomeToken TokLet _) -> dquotes $ text "let"
     Token (SomeToken TokIs _) -> dquotes $ text "="
     Token (SomeToken TokIn _) -> dquotes $ text "in"
@@ -75,3 +74,7 @@ instance Display Token where
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
     Token (SomeToken TokLitInt (posData -> n)) -> text "int#" <> dquotes (text $ show n)
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
+
+instance Display Token where
+  makeDoc t@(Token (SomeToken _ d)) =
+    makeDoc (posSpan d) <> char ':' <> tokenPayloadDoc t

@@ -96,6 +96,7 @@ library
                    Language.TinyBang.Utils.Syntax.Location,
                    Language.TinyBang.Utils.Syntax.Parser,
                    Language.TinyBang.Utils.Syntax.Positional,
+                   Language.TinyBang.Utils.Syntax.TokenDisplay,
                    Language.TinyBang.Utils.Syntax.Tokens,
                    Language.TinyBang.Utils.TemplateHaskell.Deriving,
                    Language.TinyBang.Utils.TemplateHaskell.Reduce,

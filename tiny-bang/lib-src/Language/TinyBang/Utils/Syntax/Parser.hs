@@ -4,7 +4,10 @@
   create span-tracking structures.
 -}
 module Language.TinyBang.Utils.Syntax.Parser
-( oc0
+( ParserM
+, parseError
+
+, oc0
 , oc1
 , oc2
 , oc3
@@ -14,8 +17,30 @@ module Language.TinyBang.Utils.Syntax.Parser
 ) where
 
 import Language.TinyBang.Ast.Origin
+import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Utils.Syntax.Positional
+import Language.TinyBang.Utils.Syntax.TokenDisplay
+import Language.TinyBang.Utils.Syntax.Tokens
+
+-- * A parsing monad
+
+-- |A simple monad type for Happy parsers.  This section also contains utilities
+--  meant to operate within this monad.
+type ParserM a = Either String a
+
+-- |A simple function for generating a Happy parse error when using the parser
+--  monad given here and the token types given in this module.
+parseError :: (TokenDisplay t) => [TypedToken t] -> ParserM a
+parseError tokens =
+  case tokens of
+    [] -> Left $ "Unexpected end of file"
+    (t@(Token (SomeToken _ body))):_ ->
+      let pos = posSpan body in
+      Left $ display $
+        makeDoc pos <> char ':' <+> text "Unexpected token:" <+> tokenPayloadDoc t
+
+-- * Utility functions
 
 -- |A version of @oc2@ for constructors with /no/ additional arguments rather
 --  than two.
