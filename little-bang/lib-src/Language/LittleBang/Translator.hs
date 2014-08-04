@@ -40,6 +40,7 @@ desugarLittleBang expr =
       , desugarExprRecord
       , desugarExprProjection
       , desugarExprDeref
+      , desugarExprCons
       ]
     argDesugarers :: [DesugarFunction LB.RecordArgument]
     argDesugarers =
@@ -150,6 +151,10 @@ walkExprTree expr = do
     LB.ExprList o e -> (LB.ExprList o
                                     <$> mapM walkExprTree e)
                                     >>= f
+    LB.ExprCons o e1 e2 -> (LB.ExprCons o 
+                                    <$> walkExprTree e1
+                                    <*> walkExprTree e2)
+                                    >>= f
     LB.ExprRecord o e -> (LB.ExprRecord o
                                     <$> mapM walkTermTree e)
                                     >>= f
@@ -257,13 +262,22 @@ desugarExprList expr =
   case expr of
     LB.ExprList o list -> toHTList o list
     _ -> return expr
-    where
-    toHTList :: TB.Origin -> [LB.Expr] -> DesugarM LB.Expr
-    toHTList o lst = case lst of
+  where
+toHTList :: TB.Origin -> [LB.Expr] -> DesugarM LB.Expr
+toHTList o lst = case lst of
       [] -> return (LB.ExprLabelExp o (LB.LabelName o "Nil") (LB.ExprValEmptyOnion o))
       e:t -> LB.ExprOnion o
                 <$> return (LB.ExprLabelExp o (LB.LabelName o "Hd") e)
                 <*> (LB.ExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
+
+desugarExprCons :: LB.Expr -> DesugarM LB.Expr
+desugarExprCons expr =
+  case expr of
+    LB.ExprCons o e1 e2 -> return $
+                             LB.ExprOnion o
+                               (LB.ExprLabelExp o (LB.LabelName o "Hd") e1)
+                               (LB.ExprLabelExp o (LB.LabelName o "Tl") e2)
+    _ -> return expr
 
 buildRecord :: TB.Origin -> [LB.RecordTerm] -> LB.Expr
 buildRecord o terms = foldl (\a b -> LB.ExprOnion o a b) (unTermExpr $ head terms) (map unTermExpr $ tail terms)
@@ -371,6 +385,10 @@ desugarExprIdentity expr =
     LB.ExprLabelExp o label e1 -> LB.ExprLabelExp o 
                                     <$> return label 
                                     <*> return e1
+
+    LB.ExprCons o e1 e2 -> LB.ExprCons o 
+                                    <$> return e1
+                                    <*> return e2
                                     
     LB.ExprRef o e -> LB.ExprRef o <$> return e
     LB.ExprDeref o e -> LB.ExprDeref o <$> return e

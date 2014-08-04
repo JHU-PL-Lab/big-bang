@@ -34,6 +34,7 @@ data Token
   | TokThen -- ^@then@
   | TokElse -- ^@else@
   | TokSemi -- ^@;@
+  | TokCons -- ^@::@
   | TokColon -- ^@:@
   | TokOpenBracket -- ^@[@
   | TokCloseBracket -- ^@]@
@@ -83,6 +84,7 @@ instance Display Token where
     TokThen -> text "then"
     TokElse -> text "else"
     TokSemi -> text ";"
+    TokCons -> text "::"
     TokColon -> text ":"
     TokOpenBracket -> text "["
     TokCloseBracket -> text "]"

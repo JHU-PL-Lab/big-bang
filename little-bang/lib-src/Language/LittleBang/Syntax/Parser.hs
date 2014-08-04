@@ -143,11 +143,36 @@ pPrefixExpr = do
     exp1 <- ("prefix expression" <@>
               origConstr2 ExprLabelExp $% (,) <$> pLabel ?=> pPrefixExpr
           <|> origConstr1 ExprRef (consume TokRef >> pPrefixExpr) 
-          <|> pPrimaryExpr)
+          <|> pConsExpr)
     option exp1 (origConstr2 ExprProjection $% (,)
                  <$> return exp1
                  <*  consume TokDot
                  <*> (origConstr1 ExprVar pVar))
+
+pConsExpr :: TBNParser Expr
+pConsExpr = "cons expression" <@>
+  origConstr2 ExprCons $% (,) <$> pPrimaryExpr <* consume TokCons ?=> pConsExpr
+  <|> pPrimaryExpr
+
+{-
+  origConstr1 ExprCons $% 
+    ((:) <$> (pPrimaryExpr <* consume TokCons) 
+    ?=> (try (pPrimaryExpr `sepBy` consume TokCons)))
+  <|> pPrimaryExpr
+-}
+{-
+  origConstr2 ExprCons $% (,) <$> pPrimaryExpr <* consume TokCons ?=> 
+    (try (pExpr `sepBy` consume TokCons))
+-}
+{-
+  (try (origLeftAssocBinOp cons pPrimaryExpr $% consume TokCons)
+  <|> pListExpr)
+  <|> pPrimaryExpr
+  where
+    cons o e1 () e2 = ExprCons o e1 e2
+-}
+ -- infinite loop over pExpr:
+ -- origConstr2 ExprCons $% (,) <$> pExpr <* consume TokCons ?=> pListExpr
 
 -- |"primary" priority is a variable, a primitive literal, an empty onion, or
 --  a parenthesized expression
