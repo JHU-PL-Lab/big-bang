@@ -26,6 +26,7 @@ tokens :-
   $white+                      ;
   "#".*                        ;
   let                          { simply TokLet }
+  in                           { simply TokIn }
   fun                          { simply TokLambda }
   if                           { simply TokIf }
   then                         { simply TokThen }
