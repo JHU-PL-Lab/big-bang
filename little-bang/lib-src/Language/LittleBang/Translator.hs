@@ -39,6 +39,8 @@ desugarLittleBang expr =
       , desugarExprLScape
       , desugarExprLAppl
       , desugarExprProjection
+      , desugarExprDeref
+      , desugarExprCons
       ]
     patDesugarers :: [DesugarFunction LB.Pattern]
     patDesugarers =
@@ -100,6 +102,7 @@ walkExprTree expr = do
                                     >>= f
                                     
     LB.TExprRef o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
+    LB.LExprDeref o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
     LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
     LB.TExprValEmptyOnion o -> f (LB.TExprValEmptyOnion o)
@@ -125,6 +128,10 @@ walkExprTree expr = do
                                     >>= f
     LB.LExprList o e -> (LB.LExprList o
                                     <$> mapM walkExprTree e)
+                                    >>= f
+    LB.LExprCons o e1 e2 -> (LB.LExprCons o 
+                                    <$> walkExprTree e1
+                                    <*> walkExprTree e2)
                                     >>= f
     LB.LExprRecord o args -> (LB.LExprRecord o
                                     <$> mapM walkArgTree args)
@@ -233,6 +240,15 @@ desugarExprList expr =
       e:t -> LB.TExprOnion o
                 <$> return (LB.TExprLabelExp o (LB.LabelName o "Hd") e)
                 <*> (LB.TExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
+
+desugarExprCons :: LB.Expr -> DesugarM LB.Expr
+desugarExprCons expr =
+  case expr of
+    LB.LExprCons o e1 e2 -> return $
+                             LB.TExprOnion o
+                               (LB.TExprLabelExp o (LB.LabelName o "Hd") e1)
+                               (LB.TExprLabelExp o (LB.LabelName o "Tl") e2)
+    _ -> return expr
 
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
 desugarExprRecord expr =
@@ -364,6 +380,19 @@ desugarExprProjection expr =
                 )
                 e1
         _ -> return expr
+
+desugarExprDeref :: LB.Expr -> DesugarM LB.Expr
+desugarExprDeref expr =
+  case expr of
+    LB.LExprDeref o e1 -> 
+      return $
+      LB.TExprAppl o
+        (LB.TExprScape o
+          (LB.RefPattern o (LB.VariablePattern o (LB.Ident o "n")))
+          (LB.TExprVar o (LB.Ident o "n"))
+        )
+        e1
+    _ -> return expr
 
 desugarPatList :: LB.Pattern -> DesugarM LB.Pattern
 desugarPatList pat = 

@@ -43,6 +43,8 @@ data Expr
   | LExprRecord Origin [Arg]
   | LExprProjection Origin Expr Expr
   | LExprObject Origin [ObjectTerm]
+  | LExprDeref Origin Expr
+  | LExprCons Origin Expr Expr -- TODO: this should just be a binop
   deriving (Show)
 
 data BinaryOperator
@@ -135,6 +137,8 @@ instance HasOrigin Expr where
     LExprRecord orig _ -> orig
     LExprProjection orig _ _ -> orig
     LExprObject orig _ -> orig
+    LExprDeref orig _ -> orig
+    LExprCons orig _ _  -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -184,6 +188,8 @@ instance Display Expr where
    LExprObject _ terms ->
     text "object" <+> encloseSep lbrace rbrace comma (map makeDoc terms)
    LExprProjection _ e1 e2 -> makeDoc e1 <> text "." <> makeDoc e2
+   LExprDeref _ e -> text "!" <> makeDoc e
+   LExprCons _ e1 e2 -> makeDoc e1 <+> text "::" <+> makeDoc e2
 
 instance Display BinaryOperator where
   makeDoc x = case x of

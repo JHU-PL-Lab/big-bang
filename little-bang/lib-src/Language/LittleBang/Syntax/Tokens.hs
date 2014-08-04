@@ -43,6 +43,9 @@ data TokenType a where
   TokIdentifier :: TokenType String
   TokLitInt :: TokenType Integer
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
+  TokDeref :: TokenType () -- @!@
+  TokCons :: TokenType () -- @::@
+  -- TODO: what about list patterns (e.g. "...")?
 
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
@@ -74,7 +77,8 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
     Token (SomeToken TokLitInt (posData -> n)) -> text "int#" <> dquotes (text $ show n)
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
+    Token (SomeToken TokDeref _) -> text "!"
+    Token (SomeToken TokCons _) -> text "::"
 
 instance Display Token where
-  makeDoc t@(Token (SomeToken _ d)) =
-    makeDoc (posSpan d) <> char ':' <> tokenPayloadDoc t
+  makeDoc = tokenPayloadDoc

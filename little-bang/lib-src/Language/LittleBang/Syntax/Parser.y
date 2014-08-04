@@ -48,6 +48,8 @@ import Language.LittleBang.Syntax.Tokens
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
+  '::'          { Token (SomeToken TokCons $$) }
+  '!'           { Token (SomeToken TokDeref $$) }
 
 %left LAM
 %right 'in'
@@ -55,6 +57,7 @@ import Language.LittleBang.Syntax.Tokens
 %right 'else'
 %nonassoc '<=' '>=' '=='
 %right '<-'
+%right '::'
 %left '+' '-'
 %left '&'
 
@@ -81,6 +84,7 @@ Expr :: { SPositional Expr }
   | Expr '<-' Expr          { oc3 $1 $> TExprBinaryOp $1 (OpSet `oat` $2) $3 }
   | Expr '&' Expr           { oc2 $1 $> TExprOnion $1 $3 }
   | Expr ';' Expr           { oc2 $1 $> LExprSequence $1 $3 }
+  | Expr '::' Expr          { oc2 $1 $> LExprCons $1 $3 }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | PrefixExpr              { $1 }
@@ -88,6 +92,7 @@ Expr :: { SPositional Expr }
 PrefixExpr :: { SPositional Expr }
   : Label PrefixExpr        { oc2 $1 $> TExprLabelExp $1 $2 }
   | 'ref' PrefixExpr        { oc1 $1 $> TExprRef $2 }
+  | '!' PrefixExpr          { oc1 $1 $> LExprDeref $2 }
   | PrimaryExpr             { $1 }
 
 PrimaryExpr :: { SPositional Expr }

@@ -59,8 +59,10 @@ tokens :-
                                     S.token TokLabel ss $ drop 1 s
                                }
   ","                          { simply TokComma }
+  "::"                         { simply TokCons }
   ":"                          { simply TokColon }
   ";"                          { simply TokSemi }
+  "!"                          { simply TokDeref }
 
 {
 
