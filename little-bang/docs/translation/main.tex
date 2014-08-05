@@ -1,32 +1,68 @@
 \documentclass{article}
 \usepackage{mathtools}
 \usepackage{stmaryrd}
-\usepackage{multicol}
-\begin{document}
-\newcommand{\translate}[2]{\ensuremath{\llbracket\texttt{#1}\rrbracket_{#2}}}
-\newcommand{\fresh}[1]{\ensuremath{x^*_{#1}}}
+\usepackage{listings}
 
-We define $\llbracket n \rrbracket_{type}$ to be the translation of a node $n$ of type $type$ from LittleBang into TinyBang-Nested. Possible node types are \textit{expressions} ($e$), \textit{terms} ($t$), \textit{patterns} ($p$), and \textit{arguments} ($a$). The translation function is the identity when called on any LittleBang node which is also present in the TinyBang-Nested AST. We use the symbol \fresh{n} to denote the $n$th fresh variable used within the given expression; fresh variables with the same subscript within one expression are identical.\\
-%\begin{multicols}{2}
-\\\textsc{Expressions}\\
-\translate{if $e_1$ then $e_2$ else $e_3$}{e} = \verb|((`True () -> |\translate{$e_2$}{e}\verb|) & (`False () -> |\translate{$e_3$}{e}\verb|)) |\translate{$e_1$}{e}\\
-\translate{[$e_1$,$...$,$e_n$]}{e} = \verb|`Hd |\translate{$e_1$}{e}\verb| & `Tl (...(`Hd |\translate{$e_n$}{e}\verb| & `Tl `Nil ()))|\\
-\translate{$e_1$; $e_2$}{e} = \verb|(|\fresh{1}\verb| -> |\translate{$e_2$}{e}\verb|) |\translate{$e_1$}{e}\\
-\translate{$e_1$ :: $e_2$}{e} = \verb|`Hd |\translate{$e_1$}{e}\verb| & `Tl |\translate{$e_2$}{e}\\
-\translate{($t_1$,$...$,$t_n$)}{e} = \translate{$t_1$}{t}\verb| & ... & |\translate{$t_n$}{t}\\
-\translate{object ($ident$ ($a_1$,$...$,$a_n$) = $e_1$, \textbackslash($b_1$,$...$,$b_n$) = $e_2$, $...$)}{e} = \\
-\indent\indent\verb|seal (|\translate{$ident$ (self,$a_1$,$...$,$a_n$) = $e_1$}{t}\verb|, |\translate{\textbackslash(self,$b_1$,$...$,$b_n$) = $e_2$}{t}\verb|, |$...$\verb|)|\\
-\translate{$e$.$x$}{e} = \verb|((`|$x$~$x$\verb| -> |$x$\verb|) & (() -> (arg -> |\translate{$e$}{e}\verb| (`_msg (`|$x$\verb| ()) & arg)))) |\translate{$e$}{e}\\
-%\columnbreak
-\\\textsc{Patterns}\\
-\translate{[$p_1$,$p_c$...]}{p} = \verb|(`Hd |\translate{$p_1$}{p}\verb| & `Tl |\translate{$p_c$}{p}\verb|)|\\
-\translate{[$p_1$,$...$,$p_n$]}{p} = \translate{[$p_1$,$...$,$p_n$,`Nil ()...]}{p}\\
-\\\textsc{Terms}\\
-\translate{$ident$ = $e$}{t} = \verb|`|$ident$~\translate{$e$}{e}\\
-\translate{$ident$ ($a_1$,$...$,$a_n$) = $e$}{t} = \verb|(`_msg `|$ident$\verb| () & |\translate{$a_1$}{a}\verb| & |$...$\verb| & |\translate{$a_n$}{a}\verb| -> |\translate{$e$}{e}\verb|)|\\
-\translate{\textbackslash($a_1$,$...$,$a_n$) = $e$}{t} = \verb|(|\translate{$a_1$}{a}\verb| & |$...$\verb| & |\translate{$a_n$}{a}\verb| -> |\translate{$e$}{e}\verb|)|\\
-\\\textsc{Arguments}\\
-\translate{$ident$}{a} = \verb|`|$ident$~$ident$\\
-\translate{$ident$:$p$}{a} = \verb|`|$ident$~$ident$\verb| & |\translate{$p$}{p}\\
-%\end{multicols}
+\newcommand{\setlb}{%
+    \lstset{%
+        basicstyle=\small\ttfamily,%
+        numbers=none,%
+        firstnumber=auto,%
+    }%
+}
+\lstnewenvironment{code}%
+    {\setlb}%
+    {}%
+\newcommand{\lbil}{\setlb\lstinline[mathescape]}
+
+\setlength{\parindent}{0cm}
+
+\begin{document}
+\newcommand{\translate}[2]{\ensuremath{\llbracket\texttt{#2}\rrbracket_{\textnormal{#1}}}}
+\newcommand{\fresh}[1]{\ensuremath{x^*_{#1}}}
+\newcommand{\secheader}[1]{\par\noindent{\sc #1}\noindent\unskip}
+
+We use the notation $\translate{type}{\ensuremath{n}}$ to represent the translation of a node $n$ of type $type$ from LittleBang into TinyBangNested.  We define translations for the following types of nodes:
+
+\begin{itemize}
+    \item \emph{expressions} ($e$)
+    \item \emph{patterns} ($p$)
+    \item \emph{parameters} ($P$)
+    \item \emph{arguments} ($a$)
+    \item \emph{members} ($m$)
+\end{itemize}
+
+Within a translation, we use the symbol $\fresh{n}$ to denote the $n$th fresh variable; fresh variables with the same subscript within one translation rule are identical, but fresh variables appearing within distinct translation rules are distinct.
+
+\vspace*{3mm}
+\secheader{Expressions}
+
+\translate{e}{fun $P_1$,$\ldots$,$P_n$ -> $e$} = \verb|fun |\translate{P}{$P_1$}\verb| & |$\ldots$\verb| & |\translate{P}{$P_n$}\verb| -> |\translate{e}{$e$} \\
+\translate{e}{$x$\texttt{(}$a_1$,$\ldots$,$a_n$\texttt{)}} = $x$\verb| (|\translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\verb|)|\\
+\translate{e}{if $e_1$ then $e_2$ else $e_3$} = \verb|((`True () -> |\translate{e}{$e_2$}\verb|) & (`False () -> |\translate{e}{$e_3$}\verb|)) |\translate{e}{$e_1$}\\
+\translate{e}{[$e_1$,$...$,$e_n$]} = \verb|`Hd |\translate{e}{$e_1$}\verb| & `Tl (...(`Hd |\translate{e}{$e_n$}\verb| & `Tl `Nil ()))|\\
+\translate{e}{$e_1$; $e_2$} = \verb|(|\fresh{1}\verb| -> |\translate{e}{$e_2$}\verb|) |\translate{e}{$e_1$}\\
+\translate{e}{$e_1$ :: $e_2$} = \verb|`Hd |\translate{e}{$e_1$}\verb| & `Tl |\translate{e}{$e_2$}\\
+\translate{e}{\char`\{$a_1$,$\ldots$,$a_n$\char`\}} = \translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\\
+\translate{e}{object \char`\{$m_1$ $\ldots$ $m_n$\char`\}} = \verb|seal (|\translate{m}{$m_1$}\verb| & ... & |\translate{m}{$m_n$}\verb|)|\\
+\translate{e}{$e$.$x$} = \verb|(fun `$|$x~x$\verb| -> |$x$\verb|) (|$e$\verb|)| \\
+\translate{e}{$e$.$m$($a_1$,$\ldots$,$a_n$)} = $e$\verb! (!\translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\verb!)! \\
+
+\secheader{Parameters}
+
+\translate{P}{$x$} = \verb|(`$|$x\texttt{ }x$\verb|)| \\
+\translate{P}{$x$:$p$} = \verb|(`$|$x$\verb! (!$x$\verb| & |\translate{p}{$p$}\verb|))| \\
+
+\secheader{Patterns}
+
+\translate{p}{[$p_1$,$...$,$p_n$]} = \verb|`Hd |\translate{p}{$p_1$}\verb| & `Tl (`Hd |\translate{p}{$p_2$}\verb| & |$\ldots$\verb| `Tl `Nil ()|$\ldots$\verb|)| \\
+
+\secheader{Arguments}
+
+\translate{a}{$x$=$e$} = \verb|`$|$x$\verb| |\translate{e}{$e$} \\
+
+\secheader{Members}
+
+\translate{m}{$x$=$e$} = \verb|`$|$x$\verb| |\translate{e}{$e$} \\
+\translate{m}{$x$($P_1$,$\ldots$,$P_n$)=$e$} = \verb|fun |\translate{P}{$P_1$}\verb| & |$\ldots$\verb| & |\translate{P}{$P_n$}\verb| -> |\translate{e}{$e$} \\
 \end{document}
