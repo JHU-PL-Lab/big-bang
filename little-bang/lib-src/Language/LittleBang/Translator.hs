@@ -2,14 +2,16 @@ module Language.LittleBang.Translator
 ( desugarLittleBang,
 ) where
 
-import Language.LittleBang.Ast as LB
-import Language.TinyBang.Ast as TB
-import Language.LittleBang.Syntax.Lexer
-import Language.LittleBang.Syntax.Parser
-import Language.TinyBang.Utils.Syntax.Location (SourceDocument(UnknownDocument))
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Reader
+
+import Language.LittleBang.Ast as LB
+import Language.TinyBang.Ast as TB
+import Language.LittleBang.Lifter
+import Language.TinyBang.Utils.Syntax.Location (SourceDocument(UnknownDocument))
+import Language.TinyBangNested.Syntax.Lexer
+import Language.TinyBangNested.Syntax.Parser
 
 {-
   TODO: this system needs to be restructured.  In general, the translator should
@@ -29,6 +31,7 @@ desugarLittleBang expr =
   runDesugarM desugarContext $ walkExprTree expr
   --runDesugarM (return expr >>= walkExprTree)
   where
+    -- First desugarer in the list will happen first.
     exprDesugarers :: [DesugarFunction LB.Expr]
     exprDesugarers =
       [ desugarExprIf
@@ -36,9 +39,10 @@ desugarLittleBang expr =
       , desugarExprSeq
       , desugarExprList
       , desugarExprRecord
+      , desugarExprProjection
+      , desugarExprDispatch
       , desugarExprLScape
       , desugarExprLAppl
-      , desugarExprProjection
       , desugarExprDeref
       , desugarExprCons
       ]
@@ -139,9 +143,14 @@ walkExprTree expr = do
     LB.LExprObject o tms -> (LB.LExprObject o
                                     <$> mapM walkObjTermTree tms)
                                     >>= f
-    LB.LExprProjection o e1 e2 -> (LB.LExprProjection o
-                                    <$> walkExprTree e1
-                                    <*> walkExprTree e2)
+    LB.LExprProjection o e i -> (LB.LExprProjection o
+                                 <$> walkExprTree e
+                                 <*> pure i)
+                                 >>= f
+    LB.LExprDispatch o e i args -> (LB.LExprDispatch o
+                                    <$> walkExprTree e
+                                    <*> pure i
+                                    <*> mapM walkArgTree args)
                                     >>= f
 
 -- |Walk a parameter, applying desugarers
@@ -317,14 +326,14 @@ desugarParams params =
 distinguishedSymbol :: Char
 distinguishedSymbol = '$'
 
-paramNameToLabelName :: Ident -> LB.LabelName
-paramNameToLabelName (Ident o n) = LB.LabelName o $ distinguishedSymbol:n
+paramNameToLabelName :: LB.Ident -> LB.LabelName
+paramNameToLabelName (LB.Ident o n) = LB.LabelName o $ distinguishedSymbol:n
 
 internalizeName :: String -> String
 internalizeName = (distinguishedSymbol:) . (distinguishedSymbol:)
 
-methodNameToLabelName :: Ident -> LB.LabelName
-methodNameToLabelName (Ident o n) = LB.LabelName o $ internalizeName n
+methodNameToLabelName :: LB.Ident -> LB.LabelName
+methodNameToLabelName (LB.Ident o n) = LB.LabelName o $ internalizeName n
 
 desugarExprLScape :: LB.Expr -> DesugarM LB.Expr
 desugarExprLScape expr =
@@ -346,40 +355,26 @@ desugarExprProjection :: LB.Expr -> DesugarM LB.Expr
 desugarExprProjection expr =
     case expr of
       -- TODO: reconsider origins used in this AST
-        LB.LExprProjection o e1 e2 ->
-            let (LB.TExprVar _ v@(LB.Ident _ n)) = e2 in 
-            return $
-            LB.TExprAppl o
-                (LB.TExprOnion o
-                    (LB.TExprScape o
+        LB.LExprProjection o e i ->
+          let scape = LB.TExprScape o
                         (LB.LabelPattern o
-                            (LB.LabelName o n)
-                            (LB.VariablePattern o v)
+                          (paramNameToLabelName i)
+                          (LB.VariablePattern o i)
                         )
-                        (LB.TExprVar o v)
-                    )
-                    (LB.TExprScape o
-                        (LB.EmptyPattern o)
-                        (LB.TExprScape o
-                            (LB.VariablePattern o (LB.Ident o "arg"))
-                            (LB.TExprAppl o
-                                e1
-                                (LB.TExprOnion o
-                                    (LB.TExprLabelExp o
-                                        (LB.LabelName o "_msg")
-                                        (LB.TExprLabelExp o
-                                            (LB.LabelName o n)
-                                            (LB.TExprValEmptyOnion o)
-                                        )
-                                    )
-                                    (LB.TExprVar o (LB.Ident o "arg"))
-                                )
-                            )
-                        )
-                    )
-                )
-                e1
+                        (LB.TExprVar o i)
+          in
+          return $ LB.TExprAppl o scape e
         _ -> return expr
+
+desugarExprDispatch :: LB.Expr -> DesugarM LB.Expr
+desugarExprDispatch expr =
+  case expr of
+    LB.LExprDispatch o e i args -> do
+      dargs <- desugarArgs args
+      let lblName = methodNameToLabelName i
+      let message = LB.TExprLabelExp (originOf i) lblName dargs
+      return $ LB.TExprAppl o e message
+    _ -> return expr
 
 desugarExprDeref :: LB.Expr -> DesugarM LB.Expr
 desugarExprDeref expr =
@@ -416,19 +411,22 @@ desugarPatList pat =
 --  seal function to the provided expression. 
 seal :: TB.Origin -> LB.Expr -> DesugarM LB.Expr
 seal o e = -- parse this function directly until we have a prelude/stdlib for seal to load from
-    let src = "(f -> (g -> x -> g g x) (h -> y -> f (h h) y)) (seal -> obj -> (msg -> obj (msg & `self (seal obj))) & obj)" in
-    let eitherAst = do -- Either
-            tokens <- lexLittleBang UnknownDocument src
-            parseLittleBang UnknownDocument tokens
-    in
-    case eitherAst of
-      Left msg ->
-        -- This should never happen.
-        -- TODO: generate an appropriate error once DesugarM supports desugaring
-        --       failures.
-        error $ "Failed to parse seal function: " ++ msg
-      Right sealExpr ->
-        return $ LB.TExprAppl o sealExpr e
+  -- generating seal directly until we have a prelude or stdlib to use
+  let src =
+        "(fun body -> (fun wrapper -> fun arg -> wrapper wrapper arg) (fun this -> fun arg -> body (this this) arg)) " ++
+        "(fun seal -> fun obj -> (fun msg -> obj (msg & `self (seal obj))) & obj)" in
+  let eitherAst = do -- Either
+          tokens <- lexTinyBangNested UnknownDocument src
+          parseTinyBangNested UnknownDocument tokens
+  in
+  case eitherAst of
+    Left msg ->
+      -- This should never happen.
+      -- TODO: generate an appropriate error once DesugarM supports desugaring
+      --       failures.
+      error $ "Failed to parse seal function: " ++ msg
+    Right sealExpr ->
+      return $ LB.TExprAppl o (tbnLift sealExpr) e
           
 nextFreshVar :: DesugarM LB.Ident
 nextFreshVar = do
