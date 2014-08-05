@@ -40,6 +40,8 @@ import Language.LittleBang.Syntax.Tokens
   '='           { Token (SomeToken TokIs $$) }
   '('           { Token (SomeToken TokOpenParen $$) }
   ')'           { Token (SomeToken TokCloseParen $$) }
+  '['           { Token (SomeToken TokOpenBracket $$) }
+  ']'           { Token (SomeToken TokCloseBracket $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
   ':'           { Token (SomeToken TokColon $$) }
@@ -85,6 +87,7 @@ Expr :: { SPositional Expr }
   | Expr '&' Expr           { oc2 $1 $> TExprOnion $1 $3 }
   | Expr ';' Expr           { oc2 $1 $> LExprSequence $1 $3 }
   | Expr '::' Expr          { oc2 $1 $> LExprCons $1 $3 }
+  | '[' ExprList ']'        { oc1 $1 $> LExprList $2 }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | PrefixExpr              { $1 }
@@ -102,6 +105,10 @@ PrimaryExpr :: { SPositional Expr }
 InvokableExpr :: { SPositional Expr }
   : Ident                   { oc1 $1 $> TExprVar $1 }
   | '(' Expr ')'            { $2 }
+
+ExprList :: { VPositional [Expr] }
+  : manySepOpt( Expr , ',' )
+                            { $1 }
 
 Ident :: { SPositional Ident }
   : ident                   { oc1 $1 $> Ident $1 }
@@ -123,6 +130,7 @@ Param :: { SPositional Param }
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }
 
 PrimaryPattern :: {SPositional Pattern }
@@ -135,6 +143,10 @@ PrimaryPattern :: {SPositional Pattern }
 
 PrimitiveType :: { SPositional PrimitiveType }
   : 'int'                   { PrimInt `at` $1  }
+
+PatternList :: { VPositional [Pattern] }
+  : manySepOpt( Pattern , ',' )
+                            { $1 }
 
 ArgList :: { VPositional [Arg] }
   : manySepOpt( Arg , ',' ) { $1 }
