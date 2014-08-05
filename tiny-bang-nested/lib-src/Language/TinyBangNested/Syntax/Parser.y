@@ -72,7 +72,7 @@ Expr :: { SPositional Expr }
   | ApplExpr                { $1 }
 
 ApplExpr :: { SPositional Expr }
-  : PrefixExpr ApplExpr     { oc2 $1 $> ExprAppl $1 $2 }
+  : ApplExpr PrefixExpr     { oc2 $1 $> ExprAppl $1 $2 }
   | PrefixExpr              { $1 }
 
 PrefixExpr :: { SPositional Expr }
