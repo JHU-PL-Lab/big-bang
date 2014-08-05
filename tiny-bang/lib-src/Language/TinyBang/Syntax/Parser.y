@@ -49,10 +49,10 @@ Expr
   : Clauses                 { oc1 $1 $> Expr $1 }
 
 Clauses
-  : many1(Clause)           { $1 }
+  : many1SepOpt(Clause,';') { $1 }
 
 Clause
-  : Var '=' Redex ';'       { oc2 $1 $> Clause $1 $3 }
+  : Var '=' Redex           { oc2 $1 $> Clause $1 $3 }
 
 Redex
   : Var Var                 { oc2 $1 $> Appl $1 $2 }
@@ -79,7 +79,8 @@ Pattern
   : PatternClauses          { oc1 $1 $> Pattern $1 }
 
 PatternClauses
-  : many1(PatternClause)    { $1 }
+  : many1SepOpt(PatternClause, ';')
+                            { $1 }
   
 PatternClause
   : Var '=' PatternValue    { oc2 $1 $> PatternClause $1 $3 }
@@ -109,6 +110,11 @@ BuiltinOp
   | '<-'                    { posOver $1 $> OpSet }
 
 -- Generalizations of common grammar patterns.
+
+many1SepOpt(p,s)
+  : p                       { fmap (:[]) $1 }
+  | p s                     { posOver $1 $2 $ [posData $1] }
+  | p s many1SepOpt(p,s)    { posOver $1 $3 $ posData $1 : posData $3 }
 
 many1(p)
   : p                       { fmap (:[]) $1 }
