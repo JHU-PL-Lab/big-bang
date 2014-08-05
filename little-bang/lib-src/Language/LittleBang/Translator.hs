@@ -250,13 +250,52 @@ desugarExprList expr =
                 <$> return (LB.TExprLabelExp o (LB.LabelName o "Hd") e)
                 <*> (LB.TExprLabelExp o <$> (LB.LabelName o <$> return "Tl") <*> toHTList o t)
 
+-- Assumption: cons is used only on valid lists.
+-- This allows for simple, non-recursive pattern-matching
+-- to detect whether e2 is a list.
 desugarExprCons :: LB.Expr -> DesugarM LB.Expr
 desugarExprCons expr =
   case expr of
     LB.LExprCons o e1 e2 -> return $
-                             LB.TExprOnion o
-                               (LB.TExprLabelExp o (LB.LabelName o "Hd") e1)
-                               (LB.TExprLabelExp o (LB.LabelName o "Tl") e2)
+      LB.TExprAppl o
+        (LB.TExprAppl o
+          (LB.TExprScape o
+            (LB.VariablePattern o (LB.Ident o "h"))
+            (LB.TExprOnion o
+              (LB.TExprScape o -- `Hd _ & `Tl _ & t -> `Hd h & `Tl t
+                (LB.ConjunctionPattern o
+                  (LB.ConjunctionPattern o
+                    (LB.LabelPattern o (LB.LabelName o "Hd") 
+                      (LB.VariablePattern o (LB.Ident o "_")))
+                    (LB.LabelPattern o (LB.LabelName o "Tl") 
+                      (LB.VariablePattern o (LB.Ident o "_")))
+                  )
+                  (LB.VariablePattern o (LB.Ident o "t"))
+                )
+                (LB.TExprOnion o
+                  (LB.TExprLabelExp o (LB.LabelName o "Hd") 
+                    (LB.TExprVar o (LB.Ident o "h")))
+                  (LB.TExprLabelExp o (LB.LabelName o "Tl") 
+                    (LB.TExprVar o (LB.Ident o "t")))
+                )
+              )
+              (LB.TExprScape o -- `Nil _ -> `Hd h & `Tl `Nil ()
+                (LB.LabelPattern o (LB.LabelName o "Nil") 
+                  (LB.VariablePattern o (LB.Ident o "_")))
+                (LB.TExprOnion o
+                  (LB.TExprLabelExp o (LB.LabelName o "Hd") 
+                    (LB.TExprVar o (LB.Ident o "h")))
+                  (LB.TExprLabelExp o (LB.LabelName o "Tl") 
+                    (LB.TExprLabelExp o (LB.LabelName o "Nil") 
+                      (LB.TExprValEmptyOnion o))
+                  )
+                )    
+              )
+            )
+          )
+          e1
+        )
+        e2                               
     _ -> return expr
 
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
