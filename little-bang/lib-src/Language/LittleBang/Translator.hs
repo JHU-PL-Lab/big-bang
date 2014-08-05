@@ -102,7 +102,7 @@ walkExprTree expr = do
                                     >>= f
                                     
     LB.TExprRef o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
-    LB.LExprDeref o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
+    LB.LExprDeref o e -> (LB.LExprDeref o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
     LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
     LB.TExprValEmptyOnion o -> f (LB.TExprValEmptyOnion o)
