@@ -130,6 +130,7 @@ Param :: { SPositional Param }
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }
 
 PrimaryPattern :: {SPositional Pattern }
@@ -142,6 +143,10 @@ PrimaryPattern :: {SPositional Pattern }
 
 PrimitiveType :: { SPositional PrimitiveType }
   : 'int'                   { PrimInt `at` $1  }
+
+PatternList :: { VPositional [Pattern] }
+  : manySepOpt( Pattern , ',' )
+                            { $1 }
 
 ArgList :: { VPositional [Arg] }
   : manySepOpt( Arg , ',' ) { $1 }
