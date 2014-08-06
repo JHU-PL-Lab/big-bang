@@ -91,7 +91,7 @@ Expr :: { SPositional Expr }
   | Expr '<-' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpSet `oat` $2) $3 }
   | Expr '&' Expr           { oc2 $1 $> TExprOnion $1 $3 }
   | Expr ';' Expr           { oc3 $1 $> LExprBinaryOp $1 (LB.OpSeq `oat` $2) $3 }
-  | Expr '::' Expr          { oc2 $1 $> LExprCons $1 $3 }
+  | Expr '::' Expr          { oc3 $1 $> LExprBinaryOp $1 (LB.OpCons `oat` $2) $3 }
   | '[' ExprList ']'        { oc1 $1 $> LExprList $2 }
   | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
   | 'object' '{' ObjTermList '}'

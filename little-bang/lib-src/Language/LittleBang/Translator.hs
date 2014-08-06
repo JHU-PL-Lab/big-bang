@@ -36,7 +36,6 @@ desugarLittleBang expr =
     exprDesugarers =
       [ desugarExprIf
       , desugarExprObject
-      , desugarExprSeq
       , desugarExprList
       , desugarExprRecord
       , desugarExprProjection
@@ -44,7 +43,7 @@ desugarLittleBang expr =
       , desugarExprLScape
       , desugarExprLAppl
       , desugarExprDeref
-      , desugarExprCons
+      , desugarLExprBinaryOp
       ]
     patDesugarers :: [DesugarFunction LB.Pattern]
     patDesugarers =
@@ -134,10 +133,6 @@ walkExprTree expr = do
     LB.LExprList o e -> (LB.LExprList o
                                     <$> mapM walkExprTree e)
                                     >>= f
-    LB.LExprCons o e1 e2 -> (LB.LExprCons o 
-                                    <$> walkExprTree e1
-                                    <*> walkExprTree e2)
-                                    >>= f
     LB.LExprRecord o args -> (LB.LExprRecord o
                                     <$> mapM walkArgTree args)
                                     >>= f
@@ -225,8 +220,20 @@ desugarExprIf expr =
         (return e1)    
     _ -> return expr
 
-desugarExprSeq :: LB.Expr -> DesugarM LB.Expr -- TODO: after adding OpCons, rename to desugarLExprBinaryOp
-desugarExprSeq expr =
+desugarLExprBinaryOp :: LB.Expr -> DesugarM LB.Expr
+desugarLExprBinaryOp expr =
+  case expr of
+    LB.LExprBinaryOp o e1 op e2 ->
+      case op of
+        LB.OpSeq o ->
+          desugarExprSequence expr
+        LB.OpCons o ->
+          desugarExprCons expr
+        _ -> return expr
+    _ -> return expr
+
+desugarExprSequence :: LB.Expr -> DesugarM LB.Expr
+desugarExprSequence expr =
   case expr of
     LB.LExprBinaryOp o e1 op e2 ->
       case op of
@@ -238,7 +245,7 @@ desugarExprSeq expr =
             (LB.TExprLabelExp o <$>
               return (LB.LabelName o "Seq") <*>
               return e1)
-        _ -> return expr -- TODO: check for OpCons
+        _ -> return expr
     _ -> return expr
 
 desugarExprList :: LB.Expr -> DesugarM LB.Expr
@@ -260,46 +267,49 @@ desugarExprList expr =
 desugarExprCons :: LB.Expr -> DesugarM LB.Expr
 desugarExprCons expr =
   case expr of
-    LB.LExprCons o e1 e2 -> return $
-      LB.TExprAppl o
-        (LB.TExprAppl o
-          (LB.TExprScape o
-            (LB.VariablePattern o (LB.Ident o "h"))
-            (LB.TExprOnion o
-              (LB.TExprScape o -- `Hd _ & `Tl _ & t -> `Hd h & `Tl t
-                (LB.ConjunctionPattern o
-                  (LB.ConjunctionPattern o
-                    (LB.LabelPattern o (LB.LabelName o "Hd") 
-                      (LB.VariablePattern o (LB.Ident o "_")))
-                    (LB.LabelPattern o (LB.LabelName o "Tl") 
-                      (LB.VariablePattern o (LB.Ident o "_")))
-                  )
-                  (LB.VariablePattern o (LB.Ident o "t"))
-                )
+    LB.LExprBinaryOp o e1 op e2 -> return $
+      case op of
+        LB.OpCons o ->
+          LB.TExprAppl o
+            (LB.TExprAppl o
+              (LB.TExprScape o
+                (LB.VariablePattern o (LB.Ident o "h"))
                 (LB.TExprOnion o
-                  (LB.TExprLabelExp o (LB.LabelName o "Hd") 
-                    (LB.TExprVar o (LB.Ident o "h")))
-                  (LB.TExprLabelExp o (LB.LabelName o "Tl") 
-                    (LB.TExprVar o (LB.Ident o "t")))
+                  (LB.TExprScape o -- `Hd _ & `Tl _ & t -> `Hd h & `Tl t
+                    (LB.ConjunctionPattern o
+                      (LB.ConjunctionPattern o
+                        (LB.LabelPattern o (LB.LabelName o "Hd") 
+                          (LB.VariablePattern o (LB.Ident o "_")))
+                        (LB.LabelPattern o (LB.LabelName o "Tl") 
+                          (LB.VariablePattern o (LB.Ident o "_")))
+                      )
+                      (LB.VariablePattern o (LB.Ident o "t"))
+                    )
+                    (LB.TExprOnion o
+                      (LB.TExprLabelExp o (LB.LabelName o "Hd") 
+                        (LB.TExprVar o (LB.Ident o "h")))
+                      (LB.TExprLabelExp o (LB.LabelName o "Tl") 
+                        (LB.TExprVar o (LB.Ident o "t")))
+                    )
+                  )
+                  (LB.TExprScape o -- `Nil _ -> `Hd h & `Tl `Nil ()
+                    (LB.LabelPattern o (LB.LabelName o "Nil") 
+                      (LB.VariablePattern o (LB.Ident o "_")))
+                    (LB.TExprOnion o
+                      (LB.TExprLabelExp o (LB.LabelName o "Hd") 
+                        (LB.TExprVar o (LB.Ident o "h")))
+                      (LB.TExprLabelExp o (LB.LabelName o "Tl") 
+                        (LB.TExprLabelExp o (LB.LabelName o "Nil") 
+                          (LB.TExprValEmptyOnion o))
+                      )
+                    )    
+                  )
                 )
               )
-              (LB.TExprScape o -- `Nil _ -> `Hd h & `Tl `Nil ()
-                (LB.LabelPattern o (LB.LabelName o "Nil") 
-                  (LB.VariablePattern o (LB.Ident o "_")))
-                (LB.TExprOnion o
-                  (LB.TExprLabelExp o (LB.LabelName o "Hd") 
-                    (LB.TExprVar o (LB.Ident o "h")))
-                  (LB.TExprLabelExp o (LB.LabelName o "Tl") 
-                    (LB.TExprLabelExp o (LB.LabelName o "Nil") 
-                      (LB.TExprValEmptyOnion o))
-                  )
-                )    
-              )
+              e1
             )
-          )
-          e1
-        )
-        e2                               
+            e2
+        _ -> expr                               
     _ -> return expr
 
 desugarExprRecord :: LB.Expr -> DesugarM LB.Expr
