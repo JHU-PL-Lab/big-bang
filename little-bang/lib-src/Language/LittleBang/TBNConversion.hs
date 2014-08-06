@@ -32,7 +32,7 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.TExprScape o outerPattern e -> TBN.ExprScape o 
                                     <$> toTBN outerPattern 
                                     <*> toTBN e
-                                    
+                                   
     LB.TExprBinaryOp o e1 op e2 -> TBN.ExprBinaryOp o 
                                     <$> toTBN e1 
                                     <*> toTBN op
@@ -73,14 +73,18 @@ instance TBNConvertible LB.Pattern TBN.Pattern where
     _ -> error $ "Cannot TBN convert: " ++ display pattern -- TODO: get a correct failure mode
 
 -- | Convert a LittleBang binary operator to a TinyBang Nested binary operator      
-instance TBNConvertible LB.BinaryOperator TBN.BinaryOperator where
+
+instance TBNConvertible TBN.BinaryOperator TBN.BinaryOperator where
   toTBN binaryOperator = return $ case binaryOperator of
+    _ -> binaryOperator -- TODO: try to get rid of this function call
+{-
         LB.OpIntPlus o -> TBN.OpIntPlus o
         LB.OpIntMinus o -> TBN.OpIntMinus o
         LB.OpIntEq o -> TBN.OpIntEq o 
         LB.OpIntGreaterEq o -> TBN.OpIntGreaterEq o
         LB.OpIntLessEq o -> TBN.OpIntLessEq o
         LB.OpSet o -> TBN.OpSet o
+-}
 
 -- | Convert a LittleBang primitive to a TinyBang Nested primitive         
 instance TBNConvertible LB.PrimitiveType TBN.PrimitiveType where

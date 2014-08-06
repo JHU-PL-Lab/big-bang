@@ -18,6 +18,7 @@ import Control.Applicative
 import Language.TinyBang.Ast.Origin
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.TemplateHaskell.Deriving
+import qualified Language.TinyBangNested.Ast as TBN
 
 -- | AST structure for LittleBang.  This AST includes nodes for each of the
 --   TinyBangNested AST nodes so that it may be used as both the source and
@@ -26,7 +27,7 @@ data Expr
   -- Constructors representing TBN nodes
   = TExprLet Origin Ident Expr Expr
   | TExprScape Origin Pattern Expr
-  | TExprBinaryOp Origin Expr BinaryOperator Expr
+  | TExprBinaryOp Origin Expr TBN.BinaryOperator Expr
   | TExprOnion Origin Expr Expr
   | TExprAppl Origin Expr Expr
   | TExprLabelExp Origin LabelName Expr -- TODO: rename
@@ -36,6 +37,7 @@ data Expr
   | TExprValEmptyOnion Origin 
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
+  | LExprBinaryOp Origin Expr BinaryOperator Expr
   | LExprAppl Origin Expr [Arg]
   | LExprCondition Origin Expr Expr Expr
   | LExprSequence Origin Expr Expr -- TODO: shouldn't this just be a binop?
@@ -49,12 +51,8 @@ data Expr
   deriving (Show)
 
 data BinaryOperator
-  = OpIntPlus Origin
-  | OpIntMinus Origin
-  | OpIntEq Origin 
-  | OpIntGreaterEq Origin
-  | OpIntLessEq Origin
-  | OpSet Origin
+  = OpSeq Origin
+  | OpCons Origin
   deriving (Show)
 
 data Param
@@ -131,6 +129,7 @@ instance HasOrigin Expr where
     TExprValInt orig _ -> orig
     TExprValEmptyOnion orig -> orig
     LExprScape orig _ _ -> orig
+    LExprBinaryOp orig _ _ _ -> orig
     LExprAppl orig _ _ -> orig
     LExprCondition orig _ _ _ -> orig
     LExprSequence orig _ _ -> orig
@@ -180,6 +179,7 @@ instance Display Expr where
    TExprValInt _ i -> text $ show i
    TExprValEmptyOnion _ -> text "()"
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
+   LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)
    LExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                 makeDoc e2 <+> text "else" <+> makeDoc e3
@@ -197,12 +197,8 @@ instance Display Expr where
 
 instance Display BinaryOperator where
   makeDoc x = case x of
-   OpIntPlus _ -> text "+"
-   OpIntMinus _ -> text "-"
-   OpIntEq _ -> text "=="
-   OpIntGreaterEq _ -> text ">="
-   OpIntLessEq _ -> text "<="
-   OpSet _ -> text "<-"
+   OpSeq _ -> text ";"
+   OpCons _ -> text "::"
 
 instance Display Param where
   makeDoc param = case param of

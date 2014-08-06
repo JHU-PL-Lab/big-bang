@@ -12,8 +12,9 @@ import Data.Maybe
 
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Syntax 
-import Language.LittleBang.Ast
 import Language.LittleBang.Syntax.Tokens
+import Language.LittleBang.Ast as LB
+import qualified Language.TinyBangNested.Ast as TBN
 }
 
 %name parseTokens
@@ -82,15 +83,15 @@ Expr :: { SPositional Expr }
                             { oc2 $1 $> LExprScape $2 $4 }
   | 'if' Expr 'then' Expr 'else' Expr
                             { oc3 $1 $> LExprCondition $2 $4 $6 }
-  | Expr '+' Expr           { oc3 $1 $> TExprBinaryOp $1 (OpIntPlus `oat` $2) $3 }
-  | Expr '-' Expr           { oc3 $1 $> TExprBinaryOp $1 (OpIntMinus `oat` $2) $3 }
-  | Expr '==' Expr          { oc3 $1 $> TExprBinaryOp $1 (OpIntEq `oat` $2) $3 }
-  | Expr '>=' Expr          { oc3 $1 $> TExprBinaryOp $1 (OpIntGreaterEq `oat` $2) $3 }
-  | Expr '<=' Expr          { oc3 $1 $> TExprBinaryOp $1 (OpIntLessEq `oat` $2) $3 }
-  | Expr '<-' Expr          { oc3 $1 $> TExprBinaryOp $1 (OpSet `oat` $2) $3 }
+  | Expr '+' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntPlus `oat` $2) $3 }
+  | Expr '-' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntMinus `oat` $2) $3 }
+  | Expr '==' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntEq `oat` $2) $3 }
+  | Expr '>=' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntGreaterEq `oat` $2) $3 }
+  | Expr '<=' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntLessEq `oat` $2) $3 }
+  | Expr '<-' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpSet `oat` $2) $3 }
   | Expr '&' Expr           { oc2 $1 $> TExprOnion $1 $3 }
-  | Expr ';' Expr           { oc2 $1 $> LExprSequence $1 $3 }
-  | Expr '::' Expr          { oc2 $1 $> LExprCons $1 $3 }
+  | Expr ';' Expr           { oc3 $1 $> LExprBinaryOp $1 (LB.OpSeq `oat` $2) $3 }
+  | Expr '::' Expr          { oc3 $1 $> LExprBinaryOp $1 (LB.OpCons `oat` $2) $3 }
   | '[' ExprList ']'        { oc1 $1 $> LExprList $2 }
   | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
   | 'object' '{' ObjTermList '}'
