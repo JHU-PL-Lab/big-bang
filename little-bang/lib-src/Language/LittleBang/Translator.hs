@@ -126,8 +126,9 @@ walkExprTree expr = do
                                     <*> walkExprTree e2
                                     <*> walkExprTree e3)
                                     >>= f
-    LB.LExprSequence o e1 e2 -> (LB.LExprSequence o
+    LB.LExprBinaryOp o e1 op e2 -> (LB.LExprBinaryOp o
                                     <$> walkExprTree e1
+                                    <*> return op
                                     <*> walkExprTree e2)
                                     >>= f
     LB.LExprList o e -> (LB.LExprList o
@@ -224,17 +225,20 @@ desugarExprIf expr =
         (return e1)    
     _ -> return expr
 
-desugarExprSeq :: LB.Expr -> DesugarM LB.Expr
+desugarExprSeq :: LB.Expr -> DesugarM LB.Expr -- TODO: after adding OpCons, rename to desugarLExprBinaryOp
 desugarExprSeq expr =
   case expr of
-    LB.LExprSequence o e1 e2 -> 
-      LB.TExprAppl o <$>
-        (LB.TExprScape o
-          (LB.LabelPattern o (LB.LabelName o "Seq") (LB.EmptyPattern o))
-          <$> return e2) <*>
-        (LB.TExprLabelExp o <$>
-          return (LB.LabelName o "Seq") <*>
-          return e1)
+    LB.LExprBinaryOp o e1 op e2 ->
+      case op of
+        LB.OpSeq o ->
+          LB.TExprAppl o <$>
+            (LB.TExprScape o
+              (LB.LabelPattern o (LB.LabelName o "Seq") (LB.EmptyPattern o))
+              <$> return e2) <*>
+            (LB.TExprLabelExp o <$>
+              return (LB.LabelName o "Seq") <*>
+              return e1)
+        _ -> return expr -- TODO: check for OpCons
     _ -> return expr
 
 desugarExprList :: LB.Expr -> DesugarM LB.Expr

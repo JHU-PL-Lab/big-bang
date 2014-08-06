@@ -41,15 +41,17 @@ instance TBNLiftable TBN.LabelName LB.LabelName where
 instance TBNLiftable TBN.Ident LB.Ident where
   tbnLift (TBN.Ident o s) = LB.Ident o s
   
-instance TBNLiftable TBN.BinaryOperator LB.BinaryOperator where
+instance TBNLiftable TBN.BinaryOperator TBN.BinaryOperator where -- TODO: remove call to this function if possible.
   tbnLift op = case op of
+    _ -> op
+{-
     TBN.OpIntPlus o -> LB.OpIntPlus o
     TBN.OpIntMinus o -> LB.OpIntMinus o
     TBN.OpIntEq o -> LB.OpIntEq o
     TBN.OpIntGreaterEq o -> LB.OpIntGreaterEq o
     TBN.OpIntLessEq o -> LB.OpIntLessEq o
     TBN.OpSet o -> LB.OpSet o
-
+-}
 instance TBNLiftable TBN.PrimitiveType LB.PrimitiveType where
   tbnLift pt = case pt of
     TBN.PrimInt -> LB.PrimInt
