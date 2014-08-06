@@ -23,6 +23,7 @@ data TokenType a where
   TokIf :: TokenType () -- @if@
   TokThen :: TokenType () -- @then@
   TokElse :: TokenType () -- @else@
+  TokObject :: TokenType () -- @object@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
   TokEq :: TokenType () -- @==@
@@ -34,9 +35,12 @@ data TokenType a where
   TokCloseParen :: TokenType () -- @)@
   TokOpenBracket :: TokenType () -- @[@
   TokCloseBracket :: TokenType () -- @]@
+  TokOpenBrace :: TokenType () -- @{@
+  TokCloseBrace :: TokenType () -- @}@
   TokComma :: TokenType () -- @,@
   TokColon :: TokenType () -- @:@
   TokSemi :: TokenType () -- @;@
+  TokDot :: TokenType () -- @.@
   TokRef :: TokenType () -- @ref@
   TokEmptyOnion :: TokenType () -- @()@
   TokInt :: TokenType () -- @int@  
@@ -57,6 +61,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokIf _) -> dquotes $ text "if"
     Token (SomeToken TokThen _) -> dquotes $ text "then"
     Token (SomeToken TokElse _) -> dquotes $ text "else"
+    Token (SomeToken TokObject _) -> dquotes $ text "object"
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
     Token (SomeToken TokEq _) -> text "=="
@@ -68,6 +73,8 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokCloseParen _) -> dquotes $ text ")"
     Token (SomeToken TokOpenBracket _) -> dquotes $ text "["
     Token (SomeToken TokCloseBracket _) -> dquotes $ text "]"
+    Token (SomeToken TokOpenBrace _) -> dquotes $ text "{"
+    Token (SomeToken TokCloseBrace _) -> dquotes $ text "}"
     Token (SomeToken TokComma _) -> dquotes $ text ","
     Token (SomeToken TokColon _) -> dquotes $ text ":"
     Token (SomeToken TokSemi _) -> dquotes $ text ";"
@@ -79,6 +86,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokDeref _) -> text "!"
     Token (SomeToken TokCons _) -> text "::"
+    Token (SomeToken TokDot _) -> text "."
 
 instance Display Token where
   makeDoc = tokenPayloadDoc

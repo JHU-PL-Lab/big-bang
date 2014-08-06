@@ -33,6 +33,7 @@ tokens :-
   else                         { simply TokElse }
   int                          { simply TokInt }
   ref                          { simply TokRef }
+  object                       { simply TokObject }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }
@@ -45,6 +46,8 @@ tokens :-
   ")"                          { simply TokCloseParen }
   "["                          { simply TokOpenBracket }
   "]"                          { simply TokCloseBracket }
+  "{"                          { simply TokOpenBrace }
+  "}"                          { simply TokCloseBrace }
   "+"                          { simply TokPlus }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
@@ -64,6 +67,7 @@ tokens :-
   ":"                          { simply TokColon }
   ";"                          { simply TokSemi }
   "!"                          { simply TokDeref }
+  "."                          { simply TokDot }
 
 {
 

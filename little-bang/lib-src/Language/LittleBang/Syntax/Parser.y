@@ -31,6 +31,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   'if'          { Token (SomeToken TokIf $$) }
   'then'        { Token (SomeToken TokThen $$) }
   'else'        { Token (SomeToken TokElse $$) }
+  'object'      { Token (SomeToken TokObject $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -43,6 +44,8 @@ import qualified Language.TinyBangNested.Ast as TBN
   ')'           { Token (SomeToken TokCloseParen $$) }
   '['           { Token (SomeToken TokOpenBracket $$) }
   ']'           { Token (SomeToken TokCloseBracket $$) }
+  '{'           { Token (SomeToken TokOpenBrace $$) }
+  '}'           { Token (SomeToken TokCloseBrace $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
   ':'           { Token (SomeToken TokColon $$) }
@@ -53,6 +56,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   litint        { Token (SomeToken TokLitInt $$) }
   '::'          { Token (SomeToken TokCons $$) }
   '!'           { Token (SomeToken TokDeref $$) }
+  '.'           { Token (SomeToken TokDot $$) }
 
 %left LAM
 %right 'in'
@@ -89,6 +93,9 @@ Expr :: { SPositional Expr }
   | Expr ';' Expr           { oc2 $1 $> LExprSequence $1 $3 }
   | Expr '::' Expr          { oc2 $1 $> LExprCons $1 $3 }
   | '[' ExprList ']'        { oc1 $1 $> LExprList $2 }
+  | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
+  | 'object' '{' ObjTermList '}'
+                            { oc1 $1 $> LExprObject $3 }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | PrefixExpr              { $1 }
@@ -102,6 +109,9 @@ PrefixExpr :: { SPositional Expr }
 PrimaryExpr :: { SPositional Expr }
   : LiteralExpr             { $1 }
   | InvokableExpr           { $1 }
+  | PrimaryExpr '.' Ident   { oc2 $1 $> LExprProjection $1 $3 }
+  | PrimaryExpr '.' Ident '(' ArgList ')'
+                            { oc3 $1 $> LExprDispatch $1 $3 $5 }
 
 InvokableExpr :: { SPositional Expr }
   : Ident                   { oc1 $1 $> TExprVar $1 }
@@ -156,11 +166,26 @@ Arg :: { SPositional Arg }
   : Expr                    { oc1 $1 $> PositionalArg $1 }
   | Ident '=' Expr          { oc2 $1 $> NamedArg $1 $3 }
 
+ObjTermList :: { VPositional [ObjectTerm] }
+  : many( ObjTerm )         { $1 }
+
+ObjTerm :: { SPositional ObjectTerm }
+  : Ident '(' ParamList ')' '=' Expr
+                            { oc3 $1 $> ObjectMethod $1 $3 $6 }
+  | Ident '=' Expr          { oc2 $1 $> ObjectField $1 $3 }
+
 -- Generalizations of common grammar patterns.
 
 maybe(p)
   : p                       { Just $1 }
   | {- epsilon -}           { Nothing }
+
+many(p)
+  : maybe(many1(p))         { maybe (vpos []) forgetSpan $1 }
+
+many1(p)
+  : p                       { fmap (:[]) $1 }
+  | p many1(p)              { posOver $1 $> $ posData $1 : posData $2 }
 
 manySepOpt(p,s)
   : maybe(many1SepOpt(p,s)) { maybe (vpos []) forgetSpan $1 }        
