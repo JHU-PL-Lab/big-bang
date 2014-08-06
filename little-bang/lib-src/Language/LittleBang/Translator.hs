@@ -318,12 +318,12 @@ desugarExprObject expr =
       LB.ObjectMethod o n params e -> do
         pat <- desugarParams params
         let orig = TB.ComputedOrigin [o]
-        let selfPat = LB.LabelPattern orig
-                        (LB.LabelName orig $ internalizeName "self")
-                        (LB.VariablePattern orig $ LB.Ident orig "self")
-        let msgPat = LB.LabelPattern orig
-                        (methodNameToLabelName n) $
-                          conjoinPatterns pat selfPat
+        let tagPat = LB.LabelPattern orig methodTagLabelName $
+                        LB.LabelPattern orig (methodNameToLabelName n) $
+                          LB.EmptyPattern orig
+        let selfPat = LB.LabelPattern orig selfLabelName $
+                        LB.VariablePattern orig $ LB.Ident orig "self"
+        let msgPat = conjoinPatternList [pat,tagPat,selfPat]
         return $ LB.TExprScape o msgPat e
       LB.ObjectField o n e ->
         return $ LB.TExprLabelExp o (paramNameToLabelName n) e
@@ -366,13 +366,26 @@ distinguishedSymbol :: Char
 distinguishedSymbol = '$'
 
 paramNameToLabelName :: LB.Ident -> LB.LabelName
-paramNameToLabelName (LB.Ident o n) = LB.LabelName o $ distinguishedSymbol:n
-
-internalizeName :: String -> String
-internalizeName = (distinguishedSymbol:) . (distinguishedSymbol:)
+paramNameToLabelName (LB.Ident o n) =
+  LB.LabelName o $ userSpecifiedInternalName n
 
 methodNameToLabelName :: LB.Ident -> LB.LabelName
-methodNameToLabelName (LB.Ident o n) = LB.LabelName o $ internalizeName n
+methodNameToLabelName (LB.Ident o n) =
+  LB.LabelName o $ userSpecifiedInternalName n
+
+userSpecifiedInternalName :: String -> String
+userSpecifiedInternalName = (distinguishedSymbol:)
+
+systemInternalName :: String -> String
+systemInternalName = (distinguishedSymbol:) . (distinguishedSymbol:)
+
+methodTagLabelName :: LB.LabelName
+methodTagLabelName = LB.LabelName generated $ systemInternalName "msg"
+
+selfLabelName :: LB.LabelName
+-- TODO: currently avoiding $$self because TinyBangNested parser for seal can't
+--       handle it.
+selfLabelName = LB.LabelName generated "self"
 
 desugarExprLScape :: LB.Expr -> DesugarM LB.Expr
 desugarExprLScape expr =
@@ -410,8 +423,10 @@ desugarExprDispatch expr =
   case expr of
     LB.LExprDispatch o e i args -> do
       dargs <- desugarArgs args
-      let lblName = methodNameToLabelName i
-      let message = LB.TExprLabelExp (originOf i) lblName dargs
+      let msgTag =  LB.TExprLabelExp (originOf i) methodTagLabelName $
+                      LB.TExprLabelExp (originOf i) (methodNameToLabelName i) $
+                        LB.TExprValEmptyOnion (originOf i)
+      let message = LB.TExprOnion o msgTag dargs 
       return $ LB.TExprAppl o e message
     _ -> return expr
 
