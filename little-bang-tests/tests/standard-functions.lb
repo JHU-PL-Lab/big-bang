@@ -1,0 +1,197 @@
+# TODO: turn typechecking off to avoid performance delay while necessary.
+
+
+let Common = 
+  object {
+    # a1: list
+    # a2: list  
+    append(a1, a2) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> head :: (self.append(a1=tail, a2=arg2))) &
+         (fun arg1:(`Nil ()),         arg2 -> arg2))
+      in f(arg1=a1, arg2=a2)
+
+    #TODO: convert into LittleBang unary operator "not"
+    # a1: boolean
+    negate(a1) =
+      let f = 
+        ((fun arg1:(`True ())  -> `False ()) &
+         (fun arg1:(`False ()) -> `True ()))
+      in f(arg1=a1)
+
+    #TODO: convert into LittleBang binary operator "and"
+    # a1: boolean
+    # a2: boolean
+    areBothTrue(a1, a2) =
+      let f = 
+        ((fun arg1:(`True ()), arg2  -> if arg2 then `True () else `False ()) &
+         (fun arg1:(`False ()), arg2 -> `False ()))
+      in f(arg1=a1, arg2=a2)
+
+    #TODO: convert into LittleBang binary operator "or"
+    # a1: boolean
+    # a2: boolean
+    isOneTrue(a1, a2) =
+      let f = 
+        ((fun arg1:(`True ()), arg2  -> `True ()) &
+         (fun arg1:(`False ()), arg2 -> arg2))
+      in f(arg1=a1, arg2=a2)
+
+    #TODO: convert into LittleBang binary operator "<"
+    isLessThan(a1:int, a2:int) =
+      let b1 = (a1 >= a2) in
+      if self.negate(a1=b1) then `True ()
+      else `False ()
+
+    #TODO: convert into LittleBang binary operator ">"
+    isGreaterThan(a1:int, a2:int) =
+      let b1 = (a1 <= a2) in
+      if self.negate(a1=b1) then `True ()
+      else `False ()
+
+  } in 
+
+
+let LinkedList =
+  object {
+    # a1: list
+    getLength(a1) =
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail) -> 1 + (self.getLength(a1=tail))) &
+         (fun arg1:(`Nil ())         -> 0))
+      in f(arg1=a1)
+
+    # a1: list
+    getHead(a1) =
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail) -> head) &
+         (fun arg1:(`Nil ())         -> `Failure ()))
+      in f(arg1=a1)
+
+    # a1: list
+    getTail(a1) =
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail) -> tail) &
+         (fun arg1:(`Nil ())         -> `Failure ()))
+      in f(arg1=a1)
+
+    # a1: list
+    getElement(a1, a2:int) =
+      if Common.isLessThan(a1=a2, a2=0) then `Failure ()
+      else 
+        let f = 
+          ((fun arg1:(`Hd head & `Tl tail) -> 
+              if a2 == 0 then head
+              else self.getElement(a1=tail, a2=a2 - 1)
+          ) &
+           (fun arg1:(`Nil ())         -> `Failure ()))
+        in f(arg1=a1)
+
+    # a1: list
+    flatten(a1) =
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail) -> Common.append(a1=head, a2=(self.flatten(a1=tail)))) &
+         (fun arg1:(`Nil ())             -> arg1))
+      in f(arg1=a1)      
+
+    # a1: list
+    # a2: fun
+    map(a1, a2) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> (arg2(a1=head)) :: (self.map(a1=tail, a2=arg2))) &
+         (fun arg1:(`Nil ()),             arg2 -> arg1))
+      in f(arg1=a1, arg2=a2)
+
+    # a1: list
+    # a2: fun
+    iterate(a1, a2) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> arg2(a1=head); self.map(a1=tail, a2=arg2)) &
+         (fun arg1:(`Nil ()),             arg2 -> ()))
+      in f(arg1=a1, arg2=a2)
+
+    # a1: list
+    # a2: fun
+    foldLeft(a1, a2, a3:int) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2, arg3 -> self.foldLeft(a1=tail, a2=arg2, a3=arg2(a1=head, a2=arg3))) &
+         (fun arg1:(`Nil ()),             arg2, arg3 -> arg3))
+      in f(arg1=a1, arg2=a2, arg3=a3)
+
+    # a1: list
+    # a2: fun
+    foldRight(a1, a2, a3:int) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2, arg3 -> arg2(a1=head, a2=self.foldRight(a1=tail, a2=arg2, a3=arg3))) &
+         (fun arg1:(`Nil ()),             arg2, arg3 -> arg3))
+      in f(arg1=a1, arg2=a2, arg3=a3)
+
+    # a1: list
+    # a2: fun
+    isTrueForAll(a1, a2) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> Common.areBothTrue(a1=arg2(a1=head), a2=self.isTrueForAll(a1=tail, a2=arg2))) &
+         (fun arg1:(`Nil ()),             arg2 -> `True ()))
+      in f(arg1=a1, arg2=a2)
+
+    # a1: list
+    # a2: fun
+    isTrueForOne(a1, a2) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> 
+            if arg2(a1=head) then `True ()
+            else self.isTrueForOne(a1=tail, a2=arg2)) &
+         (fun arg1:(`Nil ()),             arg2 -> `False ()))
+      in f(arg1=a1, arg2=a2)
+
+    # TODO: make more general (e.g. beyond int)
+    # a1: list
+    containsInt(a1, a2:int) = 
+      let f = 
+        ((fun arg1:(`Hd head & `Tl tail), arg2 -> 
+            if head == arg2 then `True ()
+            else self.containsInt(a1=tail, a2=arg2)) &
+
+         (fun arg1:(`Nil ()),             arg2 -> `False ()))
+      in f(arg1=a1, arg2=a2)
+
+  } in
+
+#TODO: finish adding list functions.
+
+#TODO: add comment as to what the expected result of the following tests is. Follow example in if-then-else.lb
+
+#Common.append(a1=[1], a2=[2,3])
+#LinkedList.getLength(a1=[1,2,3])
+#LinkedList.getLength(a1=[])
+#LinkedList.getHead(a1=[1,2,3])
+#LinkedList.getHead(a1=[])
+#LinkedList.getTail(a1=[1,2,3])
+#LinkedList.getTail(a1=[])
+#Common.negate(a1=`True ())
+#Common.negate(a1=`False ())
+#Common.isLessThan(a1=3, a2=2)
+#Common.isLessThan(a1=-1, a2=2)
+#LinkedList.getElement(a1=[1,2,3], a2=0) # takes a long time to run
+#LinkedList.getElement(a1=[1,2,3], a2=1) 
+#LinkedList.getElement(a1=[1,2,3], a2=2) 
+#LinkedList.getElement(a1=[1,2,3], a2=4)
+#LinkedList.getElement(a1=[1,2,3], a2=-1)
+#LinkedList.flatten(a1=[1,2,3]) 
+#LinkedList.flatten(a1=[[1, 2],[3, 4]]) 
+#let ff = (fun a1 -> a1 + 1) in LinkedList.map(a1=[1, 2, 3], a2=ff)
+#let x = ref 0 in let ff = (fun a2 -> (fun a1 -> a2 <- !a2 + a1)) in LinkedList.iterate(a1=[1, 2, 3], a2=ff(a2=x)); !x 
+#let ff = (fun a1, a2 -> a1 + a2) in LinkedList.foldLeft(a1=[1, 2, 3], a2=ff, a3=0)
+#let ff = (fun a1, a2 -> a1 + a2) in LinkedList.foldRight(a1=[1, 2, 3], a2=ff, a3=0)
+#let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForAll(a1=[1, 1, 1], a2=ff)
+#let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForAll(a1=[1, 1, 2], a2=ff)
+#let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[1, 1, 2], a2=ff)
+#let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 1, 2], a2=ff)
+#let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 2, 2], a2=ff)
+#LinkedList.containsInt(a1=[1,2,3], a2=2)
+LinkedList.containsInt(a1=[1,2,3], a2=4)
+
+#TODO: finish adding list tests.
+;;
+
+
