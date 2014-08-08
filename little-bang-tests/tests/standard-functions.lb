@@ -1,15 +1,18 @@
 # TODO: turn typechecking off to avoid performance delay while necessary.
 
+# TODO: try to implement :: as a pattern to eliminate use of `Head head & `Tl tail in fun arg patterns.
 
 let Common = 
   object {
     # a1: list
     # a2: list  
     append(a1, a2) = 
+      let lst1 = a1 in
+      let lst2 = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> head :: (self.append(a1=tail, a2=arg2))) &
-         (fun arg1:(`Nil ()),         arg2 -> arg2))
-      in f(arg1=a1, arg2=a2)
+        ((fun lst1:(`Hd head & `Tl tail), lst2 -> head :: (self.append(a1=tail, a2=lst2))) &
+         (fun lst1:(`Nil ()), lst2 -> lst2))
+      in f(lst1=a1, lst2=a2)
 
     #TODO: convert into LittleBang unary operator "not"
     # a1: boolean
@@ -58,102 +61,123 @@ let LinkedList =
     getLength(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> 1 + (self.getLength(a1=tail))) &
-         (fun arg1:(`Nil ())         -> 0))
+         (fun arg1:(`Nil ()) -> 0))
       in f(arg1=a1)
 
     # a1: list
     getHead(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> head) &
-         (fun arg1:(`Nil ())         -> `Failure ()))
+         (fun arg1:(`Nil ()) -> `Failure ()))
       in f(arg1=a1)
 
     # a1: list
     getTail(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> tail) &
-         (fun arg1:(`Nil ())         -> `Failure ()))
+         (fun arg1:(`Nil ()) -> `Failure ()))
       in f(arg1=a1)
 
     # a1: list
     getElement(a1, a2:int) =
-      if Common.isLessThan(a1=a2, a2=0) then `Failure ()
+      let lst = a1 in
+      let index = a2 in
+      if Common.isLessThan(a1=index, a2=0) then `Failure ()
       else 
         let f = 
-          ((fun arg1:(`Hd head & `Tl tail) -> 
-              if a2 == 0 then head
-              else self.getElement(a1=tail, a2=a2 - 1)
+          ((fun lst:(`Hd head & `Tl tail) -> 
+              if index == 0 then head
+              else self.getElement(a1=tail, a2=index - 1)
           ) &
-           (fun arg1:(`Nil ())         -> `Failure ()))
-        in f(arg1=a1)
+           (fun lst:(`Nil ()) -> `Failure ()))
+        in f(lst=a1)
 
     # a1: list
     flatten(a1) =
+      let lst = a1 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail) -> Common.append(a1=head, a2=(self.flatten(a1=tail)))) &
-         (fun arg1:(`Nil ())             -> arg1))
-      in f(arg1=a1)      
+        ((fun lst:(`Hd head & `Tl tail) -> Common.append(a1=head, a2=(self.flatten(a1=tail)))) &
+         (fun lst:(`Nil ()) -> lst))
+      in f(lst=a1)      
 
     # a1: list
     # a2: fun
     map(a1, a2) = 
+      let lst = a1 in
+      let func = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> (arg2(a1=head)) :: (self.map(a1=tail, a2=arg2))) &
-         (fun arg1:(`Nil ()),             arg2 -> arg1))
-      in f(arg1=a1, arg2=a2)
+        ((fun lst:(`Hd head & `Tl tail), func -> (func(a1=head)) :: (self.map(a1=tail, a2=func))) &
+         (fun lst:(`Nil ()), func -> lst))
+      in f(lst=a1, func=a2)
 
     # a1: list
     # a2: fun
     iterate(a1, a2) = 
+      let lst = a1 in
+      let func = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> arg2(a1=head); self.map(a1=tail, a2=arg2)) &
-         (fun arg1:(`Nil ()),             arg2 -> ()))
-      in f(arg1=a1, arg2=a2)
+        ((fun lst:(`Hd head & `Tl tail), func -> func(a1=head); self.map(a1=tail, a2=func)) &
+         (fun lst:(`Nil ()), func -> ()))
+      in f(lst=a1, func=a2)
 
     # a1: list
     # a2: fun
     foldLeft(a1, a2, a3:int) = 
+      let lst = a1 in
+      let func = a2 in
+      let acc = a3 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2, arg3 -> self.foldLeft(a1=tail, a2=arg2, a3=arg2(a1=head, a2=arg3))) &
-         (fun arg1:(`Nil ()),             arg2, arg3 -> arg3))
-      in f(arg1=a1, arg2=a2, arg3=a3)
+        ((fun lst:(`Hd head & `Tl tail), func, acc -> self.foldLeft(a1=tail, a2=func, a3=func(a1=head, a2=acc))) &
+         (fun lst:(`Nil ()), func, acc -> acc))
+      in f(lst=a1, func=a2, acc=a3)
 
     # a1: list
     # a2: fun
     foldRight(a1, a2, a3:int) = 
+      let lst = a1 in
+      let func = a2 in
+      let acc = a3 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2, arg3 -> arg2(a1=head, a2=self.foldRight(a1=tail, a2=arg2, a3=arg3))) &
-         (fun arg1:(`Nil ()),             arg2, arg3 -> arg3))
-      in f(arg1=a1, arg2=a2, arg3=a3)
+        ((fun lst:(`Hd head & `Tl tail), func, acc -> func(a1=head, a2=self.foldRight(a1=tail, a2=func, a3=acc))) &
+         (fun lst:(`Nil ()), func, acc -> acc))
+      in f(lst=a1, func=a2, acc=a3)
 
     # a1: list
-    # a2: fun
+    # a2: predicate
     isTrueForAll(a1, a2) = 
+      let lst = a1 in
+      let func = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> Common.areBothTrue(a1=arg2(a1=head), a2=self.isTrueForAll(a1=tail, a2=arg2))) &
-         (fun arg1:(`Nil ()),             arg2 -> `True ()))
-      in f(arg1=a1, arg2=a2)
+        ((fun lst:(`Hd head & `Tl tail), func -> 
+            Common.areBothTrue(a1=func(a1=head), a2=self.isTrueForAll(a1=tail, a2=func))
+         ) &
+         (fun lst:(`Nil ()), func -> `True ()))
+      in f(lst=a1, func=a2)
 
     # a1: list
-    # a2: fun
+    # a2: predicate
     isTrueForOne(a1, a2) = 
+      let lst = a1 in
+      let func = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> 
-            if arg2(a1=head) then `True ()
-            else self.isTrueForOne(a1=tail, a2=arg2)) &
-         (fun arg1:(`Nil ()),             arg2 -> `False ()))
-      in f(arg1=a1, arg2=a2)
+        ((fun lst:(`Hd head & `Tl tail), func -> 
+            if func(a1=head) then `True ()
+            else self.isTrueForOne(a1=tail, a2=func)) &
+         (fun lst:(`Nil ()), func -> `False ()))
+      in f(lst=a1, func=a2)
 
     # TODO: make more general (e.g. beyond int)
     # a1: list
     containsInt(a1, a2:int) = 
+      let lst = a1 in
+      let elem = a2 in
       let f = 
-        ((fun arg1:(`Hd head & `Tl tail), arg2 -> 
-            if head == arg2 then `True ()
-            else self.containsInt(a1=tail, a2=arg2)) &
+        ((fun lst:(`Hd head & `Tl tail), elem -> 
+            if head == elem then `True ()
+            else self.containsInt(a1=tail, a2=elem)) &
 
-         (fun arg1:(`Nil ()),             arg2 -> `False ()))
-      in f(arg1=a1, arg2=a2)
+         (fun lst:(`Nil ()), elem -> `False ()))
+      in f(lst=a1, elem=a2)
 
   } in
 
