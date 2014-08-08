@@ -1,6 +1,10 @@
 # TODO: turn typechecking off to avoid performance delay while necessary.
 
-# TODO: try to implement :: as a pattern to eliminate use of `Head head & `Tl tail in fun arg patterns.
+# TODO: try to implement :: as a pattern to eliminate use of `Head head & `Tl tail in fun arg patterns. Then, also replace `Nil () by [].
+
+# TODO: carriage return after open parenthesis in function call (e.g. application via arg list) causes error.
+
+# TODO: function passing by name does not work directly (see divideInt comments).
 
 let Common = 
   object {
@@ -51,6 +55,51 @@ let Common =
       let b1 = (a1 <= a2) in
       if self.negate(a1=b1) then `True ()
       else `False ()
+
+    #TODO: replace explicit reference to self.divideIntHelper with func if possible.
+    # Helper for int multiplication and division.
+    # a1: helper function
+    # a2: param 1
+    # a3: param 2
+    multDivIntHelper(a1, a2:int, a3:int) =
+      let func = a1 in
+      let param1 = a2 in
+      let param2 = a3 in
+      if param1 == 0 then 0
+      else
+        let bothPos = self.areBothTrue(a1=self.isLessThan(a1=0, a2=param1),
+                                       a2=self.isLessThan(a1=0, a2=param2)) in
+        let bothNeg = self.areBothTrue(a1=self.isGreaterThan(a1=0, a2=param1),
+                                       a2=self.isGreaterThan(a1=0, a2=param2)) in
+        if self.isOneTrue(a1=bothPos, a2=bothNeg) then
+          if self.isLessThan(a1=0, a2=param1) then
+            self.divideIntHelper(a1=0, a2=param1, a3=param2)
+          else
+            self.divideIntHelper(a1=0, a2=0 - param1, a3=0 - param2)
+        else
+          if self.isGreaterThan(a1=0, a2=param1) then
+            0 - self.divideIntHelper(a1=0, a2=0 - param1, a3=param2)
+          else
+            0 - self.divideIntHelper(a1=0, a2=param1, a3=0 - param2)
+
+    divideIntHelper(a1:int, a2:int, a3:int) =
+      let count = a1 in
+      let subtraction = a2 in
+      let subtractor = a3 in
+      if self.isLessThan(a1=subtraction, a2=subtractor) then
+        count
+      else
+        self.divideIntHelper(a1=(count + 1), a2=(subtraction - subtractor), a3=subtractor)
+
+    #TODO: replace () with self.divideIntHelper if possible.
+    #TODO: convert into LittleBang binary operator "/"
+    # This goes into an infinite loop when division is by zero.
+    divideInt(a1:int, a2:int) =
+      let param1 = a1 in
+      let param2 = a2 in
+      self.multDivIntHelper(a1=(), a2=param1, a3=param2)
+    
+    #TODO: other common binary operators that could be implemented: "*", "%"  
 
   } in 
 
@@ -179,6 +228,70 @@ let LinkedList =
          (fun lst:(`Nil ()), elem -> `False ()))
       in f(lst=a1, elem=a2)
 
+    # This function is used by mergeSort.
+    # a1: list
+    # a2: list
+    # a3: predicate fun
+    mergeLists(a1, a2, a3) =
+      let f =
+        ((fun lst1:(`Nil ()), lst2:(`Nil ()), predicate -> `Nil ()
+         ) &
+         (fun lst1:(`Nil ()), lst2:(`Hd head & `Tl tail), predicate -> lst2
+         ) &
+         (fun lst1:(`Hd head & `Tl tail), lst2:(`Nil ()), predicate -> lst1
+         ) &
+         (fun lst1:(`Hd head1 & `Tl tail1), lst2:(`Hd head2 & `Tl tail2), predicate ->
+           if predicate(a1=head1, a2=head2) then
+             head1 :: self.mergeLists(a1=tail1, a2=lst2, a3=predicate)
+           else
+             head2 :: self.mergeLists(a1=lst1, a2=tail2, a3=predicate)
+         )
+        )
+      in f(lst1=a1, lst2=a2, predicate=a3)
+
+    # This function is used by mergeSort.
+    # If index2 is greater than the length of the list, then the function returns
+    # element at index1 through last element in the list.
+    # a1: list
+    # a2: index 1
+    # a3: index 2
+    getSublist(a1, a2:int, a3:int) =
+      let f = 
+        (fun lst:(`Nil ()), index1, index2 -> lst) &
+        (fun lst:(`Hd head & `Tl tail), index1, index2 -> 
+          if Common.isOneTrue(a1=Common.isGreaterThan(a1=index1, a2=index2),
+                              a2=Common.isLessThan(a1=index1, a2=0)) then 
+            `Nil () 
+          else if Common.isGreaterThan(a1=index1, a2=0) then
+            self.getSublist(a1=tail, a2=index1 - 1, a3=index2 - 1)
+          else if index1 == index2 then
+            head :: (`Nil ())
+          else 
+            head :: (self.getSublist(a1=tail, a2=index1, a3=index2 - 1))
+        )
+      in f(lst=a1, index1=a2, index2=a3)
+
+
+    # a1: list
+    # a2: comparison function
+    mergeSort(a1, a2) =      
+      let firstHalf = fun lst -> 
+        self.getSublist(a1=a1, 
+          a2=0, 
+          a3=Common.divideInt(a1=self.getLength(a1=lst), a2=2) - 1) in
+      let secondHalf = fun lst -> 
+        self.getSublist(a1=a1, 
+          a2=Common.divideInt(a1=self.getLength(a1=lst), a2=2),
+          a3=self.getLength(a1=lst) - 1) in
+      let f =
+        (fun lst:(`Nil ()), comparisonFunc -> `Nil ()) &
+        (fun lst:(`Hd head & `Tl `Nil ()), comparisonFunc -> lst) &
+        (fun lst:(`Hd head1 & `Tl (`Hd head2 & `Tl tail)), comparisonFunc -> 
+           self.mergeLists(a1=self.mergeSort(a1=firstHalf(lst=lst), a2=comparisonFunc),
+             a2=self.mergeSort(a1=secondHalf(lst=lst), a2=comparisonFunc),
+             a3=comparisonFunc))
+      in f(lst=a1, comparisonFunc=a2)
+
   } in
 
 #TODO: finish adding list functions.
@@ -196,6 +309,8 @@ let LinkedList =
 #Common.negate(a1=`False ())
 #Common.isLessThan(a1=3, a2=2)
 #Common.isLessThan(a1=-1, a2=2)
+#Common.isGreaterThan(a1=3, a2=2)
+#Common.isGreaterThan(a1=-1, a2=2)
 #LinkedList.getElement(a1=[1,2,3], a2=0) # takes a long time to run
 #LinkedList.getElement(a1=[1,2,3], a2=1) 
 #LinkedList.getElement(a1=[1,2,3], a2=2) 
@@ -213,7 +328,22 @@ let LinkedList =
 #let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 1, 2], a2=ff)
 #let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 2, 2], a2=ff)
 #LinkedList.containsInt(a1=[1,2,3], a2=2)
-LinkedList.containsInt(a1=[1,2,3], a2=4)
+#LinkedList.containsInt(a1=[1,2,3], a2=4)
+#LinkedList.mergeLists(a1=[2, 5, 8], a2=[0, 1, 4, 9], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
+#LinkedList.mergeLists(a1=[2, 5, 8], a2=[], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
+#LinkedList.mergeLists(a1=[], a2=[0, 1, 4, 9], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
+#LinkedList.mergeLists(a1=[], a2=[], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
+#LinkedList.getSublist(a1=[0, 1, 2, 3, 4, 5], a2=1, a3=7)
+#Common.divideIntHelper(a1=0, a2=4, a3=2)
+#Common.multDivIntHelper(a1=(), a2=4, a3=2)
+#Common.divideInt(a1=4, a2=2)
+#Common.divideInt(a1=0, a2=2)
+#Common.divideInt(a1=-7, a2=2)
+#Common.divideInt(a1=-1, a2=2)
+#Common.divideInt(a1=8, a2=-2)
+#Common.divideInt(a1=-7, a2=-2)
+#Common.divideInt(a1=-7, a2=0)
+#let cFunc = (fun a1:int, a2:int -> if a1 >= a2 then `False () else `True ()) in LinkedList.mergeSort(a1=[5, 2, 10, 11, 3, 14, 15, 0], a2=cFunc) # TODO: this takes a while to compute, even if typechecking is off.
 
 #TODO: finish adding list tests.
 ;;
