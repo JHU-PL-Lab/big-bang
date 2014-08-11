@@ -1,10 +1,14 @@
 # TODO: turn typechecking off to avoid performance delay while necessary.
 
-# TODO: try to implement :: as a pattern to eliminate use of `Head head & `Tl tail in fun arg patterns. Then, also replace `Nil () by [].
+# TODO: try to implement :: as a pattern to eliminate use of 
+# `Head head & `Tl tail in fun arg patterns. Then, also replace `Nil () by [].
 
-# TODO: carriage return after open parenthesis in function call (e.g. application via arg list) causes error.
+# TODO: carriage return after open parenthesis in function call 
+# (e.g. application via arg list) causes error.
 
 # TODO: function passing by name does not work directly (see divideInt comments).
+#
+# TODO: add variable name to "Undefined variable!" message.
 
 let Common = 
   object {
@@ -14,7 +18,8 @@ let Common =
       let lst1 = a1 in
       let lst2 = a2 in
       let f = 
-        ((fun lst1:(`Hd head & `Tl tail), lst2 -> head :: (self.append(a1=tail, a2=lst2))) &
+        ((fun lst1:(`Hd head & `Tl tail), lst2 -> 
+            head :: (self.append(a1=tail, a2=lst2))) &
          (fun lst1:(`Nil ()), lst2 -> lst2))
       in f(lst1=a1, lst2=a2)
 
@@ -89,7 +94,9 @@ let Common =
       if self.isLessThan(a1=subtraction, a2=subtractor) then
         count
       else
-        self.divideIntHelper(a1=(count + 1), a2=(subtraction - subtractor), a3=subtractor)
+        self.divideIntHelper(a1=(count + 1), 
+                             a2=(subtraction - subtractor), 
+                             a3=subtractor)
 
     #TODO: replace () with self.divideIntHelper if possible.
     #TODO: convert into LittleBang binary operator "/"
@@ -107,6 +114,7 @@ let Common =
 let LinkedList =
   object {
     # a1: list
+    # returns the length of the list.
     getLength(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> 1 + (self.getLength(a1=tail))) &
@@ -114,6 +122,7 @@ let LinkedList =
       in f(arg1=a1)
 
     # a1: list
+    # returns the head of the list, or a failure message if the list is empty.
     getHead(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> head) &
@@ -121,6 +130,7 @@ let LinkedList =
       in f(arg1=a1)
 
     # a1: list
+    # returns the tail of the list, or a failure message if the list is empty.
     getTail(a1) =
       let f = 
         ((fun arg1:(`Hd head & `Tl tail) -> tail) &
@@ -128,6 +138,8 @@ let LinkedList =
       in f(arg1=a1)
 
     # a1: list
+    # a2: index
+    # returns the element in list at input index, or a failure message if not found.
     getElement(a1, a2:int) =
       let lst = a1 in
       let index = a2 in
@@ -137,74 +149,99 @@ let LinkedList =
           ((fun lst:(`Hd head & `Tl tail) -> 
               if index == 0 then head
               else self.getElement(a1=tail, a2=index - 1)
-          ) &
+           ) &
            (fun lst:(`Nil ()) -> `Failure ()))
         in f(lst=a1)
 
     # a1: list
+    # returns a list consisting of all elements in member lists of 
+    # the original list, in successive order, but now contained in 
+    # the return list only.
     flatten(a1) =
       let lst = a1 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail) -> Common.append(a1=head, a2=(self.flatten(a1=tail)))) &
+        ((fun lst:(`Hd head & `Tl tail) -> Common.append(a1=head, 
+                                             a2=(self.flatten(a1=tail)))) &
          (fun lst:(`Nil ()) -> lst))
       in f(lst=a1)      
 
     # a1: list
     # a2: fun
+    # returns a new list consisting of fun applied to each element 
+    # in an input list.
     map(a1, a2) = 
       let lst = a1 in
       let func = a2 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail), func -> (func(a1=head)) :: (self.map(a1=tail, a2=func))) &
+        ((fun lst:(`Hd head & `Tl tail), func -> 
+           (func(a1=head)) :: (self.map(a1=tail, a2=func))) &
          (fun lst:(`Nil ()), func -> lst))
       in f(lst=a1, func=a2)
 
     # a1: list
     # a2: fun
+    # applies fun to each element in list, successively, and returns 
+    # the result of applying fun to the last element in list.
     iterate(a1, a2) = 
       let lst = a1 in
       let func = a2 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail), func -> func(a1=head); self.map(a1=tail, a2=func)) &
+        ((fun lst:(`Hd head & `Tl tail), func -> 
+            func(a1=head); self.map(a1=tail, a2=func)) &
          (fun lst:(`Nil ()), func -> ()))
       in f(lst=a1, func=a2)
 
     # a1: list
     # a2: fun
+    # a3: acc
+    # returns the accrued value of successive applications of fun to 
+    # each element in list, from left to right, each of which also 
+    # takes the prior application's result, which is initially acc.
     foldLeft(a1, a2, a3:int) = 
       let lst = a1 in
       let func = a2 in
       let acc = a3 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail), func, acc -> self.foldLeft(a1=tail, a2=func, a3=func(a1=head, a2=acc))) &
+        ((fun lst:(`Hd head & `Tl tail), func, acc -> 
+            self.foldLeft(a1=tail, a2=func, a3=func(a1=head, a2=acc))) &
          (fun lst:(`Nil ()), func, acc -> acc))
       in f(lst=a1, func=a2, acc=a3)
 
     # a1: list
     # a2: fun
+    # a3: acc
+    # returns the accrued value of successive applications of fun 
+    # to each element in list, from right to left, each of which also 
+    # takes the prior application's result, which is initially acc.
     foldRight(a1, a2, a3:int) = 
       let lst = a1 in
       let func = a2 in
       let acc = a3 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail), func, acc -> func(a1=head, a2=self.foldRight(a1=tail, a2=func, a3=acc))) &
+        ((fun lst:(`Hd head & `Tl tail), func, acc -> 
+            func(a1=head, a2=self.foldRight(a1=tail, a2=func, a3=acc))) &
          (fun lst:(`Nil ()), func, acc -> acc))
       in f(lst=a1, func=a2, acc=a3)
 
     # a1: list
     # a2: predicate
+    # returns `True () if each element in list yields `True () 
+    # as argument to predicate.
     isTrueForAll(a1, a2) = 
       let lst = a1 in
       let func = a2 in
       let f = 
         ((fun lst:(`Hd head & `Tl tail), func -> 
-            Common.areBothTrue(a1=func(a1=head), a2=self.isTrueForAll(a1=tail, a2=func))
+            Common.areBothTrue(a1=func(a1=head), 
+                               a2=self.isTrueForAll(a1=tail, a2=func))
          ) &
          (fun lst:(`Nil ()), func -> `True ()))
       in f(lst=a1, func=a2)
 
     # a1: list
     # a2: predicate
+    # returns `True () if at least one element in list yields `True () 
+    # as argument to predicate.
     isTrueForOne(a1, a2) = 
       let lst = a1 in
       let func = a2 in
@@ -217,6 +254,8 @@ let LinkedList =
 
     # TODO: make more general (e.g. beyond int)
     # a1: list
+    # a2: element
+    # returns `True () if element is contained in list, `False () otherwise.
     containsInt(a1, a2:int) = 
       let lst = a1 in
       let elem = a2 in
@@ -228,10 +267,100 @@ let LinkedList =
          (fun lst:(`Nil ()), elem -> `False ()))
       in f(lst=a1, elem=a2)
 
+    # a1: list
+    # a2: predicate
+    # returns element in the list which, as argument to the predicate, 
+    # yields `True (); fails if element is not found.
+    find(a1, a2) =
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail), predicate -> 
+            if predicate(a1=head) then head
+            else self.find(a1=tail, a2=predicate)) &
+         (fun lst:(`Nil ()), predicate -> `Failure ()))
+      in f(lst=a1, predicate=a2)
+
+    # performs the action specified by func (which can be at a specific index) while being able to track current
+    # index; traverses a list in foldRight fashion.
+    trackIndex(a1, a2, a3:int, a4) = 
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail), func, acc, currentIndex ->
+            func(a1=head, a2=self.trackIndex(a1=tail, a2=func, a3=acc, a4=currentIndex+1), a3=currentIndex)
+         ) &
+         (fun lst:(`Nil ()), func, acc -> acc))
+      in f(lst=a1, func=a2, acc=a3, currentIndex = a4)
+
+    # a1: list
+    # a2: predicate
+    # TODO: this function has not been fully tested, since assigning [] (or `Nil ()) to a3 is causing an error.
+#    filter(a1, a2) =
+#      let p = a2 in
+#      let pred = (fun a1, a2 -> if p(a1=a1) then a1 :: a2 else a2) in 
+#      let f =
+#        ((fun lst:(`Hd head & `Tl tail), predicate -> 
+#            self.foldRight(a1=lst, a2=predicate, a3=[])) &
+#         (fun lst:(`Nil ()), predicate -> `Failure ()))
+#      in f(lst=a1, predicate=pred)
+
+    # a1: list
+    # a2: element
+    # a3: index
+    # performs index validity check and calls trackIndex.
+    # TODO: this function has not been tested, since assigning [] (or `Nil ()) to a3 is causing an error.
+#    opHelper(a1, a2, a3, a4) =
+#      let lst = a1 in
+#      let elem = a2 in
+#      let index = a3 in
+#      let predicate = a4 in
+#      if Common.isLessThan(a1=index, a2=0) then `Failure ()
+#      else 
+#        let f = 
+#          ((fun lst:(`Hd head & `Tl tail) -> 
+#              self.trackIndex(a1=lst, a2=predicate, a3=[], a4=0)
+#           ) &
+#           (fun lst:(`Nil ()) -> `Failure ()))
+#        in f(lst=a1)
+
+     # a1: list
+     # a2: element
+     # a3: index
+     # returns a list with element inserted at index.
+     # TODO: this function has not been tested due to issue with opHelper (see comment).
+#    add(a1, a2, a3) =
+#      let lst = a1 in
+#      let elem = a2 in
+#      let index = a3 in
+#      if index == 0 then elem :: lst
+#      else
+#        let predicate = (fun a1, a2, a3 -> if a3 == index then elem :: a1 :: a2 else a1 :: a2) in
+#        self.opHelper(a1=lst, a2=elem, a3=index, a4=predicate)
+
+     # a1: list
+     # a2: element
+     # a3: index
+     # returns a list with element at index removed.
+     # TODO: this function has not been tested due to issue with opHelper (see comment).
+#    remove(a1, a2, a3) =
+#      let lst = a1 in
+#      let elem = a2 in
+#      let index = a3 in
+#      if index == 0 then
+#        let f = 
+#          (fun lst:(`Hd head & `Tl tail) -> 
+#              tail
+#          ) in f(lst=a1)
+#      else
+#        let predicate = (fun a1, a2, a3 -> if a3 == index then a2 else a1 :: a2) in
+#        self.opHelper(a1=lst, a2=elem, a3=index, a4=predicate)
+
     # This function is used by mergeSort.
     # a1: list
     # a2: list
     # a3: predicate fun
+    # returns a list consisting of the merging of the two input lists, 
+    # where the heads of each list are compared using predicate fun, 
+    # with the element on the left argument to predicate fun being 
+    # selected for merging if it yields `True (), and the element on the 
+    # right being selected otherwise.
     mergeLists(a1, a2, a3) =
       let f =
         ((fun lst1:(`Nil ()), lst2:(`Nil ()), predicate -> `Nil ()
@@ -249,12 +378,14 @@ let LinkedList =
         )
       in f(lst1=a1, lst2=a2, predicate=a3)
 
-    # This function is used by mergeSort.
-    # If index2 is greater than the length of the list, then the function returns
-    # element at index1 through last element in the list.
     # a1: list
     # a2: index 1
     # a3: index 2
+    # returns a sublist with endpoints corresponding to the elements 
+    # at index 1 and index 2.
+    # If index2 is greater than the length of the list, then the function returns
+    # element at index1 through last element in the list.
+    # This function is used by mergeSort.
     getSublist(a1, a2:int, a3:int) =
       let f = 
         (fun lst:(`Nil ()), index1, index2 -> lst) &
@@ -274,6 +405,8 @@ let LinkedList =
 
     # a1: list
     # a2: comparison function
+    # returns a sorted list, using merge-sort, where merging is performed
+    # using the comparison function, as explained in mergeLists.
     mergeSort(a1, a2) =      
       let firstHalf = fun lst -> 
         self.getSublist(a1=a1, 
@@ -294,9 +427,6 @@ let LinkedList =
 
   } in
 
-#TODO: finish adding list functions.
-
-#TODO: add comment as to what the expected result of the following tests is. Follow example in if-then-else.lb
 
 #Common.append(a1=[1], a2=[2,3])
 #LinkedList.getLength(a1=[1,2,3])
@@ -343,9 +473,17 @@ let LinkedList =
 #Common.divideInt(a1=8, a2=-2)
 #Common.divideInt(a1=-7, a2=-2)
 #Common.divideInt(a1=-7, a2=0)
+#
 #let cFunc = (fun a1:int, a2:int -> if a1 >= a2 then `False () else `True ()) in LinkedList.mergeSort(a1=[5, 2, 10, 11, 3, 14, 15, 0], a2=cFunc) # TODO: this takes a while to compute, even if typechecking is off.
 
-#TODO: finish adding list tests.
+#let nil = 0 in let ff = (fun a1, a2 -> `Hd a1 & `Tl a2) in LinkedList.foldRight(a1=[1, 2, 3], a2=ff, a3=nil) #TODO: if `Nil () is assigned to nil, then an error is thrown; this is preventing completion of the LinkedList.filter function (and it's associated with the opHelper error).
+
+#let predicate = (fun a1 -> if Common.divideInt(a1=a1, a2=2) == 0 then `True () else `False ()) in LinkedList.filter(a1=[0, 2, 1, 3, 4, 5, 6, 7], a2=predicate) #TODO: this test has not been completed (see above TODO).
+
+#let ff = (fun a1 -> if Common.divideInt(a1=a1, a2=2) == 4 then `True () else `False ()) in LinkedList.find(a1=[3, 5, 7, 8, 9], a2=ff)
+
+let predicate = (fun a1, a2, a3 -> if a3 == 2 then `Hd (a1 + 2) & `Tl a2 else `Hd a1 & `Tl a2) in LinkedList.trackIndex(a1=[1, 2, 3, 4], a2=predicate, a3=0, a4=0)
+
 ;;
 
 
