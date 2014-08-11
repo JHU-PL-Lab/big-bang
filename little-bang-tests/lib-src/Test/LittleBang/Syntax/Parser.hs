@@ -7,18 +7,19 @@ module Test.LittleBang.Syntax.Parser
 ( parserTests
 ) where
 
-import Language.LittleBang.Ast
+import Language.LittleBang.Ast as LB
 import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Syntax.Parser
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Syntax.Location
+import Language.TinyBangNested.Ast as TBN
 import Test.HUnit
 
 -- TODO: these parser tests are taken straight from TBN; add some LB stuff
 
 -- |Constructs a positive parser test.  A positive test consists of a source
 --  string and a predicate function which tests the resulting TExpression.
-postest :: String -> String -> (Expr -> Bool) -> Test
+postest :: String -> String -> (LB.Expr -> Bool) -> Test
 postest name src check = TestLabel name $ TestCase $
   let ans = lexLittleBang UnknownDocument src >>=
             parseLittleBang UnknownDocument
@@ -72,14 +73,14 @@ parserTests = TestList
       (\case
           TExprOnion _
             (TExprOnion _ (TExprVar _ _) (TExprValInt _ 2))
-            (TExprLabelExp _ (LabelName _ "A") (TExprValInt _ 1)) -> True
+            (TExprLabelExp _ (LB.LabelName _ "A") (TExprValInt _ 1)) -> True
           _ -> False)
   , postest "nested label"
       "`A `B `C 1"
       (\case
-          TExprLabelExp _ (LabelName _ "A")
-            (TExprLabelExp _ (LabelName _ "B")
-              (TExprLabelExp _ (LabelName _ "C")
+          TExprLabelExp _ (LB.LabelName _ "A")
+            (TExprLabelExp _ (LB.LabelName _ "B")
+              (TExprLabelExp _ (LB.LabelName _ "C")
                 (TExprValInt _ 1))) -> True
           _ -> False)
   , postest "application associativity"
@@ -98,7 +99,7 @@ parserTests = TestList
   , postest "scape parse"
       "`A x -> x + x"
       (\case
-          TExprScape _ (LabelPattern _ (LabelName _ "A") (VariablePattern _ v))
+          TExprScape _ (LB.LabelPattern _ (LB.LabelName _ "A") (LB.VariablePattern _ v))
             (TExprBinaryOp _ (TExprVar _ v') (OpIntPlus _) (TExprVar _ v''))
               | v == v' && v == v'' -> True
           _ -> False)
@@ -106,9 +107,9 @@ parserTests = TestList
       "`A int & int -> ()"
       (\case
           TExprScape _
-            (ConjunctionPattern _
-              (LabelPattern _ (LabelName _ "A") (PrimitivePattern _ PrimInt))
-              (PrimitivePattern _ PrimInt))
+            (LB.ConjunctionPattern _
+              (LB.LabelPattern _ (LB.LabelName _ "A") (LB.PrimitivePattern _ LB.PrimInt))
+              (LB.PrimitivePattern _ LB.PrimInt))
             _ -> True
           _ -> False)
   ]
