@@ -40,14 +40,12 @@ data Expr
   | LExprBinaryOp Origin Expr BinaryOperator Expr
   | LExprAppl Origin Expr [Arg]
   | LExprCondition Origin Expr Expr Expr
-  | LExprSequence Origin Expr Expr -- TODO: shouldn't this just be a binop?
   | LExprList Origin [Expr]
   | LExprRecord Origin [Arg]
   | LExprProjection Origin Expr Ident
   | LExprDispatch Origin Expr Ident [Arg]
   | LExprObject Origin [ObjectTerm]
   | LExprDeref Origin Expr
-  | LExprCons Origin Expr Expr -- TODO: this should just be a binop
   deriving (Show)
 
 data BinaryOperator
@@ -132,14 +130,12 @@ instance HasOrigin Expr where
     LExprBinaryOp orig _ _ _ -> orig
     LExprAppl orig _ _ -> orig
     LExprCondition orig _ _ _ -> orig
-    LExprSequence orig _ _ -> orig
     LExprList orig _ -> orig
     LExprRecord orig _ -> orig
     LExprProjection orig _ _ -> orig
     LExprDispatch orig _ _ _ -> orig
     LExprObject orig _ -> orig
     LExprDeref orig _ -> orig
-    LExprCons orig _ _  -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -183,7 +179,6 @@ instance Display Expr where
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)
    LExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                 makeDoc e2 <+> text "else" <+> makeDoc e3
-   LExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
    LExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"
    LExprRecord _ args ->
     encloseSep lbrace rbrace comma $ map makeDoc args
@@ -193,7 +188,6 @@ instance Display Expr where
    LExprDispatch _ e i a -> makeDoc e <> text "." <> makeDoc i <>
                               encloseSep lparen rparen comma (map makeDoc a)
    LExprDeref _ e -> text "!" <> makeDoc e
-   LExprCons _ e1 e2 -> makeDoc e1 <+> text "::" <+> makeDoc e2
 
 instance Display BinaryOperator where
   makeDoc x = case x of
