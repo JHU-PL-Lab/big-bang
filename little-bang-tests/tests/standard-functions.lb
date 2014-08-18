@@ -1,13 +1,15 @@
+# EXPECT-MATCHES: ()
+
 # TODO: turn typechecking off to avoid performance delay while necessary.
 
 # TODO: try to implement :: as a pattern to eliminate use of 
 # `Head head & `Tl tail in fun arg patterns. Then, also replace `Nil () by [].
 
 # TODO: carriage return after open parenthesis in function call 
-# (e.g. application via arg list) causes error.
+# (e.g. application via arg list) has caused an error. Capture so it can be tested.
 
 # TODO: function passing by name does not work directly (see divideInt comments).
-#
+
 # TODO: add variable name to "Undefined variable!" message.
 
 let Common = 
@@ -94,7 +96,8 @@ let Common =
       if self.isLessThan(a1=subtraction, a2=subtractor) then
         count
       else
-        self.divideIntHelper(a1=(count + 1), 
+        self.divideIntHelper(
+                             a1=(count + 1), 
                              a2=(subtraction - subtractor), 
                              a3=subtractor)
 
@@ -213,7 +216,7 @@ let LinkedList =
     # returns the accrued value of successive applications of fun 
     # to each element in list, from right to left, each of which also 
     # takes the prior application's result, which is initially acc.
-    foldRight(a1, a2, a3:int) = 
+    foldRight(a1, a2, a3) = 
       let lst = a1 in
       let func = a2 in
       let acc = a3 in
@@ -252,19 +255,21 @@ let LinkedList =
          (fun lst:(`Nil ()), func -> `False ()))
       in f(lst=a1, func=a2)
 
-    # TODO: make more general (e.g. beyond int)
+    # TODO: allow this function to take elements of more types.
     # a1: list
-    # a2: element
+    # a2: element (int)
     # returns `True () if element is contained in list, `False () otherwise.
-    containsInt(a1, a2:int) = 
+    contains(a1, a2) = 
       let lst = a1 in
       let elem = a2 in
       let f = 
-        ((fun lst:(`Hd head & `Tl tail), elem -> 
+        (
+         (fun lst:(`Hd head & `Tl tail), elem:int -> 
             if head == elem then `True ()
-            else self.containsInt(a1=tail, a2=elem)) &
+            else self.contains(a1=tail, a2=elem)) &
 
-         (fun lst:(`Nil ()), elem -> `False ()))
+         (fun lst:(`Nil ()), elem -> `False ())
+        )
       in f(lst=a1, elem=a2)
 
     # a1: list
@@ -281,7 +286,7 @@ let LinkedList =
 
     # performs the action specified by func (which can be at a specific index) while being able to track current
     # index; traverses a list in foldRight fashion.
-    trackIndex(a1, a2, a3:int, a4) = 
+    trackIndex(a1, a2, a3, a4) = 
       let f = 
         ((fun lst:(`Hd head & `Tl tail), func, acc, currentIndex ->
             func(a1=head, a2=self.trackIndex(a1=tail, a2=func, a3=acc, a4=currentIndex+1), a3=currentIndex)
@@ -291,66 +296,60 @@ let LinkedList =
 
     # a1: list
     # a2: predicate
-    # TODO: this function has not been fully tested, since assigning [] (or `Nil ()) to a3 is causing an error.
-#    filter(a1, a2) =
-#      let p = a2 in
-#      let pred = (fun a1, a2 -> if p(a1=a1) then a1 :: a2 else a2) in 
-#      let f =
-#        ((fun lst:(`Hd head & `Tl tail), predicate -> 
-#            self.foldRight(a1=lst, a2=predicate, a3=[])) &
-#         (fun lst:(`Nil ()), predicate -> `Failure ()))
-#      in f(lst=a1, predicate=pred)
+    filter(a1, a2) =
+      let p = a2 in
+      let pred = (fun a1, a2 -> if p(a1=a1) then a1 :: a2 else a2) in 
+      let f =
+        ((fun lst:(`Hd head & `Tl tail), predicate -> 
+            self.foldRight(a1=lst, a2=predicate, a3=[])) &
+         (fun lst:(`Nil ()), predicate -> `Failure ()))
+      in f(lst=a1, predicate=pred)
 
     # a1: list
     # a2: element
     # a3: index
     # performs index validity check and calls trackIndex.
-    # TODO: this function has not been tested, since assigning [] (or `Nil ()) to a3 is causing an error.
-#    opHelper(a1, a2, a3, a4) =
-#      let lst = a1 in
-#      let elem = a2 in
-#      let index = a3 in
-#      let predicate = a4 in
-#      if Common.isLessThan(a1=index, a2=0) then `Failure ()
-#      else 
-#        let f = 
-#          ((fun lst:(`Hd head & `Tl tail) -> 
-#              self.trackIndex(a1=lst, a2=predicate, a3=[], a4=0)
-#           ) &
-#           (fun lst:(`Nil ()) -> `Failure ()))
-#        in f(lst=a1)
+    opHelper(a1, a2, a3) =
+      let lst = a1 in
+      let index = a2 in
+      let predicate = a3 in
+      if Common.isLessThan(a1=index, a2=0) then `Failure ()
+      else if self.getLength(a1=lst) <= index then `Failure ()
+      else 
+        let f = 
+          ((fun lst:(`Hd head & `Tl tail) -> 
+              self.trackIndex(a1=lst, a2=predicate, a3=[], a4=0)
+           ) &
+           (fun lst:(`Nil ()) -> `Failure ()))
+        in f(lst=a1)
 
      # a1: list
      # a2: element
      # a3: index
      # returns a list with element inserted at index.
-     # TODO: this function has not been tested due to issue with opHelper (see comment).
-#    add(a1, a2, a3) =
-#      let lst = a1 in
-#      let elem = a2 in
-#      let index = a3 in
-#      if index == 0 then elem :: lst
-#      else
-#        let predicate = (fun a1, a2, a3 -> if a3 == index then elem :: a1 :: a2 else a1 :: a2) in
-#        self.opHelper(a1=lst, a2=elem, a3=index, a4=predicate)
+    add(a1, a2, a3) =
+      let lst = a1 in
+      let elem = a2 in
+      let index = a3 in
+      if index == 0 then elem :: lst
+      else
+        let predicate = (fun a1, a2, a3 -> if a3 == index then elem :: a1 :: a2 else a1 :: a2) in
+        self.opHelper(a1=lst, a2=index, a3=predicate)
 
      # a1: list
-     # a2: element
-     # a3: index
+     # a2: index
      # returns a list with element at index removed.
-     # TODO: this function has not been tested due to issue with opHelper (see comment).
-#    remove(a1, a2, a3) =
-#      let lst = a1 in
-#      let elem = a2 in
-#      let index = a3 in
-#      if index == 0 then
-#        let f = 
-#          (fun lst:(`Hd head & `Tl tail) -> 
-#              tail
-#          ) in f(lst=a1)
-#      else
-#        let predicate = (fun a1, a2, a3 -> if a3 == index then a2 else a1 :: a2) in
-#        self.opHelper(a1=lst, a2=elem, a3=index, a4=predicate)
+    remove(a1, a2) =
+      let lst = a1 in
+      let index = a2 in
+      if index == 0 then
+        let f = 
+          (fun lst:(`Hd head & `Tl tail) -> 
+              tail
+          ) in f(lst=a1)
+      else
+        let predicate = (fun a1, a2, a3 -> if a3 == index then a2 else a1 :: a2) in
+        self.opHelper(a1=lst, a2=index, a3=predicate)
 
     # This function is used by mergeSort.
     # a1: list
@@ -457,8 +456,8 @@ let LinkedList =
 #let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[1, 1, 2], a2=ff)
 #let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 1, 2], a2=ff)
 #let ff = (fun a1 -> a1 == 1) in LinkedList.isTrueForOne(a1=[2, 2, 2], a2=ff)
-#LinkedList.containsInt(a1=[1,2,3], a2=2)
-#LinkedList.containsInt(a1=[1,2,3], a2=4)
+#LinkedList.contains(a1=[1,2,3], a2=2)
+#LinkedList.contains(a1=[1,2,3], a2=4)
 #LinkedList.mergeLists(a1=[2, 5, 8], a2=[0, 1, 4, 9], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
 #LinkedList.mergeLists(a1=[2, 5, 8], a2=[], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
 #LinkedList.mergeLists(a1=[], a2=[0, 1, 4, 9], a3=(fun a1, a2 -> if a1 >= a2 then `False() else `True()))
@@ -476,14 +475,27 @@ let LinkedList =
 #
 #let cFunc = (fun a1:int, a2:int -> if a1 >= a2 then `False () else `True ()) in LinkedList.mergeSort(a1=[5, 2, 10, 11, 3, 14, 15, 0], a2=cFunc) # TODO: this takes a while to compute, even if typechecking is off.
 
-#let nil = 0 in let ff = (fun a1, a2 -> `Hd a1 & `Tl a2) in LinkedList.foldRight(a1=[1, 2, 3], a2=ff, a3=nil) #TODO: if `Nil () is assigned to nil, then an error is thrown; this is preventing completion of the LinkedList.filter function (and it's associated with the opHelper error).
+#let nil = (`Nil ()) in let ff = (fun a1, a2 -> `Hd a1 & `Tl a2) in LinkedList.foldRight(a1=[1, 2, 3], a2=ff, a3=nil)
 
-#let predicate = (fun a1 -> if Common.divideInt(a1=a1, a2=2) == 0 then `True () else `False ()) in LinkedList.filter(a1=[0, 2, 1, 3, 4, 5, 6, 7], a2=predicate) #TODO: this test has not been completed (see above TODO).
+#let predicate = (fun a1 -> if Common.divideInt(a1=a1, a2=2) == 0 then `True () else `False ()) in LinkedList.filter(a1=[0, 2, 1, 3, 4, 5, 6, 7], a2=predicate)
 
 #let ff = (fun a1 -> if Common.divideInt(a1=a1, a2=2) == 4 then `True () else `False ()) in LinkedList.find(a1=[3, 5, 7, 8, 9], a2=ff)
 
-let predicate = (fun a1, a2, a3 -> if a3 == 2 then `Hd (a1 + 2) & `Tl a2 else `Hd a1 & `Tl a2) in LinkedList.trackIndex(a1=[1, 2, 3, 4], a2=predicate, a3=0, a4=0)
+#let predicate = (fun a1, a2, a3 -> if a3 == 2 then `Hd (a1 + 2) & `Tl a2 else `Hd a1 & `Tl a2) in LinkedList.trackIndex(a1=[1, 2, 3, 4], a2=predicate, a3=0, a4=0)
 
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=-1)
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=0)
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=1)
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=2)
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=3)
+#LinkedList.add(a1=[0, 1, 2], a2=3, a3=10)
+
+#LinkedList.remove(a1=[0, 1, 2], a2=-1)
+#LinkedList.remove(a1=[0, 1, 2], a2=0)
+#LinkedList.remove(a1=[0, 1, 2], a2=1)
+#LinkedList.remove(a1=[0, 1, 2], a2=2)
+#LinkedList.remove(a1=[0, 1, 2], a2=3)
+#LinkedList.remove(a1=[0, 1, 2], a2=10)
 ;;
 
 
