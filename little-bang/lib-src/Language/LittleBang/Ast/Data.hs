@@ -46,6 +46,7 @@ data Expr
   | LExprDispatch Origin Expr Ident [Arg]
   | LExprObject Origin [ObjectTerm]
   | LExprDeref Origin Expr
+  | LExprIndexedList Origin Expr Expr
   deriving (Show)
 
 data BinaryOperator
@@ -136,6 +137,7 @@ instance HasOrigin Expr where
     LExprDispatch orig _ _ _ -> orig
     LExprObject orig _ -> orig
     LExprDeref orig _ -> orig
+    LExprIndexedList orig _ _ -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -188,6 +190,7 @@ instance Display Expr where
    LExprDispatch _ e i a -> makeDoc e <> text "." <> makeDoc i <>
                               encloseSep lparen rparen comma (map makeDoc a)
    LExprDeref _ e -> text "!" <> makeDoc e
+   LExprIndexedList _ e i -> makeDoc e <> text "[" <> makeDoc i <> text "]"
 
 instance Display BinaryOperator where
   makeDoc x = case x of

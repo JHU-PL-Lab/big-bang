@@ -44,6 +44,7 @@ desugarLittleBang expr =
       , desugarExprLAppl
       , desugarExprDeref
       , desugarLExprBinaryOp
+      , desugarLExprIndexedList
       ]
     patDesugarers :: [DesugarFunction LB.Pattern]
     patDesugarers =
@@ -148,7 +149,10 @@ walkExprTree expr = do
                                     <*> pure i
                                     <*> mapM walkArgTree args)
                                     >>= f
-
+    LB.LExprIndexedList o e i -> (LB.LExprIndexedList o
+                                 <$> walkExprTree e
+                                 <*> walkExprTree i)
+                                 >>= f
 -- |Walk a parameter, applying desugarers
 walkParamTree :: LB.Param -> DesugarM LB.Param
 walkParamTree p = case p of
@@ -473,7 +477,23 @@ desugarPatList pat =
     getListContinuation o end = case end of
       Nothing -> return (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))
       Just p -> return p
-      
+
+desugarLExprIndexedList :: LB.Expr -> DesugarM LB.Expr
+desugarLExprIndexedList expr = 
+  case expr of
+    LB.LExprIndexedList o e (TExprValInt _ i) -> getIndex o e i expr
+    _ -> return expr
+    where
+    getIndex :: TB.Origin -> LB.Expr -> Integer -> LB.Expr -> DesugarM LB.Expr
+    getIndex o e i expr =
+      case e of
+        LB.TExprOnion _
+          (LB.TExprLabelExp _ (LB.LabelName _ "Hd") hd)
+          (LB.TExprLabelExp _ (LB.LabelName _ "Tl") tl) ->
+          if i == 0 then return hd
+          else if i < 0 then return expr -- TODO: this should throw an "index out of bounds" exception (currently it will throw a "Cannot TBN convert" error message.
+          else getIndex o tl (i - 1) expr
+        _ -> return expr                  
 
 -- |Seal a given expression.  This function generates code which will apply the
 --  seal function to the provided expression. 

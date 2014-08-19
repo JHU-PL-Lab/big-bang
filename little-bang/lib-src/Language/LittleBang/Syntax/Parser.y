@@ -99,6 +99,7 @@ Expr :: { SPositional Expr }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | PrefixExpr              { $1 }
+  | Expr '[' Expr ']'       { oc2 $1 $> LExprIndexedList $1 $3 }
 
 PrefixExpr :: { SPositional Expr }
   : Label PrefixExpr        { oc2 $1 $> TExprLabelExp $1 $2 }
