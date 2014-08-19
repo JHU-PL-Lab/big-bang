@@ -14,6 +14,8 @@
 
 let Common = 
   object {
+    maxInt = 2147483647
+
     # a1: list
     # a2: list  
     append(a1, a2) = 
@@ -80,14 +82,14 @@ let Common =
                                        a2=self.isGreaterThan(a1=0, a2=param2)) in
         if self.isOneTrue(a1=bothPos, a2=bothNeg) then
           if self.isLessThan(a1=0, a2=param1) then
-            self.divideIntHelper(a1=0, a2=param1, a3=param2)
+            func(a1=0, a2=param1, a3=param2)
           else
-            self.divideIntHelper(a1=0, a2=0 - param1, a3=0 - param2)
+            func(a1=0, a2=0 - param1, a3=0 - param2)
         else
           if self.isGreaterThan(a1=0, a2=param1) then
-            0 - self.divideIntHelper(a1=0, a2=0 - param1, a3=param2)
+            0 - func(a1=0, a2=0 - param1, a3=param2)
           else
-            0 - self.divideIntHelper(a1=0, a2=param1, a3=0 - param2)
+            0 - func(a1=0, a2=param1, a3=0 - param2)
 
     divideIntHelper(a1:int, a2:int, a3:int) =
       let count = a1 in
@@ -107,9 +109,10 @@ let Common =
     divideInt(a1:int, a2:int) =
       let param1 = a1 in
       let param2 = a2 in
-      self.multDivIntHelper(a1=(), a2=param1, a3=param2)
+      let f = (fun a1, a2, a3 -> self.divideIntHelper(a1=a1, a2=a2, a3=a3)) in
+      self.multDivIntHelper(a1=f, a2=param1, a3=param2)
     
-    #TODO: other common binary operators that could be implemented: "*", "%"  
+    #TODO: other common binary operators that could be implemented: "*", bit-wise operators (including shift).  
 
   } in 
 
@@ -323,10 +326,10 @@ let LinkedList =
            (fun lst:(`Nil ()) -> `Failure ()))
         in f(lst=a1)
 
-     # a1: list
-     # a2: element
-     # a3: index
-     # returns a list with element inserted at index.
+    # a1: list
+    # a2: element
+    # a3: index
+    # returns a list with element inserted at index.
     add(a1, a2, a3) =
       let lst = a1 in
       let elem = a2 in
@@ -336,9 +339,25 @@ let LinkedList =
         let predicate = (fun a1, a2, a3 -> if a3 == index then elem :: a1 :: a2 else a1 :: a2) in
         self.opHelper(a1=lst, a2=index, a3=predicate)
 
-     # a1: list
-     # a2: index
-     # returns a list with element at index removed.
+    # a1: list
+    # a2: index
+    # returns a list with element at index updated.
+    update(a1, a2, a3) =
+      let lst = a1 in
+      let elem = a2 in
+      let index = a3 in
+      if index == 0 then
+        let f = 
+          (fun lst:(`Hd head & `Tl tail) -> 
+              elem :: tail
+          ) in f(lst=a1)
+      else
+        let predicate = (fun a1, a2, a3 -> if a3 == index then elem :: a2 else a1 :: a2) in
+        self.opHelper(a1=lst, a2=index, a3=predicate)
+
+    # a1: list
+    # a2: index
+    # returns a list with element at index removed.
     remove(a1, a2) =
       let lst = a1 in
       let index = a2 in
@@ -426,6 +445,28 @@ let LinkedList =
 
   } in
 
+# This is a simple list-based array object used for building a hash table.
+let ListArray = 
+  object {
+    length = ref 0
+    maxCapacity = Common.maxInt # TODO: consider changing this to improve hashing.
+
+    createHelper(a1:int, a2)=
+      let len = a1 in
+      let lst = a2 in
+      if len >= 1 then self.createHelper(a1=len - 1, a2=(ref ())::lst) 
+      else lst
+      
+    # TODO: implement a LittleBang methodology which returns an expression's hashcode; look into fresh var concept as source of hashcode, or recursively compute it based on the hashcode of subexpressions. This will allow expressions such as functions and records to be keys. Until then, assume that all keys are ints.
+    # a1: int (initial capacity)
+    create(a1:int) =
+      let len = a1 in
+      if (len + 1) <= 0 then `Failure ()
+      else if len >= self.maxCapacity then self.length <- self.maxCapacity; self.createHelper(a1=!self.length, a2=[])
+      else self.length <- len; self.createHelper(a1=!self.length, a2=[]) # TODO: consider further calculating an appropriate length to improve hashing uniforminity.
+            
+
+  } in
 
 #Common.append(a1=[1], a2=[2,3])
 #LinkedList.getLength(a1=[1,2,3])
@@ -490,12 +531,17 @@ let LinkedList =
 #LinkedList.add(a1=[0, 1, 2], a2=3, a3=3)
 #LinkedList.add(a1=[0, 1, 2], a2=3, a3=10)
 
+#LinkedList.update(a1=[0, 1, 2], a2=3, a3=0)
+#LinkedList.update(a1=[0, 1, 2], a2=3, a3=1)
+
 #LinkedList.remove(a1=[0, 1, 2], a2=-1)
 #LinkedList.remove(a1=[0, 1, 2], a2=0)
 #LinkedList.remove(a1=[0, 1, 2], a2=1)
 #LinkedList.remove(a1=[0, 1, 2], a2=2)
 #LinkedList.remove(a1=[0, 1, 2], a2=3)
 #LinkedList.remove(a1=[0, 1, 2], a2=10)
+
+#ListArray.create(a1=3)
 ;;
 
 
