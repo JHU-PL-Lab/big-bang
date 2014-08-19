@@ -10,7 +10,7 @@
 
 # TODO: function passing by name does not work directly (see divideInt comments).
 
-# TODO: add variable name to "Undefined variable!" message.
+# TODO: access nested objects.
 
 let Common = 
   object {
@@ -448,8 +448,7 @@ let LinkedList =
 # This is a simple list-based array object used for building a hash table.
 let ListArray = 
   object {
-    length = ref 0
-    maxCapacity = Common.maxInt # TODO: consider changing this to improve hashing.
+    maxCapacity = Common.maxInt 
 
     createHelper(a1:int, a2)=
       let len = a1 in
@@ -457,16 +456,26 @@ let ListArray =
       if len >= 1 then self.createHelper(a1=len - 1, a2=(ref ())::lst) 
       else lst
       
-    # TODO: implement a LittleBang methodology which returns an expression's hashcode; look into fresh var concept as source of hashcode, or recursively compute it based on the hashcode of subexpressions. This will allow expressions such as functions and records to be keys. Until then, assume that all keys are ints.
     # a1: int (initial capacity)
     create(a1:int) =
       let len = a1 in
       if (len + 1) <= 0 then `Failure ()
-      else if len >= self.maxCapacity then self.length <- self.maxCapacity; self.createHelper(a1=!self.length, a2=[])
-      else self.length <- len; self.createHelper(a1=!self.length, a2=[]) # TODO: consider further calculating an appropriate length to improve hashing uniforminity.
-            
+      else 
+        let len =
+          if len >= self.maxCapacity then self.maxCapacity else len
+        in
+        self.createHelper(a1=len, a2=[])
+   
+    copy(a1, a2) =
+      let arr1 = a1 in
+      let arr2 = a2 in
+      let arr1Len = LinkedList.getLength(a1=arr1) in
+      let arr2Len = LinkedList.getLength(a1=arr2) in
+      Common.append(a1=arr2, a2=LinkedList.getSublist(a1=arr1, a2=arr2Len, a3=arr1Len - 1))
 
   } in
+
+    # TODO: implement a LittleBang methodology which returns an expression's hashcode; look into fresh var concept as source of hashcode, or recursively compute it based on the hashcode of subexpressions. This will allow expressions such as functions and records to be keys. Until then, assume that all keys are ints.
 
 #Common.append(a1=[1], a2=[2,3])
 #LinkedList.getLength(a1=[1,2,3])
@@ -542,6 +551,15 @@ let ListArray =
 #LinkedList.remove(a1=[0, 1, 2], a2=10)
 
 #ListArray.create(a1=3)
+#TODO: replace with expr[expr] syntax after translator desugaring is finished.
+let arr1 = ListArray.create(a1=3) in 
+  LinkedList.getElement(a1=arr1, a2=0) <- 100; 
+  LinkedList.getElement(a1=arr1, a2=1) <- 200; 
+  LinkedList.getElement(a1=arr1, a2=2) <- 300; 
+  let arr2 = ListArray.create(a1=2) in 
+  LinkedList.getElement(a1=arr2, a2=0) <- 400; 
+  LinkedList.getElement(a1=arr2, a2=1) <- 500; 
+  ListArray.copy(a1=arr1, a2=arr2)
 ;;
 
 
