@@ -112,6 +112,51 @@ let Common =
       let f = (fun a1, a2, a3 -> self.divideIntHelper(a1=a1, a2=a2, a3=a3)) in
       self.multDivIntHelper(a1=f, a2=param1, a3=param2)
     
+    modIntHelperHelper(a1, a2:int, a3:int) =
+      let multDivHelper = a1 in
+      let param1 = a2 in
+      let param2 = a3 in
+      if param1 == 0 then 0
+      else
+        let bothPos = self.areBothTrue(a1=self.isLessThan(a1=0, a2=param1),
+                                       a2=self.isLessThan(a1=0, a2=param2)) in
+        let bothNeg = self.areBothTrue(a1=self.isGreaterThan(a1=0, a2=param1),
+                                       a2=self.isGreaterThan(a1=0, a2=param2)) in
+        if self.isOneTrue(a1=bothPos, a2=bothNeg) then
+          if self.isLessThan(a1=0, a2=param1) then
+            multDivHelper(a1=0, a2=param1, a3=param2)
+          else
+            multDivHelper(a1=0, a2=0 - param1, a3=0 - param2)
+        else
+          if self.isGreaterThan(a1=0, a2=param1) then
+            if (0 - multDivHelper(a1=0, a2=0 - param1, a3=param2)) == 0 then
+              0 - multDivHelper(a1=0, a2=0 - param1, a3=param2)
+            else
+              param2 - multDivHelper(a1=0, a2=0 - param1, a3=param2)
+          else
+            if (0 - multDivHelper(a1=0, a2=param1, a3=0 - param2)) == 0 then
+              multDivHelper(a1=0, a2=param1, a3=0 - param2)
+            else
+              0 - param2 - multDivHelper(a1=0, a2=param1, a3=0 - param2)
+
+    modIntHelper(a1:int, a2:int, a3:int) =
+      let count = a1 in
+      let subtraction = a2 in
+      let subtractor = a3 in
+      if self.isLessThan(a1=subtraction, a2=subtractor) then
+        subtraction
+      else
+        self.modIntHelper(
+                             a1=(count + 1), 
+                             a2=(subtraction - subtractor), 
+                             a3=subtractor)
+
+    modInt(a1:int, a2:int) =
+      let param1 = a1 in
+      let param2 = a2 in
+      let f = (fun a1, a2, a3 -> self.modIntHelper(a1=a1, a2=a2, a3=a3)) in
+      self.modIntHelperHelper(a1=f, a2=param1, a3=param2)
+
     #TODO: other common binary operators that could be implemented: "*", bit-wise operators (including shift).  
 
   } in 
@@ -450,22 +495,30 @@ let ListArray =
   object {
     maxCapacity = Common.maxInt 
 
-    createHelper(a1:int, a2)=
+    createHelper(a1:int, a2, a3)=
       let len = a1 in
       let lst = a2 in
-      if len >= 1 then self.createHelper(a1=len - 1, a2=(ref ())::lst) 
+      let pseudotype = a3 in
+      let temp = ref () in temp <- pseudotype;
+      if len >= 1 then self.createHelper(a1=len - 1, a2=temp::lst, a3=pseudotype) 
       else lst
       
     # a1: int (initial capacity)
-    create(a1:int) =
+    # a2: pseudo-type
+    # returns a list array with elements consisting of ref pseudo-type.
+    create(a1:int, a2) =
       let len = a1 in
+      let pseudotype = a2 in
       if (len + 1) <= 0 then `Failure ()
       else 
         let len =
           if len >= self.maxCapacity then self.maxCapacity else len
         in
-        self.createHelper(a1=len, a2=[])
+        self.createHelper(a1=len, a2=[], a3=[])
    
+    # a1: array 1
+    # a2: array 2
+    # returns an array consisting of array 2 copied onto array 1, starting at index 0.
     copy(a1, a2) =
       let arr1 = a1 in
       let arr2 = a2 in
@@ -475,7 +528,148 @@ let ListArray =
 
   } in
 
-    # TODO: implement a LittleBang methodology which returns an expression's hashcode; look into fresh var concept as source of hashcode, or recursively compute it based on the hashcode of subexpressions. This will allow expressions such as functions and records to be keys. Until then, assume that all keys are ints.
+# TODO: to implement getHashCode on objects, one possibility is for the object to have an equatable field, 
+# which is a field containing a set of strings of names of object fields which are to be equated to another
+# object's corresponding fields. 
+# Then the getHashCode function recursively looks into 
+# fields named in the set and builds a hashCode by arriving at fields which can be equated using == (such as
+# boolean, int, char, and string).
+# If two objects' equatable fields have the same set of strings, then an equals function can recursively
+# look into the fields and compare the objects.
+let HashMap = 
+  object {
+    initialCapacity = ref 3 #TODO: update this
+    maxCapacity = ref 5 #TODO: update this
+
+    #TODO: use of self is not allowed, unless an argument is added.
+#    createDefault = 
+#      let array = ListArray.create(a1=self.initialCapacity) in
+#      object{hashedArray=array capacityRef=(ref !(self.initialCapacity)) sizeRef=(ref 0)}
+
+    create(a1:int) =
+      let capacity = a1 in 
+      if capacity <= 0 then `Failure ()
+      else if capacity >= !self.maxCapacity + 1 then `Failure ()
+      else 
+        let capacity =
+          if capacity <= (!self.initialCapacity - 1) then 
+            self.initialCapacity
+          else capacity 
+        in let array = ListArray.create(a1=capacity, a2=[]) in
+        object{hashedArray=array capacityRef=(ref capacity) sizeRef=(ref 0)}
+
+    getHashIndex(a1, a2) =
+      let hashMap = a1 in
+      let key = a2 in
+      let hashCode = key in #TODO: replace this by "getHashCode key" once getHashCode is available.
+      #TODO: possibly do bitwise manipulation on hashCode to get a more uniform hash code.
+      Common.modInt(a1=hashCode, a2=!hashMap.capacityRef)
+
+    # TODO: resize
+
+    # a1: HashMap
+    # a2: key
+    getIndexListRef(a1, a2) =
+      let hashMap = a1 in
+      let key = a2 in
+      let keyIndex = self.getHashIndex(a1=hashMap, a2=key) in
+      let array = hashMap.hashedArray in array[keyIndex] 
+
+    # a1: HashMap
+    # a2: key
+    # a3: element
+    addElement(a1, a2:int, a3) = #TODO: eventually remove the a2:int constraint.
+      let hashMap = a1 in 
+      let key = a2 in
+      let elem = a3 in
+      let indexListRef = self.getIndexListRef(a1=hashMap, a2=key) in 
+      indexListRef <- [key, elem] :: !indexListRef;
+      hashMap.sizeRef <- !hashMap.sizeRef + 1
+    
+    # a1: HashMap
+    # a2: key 
+    getElement(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
+      let hashMap = a1 in
+      let key = a2 in
+      let indexList = !self.getIndexListRef(a1=hashMap, a2=key) in
+      let predicate = fun a1:[x,y] -> if x == key then `True () else `False () in
+      let pair = LinkedList.find(a1=indexList, a2=predicate) in
+      let f = 
+        (fun p:(`Hd head & `Tl tail) -> pair[1]) &
+        (fun p:() -> `Failure ()) in f(p=pair)
+
+    # a1: list
+    # a2: key
+    removeKeyHelper(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
+      let lst = a1 in
+      let key = a2 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+            let k = head[0] in  
+            if k == key then tail 
+            else `Hd head & `Tl self.removeKeyHelper(a1=tail, a2=key)
+         ) &
+         (fun lst:(`Nil ()) -> lst))
+      in f(lst=lst)
+
+    # a1: HashMap
+    # a2: key
+    removeKey(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
+      let hashMap = a1 in
+      let key = a2 in
+      let indexListRef = self.getIndexListRef(a1=hashMap, a2=key) in
+      let predicate = fun a1:[x,y] -> if x == key then `True () else `False () in
+      if LinkedList.isTrueForOne(a1=!indexListRef, a2=predicate) then
+        indexListRef <- self.removeKeyHelper(a1=!indexListRef, a2=key);
+        hashMap.sizeRef <- !hashMap.sizeRef - 1
+      else ()
+
+    # a1: list
+    # a2: key
+    containsKeyHelper(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
+      let indexList = a1 in
+      let key = a2 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+            let k = head[0] in  
+            if k == key then `True () 
+            else self.containsKeyHelper(a1=tail, a2=key)
+         ) &
+         (fun lst:(`Nil ()) -> `False ()))
+      in f(lst=indexList)
+
+    # a1: HashMap
+    # a2: key
+    containsKey(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
+      let hashMap = a1 in
+      let key = a2 in
+      let indexList = !self.getIndexListRef(a1=hashMap, a2=key) in
+      self.containsKeyHelper(a1=indexList, a2=key)
+
+    # a1: HashMap
+    # a2: function
+    #findPair(a1, a2) = 
+
+
+    # a1: HashMap
+    # a2: function
+    # Iterates through the keys, applying the function to each key's element, returning the result of the last application.
+    #iterate(a1, a2) =
+    
+
+    # a1: HashMap
+    # a2: function
+    #map(a1, a2) =
+
+
+    # a1: HashMap
+    getNumberOfKeys(a1) =
+      let hashMap = a1 in
+      !hashMap.sizeRef
+
+  } in
+
+#f cons (e cons (d cons (c cons (b cons a))))
 
 #Common.append(a1=[1], a2=[2,3])
 #LinkedList.getLength(a1=[1,2,3])
@@ -550,16 +744,72 @@ let ListArray =
 #LinkedList.remove(a1=[0, 1, 2], a2=3)
 #LinkedList.remove(a1=[0, 1, 2], a2=10)
 
-#ListArray.create(a1=3)
-#TODO: replace with expr[expr] syntax after translator desugaring is finished.
-let arr1 = ListArray.create(a1=3) in 
-  LinkedList.getElement(a1=arr1, a2=0) <- 100; 
-  LinkedList.getElement(a1=arr1, a2=1) <- 200; 
-  LinkedList.getElement(a1=arr1, a2=2) <- 300; 
-  let arr2 = ListArray.create(a1=2) in 
-  LinkedList.getElement(a1=arr2, a2=0) <- 400; 
-  LinkedList.getElement(a1=arr2, a2=1) <- 500; 
-  ListArray.copy(a1=arr1, a2=arr2)
+#ListArray.create(a1=3, a2=())
+#let arr1 = ListArray.create(a1=3, a2=()) in 
+#  arr1[0] <- 100; 
+#  arr1[1] <- 200; 
+#  arr1[2] <- 300; 
+#  let arr2 = ListArray.create(a1=2, a2=()) in 
+#  arr2[0] <- 400; 
+#  arr2[1] <- 500; 
+#  ListArray.copy(a1=arr1, a2=arr2)
+
+#let x = ref () in x <- []; x::x::[]
+#HashMap.create(a1=5)
+#Common.modInt(a1=1, a2=3)
+#HashMap.getHashIndex(a1=HashMap.create(a1=5), a2=2)
+#HashMap.getHashIndex(a1=HashMap.create(a1=3), a2=-1)
+
+#let hashMap = HashMap.create(a1=3) in HashMap.addElement(a1=hashMap, a2=-1, a3=-5); hashMap
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  hashMap
+
+#let key = 1 in let predicate = fun a1:[x,y] -> if x == key then `True () else `False () in
+#  LinkedList.find(a1=[[4, 400], [1, 100]], a2=predicate)
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.getElement(a1=hashMap, a2=1)
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.getElement(a1=hashMap, a2=10)
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.containsKey(a1=hashMap, a2=3)
+
+#let l = ref 0 in l <- [[1,100],[2,200]]; HashMap.removeKeyHelper(a1=!l, a2=2)
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  let key = 1 in
+#  HashMap.removeKey(a1=hashMap, a2=key); hashMap
+
+let hashMap = HashMap.create(a1=3) in 
+  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+  HashMap.getNumberOfKeys(a1=hashMap)
+
 ;;
 
 
