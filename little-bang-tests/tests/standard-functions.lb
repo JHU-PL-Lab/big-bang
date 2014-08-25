@@ -238,7 +238,7 @@ let LinkedList =
       let func = a2 in
       let f = 
         ((fun lst:(`Hd head & `Tl tail), func -> 
-            func(a1=head); self.map(a1=tail, a2=func)) &
+            func(a1=head); self.iterate(a1=tail, a2=func)) &
          (fun lst:(`Nil ()), func -> ()))
       in f(lst=a1, func=a2)
 
@@ -646,10 +646,48 @@ let HashMap =
       let indexList = !self.getIndexListRef(a1=hashMap, a2=key) in
       self.containsKeyHelper(a1=indexList, a2=key)
 
-    # a1: HashMap
-    # a2: function
-    #findPair(a1, a2) = 
+    # a1: list of pair lists
+    # a2: list of pairs
+    # a3: function
+#    findPairHelper(a1, a2, a3) = 
+#      let lstIndexes = a1 in
+#      let lstPairs = a2 in
+#      let predicate = a3 in
+#      let f = 
+#        ((fun lst:(`Hd head & `Tl tail) ->
+#            if predicate(a1=head) then head
+#            else self.findPairHelper(a1=lstIndexes, a2=tail, a3=predicate)
+#         ) &
+#         (fun lst:(`Nil ()) -> 
+#            let f2 =
+#              ((fun lst2:(`Hd head & `Tl tail) ->
+#                self.findPairHelper(a1=tail, a2=!head, a3=predicate)
+#               ) &
+#               (fun lst2:(`Nil ()) ->
+#                 `Failure ()
+#               ))
+#            in f2(ls2=lstIndexes)
+#         ))
+#      in f(lst=lstPairs)
 
+    # a1: HashMap
+    # a2: predicate
+#    findPair(a1, a2) = 
+#      let hashMap = a1 in
+#      let predicate = a2 in
+#      let f = 
+#        ((fun lst:(`Hd head & `Tl tail) ->
+#          self.findPairHelper(a1=tail, a2=!head, a3=predicate)
+#         ) &
+#         (fun lst:(`Nil ()) ->
+#           `Failure ()
+#        ))
+#      in f(lst=hashMap.hashedArray)  
+
+    # a1: list of pair lists
+    # a2: list of pairs
+    # a3: function applied to values
+    #iterateHelper(a1, a2, a3) = 
 
     # a1: HashMap
     # a2: function
@@ -660,7 +698,6 @@ let HashMap =
     # a1: HashMap
     # a2: function
     #map(a1, a2) =
-
 
     # a1: HashMap
     getNumberOfKeys(a1) =
@@ -803,12 +840,32 @@ let HashMap =
 #  let key = 1 in
 #  HashMap.removeKey(a1=hashMap, a2=key); hashMap
 
-let hashMap = HashMap.create(a1=3) in 
-  HashMap.addElement(a1=hashMap, a2=0, a3=0);
-  HashMap.addElement(a1=hashMap, a2=1, a3=100);
-  HashMap.addElement(a1=hashMap, a2=2, a3=200);
-  HashMap.addElement(a1=hashMap, a2=4, a3=400);
-  HashMap.getNumberOfKeys(a1=hashMap)
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.removeKey(a1=hashMap, a2=2); 
+#  HashMap.removeKey(a1=hashMap, a2=4);
+#  HashMap.removeKey(a1=hashMap, a2=0);
+#  HashMap.removeKey(a1=hashMap, a2=1);
+#  hashMap
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.getNumberOfKeys(a1=hashMap)
+
+#TODO: finish testing this
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  let predicate = fun a1:[x,y] -> if x == 1 then `True () else `False () in
+#  HashMap.findPair(a1=hashMap, a2=predicate)
 
 ;;
 
