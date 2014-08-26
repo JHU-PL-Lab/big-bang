@@ -64,11 +64,11 @@ data Pattern
   | LabelPattern Origin LabelName Pattern
   | RefPattern Origin Pattern
   | ConjunctionPattern Origin Pattern Pattern
-  | ConsPattern Origin Pattern Pattern
   | EmptyPattern Origin
   | VariablePattern Origin Ident
   -- LittleBang-specific
   | ListPattern Origin [Pattern] (Maybe Pattern)
+  | ConsPattern Origin Pattern Pattern
   deriving (Show)
 
 data Arg
