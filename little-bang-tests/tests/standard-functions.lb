@@ -538,14 +538,16 @@ let ListArray =
 # look into the fields and compare the objects.
 let HashMap = 
   object {
-    initialCapacity = ref 3 #TODO: update this
-    maxCapacity = ref 5 #TODO: update this
+    initialCapacity = ref 10 #TODO: update this
+    maxCapacity = ref 100 #TODO: update this
 
     #TODO: use of self is not allowed, unless an argument is added.
 #    createDefault = 
 #      let array = ListArray.create(a1=self.initialCapacity) in
 #      object{hashedArray=array capacityRef=(ref !(self.initialCapacity)) sizeRef=(ref 0)}
 
+    # a1: capacity
+    # returns a hash map
     create(a1:int) =
       let capacity = a1 in 
       if capacity <= 0 then `Failure ()
@@ -558,6 +560,9 @@ let HashMap =
         in let array = ListArray.create(a1=capacity, a2=[]) in
         object{hashedArray=array capacityRef=(ref capacity) sizeRef=(ref 0)}
 
+    # a1: HashMap
+    # a2: key
+    # returns the hashed index for the key.
     getHashIndex(a1, a2) =
       let hashMap = a1 in
       let key = a2 in
@@ -565,10 +570,9 @@ let HashMap =
       #TODO: possibly do bitwise manipulation on hashCode to get a more uniform hash code.
       Common.modInt(a1=hashCode, a2=!hashMap.capacityRef)
 
-    # TODO: resize
-
     # a1: HashMap
     # a2: key
+    # returns a reference to a list of pairs at the hashed index obtained from the key.
     getIndexListRef(a1, a2) =
       let hashMap = a1 in
       let key = a2 in
@@ -578,6 +582,7 @@ let HashMap =
     # a1: HashMap
     # a2: key
     # a3: element
+    # adds an element to the hash map; returns ().
     addElement(a1, a2:int, a3) = #TODO: eventually remove the a2:int constraint.
       let hashMap = a1 in 
       let key = a2 in
@@ -588,6 +593,7 @@ let HashMap =
     
     # a1: HashMap
     # a2: key 
+    # returns the element with key "key".
     getElement(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
       let hashMap = a1 in
       let key = a2 in
@@ -614,6 +620,7 @@ let HashMap =
 
     # a1: HashMap
     # a2: key
+    # removes the element with key "key"; returns ().
     removeKey(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
       let hashMap = a1 in
       let key = a2 in
@@ -640,6 +647,7 @@ let HashMap =
 
     # a1: HashMap
     # a2: key
+    # returns true if the hash map contains the pair with key "key".
     containsKey(a1, a2:int) = #TODO: eventually remove the a2:int constraint.
       let hashMap = a1 in
       let key = a2 in
@@ -649,57 +657,117 @@ let HashMap =
     # a1: list of pair lists
     # a2: list of pairs
     # a3: function
-#    findPairHelper(a1, a2, a3) = 
-#      let lstIndexes = a1 in
-#      let lstPairs = a2 in
-#      let predicate = a3 in
-#      let f = 
-#        ((fun lst:(`Hd head & `Tl tail) ->
-#            if predicate(a1=head) then head
-#            else self.findPairHelper(a1=lstIndexes, a2=tail, a3=predicate)
-#         ) &
-#         (fun lst:(`Nil ()) -> 
-#            let f2 =
-#              ((fun lst2:(`Hd head & `Tl tail) ->
-#                self.findPairHelper(a1=tail, a2=!head, a3=predicate)
-#               ) &
-#               (fun lst2:(`Nil ()) ->
-#                 `Failure ()
-#               ))
-#            in f2(ls2=lstIndexes)
-#         ))
-#      in f(lst=lstPairs)
+    findPairHelper(a1, a2, a3) = 
+      let lstIndexes = a1 in
+      let lstPairs = a2 in
+      let predicate = a3 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+            if predicate(a1=head) then head
+            else self.findPairHelper(a1=lstIndexes, a2=tail, a3=predicate)
+         ) &
+         (fun lst:(`Nil ()) -> 
+            let f2 =
+              ((fun lst2:(`Hd head & `Tl tail) ->
+                self.findPairHelper(a1=tail, a2=!head, a3=predicate)
+               ) &
+               (fun lst2:(`Nil ()) ->
+                 `Failure ()
+               ))
+            in f2(lst2=lstIndexes)
+         ))
+      in f(lst=lstPairs)
 
     # a1: HashMap
     # a2: predicate
-#    findPair(a1, a2) = 
-#      let hashMap = a1 in
-#      let predicate = a2 in
-#      let f = 
-#        ((fun lst:(`Hd head & `Tl tail) ->
-#          self.findPairHelper(a1=tail, a2=!head, a3=predicate)
-#         ) &
-#         (fun lst:(`Nil ()) ->
-#           `Failure ()
-#        ))
-#      in f(lst=hashMap.hashedArray)  
+    # returns the pair that meets the predicate.
+    findPair(a1, a2) = 
+      let hashMap = a1 in
+      let predicate = a2 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+          self.findPairHelper(a1=tail, a2=!head, a3=predicate)
+         ) &
+         (fun lst:(`Nil ()) ->
+           `Failure ()
+        ))
+      in f(lst=hashMap.hashedArray)  
 
     # a1: list of pair lists
     # a2: list of pairs
     # a3: function applied to values
-    #iterateHelper(a1, a2, a3) = 
+    iterateHelper(a1, a2, a3) = 
+      let lstIndexes = a1 in
+      let lstPairs = a2 in
+      let func = a3 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+            func(a1=head);
+            self.iterateHelper(a1=lstIndexes, a2=tail, a3=func)
+         ) &
+         (fun lst:(`Nil ()) -> 
+            let f2 =
+              ((fun lst2:(`Hd head & `Tl tail) ->
+                self.iterateHelper(a1=tail, a2=!head, a3=func)
+               ) &
+               (fun lst2:(`Nil ()) ->
+                 ()
+               ))
+            in f2(lst2=lstIndexes)
+         ))
+      in f(lst=lstPairs)
 
     # a1: HashMap
     # a2: function
-    # Iterates through the keys, applying the function to each key's element, returning the result of the last application.
-    #iterate(a1, a2) =
-    
+    # iterates through the key-value pairs, applying the function to each pair, returning ().
+    iterate(a1, a2) =
+      let hashMap = a1 in
+      let func = a2 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+          self.iterateHelper(a1=tail, a2=!head, a3=func)
+         ) &
+         (fun lst:(`Nil ()) ->
+           ()
+        ))
+      in f(lst=hashMap.hashedArray)  
+
+    # a1: HashMap
+    # a2: size
+    # returns a new hash map of size "size", with the key-value pairs in the old hash map.
+    resize(a1, a2:int) =
+      let oHashMap = a1 in
+      let nHashMap = self.create(a1=a2) in
+      let func =
+        (fun a1:[k,e] -> self.addElement(a1=nHashMap, a2=k, a3=e))
+      in self.iterate(a1=oHashMap, a2=func); nHashMap
+
+    # a1: list of pair lists
+    # a2: list of pairs
+    # a3: function applied to values
+    mapHelper(a1, a2) = 
+      let lstIndexes = a1 in
+      let func = a2 in
+      let f = 
+        ((fun lst:(`Hd head & `Tl tail) ->
+            head <- LinkedList.map(a1=!head, a2=func);
+            self.mapHelper(a1=tail, a2=func)
+         ) &
+         (fun lst:(`Nil ()) ->
+            ()
+         ))
+      in f(lst=lstIndexes)
 
     # a1: HashMap
     # a2: function
-    #map(a1, a2) =
+    # maps the function to each key-value pair; returns ().
+    map(a1, a2) =
+      let hashMap = a1 in
+      let func = a2 in
+      self.mapHelper(a1=hashMap.hashedArray, a2=func)
 
     # a1: HashMap
+    # returns the number of key-value pairs in the hash map.
     getNumberOfKeys(a1) =
       let hashMap = a1 in
       !hashMap.sizeRef
@@ -858,7 +926,6 @@ let HashMap =
 #  HashMap.addElement(a1=hashMap, a2=4, a3=400);
 #  HashMap.getNumberOfKeys(a1=hashMap)
 
-#TODO: finish testing this
 #let hashMap = HashMap.create(a1=3) in 
 #  HashMap.addElement(a1=hashMap, a2=0, a3=0);
 #  HashMap.addElement(a1=hashMap, a2=1, a3=100);
@@ -867,6 +934,28 @@ let HashMap =
 #  let predicate = fun a1:[x,y] -> if x == 1 then `True () else `False () in
 #  HashMap.findPair(a1=hashMap, a2=predicate)
 
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  let x = ref 0 in let ff = (fun a2 -> (fun a1:[k,e] -> a2 <- !a2 + e)) in 
+#  HashMap.iterate(a1=hashMap, a2=ff(a2=x)); !x
+
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  let ff = (fun a1:[k,e] -> [k,1 + e]) in 
+#  HashMap.map(a1=hashMap, a2=ff); hashMap
+
+let hashMap = HashMap.create(a1=3) in 
+  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+  HashMap.resize(a1=hashMap, a2=5)
 ;;
 
 
