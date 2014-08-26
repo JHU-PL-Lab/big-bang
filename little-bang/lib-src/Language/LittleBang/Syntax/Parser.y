@@ -142,6 +142,7 @@ Param :: { SPositional Param }
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  | Pattern '::' Pattern    { oc2 $1 $> ConsPattern $1 $3 }
   | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }
 

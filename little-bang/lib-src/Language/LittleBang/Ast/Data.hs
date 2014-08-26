@@ -64,6 +64,7 @@ data Pattern
   | LabelPattern Origin LabelName Pattern
   | RefPattern Origin Pattern
   | ConjunctionPattern Origin Pattern Pattern
+  | ConsPattern Origin Pattern Pattern
   | EmptyPattern Origin
   | VariablePattern Origin Ident
   -- LittleBang-specific
@@ -146,6 +147,7 @@ instance HasOrigin Ident where
 instance HasOrigin Pattern where
   originOf x = case x of
     ConjunctionPattern orig _ _ -> orig
+    ConsPattern orig _ _ -> orig
     LabelPattern orig _ _ -> orig
     RefPattern orig _ -> orig
     PrimitivePattern orig _ -> orig
@@ -207,6 +209,7 @@ instance Display Pattern where
    LabelPattern _ l p -> text "(" <> makeDoc l <+> makeDoc p <> text ")"
    RefPattern _ p -> text "ref" <+> parens (makeDoc p )
    ConjunctionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
+   ConsPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "::pat" <+> makeDoc p2 <> text ")"
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
    ListPattern _ p _ -> text "[" <> foldl (<+>) (text "") (map makeDoc p) <> text "]"  -- TODO: include ... form

@@ -50,6 +50,7 @@ desugarLittleBang expr =
     patDesugarers :: [DesugarFunction LB.Pattern]
     patDesugarers =
       [ desugarPatList
+      , desugarPatCons
       ]
 
 runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
@@ -181,6 +182,10 @@ walkPatTree pat = do
                             <$> walkPatTree p)
                             >>= f
     LB.ConjunctionPattern o p1 p2 -> (LB.ConjunctionPattern o
+                                    <$> walkPatTree p1
+                                    <*> walkPatTree p2)
+                                    >>= f
+    LB.ConsPattern o p1 p2 -> (LB.ConsPattern o
                                     <$> walkPatTree p1
                                     <*> walkPatTree p2)
                                     >>= f
@@ -478,6 +483,15 @@ desugarPatList pat =
     getListContinuation o end = case end of
       Nothing -> return (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))
       Just p -> return p
+
+desugarPatCons :: LB.Pattern -> DesugarM LB.Pattern
+desugarPatCons pat = 
+  case pat of
+    LB.ConsPattern o p1 p2 -> return $ 
+      LB.ConjunctionPattern o 
+      (LB.LabelPattern o (LB.LabelName o "Hd") p1) 
+      (LB.LabelPattern o (LB.LabelName o "Tl") p2)
+    _ -> return pat
 
 -- TODO: see why this is not working correctly.
 desugarLExprIndexedList :: LB.Expr -> DesugarM LB.Expr
