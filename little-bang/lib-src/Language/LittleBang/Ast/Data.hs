@@ -34,6 +34,7 @@ data Expr
   | TExprRef Origin Expr
   | TExprVar Origin Ident
   | TExprValInt Origin Integer -- TODO: reorganize into TExprPrimLit or similar
+  | TExprValChar Origin Char   -- TODO: reorganize into TExprPrimChar or similar
   | TExprValEmptyOnion Origin 
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
@@ -95,6 +96,7 @@ unLabelName (LabelName _ s) = s
 
 data PrimitiveType
   = PrimInt
+  | PrimChar
   deriving (Eq,Ord,Show)
 
 -- |Generate Eq and Ord instances
@@ -127,6 +129,7 @@ instance HasOrigin Expr where
     TExprRef orig _ -> orig
     TExprVar orig _ -> orig
     TExprValInt orig _ -> orig
+    TExprValChar orig _ -> orig
     TExprValEmptyOnion orig -> orig
     LExprScape orig _ _ -> orig
     LExprBinaryOp orig _ _ _ -> orig
@@ -177,6 +180,7 @@ instance Display Expr where
    TExprRef _ e -> text "ref" <+> makeDoc e
    TExprVar _ v -> makeDoc v 
    TExprValInt _ i -> text $ show i
+   TExprValChar _ i -> text $ show i
    TExprValEmptyOnion _ -> text "()"
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
    LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
@@ -239,3 +243,4 @@ instance Display LabelName where
 instance Display PrimitiveType where
   makeDoc p = case p of
     PrimInt -> text "int"
+    PrimChar -> text "char"

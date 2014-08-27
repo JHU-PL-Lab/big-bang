@@ -111,6 +111,7 @@ walkExprTree expr = do
     LB.LExprDeref o e -> (LB.LExprDeref o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
     LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
+    LB.TExprValChar o char -> (LB.TExprValChar o <$> return char) >>= f
     LB.TExprValEmptyOnion o -> f (LB.TExprValEmptyOnion o)
     
     LB.LExprScape o params e -> (LB.LExprScape o

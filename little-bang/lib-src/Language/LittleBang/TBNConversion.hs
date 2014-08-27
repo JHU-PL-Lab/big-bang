@@ -54,6 +54,7 @@ instance TBNConvertible LB.Expr TBN.Expr where
                                     
     LB.TExprVar o var -> TBN.ExprVar o <$> toTBN var
     LB.TExprValInt o i -> return $ TBN.ExprValInt o i
+    LB.TExprValChar o i -> return $ TBN.ExprValChar o i
     LB.TExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
     _ -> error $ "Cannot TBN convert: " ++ display expr -- TODO: get a correct failure mode
         
@@ -90,6 +91,7 @@ instance TBNConvertible TBN.BinaryOperator TBN.BinaryOperator where
 instance TBNConvertible LB.PrimitiveType TBN.PrimitiveType where
   toTBN primitive = return $ case primitive of
         LB.PrimInt -> TBN.PrimInt
+        LB.PrimChar -> TBN.PrimChar
 
 -- | Convert a LittleBang label to a TinyBang label      
 instance TBNConvertible LB.LabelName TBN.LabelName where

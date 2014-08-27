@@ -44,8 +44,10 @@ data TokenType a where
   TokRef :: TokenType () -- @ref@
   TokEmptyOnion :: TokenType () -- @()@
   TokInt :: TokenType () -- @int@  
+  TokChar :: TokenType () -- @char@
   TokIdentifier :: TokenType String
   TokLitInt :: TokenType Integer
+  TokLitChar :: TokenType Char
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokDeref :: TokenType () -- @!@
   TokCons :: TokenType () -- @::@
@@ -81,8 +83,10 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokRef _) -> text "ref"
     Token (SomeToken TokEmptyOnion _) -> dquotes $ text "()"
     Token (SomeToken TokInt _) -> dquotes $ text "int"
+    Token (SomeToken TokChar _) -> dquotes $ text "char"
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
     Token (SomeToken TokLitInt (posData -> n)) -> text "int#" <> dquotes (text $ show n)
+    Token (SomeToken TokLitChar (posData -> n)) -> text "char#" <> dquotes (text $ show n)
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokDeref _) -> text "!"
     Token (SomeToken TokCons _) -> text "::"

@@ -55,6 +55,7 @@ instance TBNLiftable TBN.BinaryOperator TBN.BinaryOperator where -- TODO: remove
 instance TBNLiftable TBN.PrimitiveType LB.PrimitiveType where
   tbnLift pt = case pt of
     TBN.PrimInt -> LB.PrimInt
+    TBN.PrimChar -> LB.PrimChar
 
 ol1 :: (TBNLiftable a a') => (Origin -> a' -> r) -> Origin -> a -> r
 ol1 f o a = f o (tbnLift a)
