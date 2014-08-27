@@ -22,9 +22,11 @@ data TokenType a where
   TokEmptyOnion :: TokenType () -- @()@
   TokOnion :: TokenType () -- @&@
   TokInt :: TokenType () -- @int@
+  TokChar :: TokenType () -- @char@
   TokSemi :: TokenType () -- @;@
   TokIdentifier :: TokenType String
   TokLitInt :: TokenType Integer
+  TokLitChar :: TokenType Char
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
@@ -41,11 +43,13 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokOnion _) -> dquotes $ text "&"
     Token (SomeToken TokArrow _) -> dquotes $ text "->"
     Token (SomeToken TokInt _) -> dquotes $ text "int"
+    Token (SomeToken TokChar _) -> dquotes $ text "char"
     Token (SomeToken TokSemi _) -> dquotes $ text ";"
     Token (SomeToken TokStartBlock _) -> dquotes $ text "{"
     Token (SomeToken TokStopBlock _) -> dquotes $ text "}"
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
     Token (SomeToken TokLitInt (posData -> n)) -> text "int#" <> dquotes (text $ show n)
+    Token (SomeToken TokLitChar (posData -> n)) -> text "char#" <> dquotes (text $ show n)
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"

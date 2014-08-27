@@ -74,6 +74,7 @@ clauseDerivation clause@(Clause _ x1 r) = do
                 VPrimitive _ pv ->
                   case pv of
                     VInt _ _ -> return $ TPrimitive PrimInt
+                    VChar _ _ -> return $ TPrimitive PrimChar
                 VEmptyOnion _ -> return TEmptyOnion
                 VLabel _ n x -> return $ TLabel n $ mktov $ derivVar x
                 VRef _ x -> return $ TRef $ derivVar x
