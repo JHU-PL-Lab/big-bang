@@ -99,6 +99,13 @@ innerATranslate e =
                ]
              , x
              )
+    ExprValChar _ n -> do
+      x <- freshVar
+      return ( [ TBA.Clause generated x $ TBA.Def generated $
+                    VPrimitive generated $ VChar generated n
+               ]
+             , x
+             )
     ExprVar _ x -> do
       x' <- freshVar
       x'' <- useVar x
@@ -179,3 +186,4 @@ aTransLabel = TBA.LabelName generated . TBN.unLabelName
 aTransPrimitiveType :: TBN.PrimitiveType -> TBA.PrimitiveType
 aTransPrimitiveType t = case t of
   TBN.PrimInt -> TBA.PrimInt
+  TBN.PrimChar -> TBA.PrimChar
