@@ -11,6 +11,8 @@ module Language.TinyBang.Toploop
 ) where
 
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import Data.List
 import Data.Map (Map)
@@ -70,26 +72,27 @@ data InterpreterConfiguration
 --  constraint database to drive the database type used by type inference.
 interpretSource :: (CDb.ConstraintDatabase db, Display db)
                 => db -> InterpreterConfiguration
-                -> String -> Either (InterpreterError db) InterpreterResult
+                -> String -> EitherT (InterpreterError db) IO InterpreterResult
 interpretSource dummy interpConf src = do
   let doc = UnknownDocument
-  tokens <- mapLeft LexerFailure $ lexTinyBang doc src
-  ast <- mapLeft ParserFailure $ parseTinyBang doc tokens
+  tokens <- hoistEither $ mapLeft LexerFailure $ lexTinyBang doc src
+  ast <- hoistEither $ mapLeft ParserFailure $ parseTinyBang doc tokens
   interpretAst dummy interpConf ast
 
 -- |Interprets the provided TinyBang AST.
 interpretAst :: (CDb.ConstraintDatabase db, Display db)
                 => db -> InterpreterConfiguration
-                -> Expr -> Either (InterpreterError db) InterpreterResult
+                -> Expr -> EitherT (InterpreterError db) IO InterpreterResult
 interpretAst _ interpConf ast = do
   when (typechecking interpConf) $
-    void $ mapLeft TypecheckFailure $ TI.typecheck ast
+    void $ hoistEither $ mapLeft TypecheckFailure $ TI.typecheck ast
   if evaluating interpConf
-    then do
-      (env,var) <- mapLeft (uncurry EvaluationFailure) $ I.eval ast
-      return $ InterpreterResult var (I.varMap env)
+    then
+      let transErr = uncurry EvaluationFailure in
+      let transVal (env,var) = InterpreterResult var (I.varMap env) in
+      bimapEitherT transErr transVal $ I.eval ast
     else
-      Left EvaluationDisabled
+      left EvaluationDisabled
     
 instance (Display db) => Display (InterpreterError db) where
   makeDoc ierr = case ierr of
@@ -172,13 +175,14 @@ instance (Display db) => Display (InterpreterError db) where
 --  similar to @interpretSource@ but converts the result to a user-readable
 --  string.  This function takes a dummy constraint database to drive the
 --  database type used by type inference.
-stringyInterpretSource :: InterpreterConfiguration -> String -> String
+stringyInterpretSource :: InterpreterConfiguration -> String -> IO String
 stringyInterpretSource interpConf exprSrc =
   case emptyDatabaseFromType $ databaseType interpConf of
-    CDb.SomeDisplayableConstraintDatabase dummy ->
-      case interpretSource dummy interpConf exprSrc of
-        Left err -> display err
-        Right result -> display result
+    CDb.SomeDisplayableConstraintDatabase dummy -> do
+      res <- runEitherT $ interpretSource dummy interpConf exprSrc
+      case res of
+        Left err -> return $ display err
+        Right result -> return $ display result
 
 -- |Creates an empty database of a recognized type.
 emptyDatabaseFromType :: ConstraintDatabaseType

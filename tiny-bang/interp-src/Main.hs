@@ -30,7 +30,7 @@ makeEval opts = do
                     { typechecking = not $ noTypecheck opts
                     , evaluating = not $ noEval opts
                     , databaseType = dtype }
-  return $ return . stringyInterpretSource config
+  return $ stringyInterpretSource config
 
 -- |Executes the TinyBang interpreter.
 main :: IO ()
@@ -54,8 +54,9 @@ main = do
           config = InterpreterConfiguration
                      { typechecking = not $ noTypecheck opts
                      , evaluating = not $ noEval opts
-                     , databaseType = Simple }                
-      mapM_ (putStrLn . stringyInterpretSource config) exprSrcs      
+                     , databaseType = Simple }          
+      --mapM_ (putStrLn . stringyInterpretSource config) exprSrcs
+      mapM_ (\l -> do {ll <- l; putStrLn ll}) (map (stringyInterpretSource config) exprSrcs)      
       
     else do 
       putStrLn versionStr
