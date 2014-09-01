@@ -6,6 +6,7 @@ module Language.TinyBang.Toploop
 , interpretAst
 , InterpreterConfiguration(..)
 , InterpreterResult(..)
+, InterpreterError(..)
 , ConstraintDatabaseType(..)
 , emptyDatabaseFromType
 ) where
