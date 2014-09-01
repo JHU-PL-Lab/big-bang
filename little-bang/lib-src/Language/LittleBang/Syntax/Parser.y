@@ -24,6 +24,7 @@ import qualified Language.TinyBangNested.Ast as TBN
 
 %token
   'int'         { Token (SomeToken TokInt $$) } 
+  'char'        { Token (SomeToken TokChar $$) }
   'ref'         { Token (SomeToken TokRef $$) }
   'let'         { Token (SomeToken TokLet $$) }
   'in'          { Token (SomeToken TokIn $$) }
@@ -54,6 +55,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
+  litchar       { Token (SomeToken TokLitChar $$) }
   '::'          { Token (SomeToken TokCons $$) }
   '!'           { Token (SomeToken TokDeref $$) }
   '.'           { Token (SomeToken TokDot $$) }
@@ -99,6 +101,7 @@ Expr :: { SPositional Expr }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | PrefixExpr              { $1 }
+  | Expr '[' Expr ']'       { oc2 $1 $> LExprIndexedList $1 $3 }
 
 PrefixExpr :: { SPositional Expr }
   : Label PrefixExpr        { oc2 $1 $> TExprLabelExp $1 $2 }
@@ -130,6 +133,7 @@ Label :: { SPositional LabelName }
 LiteralExpr :: { SPositional Expr }
   : '()'                    { oc0 $1 $> TExprValEmptyOnion }
   | litint                  { oc1 $1 $> TExprValInt $1 }
+  | litchar                 { oc1 $1 $> TExprValChar $1 }
   
 ParamList :: { VPositional [Param] }
   : manySepOpt( Param , ',' )
@@ -141,6 +145,7 @@ Param :: { SPositional Param }
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  | Pattern '::' Pattern    { oc2 $1 $> ConsPattern $1 $3 }
   | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }
 
@@ -154,6 +159,7 @@ PrimaryPattern :: {SPositional Pattern }
 
 PrimitiveType :: { SPositional PrimitiveType }
   : 'int'                   { PrimInt `at` $1  }
+  | 'char'                  { PrimChar `at` $1  }
 
 PatternList :: { VPositional [Pattern] }
   : manySepOpt( Pattern , ',' )

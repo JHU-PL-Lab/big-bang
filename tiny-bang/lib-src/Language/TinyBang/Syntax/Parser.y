@@ -22,6 +22,7 @@ import Language.TinyBang.Utils.Syntax
 
 %token
   'int'         { Token (SomeToken TokInt $$) } 
+  'char'        { Token (SomeToken TokChar $$) } 
   'ref'         { Token (SomeToken TokRef $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
@@ -39,6 +40,7 @@ import Language.TinyBang.Utils.Syntax
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
+  litchar       { Token (SomeToken TokLitChar $$) }
 
 %%
 
@@ -87,6 +89,7 @@ PatternClause
 
 PatternValue
   : 'int'                   { oc0 $1 $> (\o -> PPrimitive o PrimInt) }
+  | 'char'                  { oc0 $1 $> (\o -> PPrimitive o PrimChar) }
   | '()'                    { oc0 $1 $> PEmptyOnion }
   | Label Var               { oc2 $1 $> PLabel $1 $2 }
   | 'ref' Var               { oc1 $1 $> PRef $2 }
@@ -100,6 +103,7 @@ Label
 
 LiteralPrimitive
   : litint                  { oc1 $1 $> VInt $1 }
+  | litchar                 { oc1 $1 $> VChar $1 }
 
 BuiltinOp
   : '+'                     { posOver $1 $> OpIntPlus }

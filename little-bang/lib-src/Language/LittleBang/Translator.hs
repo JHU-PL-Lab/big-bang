@@ -8,6 +8,7 @@ import Control.Monad.Reader
 
 import Language.LittleBang.Ast as LB
 import Language.TinyBang.Ast as TB
+import Language.TinyBangNested.Ast as TBN
 import Language.LittleBang.Lifter
 import Language.TinyBang.Utils.Syntax.Location (SourceDocument(UnknownDocument))
 import Language.TinyBangNested.Syntax.Lexer
@@ -44,10 +45,12 @@ desugarLittleBang expr =
       , desugarExprLAppl
       , desugarExprDeref
       , desugarLExprBinaryOp
+      , desugarLExprIndexedList
       ]
     patDesugarers :: [DesugarFunction LB.Pattern]
     patDesugarers =
       [ desugarPatList
+      , desugarPatCons
       ]
 
 runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
@@ -108,6 +111,7 @@ walkExprTree expr = do
     LB.LExprDeref o e -> (LB.LExprDeref o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
     LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
+    LB.TExprValChar o char -> (LB.TExprValChar o <$> return char) >>= f
     LB.TExprValEmptyOnion o -> f (LB.TExprValEmptyOnion o)
     
     LB.LExprScape o params e -> (LB.LExprScape o
@@ -148,7 +152,10 @@ walkExprTree expr = do
                                     <*> pure i
                                     <*> mapM walkArgTree args)
                                     >>= f
-
+    LB.LExprIndexedList o e i -> (LB.LExprIndexedList o
+                                 <$> walkExprTree e
+                                 <*> walkExprTree i)
+                                 >>= f
 -- |Walk a parameter, applying desugarers
 walkParamTree :: LB.Param -> DesugarM LB.Param
 walkParamTree p = case p of
@@ -176,6 +183,10 @@ walkPatTree pat = do
                             <$> walkPatTree p)
                             >>= f
     LB.ConjunctionPattern o p1 p2 -> (LB.ConjunctionPattern o
+                                    <$> walkPatTree p1
+                                    <*> walkPatTree p2)
+                                    >>= f
+    LB.ConsPattern o p1 p2 -> (LB.ConsPattern o
                                     <$> walkPatTree p1
                                     <*> walkPatTree p2)
                                     >>= f
@@ -473,7 +484,68 @@ desugarPatList pat =
     getListContinuation o end = case end of
       Nothing -> return (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))
       Just p -> return p
-      
+
+desugarPatCons :: LB.Pattern -> DesugarM LB.Pattern
+desugarPatCons pat = 
+  case pat of
+    LB.ConsPattern o p1 p2 -> return $ 
+      LB.ConjunctionPattern o 
+      (LB.LabelPattern o (LB.LabelName o "Hd") p1) 
+      (LB.LabelPattern o (LB.LabelName o "Tl") p2)
+    _ -> return pat
+
+-- TODO: see why this is not working correctly.
+desugarLExprIndexedList :: LB.Expr -> DesugarM LB.Expr
+desugarLExprIndexedList expr = 
+  case expr of
+    LB.LExprIndexedList o e i -> getIndex o e i expr
+    _ -> return expr
+    where
+    getIndex :: TB.Origin -> LB.Expr -> LB.Expr -> LB.Expr -> DesugarM LB.Expr
+    getIndex o e i expr =
+      walkExprTree $ -- call desugar here
+        (LB.LExprCondition o
+          (LB.TExprBinaryOp o 
+           (LB.TExprBinaryOp o i (TBN.OpIntPlus o) (LB.TExprValInt o 1)) 
+           (TBN.OpIntLessEq o) 
+           (LB.TExprValInt o 0)) -- TODO: change to i < 0 when < is available in the language.
+          (LB.TExprLabelExp o  (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)) -- TODO: add "index out of bounds exception"; this is a temporary placeholder.
+          (LB.TExprLet o
+            (LB.Ident o "obj")
+            (LB.LExprObject o [objTerm])
+            (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "obj")) (LB.Ident o "getElement")
+             [LB.NamedArg o (LB.Ident o "lst") e,
+              LB.NamedArg o (LB.Ident o "index") i]))
+      )
+      where
+      objTerm = ObjectMethod o (LB.Ident o "getElement")
+        [LB.Param o (LB.Ident o "lst") (LB.EmptyPattern o), 
+         LB.Param o (LB.Ident o "index") (LB.PrimitivePattern o LB.PrimInt)]
+        (LB.TExprLet o (LB.Ident o "f")
+          (LB.TExprOnion o
+             (LB.LExprScape o [LB.Param o (LB.Ident o "l") 
+                (LB.ConjunctionPattern o 
+                   (LB.LabelPattern o (LB.LabelName o "Hd") (LB.VariablePattern o (LB.Ident o "hd"))) 
+                   (LB.LabelPattern o (LB.LabelName o "Tl") (LB.VariablePattern o (LB.Ident o "tl"))))]
+                (LB.LExprCondition o 
+                   (LB.TExprBinaryOp o (LB.TExprVar o (LB.Ident o "index")) (TBN.OpIntEq o) (LB.TExprValInt o 0)) 
+                   (LB.TExprVar o (LB.Ident o "hd")) 
+                   (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "self")) 
+                      (LB.Ident o "getElement") 
+                      [LB.NamedArg o (LB.Ident o "lst") (LB.TExprVar o (LB.Ident o "tl")),
+                       LB.NamedArg o (LB.Ident o "index") 
+                         (LB.TExprBinaryOp o (LB.TExprVar o (LB.Ident o "index")) 
+                         (TBN.OpIntMinus o)
+                         (LB.TExprValInt o 1))]))
+             ) 
+             (LB.LExprScape o [LB.Param o (LB.Ident o "l") 
+                (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))]
+                (LB.TExprLabelExp o  (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)) -- TODO: add "index out of bounds exception"; this is a temporary placeholder.
+             )
+           )
+           (LB.LExprAppl o (LB.TExprVar o (LB.Ident o "f"))
+              [LB.NamedArg o (LB.Ident o "l") (LB.TExprVar o (LB.Ident o "lst"))])
+        )
 
 -- |Seal a given expression.  This function generates code which will apply the
 --  seal function to the provided expression. 

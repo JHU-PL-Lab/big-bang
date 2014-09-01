@@ -30,6 +30,7 @@ data Expr
   | ExprRef Origin Expr
   | ExprVar Origin Ident
   | ExprValInt Origin Integer
+  | ExprValChar Origin Char
   | ExprValEmptyOnion Origin 
   deriving (Show)
 
@@ -64,6 +65,7 @@ unLabelName (LabelName _ s) = s
 
 data PrimitiveType
   = PrimInt
+  | PrimChar
   deriving (Eq,Ord,Show)
 
 -- |Generate Eq and Ord instances
@@ -93,6 +95,7 @@ instance HasOrigin Expr where
     ExprRef orig _ -> orig
     ExprVar orig _ -> orig
     ExprValInt orig _ -> orig
+    ExprValChar orig _ -> orig
     ExprValEmptyOnion orig -> orig
 
 instance HasOrigin Ident where
@@ -126,6 +129,7 @@ instance Display Expr where
    ExprRef _ e -> text "(" <> text "ref" <+> makeDoc e <> text ")"
    ExprVar _ v -> makeDoc v 
    ExprValInt _ i -> text $ show i
+   ExprValChar _ i -> text $ show i
    ExprValEmptyOnion _ -> text "()"
 
 instance Display BinaryOperator where
@@ -157,3 +161,4 @@ instance Display LabelName where
 instance Display PrimitiveType where
   makeDoc p = case p of
     PrimInt -> text "int"
+    PrimChar -> text "char"

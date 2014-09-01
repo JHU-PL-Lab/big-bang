@@ -100,7 +100,7 @@ useVar x = do
   mv <- Map.lookup x <$> curVarMap
   case mv of
     Just x' -> return x'
-    Nothing -> error "Undefined variable!" -- TODO: monadic failure
+    Nothing -> error $ "Undefined variable: " ++ show x -- TODO: monadic failure
 
 bindVar :: TBN.Ident -> ATranslationM TBA.Var
 bindVar x = do

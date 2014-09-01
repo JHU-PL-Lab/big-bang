@@ -18,8 +18,10 @@ module Language.TinyBang.Interpreter.Basis
 ) where
 
 import Control.Applicative
+import Control.Monad.IO.Class
 import Control.Monad.State
 import Control.Monad.Trans.Either
+import Data.Functor.Identity
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
@@ -69,13 +71,17 @@ instance Display EvalError where
 
 -- |The monad in which small-step evaluation takes place.
 newtype EvalM a
-  = EvalM { unEvalM :: EitherT EvalError (State EvalState) a }
-  deriving (Functor, Applicative, Monad, MonadState EvalState)
+  = EvalM { unEvalM :: EitherT EvalError (StateT EvalState IO) a }
+  deriving (Functor, Applicative, Monad, MonadState EvalState, MonadIO)
 
 -- |Executes an evaluation.
-runEvalM :: EvalState -> EvalM a -> (Either EvalError a, EvalState)
+runEvalM :: EvalState -> EvalM a -> IO (Either EvalError a, EvalState)
 runEvalM s x =
-  runState (runEitherT $ unEvalM x) s
+  let unwrapped = unEvalM x in -- EitherT EvalError (StateT EvalState Identity) a
+  let unEithered = runEitherT unwrapped in -- StateT EvalState Identity (Either EvalError a)
+  let unStated = runStateT unEithered s in -- Identity (Either EvalError a, EvalState)
+  unStated
+  --runIdentity $ runStateT (runEitherT (unEvalM x)) s  -- Identity (EvalState, Either EvalError a)
 
 -- |Performs a value lookup on a given variable.
 varLookup :: Var -> EvalM Value

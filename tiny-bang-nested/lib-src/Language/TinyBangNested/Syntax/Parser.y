@@ -22,6 +22,7 @@ import Language.TinyBangNested.Syntax.Tokens
 
 %token
   'int'         { Token (SomeToken TokInt $$) } 
+  'char'        { Token (SomeToken TokChar $$) }
   'ref'         { Token (SomeToken TokRef $$) }
   'let'         { Token (SomeToken TokLet $$) }
   'in'          { Token (SomeToken TokIn $$) }
@@ -41,6 +42,7 @@ import Language.TinyBangNested.Syntax.Tokens
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
+  litchar       { Token (SomeToken TokLitChar $$) }
 
 %left LAM
 %right 'in'
@@ -94,6 +96,7 @@ Label :: { SPositional LabelName }
 LiteralExpr :: { SPositional Expr }
   : '()'                    { oc0 $1 $> ExprValEmptyOnion }
   | litint                  { oc1 $1 $> ExprValInt $1 }
+  | litchar                 { oc1 $1 $> ExprValChar $1 }
 
 Pattern :: { SPositional Pattern }
   : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
@@ -109,6 +112,7 @@ PrimaryPattern :: {SPositional Pattern }
 
 PrimitiveType :: { SPositional PrimitiveType }
   : 'int'                   { PrimInt `at` $1  }
+  | 'char'                  { PrimChar `at` $1  }
 
 -- Generalizations of common grammar patterns.
 

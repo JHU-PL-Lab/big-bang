@@ -143,6 +143,8 @@ project proj x = do
       maybe <$> project proj x2 <*> return Just <*> project proj x1
     VPrimitive _ (VInt _  _) ->
       requireProj $ ProjPrim PrimInt
+    VPrimitive _ (VChar _  _) ->
+      requireProj $ ProjPrim PrimChar
     VLabel _ n _ ->
       requireProj $ ProjLabel n
     VRef _ _ ->

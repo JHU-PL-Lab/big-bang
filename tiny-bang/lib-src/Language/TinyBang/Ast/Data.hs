@@ -24,6 +24,7 @@ module Language.TinyBang.Ast.Data
 , unVar
 
 , valAsInt
+, valAsChar
 
 , mkvar
 , typeOfPrimitiveValue
@@ -80,6 +81,7 @@ data Value
 -- |A data type representing primitive values.
 data PrimitiveValue
   = VInt Origin Integer
+  | VChar Origin Char
   deriving (Show)
 
 -- |A data type describing patterns.
@@ -104,6 +106,7 @@ data PatternValue
 -- |A representation of primitive types.
 data PrimitiveType
   = PrimInt
+  | PrimChar
   deriving (Eq, Ord, Show)
 
 -- |A semantic wrapper for label names.
@@ -137,6 +140,11 @@ valAsInt v = case v of
   VPrimitive _ (VInt _ n) -> Just n
   _ -> Nothing
 
+valAsChar :: Value -> Maybe Char
+valAsChar v = case v of
+  VPrimitive _ (VChar _ n) -> Just n
+  _ -> Nothing
+
 -- * Generally related routines
 
 mkvar :: Origin -> String -> Var
@@ -145,6 +153,7 @@ mkvar o s = Var o (IdentifierVar s) Nothing
 typeOfPrimitiveValue :: PrimitiveValue -> PrimitiveType
 typeOfPrimitiveValue v = case v of
   VInt _ _ -> PrimInt
+  VChar _ _ -> PrimChar
 
 exprConcat :: Expr -> Expr -> Expr
 -- TODO: better origin!
@@ -191,6 +200,7 @@ instance Display Value where
 instance Display PrimitiveValue where
   makeDoc v = case v of
     VInt _ n -> text $ show n
+    VChar _ n -> text $ show n
 
 instance Display Pattern where
   makeDoc pat = case pat of
@@ -213,6 +223,7 @@ instance Display PatternValue where
 instance Display PrimitiveType where
   makeDoc p = case p of
     PrimInt -> text "int"
+    PrimChar -> text "char"
 
 instance Display LabelName where
   makeDoc n = text "`" <> text (unLabelName n)
@@ -275,6 +286,7 @@ instance HasOrigin Value where
 instance HasOrigin PrimitiveValue where
   originOf x = case x of
     VInt orig _ -> orig
+    VChar orig _ -> orig
 
 instance HasOrigin Pattern where
   originOf x = case x of

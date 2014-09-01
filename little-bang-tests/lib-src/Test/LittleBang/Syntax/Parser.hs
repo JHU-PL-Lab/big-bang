@@ -64,8 +64,8 @@ parserTests = TestList
       "a1 + b2 + c3"
       (\case
           TExprBinaryOp _
-            (TExprBinaryOp _ (TExprVar _ _) (OpIntPlus _) (TExprVar _ _))
-            (OpIntPlus _)
+            (TExprBinaryOp _ (TExprVar _ _) (TBN.OpIntPlus _) (TExprVar _ _))
+            (TBN.OpIntPlus _)
             (TExprVar _ _) -> True
           _ -> False)
   , postest "onion associativity"
@@ -92,7 +92,7 @@ parserTests = TestList
   , postest "application precedence"
       "a + b & c d"
       (\case
-          TExprBinaryOp _ (TExprVar _ _) (OpIntPlus _)
+          TExprBinaryOp _ (TExprVar _ _) (TBN.OpIntPlus _)
             (TExprOnion _ (TExprVar _ _)
               (TExprAppl _ (TExprVar _ _) (TExprVar _ _))) -> True
           _ -> False)

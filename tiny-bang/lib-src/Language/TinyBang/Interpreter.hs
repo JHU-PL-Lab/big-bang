@@ -14,6 +14,8 @@ module Language.TinyBang.Interpreter
 ) where
 
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Either
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
@@ -32,17 +34,16 @@ $(loggingFunctions)
 --  environment (representing the heap) and a flow variable (representing the
 --  result of evaluation).  If an error occurs, it is accompanied by the list
 --  of unevaluated clauses when evaluation failed.
-eval :: Expr -> Either (EvalError, [Clause]) (EvalEnv, Var)
-eval (Expr o cls) =
-  let e'@(Expr _ cls') = Expr o $ builtinEnv ++ cls in
-  let initialState = EvalState ( EvalEnv Map.empty Nothing ) cls' 1 in
-  let (merr, rstate) = runEvalM initialState $
+eval :: Expr -> EitherT (EvalError, [Clause]) IO (EvalEnv, Var)
+eval (Expr o cls) = do
+  let e'@(Expr _ cls') = Expr o $ builtinEnv ++ cls
+  let initialState = EvalState ( EvalEnv Map.empty Nothing ) cls' 1
+  (merr, rstate) <- liftIO $ runEvalM initialState $
                           wellFormednessCheck e' >> smallStepMany
-  in
-  either (Left . (,evalClauses rstate))
-         (Right . const ( evalEnv rstate
-                        , fromJust $ lastVar $ evalEnv rstate))
-         merr
+  case merr of
+    Left err -> left (err,evalClauses rstate)
+    Right _ -> return $ ( evalEnv rstate
+                        , fromJust $ lastVar $ evalEnv rstate)
   where
     wellFormednessCheck :: Expr -> EvalM ()
     wellFormednessCheck e' =

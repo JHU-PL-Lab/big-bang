@@ -34,20 +34,20 @@ data Expr
   | TExprRef Origin Expr
   | TExprVar Origin Ident
   | TExprValInt Origin Integer -- TODO: reorganize into TExprPrimLit or similar
+  | TExprValChar Origin Char   -- TODO: reorganize into TExprPrimChar or similar
   | TExprValEmptyOnion Origin 
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
   | LExprBinaryOp Origin Expr BinaryOperator Expr
   | LExprAppl Origin Expr [Arg]
   | LExprCondition Origin Expr Expr Expr
-  | LExprSequence Origin Expr Expr -- TODO: shouldn't this just be a binop?
   | LExprList Origin [Expr]
   | LExprRecord Origin [Arg]
   | LExprProjection Origin Expr Ident
   | LExprDispatch Origin Expr Ident [Arg]
   | LExprObject Origin [ObjectTerm]
   | LExprDeref Origin Expr
-  | LExprCons Origin Expr Expr -- TODO: this should just be a binop
+  | LExprIndexedList Origin Expr Expr
   deriving (Show)
 
 data BinaryOperator
@@ -69,6 +69,7 @@ data Pattern
   | VariablePattern Origin Ident
   -- LittleBang-specific
   | ListPattern Origin [Pattern] (Maybe Pattern)
+  | ConsPattern Origin Pattern Pattern
   deriving (Show)
 
 data Arg
@@ -95,6 +96,7 @@ unLabelName (LabelName _ s) = s
 
 data PrimitiveType
   = PrimInt
+  | PrimChar
   deriving (Eq,Ord,Show)
 
 -- |Generate Eq and Ord instances
@@ -127,19 +129,19 @@ instance HasOrigin Expr where
     TExprRef orig _ -> orig
     TExprVar orig _ -> orig
     TExprValInt orig _ -> orig
+    TExprValChar orig _ -> orig
     TExprValEmptyOnion orig -> orig
     LExprScape orig _ _ -> orig
     LExprBinaryOp orig _ _ _ -> orig
     LExprAppl orig _ _ -> orig
     LExprCondition orig _ _ _ -> orig
-    LExprSequence orig _ _ -> orig
     LExprList orig _ -> orig
     LExprRecord orig _ -> orig
     LExprProjection orig _ _ -> orig
     LExprDispatch orig _ _ _ -> orig
     LExprObject orig _ -> orig
     LExprDeref orig _ -> orig
-    LExprCons orig _ _  -> orig
+    LExprIndexedList orig _ _ -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -148,6 +150,7 @@ instance HasOrigin Ident where
 instance HasOrigin Pattern where
   originOf x = case x of
     ConjunctionPattern orig _ _ -> orig
+    ConsPattern orig _ _ -> orig
     LabelPattern orig _ _ -> orig
     RefPattern orig _ -> orig
     PrimitivePattern orig _ -> orig
@@ -177,13 +180,13 @@ instance Display Expr where
    TExprRef _ e -> text "ref" <+> makeDoc e
    TExprVar _ v -> makeDoc v 
    TExprValInt _ i -> text $ show i
+   TExprValChar _ i -> text $ show i
    TExprValEmptyOnion _ -> text "()"
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
    LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)
    LExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                 makeDoc e2 <+> text "else" <+> makeDoc e3
-   LExprSequence _ e1 e2 -> makeDoc e1 <+> text "; " <+> makeDoc e2
    LExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"
    LExprRecord _ args ->
     encloseSep lbrace rbrace comma $ map makeDoc args
@@ -193,7 +196,7 @@ instance Display Expr where
    LExprDispatch _ e i a -> makeDoc e <> text "." <> makeDoc i <>
                               encloseSep lparen rparen comma (map makeDoc a)
    LExprDeref _ e -> text "!" <> makeDoc e
-   LExprCons _ e1 e2 -> makeDoc e1 <+> text "::" <+> makeDoc e2
+   LExprIndexedList _ e i -> makeDoc e <> text "[" <> makeDoc i <> text "]"
 
 instance Display BinaryOperator where
   makeDoc x = case x of
@@ -210,6 +213,7 @@ instance Display Pattern where
    LabelPattern _ l p -> text "(" <> makeDoc l <+> makeDoc p <> text ")"
    RefPattern _ p -> text "ref" <+> parens (makeDoc p )
    ConjunctionPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "&pat" <+> makeDoc p2 <> text ")"
+   ConsPattern _ p1 p2 ->  text "(" <> makeDoc p1  <+> text "::pat" <+> makeDoc p2 <> text ")"
    EmptyPattern _ -> text "()"
    VariablePattern _ x -> makeDoc x
    ListPattern _ p _ -> text "[" <> foldl (<+>) (text "") (map makeDoc p) <> text "]"  -- TODO: include ... form
@@ -239,3 +243,4 @@ instance Display LabelName where
 instance Display PrimitiveType where
   makeDoc p = case p of
     PrimInt -> text "int"
+    PrimChar -> text "char"

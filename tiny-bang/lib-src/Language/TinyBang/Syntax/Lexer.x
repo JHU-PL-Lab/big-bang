@@ -16,8 +16,9 @@ import Utils.Monad.Read
 
 %wrapper "monad"
 
-$digit = 0-9            -- digits
-$alpha = [a-zA-Z]       -- alphabetic characters
+$digit = 0-9                 -- digits
+$alpha = [a-zA-Z]            -- alphabetic characters
+$character = [\x00-\x10ffff] -- characters
 $identstart = $alpha
 $identcont = [$alpha $digit \_ \']
 
@@ -26,6 +27,7 @@ tokens :-
   $white+                      ;
   "#".*                        ;
   int                          { simply TokInt }
+  char                         { simply TokChar }
   ref                          { simply TokRef }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
@@ -48,6 +50,14 @@ tokens :-
                                          "Invalid integer literal: " ++ s
                                }
   "-"                          { simply TokMinus }
+  "'" "\\"? $character* "'"    { wrapM $ \s ->
+                                   case readMaybe s of
+                                     Just i ->
+                                        return $ \ss -> S.token TokLitChar ss i
+                                     Nothing ->
+                                       alexError $
+                                         "Invalid character literal: " ++ s
+                               }
   $identstart $identcont*      { wrap $ \s ss -> S.token TokIdentifier ss s }
   `$identcont*                 { wrap $ \s ss ->
                                     S.token TokLabel ss $ drop 1 s
