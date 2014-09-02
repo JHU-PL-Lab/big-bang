@@ -9,6 +9,7 @@ library
   build-depends:   base >= 4,
                    tiny-bang,
                    parsec,
+                   transformers,
                    containers,
                    mtl,
                    HUnit,

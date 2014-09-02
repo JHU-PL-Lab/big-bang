@@ -37,6 +37,7 @@ data InterpreterError db
   | TypecheckFailure (TI.TypecheckingError db)
   | EvaluationFailure I.EvalError [Clause]
   | EvaluationDisabled
+  | OtherFailure String
 
 data InterpreterResult
   = InterpreterResult

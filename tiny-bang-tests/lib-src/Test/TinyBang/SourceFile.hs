@@ -6,6 +6,9 @@ module Test.TinyBang.SourceFile
 , TinyBangSourceFileTestConfig(..)
 ) where
 
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Either
+
 import Data.List
 import Data.List.Split (splitOn)
 import Data.Maybe
@@ -95,7 +98,8 @@ generateTests (TinyBangSourceFileTestConfig
       let tcResult = typecheck' configDatabase ast
       case expectation of
         Pass predicate predSrc ->
-          case (tcResult, eval ast) of
+          let res = liftIO $ runEitherT $ eval ast in
+          case (tcResult, res) of
             (Left err, _) ->
               Left $ "Expected " ++ display predSrc ++
                      " but type error occurred: " ++ display err

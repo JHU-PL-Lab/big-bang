@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Monad
+import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import System.IO
 
@@ -23,6 +24,22 @@ import Utils.Toploop
 versionStr :: String
 versionStr = "TinyBangNested Interpreter version " ++ showVersion version
 
+interpretTBNSource :: (CDb.ConstraintDatabase db, Display db) => db -> InterpreterConfiguration -> String -> EitherT (InterpreterError db) IO (InterpreterResult)
+interpretTBNSource dummy interpConf src = do
+  tokens <- hoistEither $ mapLeft LexerFailure $ lexTinyBangNested UnknownDocument src
+  tbnAst <- hoistEither $ mapLeft ParserFailure $ parseTinyBangNested UnknownDocument tokens
+  let tbAst = aTranslate tbnAst
+  interpretAst dummy interpConf tbAst
+
+stringyInterpretTBNSource :: InterpreterConfiguration -> String -> IO String
+stringyInterpretTBNSource interpConf exprSrc =
+  case emptyDatabaseFromType $ databaseType interpConf of
+    CDb.SomeDisplayableConstraintDatabase dummy -> do
+      res <- runEitherT $ interpretTBNSource dummy interpConf exprSrc
+      case res of
+        Left err -> return $ display err
+        Right result -> return $ display result
+
 -- |Creates an evaluation routine for a single expression.  Requires an initial
 --  configuration.
 makeEval :: TinyBangOptions -> IO (String -> IO String)
@@ -32,18 +49,8 @@ makeEval opts = do
                     { typechecking = not $ noTypecheck opts
                     , evaluating = not $ noEval opts
                     , databaseType = dtype }
-  return $ \src ->
-    let result =
-          do
-            tokens <- lexTinyBangNested UnknownDocument src
-            tbnAst <- parseTinyBangNested UnknownDocument tokens
-            let tbAst = aTranslate tbnAst
-            case emptyDatabaseFromType dtype of
-              SomeDisplayableConstraintDatabase db ->
-                mapLeft display $ interpretAst db config tbAst
-    in
-    return $ either id display result
-    
+  return $ stringyInterpretTBNSource config
+
 main :: IO ()
 main = do
   opts <- updaterParse tinyBangOptionDescriptors tinyBangDefaultOptions
