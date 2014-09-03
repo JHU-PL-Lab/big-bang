@@ -2,27 +2,39 @@ CABAL=cabal
 SANDBOX_DIR=../cabal-sandbox
 
 .PHONY : all
-all: build install
+all: init build
+
+$(SANDBOX_DIR)/bin/alex:
+	$(CABAL) install alex
+
+$(SANDBOX_DIR)/bin/happy:
+	$(CABAL) install happy
+
+.PHONY : build-tools
+build-tools: $(SANDBOX_DIR)/bin/alex $(SANDBOX_DIR)/bin/happy
 
 cabal.sandbox.config:
 	$(CABAL) sandbox --sandbox=$(SANDBOX_DIR) init
 
+.PHONY : init
+init: cabal.sandbox.config
+	$(CABAL) sandbox add-source .
+
 .PHONY: build
-build: cabal.sandbox.config
+build: init build-tools
 	$(CABAL) install --only-dependencies
 	$(CABAL) configure
 	$(CABAL) build
-
-.PHONY: install
-install: build
-	$(CABAL) sandbox add-source .
+	$(CABAL) install
 
 .PHONY: clean
 clean:
 	$(CABAL) clean
+	$(CABAL) sandbox hc-pkg -- unregister --force $(shell basename *.cabal .cabal)
+	
+.PHONY: purge
+purge: clean
 	$(CABAL) sandbox delete-source .
-	-$(CABAL) sandbox hc-pkg -- unregister --force $(shell basename *.cabal .cabal)
-
-.PHONY: clean-all
-clean-all: clean
 	$(CABAL) sandbox delete
+	rm -f cabal.sandbox.config
+
