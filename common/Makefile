@@ -30,7 +30,7 @@ build: init build-tools
 .PHONY: clean
 clean:
 	$(CABAL) clean
-	$(CABAL) sandbox hc-pkg -- unregister --force $(shell basename *.cabal .cabal)
+	-$(CABAL) sandbox hc-pkg -- unregister --force $(shell basename *.cabal .cabal)
 	
 .PHONY: purge
 purge: clean
