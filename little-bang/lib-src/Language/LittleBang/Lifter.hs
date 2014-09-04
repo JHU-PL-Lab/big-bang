@@ -25,6 +25,7 @@ instance TBNLiftable TBN.Expr LB.Expr where
     TBN.ExprVar o i -> ol1 LB.TExprVar o i
     TBN.ExprValInt o i -> LB.TExprValInt o i
     TBN.ExprValEmptyOnion o -> LB.TExprValEmptyOnion o
+    TBN.ExprGetChar o -> LB.TExprGetChar o
 
 instance TBNLiftable TBN.Pattern LB.Pattern where
   tbnLift pat = case pat of

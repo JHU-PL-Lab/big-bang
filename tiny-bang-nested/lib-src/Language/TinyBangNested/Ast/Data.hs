@@ -32,6 +32,7 @@ data Expr
   | ExprValInt Origin Integer
   | ExprValChar Origin Char
   | ExprValEmptyOnion Origin 
+  | ExprGetChar Origin
   deriving (Show)
 
 data BinaryOperator
@@ -97,6 +98,7 @@ instance HasOrigin Expr where
     ExprValInt orig _ -> orig
     ExprValChar orig _ -> orig
     ExprValEmptyOnion orig -> orig
+    ExprGetChar orig -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -131,6 +133,7 @@ instance Display Expr where
    ExprValInt _ i -> text $ show i
    ExprValChar _ i -> text $ show i
    ExprValEmptyOnion _ -> text "()"
+   ExprGetChar _ -> text "getChar"
 
 instance Display BinaryOperator where
   makeDoc x = case x of

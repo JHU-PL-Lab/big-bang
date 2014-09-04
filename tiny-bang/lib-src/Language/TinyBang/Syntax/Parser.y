@@ -24,6 +24,7 @@ import Language.TinyBang.Utils.Syntax
   'int'         { Token (SomeToken TokInt $$) } 
   'char'        { Token (SomeToken TokChar $$) } 
   'ref'         { Token (SomeToken TokRef $$) }
+  'getChar'     { Token (SomeToken TokGetChar $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -61,7 +62,8 @@ Redex
   | BuiltinOp Vars          { oc2 $1 $> Builtin $1 $2 }
   | Var                     { oc1 $1 $> Copy $1 }
   | Value                   { oc1 $1 $> Def $1 }
-  
+  | 'getChar'               { oc0 $1 $> GetChar }
+ 
 Var
   : Ident                   { oc1 $1 $> mkvar $1 }
 
@@ -76,7 +78,6 @@ Value
   | Var '&' Var             { oc2 $1 $> VOnion $1 $3 }
   | '{' Pattern '}' '->' '{' Expr '}'
                             { oc2 $1 $> VScape $2 $6 }
-
 Pattern
   : PatternClauses          { oc1 $1 $> Pattern $1 }
 

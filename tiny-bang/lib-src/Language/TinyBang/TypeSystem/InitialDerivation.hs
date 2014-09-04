@@ -97,6 +97,8 @@ clauseDerivation clause@(Clause _ x1 r) = do
         Builtin _ op xs ->
           let as = map derivVar xs in
           return $ (op,as) <: a1 .: h
+        GetChar _ ->
+          return $ (TPrimitive PrimChar) <: a1 .: h
   return (a1, constraint)
 
 -- |Performs pattern derivation.

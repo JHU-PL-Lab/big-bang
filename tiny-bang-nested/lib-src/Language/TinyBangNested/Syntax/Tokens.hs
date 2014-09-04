@@ -39,7 +39,8 @@ data TokenType a where
   TokLambda :: TokenType () -- @\@
   TokOpenParen :: TokenType () -- @(@
   TokCloseParen :: TokenType () -- @)@
-  
+  TokGetChar :: TokenType () -- @getChar@ 
+ 
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
     Token (SomeToken TokIs _) -> dquotes $ text "="
@@ -67,3 +68,4 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLambda _) -> text "\\"
     Token (SomeToken TokOpenParen _) -> text "("
     Token (SomeToken TokCloseParen _) -> text ")"
+    Token (SomeToken TokGetChar _) -> text "getChar"

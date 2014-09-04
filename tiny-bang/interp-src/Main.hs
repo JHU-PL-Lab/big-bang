@@ -45,19 +45,14 @@ main = do
     putStrLn "Assertions enabled!"
   
   if batchMode opts     
-    then do 
-      
-      inp <- getContents
+    then do
       -- |Method for batchMode
-  
-      let exprSrcs = filter (not . null) $ splitOn ";;" inp
-          config = InterpreterConfiguration
-                     { typechecking = not $ noTypecheck opts
-                     , evaluating = not $ noEval opts
-                     , databaseType = Simple }          
-      --mapM_ (putStrLn . stringyInterpretSource config) exprSrcs
-      mapM_ (\l -> do {ll <- l; putStrLn ll}) (map (stringyInterpretSource config) exprSrcs)      
-      
+      let config = InterpreterConfiguration
+                 { typechecking = not $ noTypecheck opts
+                 , evaluating = not $ noEval opts
+                 , databaseType = Simple }          
+      batchLoop config
+
     else do 
       putStrLn versionStr
       putStrLn ""
@@ -66,4 +61,11 @@ main = do
   
       eval <- makeEval opts
       toploop eval
-
+    where
+    batchLoop :: InterpreterConfiguration -> IO ()
+    batchLoop config = do
+      inp <- getSrcLine
+      eof <- hIsEOF stdin
+      ln <- stringyInterpretSource config inp
+      putStrLn ln      
+      when (not eof) (batchLoop config)

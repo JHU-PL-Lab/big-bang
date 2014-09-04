@@ -51,6 +51,8 @@ data TokenType a where
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokDeref :: TokenType () -- @!@
   TokCons :: TokenType () -- @::@
+  TokGetChar :: TokenType () -- @getChar@
+  TokPutChar :: TokenType () -- @putChar@
   -- TODO: what about list patterns (e.g. "...")?
 
 instance TokenDisplay TokenType where
@@ -90,6 +92,8 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokDeref _) -> text "!"
     Token (SomeToken TokCons _) -> text "::"
+    Token (SomeToken TokGetChar _) -> dquotes $ text "getChar"
+    Token (SomeToken TokPutChar _) -> dquotes $ text "putChar"
     Token (SomeToken TokDot _) -> text "."
 
 instance Display Token where

@@ -89,6 +89,9 @@ smallStep = do
           Builtin o bop xs -> do
             v <- evalBuiltin o bop xs
             replaceFirstClause [Clause orig' x2 $ Def orig' v]
+          GetChar o -> do
+            v <- returnTBChar o
+            replaceFirstClause [Clause orig' x2 $ Def orig' v]
   where
     rvexpr :: Expr -> EvalM Var
     rvexpr (Expr o cls) =
