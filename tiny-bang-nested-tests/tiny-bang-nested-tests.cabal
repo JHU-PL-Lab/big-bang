@@ -11,6 +11,7 @@ library
                    tiny-bang-nested,
                    tiny-bang-tests,
                    parsec,
+                   transformers,
                    containers,
                    mtl,
                    HUnit,
