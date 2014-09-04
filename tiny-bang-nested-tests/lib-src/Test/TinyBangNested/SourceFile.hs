@@ -3,6 +3,8 @@ module Test.TinyBangNested.SourceFile
 , TinyBangNestedSourceFileTestConfig(..)
 ) where
 
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Either
 import Data.List
 import Data.List.Split (splitOn)
 import qualified Data.Map as Map
@@ -66,22 +68,21 @@ generateTests (TinyBangNestedSourceFileTestConfig
             [] -> Left "no expectation found"
             _:_:_ -> Left "multiple expectations found"
             [expectation] -> Right expectation
-    execute :: FilePath -> String -> Expectation -> Either String ()
+    execute :: FilePath -> String -> Expectation -> EitherT String IO ()
     execute filename source expectation = do
       -- We should always be able to parse successfully and get a result from
       -- the typechecker
       let doc = NamedDocument filename
-      tokens <- lexTinyBangNested doc source
-      ast <- parseTinyBangNested doc tokens
+      tokens <- hoistEither $ lexTinyBangNested doc source
+      ast <- hoistEither $ parseTinyBangNested doc tokens
       let tbAst = aTranslate ast
       let tcResult = typecheck' configDatabase tbAst
       case expectation of
-        ExpectMatches pattern patSrc ->
+        ExpectMatches pattern patSrc -> do
           -- We're going to build a catch-all scape that determines whether or
           -- not the evaluated ast matches the provided pattern.  We won't need
           -- to typecheck it because it's a catch-all.
           let ast' =
-                let genVar = TBN.Ident generated "___tbnUnitTestValueVar" in
                 TBN.ExprAppl generated
                   (TBN.ExprOnion generated
                     (TBN.ExprScape generated pattern $
@@ -93,27 +94,28 @@ generateTests (TinyBangNestedSourceFileTestConfig
                       TBN.ExprLabelExp generated
                         (TBN.LabelName generated "MatchFailure") $
                         TBN.ExprVar generated genVar))
-                  ast in
-          let tbAst' = aTranslate ast' in
-          let evalResult' = eval tbAst' in
+                  ast
+                where genVar = TBN.Ident generated "___tbnUnitTestValueVar"
+          let tbAst' = aTranslate ast'
+          evalResult' <- liftIO $ runEitherT $ eval tbAst'
           case (tcResult, evalResult') of
             (Left err, _) ->
-              Left $ display $ text "Expected match on" <+> makeDoc patSrc <+>
+              left $ display $ text "Expected match on" <+> makeDoc patSrc <+>
                                text "but instead produced a type error:" <+>
                                makeDoc err
             (Right _, Left (err, _)) ->
-              Left $ display $ text "Expected match on" <+> makeDoc patSrc <+>
+              left $ display $ text "Expected match on" <+> makeDoc patSrc <+>
                                text "but evaluation failed!  " <+> makeDoc err
             (Right _, Right (env, var)) ->
               case deepOnion (varMap env) var of
-                Left err -> Left $ display $
+                Left err -> left $ display $
                   text "FATAL: Failed to convert to deep onion for analysis:"
                   <+> makeDoc var <+> text "in" <+> makeDoc (varMap env) <+>
                   parens (text "due to:" <+> makeDoc err)
                 Right onion ->
                   if Map.member (TBA.LabelName generated "MatchSuccess") $
                       deepLabels onion
-                    then Right ()
+                    then right ()
                     else
                       case Map.lookup (TBA.LabelName generated "MatchFailure") $
                             deepLabels onion of
@@ -121,16 +123,16 @@ generateTests (TinyBangNestedSourceFileTestConfig
                                          "a `MatchSuccess or `MatchFailure " ++
                                          "on pattern match expectation!"
                         Just value ->
-                          Left $ display $
+                          left $ display $
                             text "Expected pattern match did not succeed:" <>
                             line <> indent 2 (align $
                               text "Value: " <+> makeDoc value <+>
                               text "Pattern: " <+> text patSrc)
         ExpectTypeFail ->
           case tcResult of
-            Left _ -> Right ()
+            Left _ -> right ()
             Right db ->
-              Left $ "Expected type failure but typechecking produced a " ++
+              left $ "Expected type failure but typechecking produced a " ++
                      "valid database: " ++ display db
       where
         typecheck' :: (ConstraintDatabase db, Display db)

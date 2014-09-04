@@ -9,6 +9,7 @@ module Test.TinyBang.TestUtils.SourceFileTest
 , SourceFileTestConfig(..)
 ) where
 
+import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import System.Directory
 import System.FilePath
@@ -33,7 +34,7 @@ data SourceFileTestConfig
       { sftDirectory :: FilePath
       , sftFilenameFilter :: FilePath -> Bool
       , sftExpect :: FilePath -> String -> Either String expectation
-      , sftExecute :: FilePath -> String -> expectation -> Either String ()
+      , sftExecute :: FilePath -> String -> expectation -> EitherT String IO ()
       }
 
 createSourceFileTests :: SourceFileTestConfig -> IO Test
@@ -55,7 +56,7 @@ createSourceFileTests
     makeTest filename = TestLabel filename $ TestCase $ do
       source <- readFile filename
       let expectE = tag $ getExpectation filename source
-      let resultE = (tag . execute filename source) =<< expectE
+      resultE <- runEitherT $ (execute filename source) =<< (hoistEither expectE) -- TODO: tag
       case resultE of
         Left msg ->
           assertFailure $ filename ++ ": " ++ msg
