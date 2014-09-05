@@ -24,6 +24,7 @@ instance TBNLiftable TBN.Expr LB.Expr where
     TBN.ExprRef o e -> ol1 LB.TExprRef o e
     TBN.ExprVar o i -> ol1 LB.TExprVar o i
     TBN.ExprValInt o i -> LB.TExprValInt o i
+    TBN.ExprValChar o c -> LB.TExprValChar o c
     TBN.ExprValEmptyOnion o -> LB.TExprValEmptyOnion o
     TBN.ExprGetChar o -> LB.TExprGetChar o
 

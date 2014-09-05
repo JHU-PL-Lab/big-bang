@@ -141,6 +141,7 @@ instance (Display db) => Display (InterpreterError db) where
         text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
           makeDoc bop <+> text "had an invalid operand type in position" <+>
           text (show n) <+> text "(variable" <+> makeDoc x <+> text ")"
+    OtherFailure oFailure -> text oFailure
     EvaluationDisabled -> text "(evaluation disabled)"
     where
       docForIncon :: (Display db) => Inconsistency db -> Doc

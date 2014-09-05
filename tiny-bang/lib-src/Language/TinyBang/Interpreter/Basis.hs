@@ -89,8 +89,8 @@ returnTBChar o =
   getTBChar >>= processTBChar o
   where
   processTBChar :: Origin -> Char -> EvalM Value
-  processTBChar o c =
-    return $ VPrimitive o (VChar o c)
+  processTBChar o' c =
+    return $ VPrimitive o' (VChar o' c)
   getTBChar :: EvalM Char
   getTBChar = do
     c <- liftIO getChar
