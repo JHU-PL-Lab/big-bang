@@ -62,10 +62,21 @@ main = do
       eval <- makeEval opts
       toploop eval
     where
+    consumeChar :: IO ()
+    consumeChar = do
+      _ <- getChar
+      return ()
     batchLoop :: InterpreterConfiguration -> IO ()
     batchLoop config = do
       inp <- getSrcLine
+      nc <- hLookAhead stdin
       eof <- hIsEOF stdin
-      ln <- stringyInterpretSource config inp
-      putStrLn ln      
-      when (not eof) (batchLoop config)
+      when (nc == '\n') $ do consumeChar -- flush it
+      if (nc == '\n' || eof) -- TODO: this is a temporary approach
+        then do
+          ln <- stringyInterpretSource config inp
+          putStrLn ln      
+          when (not eof) (batchLoop config)
+        else do
+          putStrLn "Invalid character after ;;. After ;; there should be line feed or end of file."
+          hFlush stdout

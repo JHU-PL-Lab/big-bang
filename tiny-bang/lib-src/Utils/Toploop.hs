@@ -14,10 +14,20 @@ import System.IO
 toploop :: (String -> IO String) -> IO ()
 toploop eval = do
   inp <- getSrcLine
+  nc <- hLookAhead stdin
   eof <- hIsEOF stdin
-  doEvalPrint inp
-  when (not eof) (toploop eval)
+  if (nc == '\n' || eof) -- TODO: this is a temporary approach
+    then do
+      when (nc == '\n') $ do consumeChar
+      doEvalPrint inp
+      when (not eof) (toploop eval)
+    else do
+      putStrLn "Invalid character after ;;. After ;; there should be line feed or end of file."
   where
+    consumeChar :: IO ()
+    consumeChar = do
+      _ <- getChar
+      return ()
     doEvalPrint :: String -> IO ()
     doEvalPrint exprSrc = do
       putStrLn =<< eval exprSrc
