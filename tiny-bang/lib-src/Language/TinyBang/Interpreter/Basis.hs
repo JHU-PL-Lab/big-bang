@@ -11,6 +11,7 @@ module Language.TinyBang.Interpreter.Basis
 , setMostRecent
 , getEnv
 , returnTBChar
+, outputTBChar
 , raiseEvalError
 , getClauses
 , setClauses
@@ -95,6 +96,12 @@ returnTBChar o =
   getTBChar = do
     c <- liftIO getChar
     return c  
+
+outputTBChar :: Value -> EvalM Value
+outputTBChar ch = do
+  let val@(VPrimitive o (VChar _ c)) = ch
+  _ <- liftIO $ putChar c
+  return $ VEmptyOnion o
 
 -- |Performs a value lookup on a given variable.
 varLookup :: Var -> EvalM Value

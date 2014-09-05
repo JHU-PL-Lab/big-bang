@@ -37,6 +37,7 @@ data Expr
   | TExprValChar Origin Char   -- TODO: reorganize into TExprPrimChar or similar
   | TExprValEmptyOnion Origin 
   | TExprGetChar Origin
+  | TExprPutChar Origin Expr
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
   | LExprBinaryOp Origin Expr BinaryOperator Expr
@@ -133,6 +134,7 @@ instance HasOrigin Expr where
     TExprValChar orig _ -> orig
     TExprValEmptyOnion orig -> orig
     TExprGetChar orig -> orig
+    TExprPutChar orig _ -> orig
     LExprScape orig _ _ -> orig
     LExprBinaryOp orig _ _ _ -> orig
     LExprAppl orig _ _ -> orig
@@ -185,6 +187,7 @@ instance Display Expr where
    TExprValChar _ i -> text $ show i
    TExprValEmptyOnion _ -> text "()"
    TExprGetChar _ -> text "getChar"
+   TExprPutChar _ e -> text "putChar" <+> makeDoc e
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
    LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)

@@ -105,6 +105,7 @@ Expr :: { SPositional Expr }
   | PrefixExpr              { $1 }
   | Expr '[' Expr ']'       { oc2 $1 $> LExprIndexedList $1 $3 }
   | 'getChar'               { oc0 $1 $> TExprGetChar }
+  | 'putChar' Expr          { oc1 $1 $> TExprPutChar $2 }
 
 PrefixExpr :: { SPositional Expr }
   : Label PrefixExpr        { oc2 $1 $> TExprLabelExp $1 $2 }

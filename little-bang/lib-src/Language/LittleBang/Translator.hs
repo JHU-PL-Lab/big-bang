@@ -107,6 +107,9 @@ walkExprTree expr = do
                                     <*> walkExprTree e1)
                                     >>= f
     LB.TExprGetChar o -> f (LB.TExprGetChar o)                             
+    LB.TExprPutChar o e -> (LB.TExprPutChar o 
+                                    <$> walkExprTree e) 
+                                    >>= f        
     LB.TExprRef o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
     LB.LExprDeref o e -> (LB.LExprDeref o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
