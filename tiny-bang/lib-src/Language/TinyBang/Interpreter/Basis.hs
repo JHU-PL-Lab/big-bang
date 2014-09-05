@@ -94,8 +94,7 @@ returnTBChar o =
   getTBChar :: EvalM Char
   getTBChar = do
     c <- liftIO getChar
-    return c
-  
+    return c  
 
 -- |Performs a value lookup on a given variable.
 varLookup :: Var -> EvalM Value

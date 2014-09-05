@@ -46,6 +46,6 @@ getSrcLine = do
       if not (c2 == ';')
         then do
           l2 <- getSrcLine
-          return (c2:l2)
+          return (c1:c2:l2)
         else
           return ""

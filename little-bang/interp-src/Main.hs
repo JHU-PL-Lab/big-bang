@@ -51,11 +51,7 @@ interpretLBSource dummy interpConf src = do
     ( \tbnAst -> display $
         text "Converted to TBN AST:" <> lineNest tbnAst ) $
     mapLeft OtherFailure $ convertToTBNExpr dlbAst
-  -- TODO: uncomment logging below and make it work
-  let tbAst = aTranslate tbnAst -- postLog _debugI
-    -- ( \tbAst' -> display $
-    --    text "A-translated AST:" <> lineNest tbAst' )
-    -- $ aTranslate tbnAst
+  let tbAst = postLog _debugI ( \tbAst' -> display $ text "A-translated AST:" <> lineNest tbAst' ) (aTranslate tbnAst)
   interpretAst dummy interpConf tbAst
   where
   lineNest x = line <> indent 2 (align $ makeDoc x)
