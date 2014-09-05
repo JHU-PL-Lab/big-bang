@@ -37,6 +37,7 @@ desugarLittleBang expr =
     exprDesugarers =
       [ desugarExprIf
       , desugarExprObject
+      , desugarExprClass
       , desugarExprList
       , desugarExprRecord
       , desugarExprProjection
@@ -142,6 +143,10 @@ walkExprTree expr = do
                                     >>= f
     LB.LExprObject o tms -> (LB.LExprObject o
                                     <$> mapM walkObjTermTree tms)
+                                    >>= f
+    LB.LExprClass o pms tms -> (LB.LExprClass o
+                                    <$> mapM walkParamTree pms
+                                    <*> mapM walkObjTermTree tms)
                                     >>= f
     LB.LExprProjection o e i -> (LB.LExprProjection o
                                  <$> walkExprTree e
@@ -329,29 +334,30 @@ desugarExprRecord expr =
     LB.LExprRecord _ args -> desugarArgs args
     _ -> return expr
 
+-- |A routine which converts each object term into an onion component.  This
+--  routine must prepare each object term for sealing; we therefore add a
+--  `self parameter to methods as well as a parameter identifying them.
+objectTermToExpr :: LB.ObjectTerm -> DesugarM LB.Expr
+objectTermToExpr term = case term of
+  LB.ObjectMethod o n params e -> do
+    pat <- desugarParams params
+    let orig = TB.ComputedOrigin [o]
+    let tagPat = LB.LabelPattern orig methodTagLabelName $
+                    LB.LabelPattern orig (methodNameToLabelName n) $
+                      LB.EmptyPattern orig
+    let selfPat = LB.LabelPattern orig selfLabelName $
+                    LB.VariablePattern orig $ LB.Ident orig "self"
+    let msgPat = conjoinPatternList [pat,tagPat,selfPat]
+    return $ LB.TExprScape o msgPat e
+  LB.ObjectField o n e ->
+    return $ LB.TExprLabelExp o (paramNameToLabelName n) e
+
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
   case expr of
     LB.LExprObject o tms -> seal o =<< onionExprList <$> mapM objectTermToExpr tms
     _ -> return expr
-  where
-    -- |A routine which converts each object term into an onion component.  This
-    --  routine must prepare each object term for sealing; we therefore add a
-    --  `self parameter to methods as well as a parameter identifying them.
-    objectTermToExpr :: LB.ObjectTerm -> DesugarM LB.Expr
-    objectTermToExpr term = case term of
-      LB.ObjectMethod o n params e -> do
-        pat <- desugarParams params
-        let orig = TB.ComputedOrigin [o]
-        let tagPat = LB.LabelPattern orig methodTagLabelName $
-                        LB.LabelPattern orig (methodNameToLabelName n) $
-                          LB.EmptyPattern orig
-        let selfPat = LB.LabelPattern orig selfLabelName $
-                        LB.VariablePattern orig $ LB.Ident orig "self"
-        let msgPat = conjoinPatternList [pat,tagPat,selfPat]
-        return $ LB.TExprScape o msgPat e
-      LB.ObjectField o n e ->
-        return $ LB.TExprLabelExp o (paramNameToLabelName n) e
+
 {-    
   addSelf :: TB.Origin -> LB.RecordTerm -> LB.RecordTerm
   addSelf o tm =
@@ -362,6 +368,21 @@ desugarExprObject expr =
         (LB.ConjunctionPattern o' selfPart pat) z)
       _ -> tm
 -}
+
+desugarExprClass :: LB.Expr -> DesugarM LB.Expr
+desugarExprClass expr =
+  case expr of
+    LB.LExprClass o pms tms ->
+      do
+        objTermExprs <- mapM objectTermToExpr tms
+        getClassFn <- objectTermToExpr
+            (LB.ObjectMethod o (LB.Ident o "getclass") []
+                (LB.TExprVar o (LB.Ident o "theclass")))
+        instObj <- seal o (onionExprList (getClassFn : objTermExprs))
+        let selfClosure = LB.TExprLet o (LB.Ident o "theclass") (LB.TExprVar o (LB.Ident o "self")) instObj
+        -- TODO allow for class methods with ~
+        seal o =<< objectTermToExpr (LB.ObjectMethod o (LB.Ident o "new") pms selfClosure)
+    _ -> return expr
 
 desugarArgs :: [LB.Arg] -> DesugarM LB.Expr
 desugarArgs args =

@@ -36,6 +36,7 @@ tokens :-
   char                         { simply TokChar }
   ref                          { simply TokRef }
   object                       { simply TokObject }
+  class                        { simply TokClass }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }

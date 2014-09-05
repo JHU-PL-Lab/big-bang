@@ -24,6 +24,7 @@ data TokenType a where
   TokThen :: TokenType () -- @then@
   TokElse :: TokenType () -- @else@
   TokObject :: TokenType () -- @object@
+  TokClass :: TokenType () -- @class@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
   TokEq :: TokenType () -- @==@
@@ -64,6 +65,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokThen _) -> dquotes $ text "then"
     Token (SomeToken TokElse _) -> dquotes $ text "else"
     Token (SomeToken TokObject _) -> dquotes $ text "object"
+    Token (SomeToken TokClass _) -> dquotes $ text "class"
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
     Token (SomeToken TokEq _) -> text "=="

@@ -33,6 +33,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   'then'        { Token (SomeToken TokThen $$) }
   'else'        { Token (SomeToken TokElse $$) }
   'object'      { Token (SomeToken TokObject $$) }
+  'class'       { Token (SomeToken TokClass $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -98,8 +99,14 @@ Expr :: { SPositional Expr }
   | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
   | 'object' '{' ObjTermList '}'
                             { oc1 $1 $> LExprObject $3 }
+  | 'class' '(' ParamList ')' '{' ObjTermList '}'
+                            { oc2 $1 $> LExprClass $3 $6 }
+  | 'class' '()' '{' ObjTermList '}'
+                            { oc2 $1 $> LExprClass (vpos []) $4 }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
+  | InvokableExpr '()'
+                            { oc2 $1 $> LExprAppl $1 (vpos []) }
   | PrefixExpr              { $1 }
   | Expr '[' Expr ']'       { oc2 $1 $> LExprIndexedList $1 $3 }
 
@@ -115,6 +122,8 @@ PrimaryExpr :: { SPositional Expr }
   | PrimaryExpr '.' Ident   { oc2 $1 $> LExprProjection $1 $3 }
   | PrimaryExpr '.' Ident '(' ArgList ')'
                             { oc3 $1 $> LExprDispatch $1 $3 $5 }
+  | PrimaryExpr '.' Ident '()'
+                            { oc3 $1 $> LExprDispatch $1 $3 (vpos []) }
 
 InvokableExpr :: { SPositional Expr }
   : Ident                   { oc1 $1 $> TExprVar $1 }
@@ -178,6 +187,8 @@ ObjTermList :: { VPositional [ObjectTerm] }
 ObjTerm :: { SPositional ObjectTerm }
   : Ident '(' ParamList ')' '=' Expr
                             { oc3 $1 $> ObjectMethod $1 $3 $6 }
+  | Ident '()' '=' Expr
+                            { oc3 $1 $> ObjectMethod $1 (vpos []) $4 }
   | Ident '=' Expr          { oc2 $1 $> ObjectField $1 $3 }
 
 -- Generalizations of common grammar patterns.
