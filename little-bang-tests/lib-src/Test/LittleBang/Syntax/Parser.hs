@@ -100,7 +100,7 @@ parserTests = TestList
       "`A x -> x + x"
       (\case
           TExprScape _ (LB.LabelPattern _ (LB.LabelName _ "A") (LB.VariablePattern _ v))
-            (TExprBinaryOp _ (TExprVar _ v') (TBN.OpIntPlus _) (TExprVar _ v''))
+            (TExprBinaryOp _ (TExprVar _ v') (OpIntPlus _) (TExprVar _ v''))
               | v == v' && v == v'' -> True
           _ -> False)
   , postest "pattern precedence"

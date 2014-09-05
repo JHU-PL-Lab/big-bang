@@ -29,6 +29,7 @@ tokens :-
   int                          { simply TokInt }
   char                         { simply TokChar }
   ref                          { simply TokRef }
+  getChar                      { simply TokGetChar }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }

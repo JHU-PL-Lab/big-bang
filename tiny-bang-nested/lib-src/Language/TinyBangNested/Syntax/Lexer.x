@@ -29,6 +29,7 @@ tokens :-
   ref                          { simply TokRef }
   let                          { simply TokLet }
   in                           { simply TokIn }
+  getChar                      { simply TokGetChar }
   "fun"                        { simply TokLambda }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }

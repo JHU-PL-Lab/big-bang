@@ -119,6 +119,12 @@ innerATranslate e =
                ]
              , x
              )
+    ExprGetChar _ -> do
+      x <- freshVar
+      return ( [ TBA.Clause generated x $ TBA.GetChar generated
+               ]
+             , x
+             )
   where
     twoSubexpressionsAndThen :: TBN.Expr
                              -> TBN.Expr

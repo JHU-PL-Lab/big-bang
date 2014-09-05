@@ -60,15 +60,15 @@ generateTests (TinyBangSourceFileTestConfig
   where
     getExpectation :: FilePath -> String -> Either String Expectation
     getExpectation _ source =
-      case mapM toExpectation $ splitOn "\n" source of
-        Left (expectationText, errMsg) ->
-          Left $ "Failed to parse expectation \"" ++ expectationText ++
-                 ": " ++ errMsg
-        Right mexps ->
-          case catMaybes mexps of
-            [] -> Left "no expectation found"
-            _:_:_ -> Left "multiple expectations found"
-            [expectation] -> Right expectation
+        case mapM toExpectation $ splitOn "\n" source of
+          Left (expectationText, errMsg) ->
+            Left $ "Failed to parse expectation \"" ++ expectationText ++
+                   ": " ++ errMsg
+          Right mexps ->
+            case catMaybes mexps of
+              [] -> Left "no expectation found"
+              _:_:_ -> Left "multiple expectations found"
+              [expectation] -> Right expectation
       where
         -- |Parses an expectation from a source line.  The result is a
         --  @Right Nothing@ if the line has no expectation; it is a @Left@ if
@@ -88,23 +88,23 @@ generateTests (TinyBangSourceFileTestConfig
                 Right expectation -> Right $ Just expectation
             else
               Right Nothing
-    execute :: FilePath -> String -> Expectation -> Either String ()
+    execute :: FilePath -> String -> Expectation -> EitherT String IO ()
     execute filename source expectation = do
       -- We should always be able to parse successfully and get a result from
       -- the typechecker
       let doc = NamedDocument filename
-      tokens <- lexTinyBang doc source
-      ast <- parseTinyBang doc tokens
+      tokens <- hoistEither $ lexTinyBang doc source
+      ast <- hoistEither $ parseTinyBang doc tokens
       let tcResult = typecheck' configDatabase ast
       case expectation of
-        Pass predicate predSrc ->
-          let res = liftIO $ runEitherT $ eval ast in
+        Pass predicate predSrc -> do
+          res <- liftIO $ runEitherT $ eval ast
           case (tcResult, res) of
             (Left err, _) ->
-              Left $ "Expected " ++ display predSrc ++
+              left $ "Expected " ++ display predSrc ++
                      " but type error occurred: " ++ display err
             (_, Left (err,_)) ->
-              Left $ "Expected " ++ display predSrc ++
+              left $ "Expected " ++ display predSrc ++
                      " but error occurred: " ++ display err
             (_, Right (env,var)) ->
               let monion = deepOnion (varMap env) var in
@@ -113,15 +113,15 @@ generateTests (TinyBangSourceFileTestConfig
                   error $ "Evaluator produced a result which did not " ++ 
                           "convert to an onion!  " ++ display err
                 Right onion ->
-                  if predicate onion then Right () else
-                    Left $ "Expected " ++ display predSrc ++
+                  if predicate onion then right () else
+                    left $ "Expected " ++ display predSrc ++
                            " but evaluation produced: " ++ display onion
-        TypeFailure ->
-          case tcResult of
-            Left _ -> Right ()
-            Right db ->
-              Left $ "Expected type failure but typechecking produced a " ++
-                     "valid database: " ++ display db
+        TypeFailure -> do
+            case tcResult of
+              Left _ -> right ()
+              Right db ->
+                left $ "Expected type failure but typechecking produced a " ++
+                       "valid database: " ++ display db
       where
         typecheck' :: (ConstraintDatabase db, Display db)
                    => db -> Expr -> Either (TypecheckingError db) db

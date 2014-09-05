@@ -34,6 +34,8 @@ import qualified Language.TinyBangNested.Ast as TBN
   'else'        { Token (SomeToken TokElse $$) }
   'object'      { Token (SomeToken TokObject $$) }
   'class'       { Token (SomeToken TokClass $$) }
+  'getChar'     { Token (SomeToken TokGetChar $$) }
+  'putChar'     { Token (SomeToken TokPutChar $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -109,6 +111,7 @@ Expr :: { SPositional Expr }
                             { oc2 $1 $> LExprAppl $1 (vpos []) }
   | PrefixExpr              { $1 }
   | Expr '[' Expr ']'       { oc2 $1 $> LExprIndexedList $1 $3 }
+  | 'getChar'               { oc0 $1 $> TExprGetChar }
 
 PrefixExpr :: { SPositional Expr }
   : Label PrefixExpr        { oc2 $1 $> TExprLabelExp $1 $2 }

@@ -107,7 +107,7 @@ walkExprTree expr = do
                                     <$> return label 
                                     <*> walkExprTree e1)
                                     >>= f
-                                    
+    LB.TExprGetChar o -> f (LB.TExprGetChar o)                             
     LB.TExprRef o e -> (LB.TExprRef o <$> walkExprTree e) >>= f
     LB.LExprDeref o e -> (LB.LExprDeref o <$> walkExprTree e) >>= f
     LB.TExprVar o var -> (LB.TExprVar o <$> return var) >>= f
@@ -241,17 +241,17 @@ desugarLExprBinaryOp expr =
   case expr of
     LB.LExprBinaryOp o e1 op e2 ->
       case op of
-        LB.OpSeq o ->
+        LB.OpSeq _ ->
           desugarExprSequence expr
-        LB.OpCons o ->
+        LB.OpCons _ ->
           desugarExprCons expr
-        _ -> return expr
+        -- _ -> return expr
     _ -> return expr
 
 desugarExprSequence :: LB.Expr -> DesugarM LB.Expr
 desugarExprSequence expr =
   case expr of
-    LB.LExprBinaryOp o e1 op e2 ->
+    LB.LExprBinaryOp _ e1 op e2 ->
       case op of
         LB.OpSeq o ->
           LB.TExprAppl o <$>
@@ -283,7 +283,7 @@ desugarExprList expr =
 desugarExprCons :: LB.Expr -> DesugarM LB.Expr
 desugarExprCons expr =
   case expr of
-    LB.LExprBinaryOp o e1 op e2 -> return $
+    LB.LExprBinaryOp _ e1 op e2 -> return $
       case op of
         LB.OpCons o ->
           LB.TExprAppl o
@@ -517,10 +517,10 @@ desugarPatCons pat =
 
 -- TODO: see why this is not working correctly.
 desugarLExprIndexedList :: LB.Expr -> DesugarM LB.Expr
-desugarLExprIndexedList expr = 
-  case expr of
-    LB.LExprIndexedList o e i -> getIndex o e i expr
-    _ -> return expr
+desugarLExprIndexedList exp = 
+  case exp of
+    LB.LExprIndexedList o e i -> getIndex o e i exp
+    _ -> return exp
     where
     getIndex :: TB.Origin -> LB.Expr -> LB.Expr -> LB.Expr -> DesugarM LB.Expr
     getIndex o e i expr =

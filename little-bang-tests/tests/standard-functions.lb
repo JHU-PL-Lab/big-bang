@@ -59,7 +59,6 @@ let Common =
       if self.negate(a1=b1) then `True ()
       else `False ()
 
-    #TODO: replace explicit reference to self.divideIntHelper with func if possible.
     # Helper for int multiplication and division.
     # a1: helper function
     # a2: param 1
@@ -97,7 +96,6 @@ let Common =
                              a2=(subtraction - subtractor), 
                              a3=subtractor)
 
-    #TODO: replace () with self.divideIntHelper if possible.
     #TODO: convert into LittleBang binary operator "/"
     # This goes into an infinite loop when division is by zero.
     divideInt(a1:int, a2:int) =
@@ -535,9 +533,9 @@ let HashMap =
     initialCapacity = ref 3 #TODO: update this
     maxCapacity = ref 100 #TODO: update this
 
-    #TODO: use of self is not allowed, unless an argument is added.
-#    createDefault = 
-#      let array = ListArray.create(a1=self.initialCapacity) in
+    # TODO: uncomment this once the method() syntax is supported
+#    createDefault() = 
+#      let array = ListArray.create(a1=self.initialCapacity, a2=[]) in
 #      object{hashedArray=array capacityRef=(ref !(self.initialCapacity)) sizeRef=(ref 0)}
 
     # a1: capacity
@@ -944,12 +942,14 @@ let HashMap =
 #  let ff = (fun a1:[k,e] -> [k,1 + e]) in 
 #  HashMap.map(a1=hashMap, a2=ff); hashMap
 
-let hashMap = HashMap.create(a1=3) in 
-  HashMap.addElement(a1=hashMap, a2=0, a3=0);
-  HashMap.addElement(a1=hashMap, a2=1, a3=100);
-  HashMap.addElement(a1=hashMap, a2=2, a3=200);
-  HashMap.addElement(a1=hashMap, a2=4, a3=400);
-  HashMap.resize(a1=hashMap, a2=5)
+#let hashMap = HashMap.create(a1=3) in 
+#  HashMap.addElement(a1=hashMap, a2=0, a3=0);
+#  HashMap.addElement(a1=hashMap, a2=1, a3=100);
+#  HashMap.addElement(a1=hashMap, a2=2, a3=200);
+#  HashMap.addElement(a1=hashMap, a2=4, a3=400);
+#  HashMap.resize(a1=hashMap, a2=5)
+
+HashMap.create(a1=3)
 ;;
 
 
