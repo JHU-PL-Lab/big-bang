@@ -2,6 +2,8 @@ module Language.LittleBang.Translator
 ( desugarLittleBang,
 ) where
 
+import Data.List
+
 import Control.Applicative
 import Control.Monad.State
 import Control.Monad.Reader
@@ -146,7 +148,7 @@ walkExprTree expr = do
                                     >>= f
     LB.LExprClass o pms tms -> (LB.LExprClass o
                                     <$> mapM walkParamTree pms
-                                    <*> mapM walkObjTermTree tms)
+                                    <*> mapM walkClassTermTree tms)
                                     >>= f
     LB.LExprProjection o e i -> (LB.LExprProjection o
                                  <$> walkExprTree e
@@ -216,6 +218,14 @@ walkObjTermTree term =
     LB.ObjectField o n e ->
       LB.ObjectField o n
         <$> walkExprTree e
+
+walkClassTermTree :: LB.ClassTerm -> DesugarM LB.ClassTerm
+walkClassTermTree term =
+  case term of
+    LB.ClassInstanceProperty o p ->
+      LB.ClassInstanceProperty o <$> walkObjTermTree p
+    LB.ClassStaticProperty o p ->
+      LB.ClassStaticProperty o <$> walkClassTermTree p
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -352,6 +362,11 @@ objectTermToExpr term = case term of
   LB.ObjectField o n e ->
     return $ LB.TExprLabelExp o (paramNameToLabelName n) e
 
+classTermToExpr :: LB.ClassTerm -> DesugarM LB.Expr
+classTermToExpr term = case term of
+  LB.ClassInstanceProperty _ p -> objectTermToExpr p
+  LB.ClassStaticProperty _ p -> classTermToExpr p
+
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
   case expr of
@@ -374,15 +389,25 @@ desugarExprClass expr =
   case expr of
     LB.LExprClass o pms tms ->
       do
-        objTermExprs <- mapM objectTermToExpr tms
+          -- (mapM classTermToExpr) :: [LB.ClassTerm] -> DesugarM [LB.Expr]
+          -- fmap :: Functor f => (a->b) -> f a -> f b
+          -- fmap (mapM classTermToExpr) :: Functor f => f [LB.ClassTerm] -> f (DesugarM [LB.Expr])
+        let (static, inst) = splitStatic tms
+        staticTermExprs <- mapM classTermToExpr static
+        objTermExprs <- mapM classTermToExpr inst
         getClassFn <- objectTermToExpr
             (LB.ObjectMethod o (LB.Ident o "getclass") []
                 (LB.TExprVar o (LB.Ident o "theclass")))
         instObj <- seal o (onionExprList (getClassFn : objTermExprs))
         let selfClosure = LB.TExprLet o (LB.Ident o "theclass") (LB.TExprVar o (LB.Ident o "self")) instObj
-        -- TODO allow for class methods with ~
-        seal o =<< objectTermToExpr (LB.ObjectMethod o (LB.Ident o "new") pms selfClosure)
+        newMethod <- objectTermToExpr (LB.ObjectMethod o (LB.Ident o "new") pms selfClosure)
+        seal o $ onionExprList (newMethod : staticTermExprs)
     _ -> return expr
+  where
+  splitStatic :: [LB.ClassTerm] -> ([LB.ClassTerm],[LB.ClassTerm])
+  splitStatic tms = partition (\x -> case x of
+    LB.ClassStaticProperty _ _ -> True
+    LB.ClassInstanceProperty _ _ -> False) tms
 
 desugarArgs :: [LB.Arg] -> DesugarM LB.Expr
 desugarArgs args =

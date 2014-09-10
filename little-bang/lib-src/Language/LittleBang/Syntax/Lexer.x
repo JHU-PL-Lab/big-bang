@@ -81,6 +81,7 @@ tokens :-
   ";"                          { simply TokSemi }
   "!"                          { simply TokDeref }
   "."                          { simply TokDot }
+  "~"                          { simply TokTilde }
 
 {
 

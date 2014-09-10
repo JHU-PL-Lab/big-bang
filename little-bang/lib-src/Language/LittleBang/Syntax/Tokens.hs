@@ -42,6 +42,7 @@ data TokenType a where
   TokColon :: TokenType () -- @:@
   TokSemi :: TokenType () -- @;@
   TokDot :: TokenType () -- @.@
+  TokTilde :: TokenType () -- @~@
   TokRef :: TokenType () -- @ref@
   TokEmptyOnion :: TokenType () -- @()@
   TokInt :: TokenType () -- @int@  
@@ -97,6 +98,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokGetChar _) -> dquotes $ text "getChar"
     Token (SomeToken TokPutChar _) -> dquotes $ text "putChar"
     Token (SomeToken TokDot _) -> text "."
+    Token (SomeToken TokTilde _) -> text "~"
 
 instance Display Token where
   makeDoc = tokenPayloadDoc

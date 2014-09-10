@@ -9,6 +9,7 @@ module Language.LittleBang.Ast.Data
 , Ident(..)
 , LabelName(..)
 , ObjectTerm(..)
+, ClassTerm(..)
 , unLabelName
 , PrimitiveType(..)
 ) where
@@ -47,7 +48,7 @@ data Expr
   | LExprProjection Origin Expr Ident
   | LExprDispatch Origin Expr Ident [Arg]
   | LExprObject Origin [ObjectTerm]
-  | LExprClass Origin [Param] [ObjectTerm]
+  | LExprClass Origin [Param] [ClassTerm]
   | LExprDeref Origin Expr
   | LExprIndexedList Origin Expr Expr
   deriving (Show)
@@ -85,6 +86,11 @@ data ObjectTerm
   | ObjectField Origin Ident Expr
   deriving (Show)
 
+data ClassTerm
+  = ClassInstanceProperty Origin ObjectTerm
+  | ClassStaticProperty Origin ClassTerm
+  deriving (Show)
+
 data Ident
   = Ident Origin String
   deriving (Show)
@@ -113,6 +119,7 @@ $(concat <$> sequence
       , ''Pattern
       , ''Arg
       , ''ObjectTerm
+      , ''ClassTerm
       , ''Ident
       , ''LabelName
       ]
@@ -238,6 +245,11 @@ instance Display ObjectTerm where
       makeDoc e
     ObjectField _ n e ->
       makeDoc n <+> text "=" <+> makeDoc e
+
+instance Display ClassTerm where
+  makeDoc tm = case tm of
+    ClassInstanceProperty _ p -> makeDoc p
+    ClassStaticProperty _ p -> text "~" <> makeDoc p
 
 instance Display Ident where
   makeDoc x = case x of

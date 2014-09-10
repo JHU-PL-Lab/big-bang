@@ -62,6 +62,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   '::'          { Token (SomeToken TokCons $$) }
   '!'           { Token (SomeToken TokDeref $$) }
   '.'           { Token (SomeToken TokDot $$) }
+  '~'           { Token (SomeToken TokTilde $$) }
 
 %left LAM
 %right 'in'
@@ -101,9 +102,9 @@ Expr :: { SPositional Expr }
   | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
   | 'object' '{' ObjTermList '}'
                             { oc1 $1 $> LExprObject $3 }
-  | 'class' '(' ParamList ')' '{' ObjTermList '}'
+  | 'class' '(' ParamList ')' '{' ClassTermList '}'
                             { oc2 $1 $> LExprClass $3 $6 }
-  | 'class' '()' '{' ObjTermList '}'
+  | 'class' '()' '{' ClassTermList '}'
                             { oc2 $1 $> LExprClass (vpos []) $4 }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
@@ -193,6 +194,13 @@ ObjTerm :: { SPositional ObjectTerm }
   | Ident '()' '=' Expr
                             { oc3 $1 $> ObjectMethod $1 (vpos []) $4 }
   | Ident '=' Expr          { oc2 $1 $> ObjectField $1 $3 }
+
+ClassTermList :: { VPositional [ClassTerm] }
+  : many( ClassTerm )       { $1 }
+
+ClassTerm :: { SPositional ClassTerm }
+  : ObjTerm              { oc1 $1 $> ClassInstanceProperty $1 }
+  | '~' ClassTerm           { oc1 $1 $> ClassStaticProperty $2 }
 
 -- Generalizations of common grammar patterns.
 
