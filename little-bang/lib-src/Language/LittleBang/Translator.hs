@@ -520,15 +520,15 @@ desugarPatCons pat =
 
 -- TODO: see why this is not working correctly.
 desugarLExprIndexedList :: LB.Expr -> DesugarM LB.Expr
-desugarLExprIndexedList exp = 
-  case exp of
-    LB.LExprIndexedList o e i -> getIndex o e i exp
-    _ -> return exp
+desugarLExprIndexedList e = 
+  case e of
+    LB.LExprIndexedList o e' i -> getIndex o e' i
+    _ -> return e
     where
-    getIndex :: TB.Origin -> LB.Expr -> LB.Expr -> LB.Expr -> DesugarM LB.Expr
-    getIndex o e i expr =
+    getIndex :: TB.Origin -> LB.Expr -> LB.Expr -> DesugarM LB.Expr
+    getIndex o e' i =
       walkExprTree $ -- call desugar here
-        (LB.LExprCondition o
+        LB.LExprCondition o
           (LB.TExprBinaryOp o 
            (LB.TExprBinaryOp o i (TBN.OpIntPlus o) (LB.TExprValInt o 1)) 
            (TBN.OpIntLessEq o) 
@@ -538,8 +538,8 @@ desugarLExprIndexedList exp =
             (LB.Ident o "obj")
             (LB.LExprObject o [objTerm])
             (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "obj")) (LB.Ident o "getElement")
-             [LB.NamedArg o (LB.Ident o "lst") e,
-              LB.NamedArg o (LB.Ident o "index") i]))
+             [LB.NamedArg o (LB.Ident o "lst") e',
+              LB.NamedArg o (LB.Ident o "index") i])
       )
       where
       objTerm = ObjectMethod o (LB.Ident o "getElement")
@@ -595,7 +595,7 @@ seal o e = -- parse this function directly until we have a prelude/stdlib for se
 nextFreshVar :: DesugarM LB.Ident
 nextFreshVar = do
   s <- get
-  let varName = "v" ++ show (freshVarIdx s)
+  let varName = 'v' : show (freshVarIdx s)
   put $ s { freshVarIdx = freshVarIdx s + 1 }
   return $ LB.Ident (TB.ComputedOrigin []) varName
 
