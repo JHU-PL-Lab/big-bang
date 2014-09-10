@@ -30,6 +30,7 @@ tokens :-
   let                          { simply TokLet }
   in                           { simply TokIn }
   getChar                      { simply TokGetChar }
+  putChar                      { simply TokPutChar }
   "fun"                        { simply TokLambda }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }

@@ -40,6 +40,7 @@ data TokenType a where
   TokOpenParen :: TokenType () -- @(@
   TokCloseParen :: TokenType () -- @)@
   TokGetChar :: TokenType () -- @getChar@ 
+  TokPutChar :: TokenType () -- @putChar@ 
  
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
@@ -69,3 +70,4 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokOpenParen _) -> text "("
     Token (SomeToken TokCloseParen _) -> text ")"
     Token (SomeToken TokGetChar _) -> text "getChar"
+    Token (SomeToken TokPutChar _) -> text "putChar"

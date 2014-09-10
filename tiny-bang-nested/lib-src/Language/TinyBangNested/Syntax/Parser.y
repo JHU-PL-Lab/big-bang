@@ -27,6 +27,7 @@ import Language.TinyBangNested.Syntax.Tokens
   'let'         { Token (SomeToken TokLet $$) }
   'in'          { Token (SomeToken TokIn $$) }
   'getChar'     { Token (SomeToken TokGetChar $$) }
+  'putChar'     { Token (SomeToken TokPutChar $$) }
   'fun'         { Token (SomeToken TokLambda $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
@@ -74,6 +75,7 @@ Expr :: { SPositional Expr }
   | Expr '&' Expr           { oc2 $1 $> ExprOnion $1 $3 }
   | ApplExpr                { $1 }
   | 'getChar'               { oc0 $1 $> ExprGetChar }
+  | 'putChar' Expr          { oc1 $1 $> ExprPutChar $2 }
 
 ApplExpr :: { SPositional Expr }
   : ApplExpr PrefixExpr     { oc2 $1 $> ExprAppl $1 $2 }

@@ -30,6 +30,7 @@ tokens :-
   char                         { simply TokChar }
   ref                          { simply TokRef }
   getChar                      { simply TokGetChar }
+  putChar                      { simply TokPutChar }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }

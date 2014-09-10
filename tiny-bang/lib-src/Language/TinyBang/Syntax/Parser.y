@@ -25,6 +25,7 @@ import Language.TinyBang.Utils.Syntax
   'char'        { Token (SomeToken TokChar $$) } 
   'ref'         { Token (SomeToken TokRef $$) }
   'getChar'     { Token (SomeToken TokGetChar $$) }
+  'putChar'     { Token (SomeToken TokPutChar $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -63,6 +64,7 @@ Redex
   | Var                     { oc1 $1 $> Copy $1 }
   | Value                   { oc1 $1 $> Def $1 }
   | 'getChar'               { oc0 $1 $> GetChar }
+  | 'putChar' Var           { oc1 $1 $> PutChar $2 }
  
 Var
   : Ident                   { oc1 $1 $> mkvar $1 }

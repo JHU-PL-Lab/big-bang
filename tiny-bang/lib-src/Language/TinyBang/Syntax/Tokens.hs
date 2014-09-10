@@ -36,6 +36,7 @@ data TokenType a where
   TokSet :: TokenType () -- @<-@
   TokRef :: TokenType () -- @ref@
   TokGetChar :: TokenType () -- @getChar@
+  TokPutChar :: TokenType () -- @putChar@
 
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
@@ -60,3 +61,4 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokSet _) -> text "<-"
     Token (SomeToken TokRef _) -> text "ref"
     Token (SomeToken TokGetChar _) -> text "getChar"
+    Token (SomeToken TokPutChar _) -> text "putChar"

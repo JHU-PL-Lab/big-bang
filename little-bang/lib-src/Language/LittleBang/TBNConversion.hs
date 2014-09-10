@@ -57,6 +57,7 @@ instance TBNConvertible LB.Expr TBN.Expr where
     LB.TExprValChar o i -> return $ TBN.ExprValChar o i
     LB.TExprValEmptyOnion o -> return $ TBN.ExprValEmptyOnion o
     LB.TExprGetChar o -> return $ TBN.ExprGetChar o
+    LB.TExprPutChar o e -> TBN.ExprPutChar o <$> toTBN e
     _ -> error $ "Cannot TBN convert: " ++ display expr -- TODO: get a correct failure mode
         
 -- | Convert a LittleBang pattern to a TinyBang Nested pattern         
