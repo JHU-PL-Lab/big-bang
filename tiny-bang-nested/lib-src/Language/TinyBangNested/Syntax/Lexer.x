@@ -55,7 +55,7 @@ tokens :-
                                          "Invalid integer literal: " ++ s
                                }
   "-"                          { simply TokMinus }
-  "'" "\\"? $character* "'"    { wrapM $ \s ->
+  "'" [\\]? $character "'"     { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
                                         return $ \ss -> S.token TokLitChar ss i
