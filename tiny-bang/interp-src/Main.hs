@@ -16,7 +16,6 @@ import Utils.CLI.Args.Logging
 --import Lanugage.TinyBang.ToploopBM
 --import Language.TinyBang.Communicator
 --import Language.TinyBang.Communnicator.FromHaskellObject
-import Data.List.Split
 
 versionStr :: String
 versionStr = "TinyBang Interpreter version " ++ showVersion version

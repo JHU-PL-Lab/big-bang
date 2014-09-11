@@ -12,7 +12,6 @@ module Language.TinyBang.Toploop
 ) where
 
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import Data.List

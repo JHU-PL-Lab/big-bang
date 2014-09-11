@@ -14,6 +14,7 @@ import Language.TinyBang.Utils.Syntax
 type Token = TypedToken TokenType
 
 data TokenType a where
+  TokEOF :: TokenType ()
   TokIs :: TokenType () -- @=@
   TokArrow :: TokenType () -- @->@
   TokStartBlock :: TokenType () -- @{@
@@ -41,9 +42,10 @@ data TokenType a where
   TokCloseParen :: TokenType () -- @)@
   TokGetChar :: TokenType () -- @getChar@ 
   TokPutChar :: TokenType () -- @putChar@ 
- 
+
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
+    Token (SomeToken TokEOF _) -> dquotes $ text "<EOF>"
     Token (SomeToken TokIs _) -> dquotes $ text "="
     Token (SomeToken TokArrow _) -> dquotes $ text "->"
     Token (SomeToken TokStartBlock _) -> dquotes $ text "{"

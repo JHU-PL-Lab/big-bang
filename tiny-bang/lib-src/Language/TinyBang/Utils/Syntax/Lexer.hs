@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, ScopedTypeVariables, TupleSections #-}
 
 {-|
   This module contains utilities to simplify the process of creating an Alex
@@ -22,13 +22,15 @@
     alexEOF = genAlexEOF
     
     instance Alexy Alex AlexInput AlexPosn TokenType where
-      alexInputPosnStr (p,_,_,s) = (p,s)
-      alexPosnLineCol (AlexPn _ x y) = (x,y)
-      alexMonadDoScan = alexMonadScan
-      runAlexMonad = runAlex
-    
-    lexTinyBang :: SourceDocument -> String -> Either String [Token]
-    lexTinyBang = lexTokens (Proxy :: Proxy Alex) 
+      alexyGetInput = alexGetInput
+      alexyInputPosnStr (p,_,_,s) = (p,s)
+      alexyPosnLineCol (AlexPn _ x y) = (x,y)
+      alexyMonadScan = alexMonadScan
+      runAlexy = runAlex
+      alexyEofTokenType = return TokEOF
+      
+    lexMyTokens :: SourceDocument -> String -> Either String [Token]
+    lexMyTokens = lexTokens (Proxy :: Proxy Alex) 
   @
 -}
 module Language.TinyBang.Utils.Syntax.Lexer
@@ -47,6 +49,7 @@ import Control.Monad.Reader
 import Data.Proxy
 
 import Language.TinyBang.Utils.Syntax.Location
+import Language.TinyBang.Utils.Syntax.Positional
 import Language.TinyBang.Utils.Syntax.Tokens as T
 
 -- |A typeclass which defines the interface necessary to communicate with an
@@ -57,10 +60,12 @@ class (Monad alex) => Alexy alex alexInput alexPosn tokenType
           | alex -> alexInput alexPosn tokenType
           , alexInput -> alex alexPosn tokenType
           , alexPosn -> alex alexInput tokenType where
-  alexInputPosnStr :: alexInput -> (alexPosn, String)
-  alexPosnLineCol :: alexPosn -> (Int,Int)
-  runAlexMonad :: String -> alex a -> Either String a
-  alexMonadDoScan :: alex (PosAlexReturnType tokenType)
+  alexyGetInput :: alex alexInput 
+  alexyInputPosnStr :: alexInput -> (alexPosn, String)
+  alexyPosnLineCol :: alexPosn -> (Int,Int)
+  runAlexy :: String -> alex a -> Either String a
+  alexyMonadScan :: alex (PosAlexReturnType tokenType)
+  alexyEofTokenType :: alex (tokenType ())
 
 -- |A utility to create positional tokens for Alex.  The first argument of this
 --  function should be a function which accepts a string from Alex and yields an
@@ -72,14 +77,14 @@ wrapM :: Alexy alex alexInput alexPosn tokenType
       -> Int
       -> alex (PosAlexReturnType tokenType)
 wrapM f inp len = do
-  let (posn, str) = alexInputPosnStr inp
-  let (lineNum, colNum) = alexPosnLineCol posn
+  let (posn, str) = alexyInputPosnStr inp
+  let (lineNum, colNum) = alexyPosnLineCol posn
   g <- f (take len str)
   let start = DocumentPosition lineNum colNum
   let stop = DocumentPosition lineNum (colNum + len - 1)
   let docSpanR = DocumentSpan <$> ask <*> pure start <*> pure stop
   let tokenR = g <$> docSpanR
-  return $ Just <$> tokenR
+  return $ (,False) <$> tokenR
 
 -- |A utility to create positional tokens for Alex.  The first argument of this
 --  function should be a function which accepts a string from Alex and yields an
@@ -109,11 +114,20 @@ type LexerErr = String
 type PosAlexTokenType t = TypedToken t
 
 -- |The token type for this lexer.
-type PosAlexReturnType t = Reader SourceDocument (Maybe (TypedToken t))
+type PosAlexReturnType t = Reader SourceDocument (PosAlexTokenType t, Bool)
 
 genAlexEOF :: Alexy alex alexInput alexPosn tokenType
-        => alex (PosAlexReturnType token)
-genAlexEOF = return $ return Nothing
+        => alex (PosAlexReturnType tokenType)
+genAlexEOF = do
+  input <- alexyGetInput
+  tokenType <- alexyEofTokenType
+  let (posn, _) = alexyInputPosnStr input
+  let (lineNum, colNum) = alexyPosnLineCol posn
+  let pos = DocumentPosition lineNum colNum
+  return $ do
+    doc <- ask
+    let docSpan = DocumentSpan doc pos pos
+    return (Token $ SomeToken tokenType $ spos docSpan (), True)
 
 lexTokens :: forall alex alexInput alexPosn tokenType.
              (Monad alex, Alexy alex alexInput alexPosn tokenType)
@@ -122,12 +136,10 @@ lexTokens :: forall alex alexInput alexPosn tokenType.
           -> String
           -> Either LexerErr [PosAlexTokenType tokenType]
 lexTokens _ doc input =
-  runAlexMonad input readTokens
+  runAlexy input readTokens
   where
     readTokens :: alex [PosAlexTokenType tokenType]
     readTokens = do
-      rmtok <- alexMonadDoScan
-      let mtok = runReader rmtok doc
-      case mtok of
-        Nothing -> return []
-        Just pt -> (pt:) `liftM` readTokens
+      rptok <- alexyMonadScan
+      let (tok,finalToken) = runReader rptok doc
+      (tok:) `liftM` (if finalToken then return [] else readTokens)

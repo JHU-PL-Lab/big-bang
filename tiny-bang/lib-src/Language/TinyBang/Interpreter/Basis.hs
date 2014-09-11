@@ -23,7 +23,6 @@ import Control.Applicative
 import Control.Monad.IO.Class
 import Control.Monad.State
 import Control.Monad.Trans.Either
-import Data.Functor.Identity
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)

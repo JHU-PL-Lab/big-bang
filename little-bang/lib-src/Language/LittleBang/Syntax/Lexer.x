@@ -89,10 +89,12 @@ alexEOF :: Alex (PosAlexReturnType TokenType)
 alexEOF = genAlexEOF
 
 instance Alexy Alex AlexInput AlexPosn TokenType where
-  alexInputPosnStr (p,_,_,s) = (p,s)
-  alexPosnLineCol (AlexPn _ x y) = (x,y)
-  alexMonadDoScan = alexMonadScan
-  runAlexMonad = runAlex
+  alexyGetInput = alexGetInput
+  alexyInputPosnStr (p,_,_,s) = (p,s)
+  alexyPosnLineCol (AlexPn _ x y) = (x,y)
+  alexyMonadScan = alexMonadScan
+  runAlexy = runAlex
+  alexyEofTokenType = return TokEOF
 
 lexLittleBang :: SourceDocument -> String -> Either String [Token]
 lexLittleBang = lexTokens (Proxy :: Proxy Alex) 
