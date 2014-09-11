@@ -72,7 +72,9 @@ import qualified Language.TinyBangNested.Ast as TBN
 %right '<-'
 %right '::'
 %left '+' '-'
+%left '['
 %left '&'
+%right 'putChar'
 
 %name parseProgram Program
 %name parsePattern Pattern
