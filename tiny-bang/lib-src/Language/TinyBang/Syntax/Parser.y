@@ -21,6 +21,7 @@ import Language.TinyBang.Utils.Syntax
 %error { parseError }
 
 %token
+  eof           { Token (SomeToken TokEOF $$) }
   'int'         { Token (SomeToken TokInt $$) } 
   'char'        { Token (SomeToken TokChar $$) } 
   'ref'         { Token (SomeToken TokRef $$) }
@@ -47,7 +48,7 @@ import Language.TinyBang.Utils.Syntax
 %%
 
 Program
-  : Expr                    { $1 }
+  : Expr eof                { $1 }
 
 Expr
   : Clauses                 { oc1 $1 $> Expr $1 }

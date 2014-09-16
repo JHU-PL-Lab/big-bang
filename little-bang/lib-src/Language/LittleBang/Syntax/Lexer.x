@@ -19,6 +19,7 @@ import Utils.Monad.Read
 $digit = 0-9            -- digits
 $alpha = [a-zA-Z]       -- alphabetic characters
 $character = [\x00-\x10ffff]
+$escapechar = [\\]
 $identstart = $alpha
 $identcont = [$alpha $digit \_ \']
 
@@ -64,7 +65,7 @@ tokens :-
                                          "Invalid integer literal: " ++ s
                                }
   "-"                          { simply TokMinus }
-  "'" "\\"? $character* "'"     { wrapM $ \s ->
+  "'" [\\]? $character "'"        { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
                                         return $ \ss -> S.token TokLitChar ss i
@@ -90,10 +91,12 @@ alexEOF :: Alex (PosAlexReturnType TokenType)
 alexEOF = genAlexEOF
 
 instance Alexy Alex AlexInput AlexPosn TokenType where
-  alexInputPosnStr (p,_,_,s) = (p,s)
-  alexPosnLineCol (AlexPn _ x y) = (x,y)
-  alexMonadDoScan = alexMonadScan
-  runAlexMonad = runAlex
+  alexyGetInput = alexGetInput
+  alexyInputPosnStr (p,_,_,s) = (p,s)
+  alexyPosnLineCol (AlexPn _ x y) = (x,y)
+  alexyMonadScan = alexMonadScan
+  runAlexy = runAlex
+  alexyEofTokenType = return TokEOF
 
 lexLittleBang :: SourceDocument -> String -> Either String [Token]
 lexLittleBang = lexTokens (Proxy :: Proxy Alex) 

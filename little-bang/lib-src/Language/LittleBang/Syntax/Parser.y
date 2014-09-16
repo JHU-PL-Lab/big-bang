@@ -23,6 +23,7 @@ import qualified Language.TinyBangNested.Ast as TBN
 %error { parseError }
 
 %token
+  eof           { Token (SomeToken TokEOF $$) }
   'int'         { Token (SomeToken TokInt $$) } 
   'char'        { Token (SomeToken TokChar $$) }
   'ref'         { Token (SomeToken TokRef $$) }
@@ -73,7 +74,9 @@ import qualified Language.TinyBangNested.Ast as TBN
 %right '<-'
 %right '::'
 %left '+' '-'
+%left '['
 %left '&'
+%right 'putChar'
 
 %name parseProgram Program
 %name parsePattern Pattern
@@ -81,7 +84,7 @@ import qualified Language.TinyBangNested.Ast as TBN
 %%
 
 Program :: { SPositional Expr }
-  : Expr                    { $1 }
+  : Expr eof                { $1 }
 
 Expr :: { SPositional Expr }
   : 'let' Ident '=' Expr 'in' Expr

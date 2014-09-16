@@ -125,11 +125,11 @@ innerATranslate e =
                ]
              , x
              )
-    ExprPutChar _ e -> do
+    ExprPutChar _ e' -> do
       x <- freshVar
-      (cls,x') <- innerATranslate e
+      (cls,x') <- innerATranslate e'
       return ( cls ++
-               [ TBA.Clause generated x $ TBA.PutChar generated $ x'
+               [ TBA.Clause generated x $ TBA.PutChar generated x'
                ]
              , x
              )

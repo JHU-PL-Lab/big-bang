@@ -4,7 +4,6 @@ module Utils.Toploop
 ) where
 
 import Control.Monad
-import Data.List.Split
 import System.IO
 
 -- |Enters a toploop in which source code is read and executed.  Each expression
