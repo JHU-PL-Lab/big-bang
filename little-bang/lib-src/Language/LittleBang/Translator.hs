@@ -149,9 +149,10 @@ walkExprTree expr = do
     LB.LExprObject o tms -> (LB.LExprObject o
                                     <$> mapM walkObjTermTree tms)
                                     >>= f
-    LB.LExprClass o pms tms -> (LB.LExprClass o
+    LB.LExprClass o pms tms s -> (LB.LExprClass o
                                     <$> mapM walkParamTree pms
-                                    <*> mapM walkClassTermTree tms)
+                                    <*> mapM walkClassTermTree tms
+                                    <*> return s)
                                     >>= f
     LB.LExprProjection o e i -> (LB.LExprProjection o
                                  <$> walkExprTree e
@@ -228,7 +229,7 @@ walkClassTermTree term =
     LB.ClassInstanceProperty o p ->
       LB.ClassInstanceProperty o <$> walkObjTermTree p
     LB.ClassStaticProperty o p ->
-      LB.ClassStaticProperty o <$> walkClassTermTree p
+      LB.ClassStaticProperty o <$> walkObjTermTree p
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -368,7 +369,7 @@ objectTermToExpr term = case term of
 classTermToExpr :: LB.ClassTerm -> DesugarM LB.Expr
 classTermToExpr term = case term of
   LB.ClassInstanceProperty _ p -> objectTermToExpr p
-  LB.ClassStaticProperty _ p -> classTermToExpr p
+  LB.ClassStaticProperty _ p -> objectTermToExpr p
 
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
@@ -390,11 +391,8 @@ desugarExprObject expr =
 desugarExprClass :: LB.Expr -> DesugarM LB.Expr
 desugarExprClass expr =
   case expr of
-    LB.LExprClass o pms tms ->
+    LB.LExprClass o pms tms superclass ->
       do
-          -- (mapM classTermToExpr) :: [LB.ClassTerm] -> DesugarM [LB.Expr]
-          -- fmap :: Functor f => (a->b) -> f a -> f b
-          -- fmap (mapM classTermToExpr) :: Functor f => f [LB.ClassTerm] -> f (DesugarM [LB.Expr])
         let (static, inst) = splitStatic tms
         staticTermExprs <- mapM classTermToExpr static
         objTermExprs <- mapM classTermToExpr inst
@@ -404,7 +402,23 @@ desugarExprClass expr =
         instObj <- seal o (onionExprList (getClassFn : objTermExprs))
         let selfClosure = LB.TExprLet o (LB.Ident o "theclass") (LB.TExprVar o (LB.Ident o "self")) instObj
         newMethod <- objectTermToExpr (LB.ObjectMethod o (LB.Ident o "new") pms selfClosure)
-        seal o $ onionExprList (newMethod : staticTermExprs)
+        let cls = onionExprList (staticTermExprs ++ [newMethod])
+        case superclass of
+          Nothing -> seal o $ onionExprList (staticTermExprs ++ [newMethod])
+          Just i -> seal o
+            (LB.TExprAppl o
+              (LB.TExprScape o
+                (LB.VariablePattern o
+                  (LB.Ident o "sc")
+                )
+                (LB.TExprOnion o cls
+                  (LB.TExprVar o
+                    (LB.Ident o "sc")
+                  )
+                )
+              )
+              (LB.TExprVar o i)
+            )
     _ -> return expr
   where
   splitStatic :: [LB.ClassTerm] -> ([LB.ClassTerm],[LB.ClassTerm])
@@ -433,8 +447,14 @@ desugarParams params =
     desugarParam :: LB.Param -> DesugarM LB.Pattern
     desugarParam p = case p of
       Param o n pat ->
+      
         return $ LB.LabelPattern o (paramNameToLabelName n) $
           LB.ConjunctionPattern o pat $ LB.VariablePattern (originOf n) n
+        {-
+        return $ LB.ConjunctionPattern o
+            (LB.LabelPattern o (paramNameToLabelName n) (LB.VariablePattern (originOf n) n))
+            (LB.LabelPattern o (paramNameToLabelName n) pat)
+        -}
 
 distinguishedSymbol :: Char
 distinguishedSymbol = '$'

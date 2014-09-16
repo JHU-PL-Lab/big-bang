@@ -41,6 +41,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   '=='          { Token (SomeToken TokEq $$) }
   '<='          { Token (SomeToken TokLessEq $$) }
   '>='          { Token (SomeToken TokGreaterEq $$) }
+  '<'           { Token (SomeToken TokLess $$) }
   '<-'          { Token (SomeToken TokSet $$) }
   '&'           { Token (SomeToken TokOnion $$) }
   '='           { Token (SomeToken TokIs $$) }
@@ -102,10 +103,10 @@ Expr :: { SPositional Expr }
   | '{' ArgList '}'         { oc1 $1 $> LExprRecord $2 }
   | 'object' '{' ObjTermList '}'
                             { oc1 $1 $> LExprObject $3 }
-  | 'class' '(' ParamList ')' '{' ClassTermList '}'
-                            { oc2 $1 $> LExprClass $3 $6 }
-  | 'class' '()' '{' ClassTermList '}'
-                            { oc2 $1 $> LExprClass (vpos []) $4 }
+  | 'class' '(' ParamList ')' maybe(SubclassTerm) '{' ClassTermList '}'
+                            { oc3 $1 $> LExprClass $3 $7 (vpos $ posData `fmap` $5) }
+  | 'class' '()' maybe(SubclassTerm) '{' ClassTermList '}'
+                            { oc3 $1 $> LExprClass (vpos []) $5 (vpos $ posData `fmap` $3) }
   | InvokableExpr '(' ArgList ')'
                             { oc2 $1 $> LExprAppl $1 $3 }
   | InvokableExpr '()'
@@ -201,7 +202,10 @@ ClassTermList :: { VPositional [ClassTerm] }
 
 ClassTerm :: { SPositional ClassTerm }
   : ObjTerm              { oc1 $1 $> ClassInstanceProperty $1 }
-  | '~' ClassTerm           { oc1 $1 $> ClassStaticProperty $2 }
+  | '~' ObjTerm           { oc1 $1 $> ClassStaticProperty $2 }
+
+SubclassTerm :: { SPositional Ident }
+  : '<' Ident            { $2 }
 
 -- Generalizations of common grammar patterns.
 

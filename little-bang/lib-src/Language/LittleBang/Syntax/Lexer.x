@@ -44,6 +44,7 @@ tokens :-
   "=="                         { simply TokEq }
   "<="                         { simply TokLessEq }
   ">="                         { simply TokGreaterEq }
+  "<"                          { simply TokLess }
   "<-"                         { simply TokSet }
   "&"                          { simply TokOnion }
   "="                          { simply TokIs }

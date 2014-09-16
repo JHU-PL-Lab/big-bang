@@ -30,6 +30,7 @@ data TokenType a where
   TokEq :: TokenType () -- @==@
   TokLessEq :: TokenType () -- @<=@
   TokGreaterEq :: TokenType () -- @>=@
+  TokLess :: TokenType () -- @<@
   TokSet :: TokenType () -- @<-@
   TokOnion :: TokenType () -- @&@
   TokOpenParen :: TokenType () -- @(@
@@ -74,6 +75,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokEq _) -> text "=="
     Token (SomeToken TokLessEq _) -> text "<="
     Token (SomeToken TokGreaterEq _) -> text ">="
+    Token (SomeToken TokLess _ ) -> text "<"
     Token (SomeToken TokSet _) -> text "<-"
     Token (SomeToken TokOnion _) -> dquotes $ text "&"
     Token (SomeToken TokOpenParen _) -> dquotes $ text "("

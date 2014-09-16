@@ -49,7 +49,7 @@ data Expr
   | LExprProjection Origin Expr Ident
   | LExprDispatch Origin Expr Ident [Arg]
   | LExprObject Origin [ObjectTerm]
-  | LExprClass Origin [Param] [ClassTerm]
+  | LExprClass Origin [Param] [ClassTerm] (Maybe Ident)
   | LExprDeref Origin Expr
   | LExprIndexedList Origin Expr Expr
   deriving (Show)
@@ -89,7 +89,7 @@ data ObjectTerm
 
 data ClassTerm
   = ClassInstanceProperty Origin ObjectTerm
-  | ClassStaticProperty Origin ClassTerm
+  | ClassStaticProperty Origin ObjectTerm
   deriving (Show)
 
 data Ident
@@ -152,7 +152,7 @@ instance HasOrigin Expr where
     LExprProjection orig _ _ -> orig
     LExprDispatch orig _ _ _ -> orig
     LExprObject orig _ -> orig
-    LExprClass orig _ _ -> orig
+    LExprClass orig _ _ _ -> orig
     LExprDeref orig _ -> orig
     LExprIndexedList orig _ _ -> orig
 
@@ -207,7 +207,7 @@ instance Display Expr where
     encloseSep lbrace rbrace comma $ map makeDoc args
    LExprObject _ terms ->
     text "object" <+> encloseSep lbrace rbrace comma (map makeDoc terms)
-   LExprClass _ args terms ->
+   LExprClass _ args terms subclass -> -- TODO include subclass
     text "class" <+> encloseSep lparen rparen comma (map makeDoc args) <+> encloseSep lbrace rbrace comma (map makeDoc terms)
    LExprProjection _ e i -> makeDoc e <> text "." <> makeDoc i
    LExprDispatch _ e i a -> makeDoc e <> text "." <> makeDoc i <>
