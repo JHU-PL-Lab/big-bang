@@ -3,6 +3,7 @@ module Language.LittleBang.Translator
 ) where
 
 import Data.List
+import Data.Maybe
 
 import Control.Applicative
 import Control.Monad.State
@@ -400,11 +401,14 @@ desugarExprClass expr =
             (LB.ObjectMethod o (LB.Ident o "getclass") []
                 (LB.TExprVar o (LB.Ident o "theclass")))
         instObj <- seal o (onionExprList (getClassFn : objTermExprs))
-        let selfClosure = LB.TExprLet o (LB.Ident o "theclass") (LB.TExprVar o (LB.Ident o "self")) instObj
+        combinedInstObj <- if (isNothing superclass)
+                             then return instObj
+                             else seal o =<< LB.TExprOnion o instObj <$> walkExprTree (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "sc")) (LB.Ident o "new") (buildArgList pms))
+        let selfClosure = LB.TExprLet o (LB.Ident o "theclass") (LB.TExprVar o (LB.Ident o "self")) combinedInstObj
         newMethod <- objectTermToExpr (LB.ObjectMethod o (LB.Ident o "new") pms selfClosure)
-        let cls = onionExprList (staticTermExprs ++ [newMethod])
+        let cls = onionExprList (newMethod:staticTermExprs)
         case superclass of
-          Nothing -> seal o $ onionExprList (staticTermExprs ++ [newMethod])
+          Nothing -> seal o $ onionExprList (newMethod:staticTermExprs)
           Just i -> seal o
             (LB.TExprAppl o
               (LB.TExprScape o
@@ -421,6 +425,8 @@ desugarExprClass expr =
             )
     _ -> return expr
   where
+  buildArgList :: [LB.Param] -> [LB.Arg]
+  buildArgList = map (\(LB.Param o i _) -> LB.NamedArg o i (LB.TExprVar o i))
   splitStatic :: [LB.ClassTerm] -> ([LB.ClassTerm],[LB.ClassTerm])
   splitStatic tms = partition (\x -> case x of
     LB.ClassStaticProperty _ _ -> True
