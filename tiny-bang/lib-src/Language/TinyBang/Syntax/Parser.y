@@ -40,6 +40,9 @@ import Language.TinyBang.Utils.Syntax
   '}'           { Token (SomeToken TokStopBlock $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '*'           { Token (SomeToken TokMult $$) }
+  '/'           { Token (SomeToken TokDiv $$) }
+  '%'           { Token (SomeToken TokMod $$) }
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
@@ -112,6 +115,9 @@ LiteralPrimitive
 BuiltinOp
   : '+'                     { posOver $1 $> OpIntPlus }
   | '-'                     { posOver $1 $> OpIntMinus }
+  | '*'                     { posOver $1 $> OpIntMult }
+  | '/'                     { posOver $1 $> OpIntDiv }
+  | '%'                     { posOver $1 $> OpIntMod }
   | '=='                    { posOver $1 $> OpIntEq }
   | '<='                    { posOver $1 $> OpIntLessEq }
   | '>='                    { posOver $1 $> OpIntGreaterEq }

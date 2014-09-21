@@ -28,6 +28,9 @@ builtinEnv =
   map defineEmptyOnionVar
     [ OpIntPlus
     , OpIntMinus
+    , OpIntMult
+    , OpIntDiv
+    , OpIntMod
     , OpIntEq
     , OpIntLessEq
     , OpIntGreaterEq
@@ -79,6 +82,9 @@ computeBuiltin = do
   case bop of
     OpIntPlus -> intComputeOp (+)
     OpIntMinus -> intComputeOp (-)
+    OpIntMult -> intComputeOp (*)
+    OpIntDiv -> intComputeOp div
+    OpIntMod -> intComputeOp mod
     OpIntEq -> intCompareOp (==)
     OpIntLessEq -> intCompareOp (<=)
     OpIntGreaterEq -> intCompareOp (>=)

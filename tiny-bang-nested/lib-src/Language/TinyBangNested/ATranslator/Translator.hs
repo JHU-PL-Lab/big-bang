@@ -62,6 +62,9 @@ innerATranslate e =
         let op' = case op of
                     TBN.OpIntPlus _ -> TBA.OpIntPlus
                     TBN.OpIntMinus _ -> TBA.OpIntMinus
+                    TBN.OpIntMult _ -> TBA.OpIntMult
+                    TBN.OpIntDiv _ -> TBA.OpIntDiv
+                    TBN.OpIntMod _ -> TBA.OpIntMod
                     TBN.OpIntEq _ -> TBA.OpIntEq
                     TBN.OpIntGreaterEq _ -> TBA.OpIntGreaterEq
                     TBN.OpIntLessEq _ -> TBA.OpIntLessEq

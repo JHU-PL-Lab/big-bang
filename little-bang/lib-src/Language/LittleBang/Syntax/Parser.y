@@ -54,6 +54,9 @@ import qualified Language.TinyBangNested.Ast as TBN
   '}'           { Token (SomeToken TokCloseBrace $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '*'           { Token (SomeToken TokMult $$) }
+  '/'           { Token (SomeToken TokDiv $$) }
+  '%'           { Token (SomeToken TokMod $$) }
   ':'           { Token (SomeToken TokColon $$) }
   ';'           { Token (SomeToken TokSemi $$) }
   ','           { Token (SomeToken TokComma $$) }
@@ -73,7 +76,7 @@ import qualified Language.TinyBangNested.Ast as TBN
 %nonassoc '<=' '>=' '=='
 %right '<-'
 %right '::'
-%left '+' '-'
+%left '+' '-' '*' '/' '%'
 %left '['
 %left '&'
 %right 'putChar'
@@ -95,6 +98,9 @@ Expr :: { SPositional Expr }
                             { oc3 $1 $> LExprCondition $2 $4 $6 }
   | Expr '+' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntPlus `oat` $2) $3 }
   | Expr '-' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntMinus `oat` $2) $3 }
+  | Expr '*' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntMult `oat` $2) $3 }
+  | Expr '/' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntDiv `oat` $2) $3 }
+  | Expr '%' Expr           { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntMod `oat` $2) $3 }
   | Expr '==' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntEq `oat` $2) $3 }
   | Expr '>=' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntGreaterEq `oat` $2) $3 }
   | Expr '<=' Expr          { oc3 $1 $> TExprBinaryOp $1 (TBN.OpIntLessEq `oat` $2) $3 }
@@ -170,6 +176,7 @@ Pattern :: { SPositional Pattern }
 PrimaryPattern :: {SPositional Pattern }
   : Label PrimaryPattern    { oc2 $1 $> LabelPattern $1 $2 }
   | 'ref' Ident             { oc1 $1 $> RefPattern (oc1S VariablePattern $2) }
+  | 'ref' '()'              { oc1 $1 $> RefPattern (oc0 $1 $> EmptyPattern) }
   | PrimitiveType           { oc1 $1 $> PrimitivePattern $1 }
   | '()'                    { oc0 $1 $> EmptyPattern }
   | Ident                   { oc1 $1 $> VariablePattern $1 }

@@ -39,6 +39,9 @@ data Expr
 data BinaryOperator
   = OpIntPlus Origin
   | OpIntMinus Origin
+  | OpIntMult Origin
+  | OpIntDiv Origin
+  | OpIntMod Origin
   | OpIntEq Origin 
   | OpIntGreaterEq Origin
   | OpIntLessEq Origin
@@ -142,6 +145,9 @@ instance Display BinaryOperator where
   makeDoc x = case x of
    OpIntPlus _ -> text "+"
    OpIntMinus _ -> text "-"
+   OpIntMult _ -> text "*"
+   OpIntDiv _ -> text "/"
+   OpIntMod _ -> text "%"
    OpIntEq _ -> text "=="
    OpIntGreaterEq _ -> text ">="
    OpIntLessEq _ -> text "<="
