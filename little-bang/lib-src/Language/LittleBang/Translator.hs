@@ -585,6 +585,14 @@ desugarLExprIndexedList e =
            (TBN.OpIntLessEq o) 
            (LB.TExprValInt o 0)) -- TODO: change to i < 0 when < is available in the language.
           (LB.TExprLabelExp o  (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)) -- TODO: add "index out of bounds exception"; this is a temporary placeholder.
+{- The above code is causing typing issues, a temporary workaround that causes an infinite loop is shown below.
+          (LB.TExprLet o
+            (LB.Ident o "obj")
+            (LB.LExprObject o [objTerm])
+            (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "obj")) (LB.Ident o "getElement")
+             [LB.NamedArg o (LB.Ident o "lst")(LB.TExprLabelExp o  (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)),
+              LB.NamedArg o (LB.Ident o "index") i]))
+-}
           (LB.TExprLet o
             (LB.Ident o "obj")
             (LB.LExprObject o [objTerm])
@@ -615,7 +623,13 @@ desugarLExprIndexedList e =
              ) 
              (LB.LExprScape o [LB.Param o (LB.Ident o "l") 
                 (LB.LabelPattern o (LB.LabelName o "Nil") (LB.EmptyPattern o))]
-                (LB.TExprLabelExp o  (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)) -- TODO: add "index out of bounds exception"; this is a temporary placeholder.
+                (LB.TExprLabelExp o (LB.LabelName o "Nil") (LB.TExprValEmptyOnion o)) -- TODO: add "index out of bounds exception"; this is a temporary placeholder.
+{- The above code is causing typing issues, a temporary workaround that causes an infinite loop is shown below.
+                (LB.LExprDispatch o (LB.TExprVar o (LB.Ident o "self"))
+                  (LB.Ident o "getElement")
+                  [LB.NamedArg o (LB.Ident o "lst") (LB.TExprVar o (LB.Ident o "l")),
+                   LB.NamedArg o (LB.Ident o "index") (LB.TExprVar o (LB.Ident o "index"))])
+-}
              )
            )
            (LB.LExprAppl o (LB.TExprVar o (LB.Ident o "f"))
