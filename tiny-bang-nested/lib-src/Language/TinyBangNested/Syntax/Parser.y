@@ -53,6 +53,7 @@ import Language.TinyBangNested.Syntax.Tokens
 %right '<-'
 %left '+' '-'
 %left '&'
+%right 'putChar'
 
 %name parseProgram Program
 %name parsePattern Pattern
