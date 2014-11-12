@@ -1,0 +1,160 @@
+\documentclass{llncs}
+\usepackage{jhupllab}
+\usepackage{mathpartir}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{relsize}
+
+\input{macros}
+
+\newcommand{\lbload}{\texttt{load}\;}
+\newcommand{\lbimport}{\texttt{import}\;}
+\newcommand{\lbimportq}{\texttt{import qual}\;}
+\newcommand{\lbimportl}{\texttt{import all}\;}
+\newcommand{\lbimporta}{\texttt{import...as}\;}
+\newcommand{\moddot}{\texttt{.}}
+
+\newcommand{\diffhat}[1]{\ensuremath{\widehat{\texttt{#1}}}}
+
+\newcommand{\translate}[2]{\ensuremath{\llbracket\texttt{#2}\rrbracket_{\textnormal{#1}}}}
+\newcommand{\fresh}[1]{\ensuremath{x^*_{#1}}}
+\newcommand{\secheader}[1]{\par\noindent{\sc #1}\noindent\unskip}
+\begin{document}
+\section{Modules}
+\label{sec-modules}
+\indent As in any language designed to be suited for problems of more than trivial size, it is important to have the ability to define logical units of source code, which are able to be evaluated independently but which are accessible to each other. For this we introduce the familiar concept of the \textit{module}, a unit of source code which has the properties outlined above. In this section we discuss the encoding of modules as TinyBang onions, as well as their construction and access.
+
+\subsection{Encoding}
+\label{ss-mod-encoding}
+% \translate{d}{$t$} : Expr -> Expr
+% both exprs are open in a variable called modraw
+% \translate{d}{x = e} = let x = \translate{e}{e} in
+% 	let $modraw = `x x & $modraw in
+% 	let mod = mseal $modraw in [?]
+%
+% 
+\indent It is natural to be able to extend our encoding of objects and classes into modules. In many languages, modules and objects have largely similar properties, as containers for values and self-aware functions. We extend this definition to give modules limited self-awareness in fields as well.\\
+\indent In order to encode this, we introduce the concept of a \textit{let-stack} which allows us to build up a module one member at a time.
+\begin{figure}[h]
+\secheader{Module declaration}\\
+\translate{d}{$\langle x$ \lbil!=! $e, Q_m,Q_f\rangle$} = \\
+$\left\langle
+\begin{tabular}{@{\texttt{let }} l @{\texttt{ = }} l @{\texttt{ in }} l}
+	$x$ & \translate{e}{e} \\
+	\texttt{\$modraw} & \texttt{`}$x\; x$\texttt{ \& \$modraw} \\
+	\texttt{mod} & \texttt{mseal \$modraw} & $\boxdot$ \\
+\end{tabular}
+\;, x \not\in Q_m ? \{x\}\cup Q_m \colon Q_m
+\;, Q_f
+\right\rangle$
+\translate{d}{$\langle x(\vec{a})$ \lbil!=! $e, Q_m, Q_f\rangle$} = \\
+$\left\langle
+\begin{tabular}{@{\texttt{let }} l @{\texttt{ = }} l @{\texttt{ in }} l}
+	$x$ & \texttt{fun `\$msg `}$x$ \texttt{() \&} \translate{a}{$\vec{a}$} \texttt{->} \translate{e}{e} \\
+	\texttt{\$modraw} & $x$ \texttt{ \& \$modraw} \\
+	\texttt{mod} & \texttt{mseal \$modraw} & $\boxdot$ \\
+\end{tabular}
+\;, Q_m
+\;, \{x\}\cup Q_f
+\right\rangle x \not\in Q_f$\\
+\translate{d}{$\langle x(\vec{a})$ \lbil!=! $e, Q_m, Q_f\rangle$} = \\
+$\left\langle
+\begin{tabular}{@{\texttt{let }} l @{\texttt{ = }} l @{\texttt{ in }} l}
+	\fresh{1} & \texttt{fun `msg `}\fresh{1} \texttt{() \&} \translate{a}{$\vec{a}$} \texttt{->} \translate{e}{e} \\
+	$x$ & \fresh{1} \texttt{\&} $x$ \\
+	\texttt{\$modraw} & $x$ \texttt{ \& \$modraw} \\
+	\texttt{mod} & \texttt{mseal \$modraw} & $\boxdot$ \\
+\end{tabular}
+\;, Q_m
+\;, \{x\}\cup Q_f
+\right\rangle x \in Q_f$
+\end{figure}\\
+\indent This desugaring is notably more involved than other basic desugarings, and this is for a variety of reasons. First is that the desugaring \translate{d}{d} returns incomplete expressions; in other words, \translate{d}{d} $\colon e \rightarrow e$. Each declaration fills the hole of the previous declaration, with the final one being filled by the variable \texttt{mod}. The whole structure is prepended by \texttt{let mod = () in }. This has a convenient implementation similar to the familiar construction of a DiffList.
+
+\begin{figure}[h]
+\begin{hscode}
+data Expr where
+	ExprLet :: Var -> Expr -> Expr -> Expr
+	...
+type DiffLet = Expr -> Expr
+--*\diffhat{let}*-- = uncurry ExprLet
+--*\diffhat{in}*-- = (.)
+\end{hscode}
+\end{figure}
+
+This representation is surprisingly convenient: a function which builds a simple let-stack can be implemented as \hsil!(foldl1 $\diffhat{in}$) . (map $\diffhat{let}$)!. Inserting lines with \texttt{let \$modraw = ...} and \texttt{let mod = ...} simply require a modified definition of \diffhat{let}.\\
+\indent While the lines beginning with \texttt{let} $x \ldots$ are rather self explanatory, the definitions of \texttt{\$modraw} and \texttt{mod} are present in order to express the notion of limited self-awareness discussed above. At the time of desugaring of the declaration $d_i$, \translate{d}{$d_1$}$\cdots$\translate{d}{$d_{i-1}$} are projectable from a variable \texttt{mod}. The intermediate definition of \texttt{\$modraw} is introduced to prevent resealing existing definitions of \texttt{mod}, so that each \texttt{mod} has only one \texttt{mseal} invocation.\\
+\indent Lastly, each desugaring operates over a pair of sets $Q_m, Q_f$ in addition to expressions. These sets accumulate the names of defined fields and functions, respectively. These sets allow us to make a distinction between the definition of a name and the \emph{re}definition of a name. For field redefinition, we overwrite the previous definition regardless, whereas function redefinitions are onioned onto old definitions if they exist. The sets $Q_m, Q_f$ have further applications, explored in \S \ref{sss-mod-name-binding}.
+\subsection{Importing}
+\label{ss-mod-imports}
+% load holds a mapping M from names to modules
+% mapping is an implementation detail
+\begin{figure}[h]
+\begin{grammar}
+	\grule[LittleBang imports]{LBModuleTerm}{
+			 LBModuleTerm
+		\gor LBImport
+	}
+	\\
+	\grule[]{LBImport}{\lbimport LBModuleName}
+	\grule[TinyBang loads]{TBRedex}{
+			 TBRedex
+		\gor TBLoad
+	}
+	\\
+	\grule[]{TBLoad}{\lbload ModuleName}
+	\grule[Module names]{ModuleName}{
+			 ident
+		\gor ident\moddot ModuleName
+	}
+\end{grammar}
+\caption{Augmenting the TinyBang and LittleBang grammars to introduce statements needed for module importing}
+\label{fig-mod-grammar}
+\end{figure}
+\indent Although modules, as onions, are first-class objects in LittleBang, other primitives must be introduced in order to grant them distinct behavior and functionality from objects. For this we will introduce the \lbimport statement to the LittleBang grammar, which builds a module object from a LittleBang source file and binds it to a name. As a component of this we also introduce the TinyBang \lbload primitive, which locates and evaluates the requested module on disk. The introduction of these statements is shown in Figure ~\ref{fig-mod-grammar}.\\
+\begin{figure}[h]
+\begin{center}
+\secheader{Load}\\
+$\mathlarger{\frac{M[n] = \langle v, Q_{m}, Q_{f}\rangle}{\lbload n \longrightarrow^{*} \langle v, Q_{m}, Q_{f}\rangle}}$
+\end{center}
+\caption{The operational semantics of the \lbload operator}
+\label{fig-opsem-load}
+\end{figure}
+\indent The operational semantics of \lbload are shown in Figure~\ref{fig-opsem-load}. TODO make a nicer figure. The mapping $M$ is implicit in the semantics of \lbload . $M$ is a mapping from module names to onions, and how it is constructed is left up to implementation. This intentional vagueness allows for the inclusion of additions to the LittleBang software stack such as a package manager. In our implementation, module names directly represent file paths from some global root directory. With \lbload available, we are now able to define a desugaring for the \lbimport expression.
+\subsubsection{Global Namespace Subtrees}
+\label{sss-glob-name-subtr}
+\indent Consider the list of \lbimport statements shown in Figure ~\ref{fig-mod-import-subtree}. We cannot represent the first import as a value with the label \bt\lbil!util.time.timedelta!, as this is not a syntactically valid name for a label. Instead, our value may have a structure akin to \lbil!`util `time `timedelta!. In matching with the desugaring of general module fields (which is identical to that of object fields), this statement could also be written as \lbil!util = `time `timedelta ...!.\\
+\begin{figure}[h]
+\lbimport \texttt{util.time.timedelta}\\
+\lbimport \texttt{util.time.date}\\
+\lbimport \texttt{util.list}
+\caption{A series of import statements which describe a namespace subtree rooted at \texttt{util}.}
+\label{fig-mod-import-subtree}
+\end{figure}
+\indent This observation leads to a question: given our representation of\\ \texttt{util.time.timedelta}, how can we now represent \lbil!util.time.date!? Clearly the answer is not as \lbil!`util `time `date!: only one of the two modules would be present in the resulting onion. What we want is to have a structure like \begin{small}\texttt{`util `time (`timedelta ... \& `date ...)}\end{small}. This gives us a single module member called \lbil!util!, containing a single field \lbil!time!, with two fields \lbil!timedelta! and \lbil!date!. This structure represents a subtree of the \emph{global namespace}, the logical hierarchy which organizes all accessible modules on the disk.\footnote{This hierarchy is implicit; it is never constructed.}\\
+\begin{figure}[h]
+\translate{m}{\lbimport $z_1$\moddot$\cdots$\moddot$z_n$} = \lbil!let ! \fresh{1}\lbil! = load !$z_1$\moddot$\cdots$\moddot$z_n$ \lbil!in! \\
+\lbil!((!\bigamp{i=1}{n} \lbil!(fun !\fresh{2}\lbil!:!\bt $z_1\cdots$ \bt $z_{n-i}$ \fresh{3} \lbil!->! \bt $z_1\cdots$ \bt $z_{n-i}$\lbil!(!\bt $z_{n-i+1}\cdots$ \bt $z_n$ \fresh{1} \lbonion \fresh{3}\lbil!)))!\\
+\lbonion (\lbil!fun! \fresh{2}\lbil!->!\bt $z_1\cdots$ \bt $z_n$ \fresh{1})) (\fresh{2} \lbil!= mod!)
+
+\caption{The desugaring of the \lbimport statement}
+\label{fig-mod-import-trans}
+\end{figure}
+% a set Q is part of the desugaring of import
+% Q represents the set of names defined in imported module
+% Qm for fields, Qf for functions
+\indent The translation of \lbimport shown in Figure~\ref{fig-mod-import-trans} is able to exactly produce each namespace subtree that is defined by a series of import statements. Module fields with the structures $\texttt{`}z_{n-1} \cdots \texttt{`} z_1$ through $\texttt{`} z_1$ are searched for in \texttt{mod}; if one of them is found, its value is left-onioned with $\texttt{`}z_{n-i+1} \cdots \texttt{`}z_n$ of the loaded module. If no existing module hierarchy is found rooted at $z_1$, the loaded module is labeled with all of its name components and bound to the field named $z_1$. With a series of global namespace subtrees built, we are able to apply a number of useful renaming operations.
+\subsubsection{Module Name Binding}
+\label{sss-mod-name-binding}
+In the above example, our imported modules must ultimately be referred to by their full qualified names: to access the member \lbil!foo! from \lbil!util.time.timedelta!, we must call \lbil!util.time.timedelta.foo! every time we want to access it. Obviously this is inconvenient, and most commercial languages with module systems have avenues to circumvent this. In LittleBang, we can write \lbil!td = util.time.timedelta! after importing our module, but this is needlessly verbose. Instead, we would like to be able to automatically insert these statements into our module if requested. We introduce several new syntactic forms of import to the grammar.\\
+\begin{figure}[h]
+\begin{tabular}{l l @{ $|$}}
+	$LBImport ::= $ & \lbimport $LBModuleName$\\
+	& \lbimport \texttt{all} $LBModuleName$\\
+	& \lbimport \texttt{qual} $LBModuleName$\\
+	& \lbimport $LBModuleName$ \texttt{as} $ident$\\
+\end{tabular}
+\end{figure}
+The behavior we defined in Figure~\ref{fig-mod-import-trans} maps to the \lbimportq statement; this is the most specific form of import which can be written. 
+\end{document}

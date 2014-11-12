@@ -1,0 +1,37 @@
+\newcommand{\setlb}{%
+    \lstset{%
+        basicstyle=\small\ttfamily,%
+        numbers=none,%
+        firstnumber=auto,%
+    }%
+}
+\lstnewenvironment{code}%
+    {\setlb}%
+    {}%
+\newcommand{\lbil}{\setlb\lstinline[mathescape]}
+
+\newcommand{\seths}{%
+	\lstset{
+		basicstyle=\ttfamily,
+		frame=single,
+		escapeinside={--*}{*--},
+		language=Haskell,
+		numbers=none,
+		tabsize=2,
+	}
+}
+\lstnewenvironment{hscode}
+	{\seths}
+	{}
+\newcommand{\hsil}{\seths\lstinline[mathescape]}		
+
+\newcommand{\bigamp}[2]{\ensuremath{
+	\mathlarger{
+	\mathlarger{
+	\mathlarger{
+	\texttt{\&}}}}_{#1}^{#2}}}
+\newcommand{\listhd}{\lbil!`Hd!\;}
+\newcommand{\listtl}{\lbil!`Tl!\;}
+\newcommand{\lbonion}{\lbil!&!\;}
+\newcommand{\lbseal}{\lbil!seal!\;}
+\newcommand{\bt}{\lbil!`!}
