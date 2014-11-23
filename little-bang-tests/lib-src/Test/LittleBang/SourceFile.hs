@@ -3,20 +3,22 @@ module Test.LittleBang.SourceFile
 , LittleBangSourceFileTestConfig(..)
 ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.List
 import Data.List.Split (splitOn)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Test.HUnit
 
 import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Utils.Syntax.Location
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
-import Language.TinyBang.TypeSystem.TypeInference
+import Language.TinyBang.TypeSystem
 import Language.TinyBang.Utils.Display
 import Language.TinyBangNested.ATranslator
 import Language.LittleBang.Ast as LB
@@ -35,7 +37,7 @@ import Test.LittleBang.SourceFile.Expectation
 data LittleBangSourceFileTestConfig
   = LittleBangSourceFileTestConfig
       { lbsftFilter :: Maybe String
-      , lbsftDatabase :: SomeDisplayableConstraintDatabase
+      , lbsftTypeSystem :: TypeSystem
       }
 
 testsPath :: FilePath
@@ -44,8 +46,7 @@ testsPath = "tests"
 generateTests :: LittleBangSourceFileTestConfig -> IO Test
 generateTests (LittleBangSourceFileTestConfig
                 { lbsftFilter = configFilter
-                , lbsftDatabase =
-                    SomeDisplayableConstraintDatabase configDatabase
+                , lbsftTypeSystem = ts
                 }) =
   let sftConfig = SourceFileTestConfig
                     { sftDirectory = testsPath
@@ -78,7 +79,7 @@ generateTests (LittleBangSourceFileTestConfig
       tokens <- hoistEither $ lexLittleBang doc source
       ast <- hoistEither $ parseLittleBang doc tokens
       tbAst <- hoistEither $ desugarAll ast
-      let tcResult = typecheck' configDatabase tbAst
+      let tcResult = typecheck' tbAst
       case expectation of
         ExpectMatches pattern patSrc -> do
           -- We're going to build a catch-all scape that determines whether or
@@ -137,9 +138,11 @@ generateTests (LittleBangSourceFileTestConfig
               left $ "Expected type failure but typechecking produced a " ++
                      "valid database: " ++ display db
       where
-        typecheck' :: (ConstraintDatabase db, Display db)
-                   => db -> TBA.Expr -> Either (TypecheckingError db) db
-        typecheck' _ = typecheck
+        typecheck' :: TBA.Expr -> Either (Set TypecheckError) ConstraintSet
+        typecheck' expr = do
+          let result = typecheck ts expr
+          unless (Set.null $ typeErrors result) $ Left $ typeErrors result
+          return $ allConstraints result
         desugarAll :: LB.Expr -> Either String TBA.Expr
         desugarAll lbAst = do
           desugaredAst <- desugarLittleBang lbAst

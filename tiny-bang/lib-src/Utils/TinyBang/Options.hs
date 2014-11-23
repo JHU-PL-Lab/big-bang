@@ -11,16 +11,16 @@ module Utils.TinyBang.Options
 ) where
 
 import Control.Monad.Error
+import Language.TinyBang.TypeSystem
 import Language.TinyBang.Toploop
 import Language.TinyBang.Utils.Logger
 import Utils.GetOpt
 import Utils.CLI.Args.Logging
 
 data TinyBangOptions = TinyBangOptions
-  { noTypecheck :: Bool
-  , noEval :: Bool
+  { noEval :: Bool
   , loggingInstructions :: [LoggingInstruction]
-  , databaseConfigType :: ConstraintDatabaseType
+  , typeSystemImplementation :: Maybe TypeSystem
   , batchMode :: Bool 
   , assertions :: Bool
   }
@@ -28,10 +28,9 @@ data TinyBangOptions = TinyBangOptions
 tinyBangDefaultOptions :: TinyBangOptions
 tinyBangDefaultOptions =
   TinyBangOptions
-    { noTypecheck = False
-    , noEval = False
+    { noEval = False
     , loggingInstructions = []
-    , databaseConfigType = Indexed
+    , typeSystemImplementation = Just simpleTypeSystem 
     , batchMode = False
     , assertions = False
     }
@@ -39,7 +38,7 @@ tinyBangDefaultOptions =
 tinyBangOptionDescriptors :: [OptDescr (OptionUpdater TinyBangOptions)]
 tinyBangOptionDescriptors =
   [ Option "T" ["no-typecheck"]
-      (NoArg $ \r -> return $ r { noTypecheck = True })
+      (NoArg $ \r -> return $ r { typeSystemImplementation = Nothing })
       "Disables typechecking."
   , Option "E" ["no-eval"]
       (NoArg $ \r -> return $ r { noEval = True })
@@ -56,10 +55,10 @@ tinyBangOptionDescriptors =
   , Option "" ["db", "database"]
       (ReqArg (\x r -> do
           db <- case x of
-                  "simple" -> return Simple
-                  "indexed" -> return Indexed
-                  _ -> throwError $ "Unrecognized database type: " ++ x
-          return $ r { databaseConfigType = db}) "IMPL") $
+                  "simple" -> return $ Just simpleTypeSystem
+                  "indexed" -> return $ undefined -- TODO
+                  _ -> throwError $ "Unrecognized type system: " ++ x
+          return $ r { typeSystemImplementation = db}) "IMPL") $
       "Selects the constraint database implementation.  This must be one of " ++
       "the following: simple [indexed]"
   , Option "" ["batch-mode"]

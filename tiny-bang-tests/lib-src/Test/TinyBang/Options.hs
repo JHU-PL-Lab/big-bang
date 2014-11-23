@@ -13,7 +13,7 @@ module Test.TinyBang.Options
 import Control.Monad.Error
 import System.Console.GetOpt
 
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
+import Language.TinyBang.TypeSystem
 import Language.TinyBang.Utils.Logger
 import Utils.CLI.Args.Logging
 import Utils.GetOpt
@@ -22,7 +22,7 @@ data TinyBangTestOptions =
   TinyBangTestOptions
   { loggerInstructions :: [LoggingInstruction]
   , sourceFileOnlyByName :: Maybe String
-  , emptyDatabase :: SomeDisplayableConstraintDatabase
+  , typeSystemImplementation :: Maybe TypeSystem
   , staticAssertions :: Bool
   }
   
@@ -31,8 +31,7 @@ defaultTinyBangTestOptions =
   TinyBangTestOptions
     { loggerInstructions = []
     , sourceFileOnlyByName = Nothing
-    , emptyDatabase = SomeDisplayableConstraintDatabase
-                        (CDb.empty :: IndexedConstraintDatabase)
+    , typeSystemImplementation = Just simpleTypeSystem
     , staticAssertions = False
     }
 
@@ -58,13 +57,11 @@ tinyBangTestOptDescrs =
       "directory prefix."
   , Option "" ["db"]
       (ReqArg (\x r -> do
-          db <- case x of
-                  "simple" -> return $ SomeDisplayableConstraintDatabase
-                                (CDb.empty :: CDb.SimpleConstraintDatabase)
-                  "indexed" -> return $ SomeDisplayableConstraintDatabase
-                                (CDb.empty :: CDb.IndexedConstraintDatabase)
+          ts <- case x of
+                  "simple" -> return $ Just simpleTypeSystem
+                  "indexed" -> return undefined -- TODO
                   _ -> throwError $ "Unrecognized database type: " ++ x
-          return $ r { emptyDatabase = db}) "IMPL") $
+          return $ r { typeSystemImplementation = ts}) "IMPL") $
       "Selects the constraint database implementation.  This must be one of " ++
       "the following: simple [indexed]"
   , Option "A" ["ea","enable-assertions"]

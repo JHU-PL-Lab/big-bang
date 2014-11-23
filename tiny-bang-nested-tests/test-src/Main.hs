@@ -8,6 +8,7 @@ module Main
 
 import Control.Applicative ((<$>))
 import Control.Monad
+import Data.Maybe
 import Data.Monoid
 import System.Exit
 import Test.Framework
@@ -37,11 +38,15 @@ main =
           when (staticAssertions options) $ do
             enableAssertions
             putStrLn "Assertions enabled!"
+          when (isNothing $ typeSystemImplementation options) $ do
+            putStrLn "Cannot unit test without type system."
+            exitWith $ ExitFailure $ -2
           -- Build the source file options
           let sfOpts =
                 SourceFile.TinyBangNestedSourceFileTestConfig
                   { SourceFile.tbnsftFilter = sourceFileOnlyByName options
-                  , SourceFile.tbnsftDatabase = emptyDatabase options
+                  , SourceFile.tbnsftTypeSystem =
+                      fromJust $ typeSystemImplementation options
                   }
           -- Construct the appropriate source file tests
           let sfTests =

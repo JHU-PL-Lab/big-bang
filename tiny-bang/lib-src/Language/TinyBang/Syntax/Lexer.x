@@ -40,8 +40,10 @@ tokens :-
   "&"                          { simply TokOnion }
   "="                          { simply TokIs }
   ";"                          { simply TokSemi }
+  "\"                          { simply TokBackslash }
   "{"                          { simply TokStartBlock }
   "}"                          { simply TokStopBlock }
+  "*"                          { simply TokAsterisk }                         
   "+"                          { simply TokPlus }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of

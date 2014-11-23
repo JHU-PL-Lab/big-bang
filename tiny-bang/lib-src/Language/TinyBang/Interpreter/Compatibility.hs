@@ -8,8 +8,10 @@ module Language.TinyBang.Interpreter.Compatibility
 ( compatibility
 ) where
 
+import Control.Applicative
 import Control.Monad
 import Data.Maybe
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
@@ -23,60 +25,53 @@ $(loggingFunctions)
 --  the pattern expressed by the second variable and its pattern structure.  The
 --  result is @Nothing@ when they are incompatible and @Just@ an expression of
 --  the appropriate bindings when they are compatible.
-compatibility :: Var -> Var -> Pattern -> EvalM (Maybe Expr)
-compatibility x x' pat =
+compatibility :: Var -> Var -> PatternFilterMap -> EvalM (Maybe Expr)
+compatibility x x' pfm =
   bracketLogM _debugI
     (display $ text "Checking compatibility of " <+> makeDoc x <+>
-      text " with " <+> makeDoc x' <+> text " under " <+> makeDoc pat)
+      text " with " <+> makeDoc x' <+> text " under " <+> makeDoc pfm)
     (\result ->
       case result of
         Just expr ->
           display $ text "Variable " <+> makeDoc x <+>
             text " is compatible with " <+> makeDoc x' <+> text " under " <+>
-            makeDoc pat <+> text " as expression " <+> makeDoc expr
+            makeDoc pfm <+> text " as expression " <+> makeDoc expr
         Nothing ->
           display $ text "Variable " <+> makeDoc x <+>
             text " is not compatible with " <+> makeDoc x' <+>
-            text " under " <+> makeDoc pat)
+            text " under " <+> makeDoc pfm)
     $ do
         v <- varLookup x
-        pv <- patVarLookup pat x'
-        case pv of
-          PPrimitive _ primt ->
-            case v of
-              VOnion _ x1 x2 -> matchOnOnion x1 x2
-              VPrimitive _ prim | typeOfPrimitiveValue prim == primt ->
-                return $ Just $ Expr generated []
-              _ -> return Nothing
-          PEmptyOnion _ ->
-            return $ Just $
-              Expr generated [Clause generated x' $ Copy generated x]
-          PLabel _ n x1' ->
-            case v of
-              VOnion _ x1 x2 -> matchOnOnion x1 x2
-              VLabel _ n' x1 | n == n' -> compatibility x1 x1' pat
-              _ -> return Nothing
-          PRef _ x1' ->
-            case v of
-              VOnion _ x1 x2 -> matchOnOnion x1 x2
-              VRef _ x1 -> compatibility x1 x1' pat
-              _ -> return Nothing
-          PConjunction _ x1' x2' -> do
-            me1 <- compatibility x x1' pat
-            me2 <- compatibility x x2' pat
-            return $ liftM2 exprConcat me1 me2
+        case Map.lookup x' $ unPatternFilterMap pfm of
+          Nothing -> raiseEvalError $ IllFormedExpression $
+                      Set.singleton $ OpenPattern $ Set.singleton x'
+          Just (_,pv) ->
+            case pv of
+              FPrimitive _ primt ->
+                case v of
+                  VOnion _ x1 x2 -> matchOnOnion x1 x2
+                  VPrimitive _ prim | typeOfPrimitiveValue prim == primt ->
+                    return $ Just $ Expr generated []
+                  _ -> return Nothing
+              FEmptyOnion _ ->
+                return $ Just $
+                  Expr generated [Clause generated x' $ Copy generated x]
+              FLabel _ n x1' ->
+                case v of
+                  VOnion _ x1 x2 -> matchOnOnion x1 x2
+                  VLabel _ n' x1 | n == n' -> compatibility x1 x1' pfm
+                  _ -> return Nothing
+              FRef _ x1' ->
+                case v of
+                  VOnion _ x1 x2 -> matchOnOnion x1 x2
+                  VRef _ x1 -> compatibility x1 x1' pfm
+                  _ -> return Nothing
+              FConjunction _ x1' x2' -> do
+                me1 <- compatibility x x1' pfm
+                me2 <- compatibility x x2' pfm
+                return $ liftM2 exprConcat me1 me2
   where
     matchOnOnion :: Var -> Var -> EvalM (Maybe Expr)
     matchOnOnion x1 x2 = do
-      me1 <- compatibility x1 x' pat
-      if isNothing me1 then compatibility x2 x' pat else return me1
-    patVarLookup :: Pattern -> Var -> EvalM PatternValue
-    patVarLookup (Pattern _ pcls) px =
-      let pvs = mapMaybe (\(PatternClause _ px' pv) ->
-                                if px == px' then Just pv else Nothing) pcls in
-      case pvs of
-        [] -> raiseEvalError $ IllFormedExpression $ Set.singleton $
-                                  OpenExpression $ Set.singleton px
-        [pv] -> return pv
-        _ -> raiseEvalError $ IllFormedExpression $ Set.singleton $
-                                DuplicateDefinition px
+      me1 <- compatibility x1 x' pfm
+      if isNothing me1 then compatibility x2 x' pfm else return me1

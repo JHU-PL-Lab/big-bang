@@ -40,15 +40,7 @@ matches x0 x1 =
         VOnion _ x2 x3 -> do
           me1 <- matches x2 x1
           if isNothing me1 then matches x3 x1 else return me1
-        VScape _ pat e' -> do
-          b <- join $ compatibility x1 <$> rvpat pat <*> return pat
+        VScape _ (Pattern _ pv pfm) e' -> do
+          b <- compatibility x1 pv pfm
           return $ exprConcat <$> b <*> Just e'
         _ -> return Nothing
-      where
-        rvpat :: Pattern -> EvalM Var
-        rvpat (Pattern o pcls) =
-          if null pcls
-            then raiseEvalError
-                    (IllFormedExpression $ Set.singleton $ EmptyPattern o)
-            else case last pcls of
-                    PatternClause _ x _ -> return x

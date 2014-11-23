@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ViewPatterns, DataKinds, GADTs, KindSignatures, StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, DataKinds, GADTs, KindSignatures, StandaloneDeriving, TupleSections #-}
 
 {-|
   A module which defines the data structures which comprise the TinyBang ANF
@@ -13,8 +13,8 @@ module Language.TinyBang.Ast.Data
 , Value(..)
 , PrimitiveValue(..)
 , Pattern(..)
-, PatternClause(..)
-, PatternValue(..)
+, PatternFilterMap(..)
+, Filter(..)
 , PrimitiveType(..)
 , LabelName(..)
 , Var(..)
@@ -32,6 +32,8 @@ module Language.TinyBang.Ast.Data
 ) where
 
 import Control.Applicative ((<$>))
+import Data.Map (Map)
+import qualified Data.Map as Map
 import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 import Language.TinyBang.Ast.Origin
@@ -56,6 +58,7 @@ data Redex
   | Copy Origin Var
   | Appl Origin Var Var
   | Builtin Origin BuiltinOp [Var]
+  -- TODO: GetChar and PutChar should really be builtins of arity 0 and 1, resp.
   | GetChar Origin
   | PutChar Origin Var
   deriving (Show)
@@ -86,23 +89,25 @@ data PrimitiveValue
   | VChar Origin Char
   deriving (Show)
 
--- |A data type describing patterns.
+-- |A data type describing patterns.  Patterns in this implementation are
+--  represented as a variable and a mapping from variable to its corresponding
+--  filters.  The origin accompanying each filter is that which identifies the
+--  clause which defined it.
 data Pattern
-  = Pattern Origin [PatternClause]
+  = Pattern Origin Var PatternFilterMap
+  deriving (Show)
+  
+newtype PatternFilterMap
+  = PatternFilterMap { unPatternFilterMap :: Map Var (Origin, Filter) }
   deriving (Show)
 
--- |A data type describing pattern clauses.
-data PatternClause
-  = PatternClause Origin Var PatternValue
-  deriving (Show)
-
--- |A data type describing pattern values.
-data PatternValue
-  = PPrimitive Origin PrimitiveType
-  | PEmptyOnion Origin
-  | PLabel Origin LabelName Var
-  | PRef Origin Var
-  | PConjunction Origin Var Var
+-- |A data type describing pattern filters.
+data Filter
+  = FPrimitive Origin PrimitiveType
+  | FEmptyOnion Origin
+  | FLabel Origin LabelName Var
+  | FRef Origin Var
+  | FConjunction Origin Var Var
   deriving (Show)
 
 -- |A representation of primitive types.
@@ -208,21 +213,23 @@ instance Display PrimitiveValue where
 
 instance Display Pattern where
   makeDoc pat = case pat of
-    Pattern _ pcls ->
-      text "{" <+> sepDoc (text ";") (map makeDoc pcls) <+> text "}"
+    Pattern _ x pfm ->
+      makeDoc x <+> char '\\' <+> makeDoc pfm 
 
-instance Display PatternClause where
-  makeDoc pcl = case pcl of
-    PatternClause _ x pv ->
-      makeDoc x <+> text "=" <+> makeDoc pv
-      
-instance Display PatternValue where
+instance Display PatternFilterMap where
+  makeDoc (PatternFilterMap pfm) = 
+    char '{' <+>
+      sepDoc (text ";") (map mappingDoc $ Map.toList pfm) <+> char '}'
+    where
+      mappingDoc (x,(_,pf)) = makeDoc x <+> char '=' <+> makeDoc pf
+
+instance Display Filter where
   makeDoc pv = case pv of
-    PPrimitive _ n -> makeDoc n
-    PEmptyOnion _ -> text "()"
-    PLabel _ n x -> makeDoc n <+> makeDoc x
-    PRef _ x -> text "ref" <+> makeDoc x
-    PConjunction _ x x' -> makeDoc x <+> text "&" <+> makeDoc x'
+    FPrimitive _ n -> makeDoc n
+    FEmptyOnion _ -> text "()"
+    FLabel _ n x -> makeDoc n <+> makeDoc x
+    FRef _ x -> text "ref" <+> makeDoc x
+    FConjunction _ x x' -> makeDoc x <+> text "*" <+> makeDoc x'
 
 instance Display PrimitiveType where
   makeDoc p = case p of
@@ -253,12 +260,14 @@ $(concat <$> sequence
       , ''Value
       , ''PrimitiveValue
       , ''Pattern
-      , ''PatternClause
-      , ''PatternValue
+      , ''Filter
       , ''LabelName
       , ''Var
       ]
   ])
+
+deriving instance Eq PatternFilterMap  
+deriving instance Ord PatternFilterMap
 
 -- * @HasOrigin@ declarations for the AST types.
 -- TODO: metaprogram these
@@ -296,11 +305,7 @@ instance HasOrigin PrimitiveValue where
 
 instance HasOrigin Pattern where
   originOf x = case x of
-    Pattern orig _ -> orig
-
-instance HasOrigin PatternClause where
-  originOf x = case x of
-    PatternClause orig _ _ -> orig
+    Pattern orig _ _ -> orig
 
 instance HasOrigin LabelName where
   originOf x = case x of

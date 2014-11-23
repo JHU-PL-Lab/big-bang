@@ -18,6 +18,7 @@ data TokenType a where
   TokEOF :: TokenType ()
   TokIs :: TokenType () -- @=@
   TokArrow :: TokenType () -- @->@
+  TokBackslash :: TokenType () -- @\@
   TokStartBlock :: TokenType () -- @{@
   TokStopBlock :: TokenType () -- @}@
   TokEmptyOnion :: TokenType () -- @()@
@@ -38,6 +39,7 @@ data TokenType a where
   TokRef :: TokenType () -- @ref@
   TokGetChar :: TokenType () -- @getChar@
   TokPutChar :: TokenType () -- @putChar@
+  TokAsterisk :: TokenType () -- @*@
 
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
@@ -49,6 +51,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokInt _) -> dquotes $ text "int"
     Token (SomeToken TokChar _) -> dquotes $ text "char"
     Token (SomeToken TokSemi _) -> dquotes $ text ";"
+    Token (SomeToken TokBackslash _) -> dquotes $ text "\\"
     Token (SomeToken TokStartBlock _) -> dquotes $ text "{"
     Token (SomeToken TokStopBlock _) -> dquotes $ text "}"
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
@@ -64,3 +67,4 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokRef _) -> text "ref"
     Token (SomeToken TokGetChar _) -> text "getChar"
     Token (SomeToken TokPutChar _) -> text "putChar"
+    Token (SomeToken TokAsterisk _) -> text "*"
