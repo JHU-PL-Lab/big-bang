@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections #-}
 module Language.TinyBang.TypeSystem.Simple.Closure.Basis
 ( ClosureM(..)
 , runClosureM
@@ -6,7 +6,6 @@ module Language.TinyBang.TypeSystem.Simple.Closure.Basis
 ) where
 
 import Control.Applicative
-import Control.Arrow (second)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Either
@@ -15,13 +14,7 @@ import Data.Monoid
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Simple.Data
-import Language.TinyBang.TypeSystem.Simple.Matching
-import Language.TinyBang.TypeSystem.Simple.Polymorphism
-import Language.TinyBang.TypeSystem.Simple.Variables
-import Language.TinyBang.Utils.Display as D
-import Language.TinyBang.Utils.Logger
 
 newtype ClosureM a
   = ClosureM

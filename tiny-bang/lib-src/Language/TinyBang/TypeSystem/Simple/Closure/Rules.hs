@@ -7,13 +7,11 @@ import Control.Applicative
 import Control.Arrow (second)
 import Control.Monad
 import Control.Monad.Reader
-import Control.Monad.Trans.Either
 import Control.Monad.Trans.NonDet
 import Data.Monoid
 import Data.Set (Set)
 import qualified Data.Set as Set
 
-import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Simple.Closure.Basis
 import Language.TinyBang.TypeSystem.Simple.Closure.Builtins
 import Language.TinyBang.TypeSystem.Simple.Data

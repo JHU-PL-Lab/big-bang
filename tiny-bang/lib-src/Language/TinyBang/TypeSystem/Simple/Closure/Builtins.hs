@@ -8,16 +8,12 @@ module Language.TinyBang.TypeSystem.Simple.Closure.Builtins
 ) where
 
 import Control.Applicative
-import Control.Arrow (second)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.NonDet
 import Control.Monad.Writer
-import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Monoid
-import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
@@ -26,10 +22,6 @@ import Language.TinyBang.TypeSystem.Simple.Closure.Basis
 import Language.TinyBang.TypeSystem.Simple.Compatibility
 import Language.TinyBang.TypeSystem.Simple.Data
 import Language.TinyBang.TypeSystem.Simple.InitialAlignment
-import Language.TinyBang.TypeSystem.Simple.Matching
-import Language.TinyBang.TypeSystem.Simple.Polymorphism
-import Language.TinyBang.TypeSystem.Simple.Variables
-import Language.TinyBang.Utils.Display as D
 import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
