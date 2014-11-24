@@ -150,7 +150,18 @@ instance Display PatternTypeSet where
   makeDoc (PatternTypeSet ps) = makeDoc ps
 
 instance Display PatternType where
-  makeDoc (PatternType a _) = makeDoc a
+  makeDoc (PatternType a pfm) = makeDoc a <> char '\\' <+> makeDoc pfm
+
+instance Display FilterType where
+  makeDoc filt = case filt of
+    TFEmpty -> text "()"
+    TFPrim tprim -> makeDoc tprim
+    TFLabel n x -> makeDoc n <+> makeDoc x
+    TFRef x -> text "ref" <+> makeDoc x
+    TFConjunction x1 x2 -> makeDoc x1 <+> char '*' <+> makeDoc x2
 
 instance Display TypecheckError where
   makeDoc = undefined -- TODO
+
+instance Display Inconsistency where
+  makeDoc = const $ text "Inconsistent!" -- TODO

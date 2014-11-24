@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections, TemplateHaskell #-}
 module Language.TinyBang.TypeSystem.Simple.Closure
 ( computeClosure
 ) where
@@ -17,9 +17,15 @@ import Language.TinyBang.TypeSystem.Simple.Data
 import Language.TinyBang.TypeSystem.Simple.Matching
 import Language.TinyBang.TypeSystem.Simple.Polymorphism
 import Language.TinyBang.TypeSystem.Simple.Variables
+import Language.TinyBang.Utils.Display as D
+import Language.TinyBang.Utils.Logger
+
+$(loggingFunctions)
 
 computeClosure :: ConstraintSet -> (Set Inconsistency, ConstraintSet)
 computeClosure cs =
+  _debugI (display $ text "Performing constraint closure on:" </>
+                     indent 2 (makeDoc cs)) $ 
   closeToFixedPoint (mempty, cs) closureStep
   where
     closeToFixedPoint :: (Eq a) => a -> (a -> a) -> a
@@ -28,9 +34,17 @@ computeClosure cs =
       if x == out then out else closeToFixedPoint out f
     closureStep :: (Set Inconsistency, ConstraintSet)
                 -> (Set Inconsistency, ConstraintSet)
-    closureStep (incons, cs) =
-      let (incons', cs') = singleClosurePass cs in
-      (incons `mappend` incons', cs `mappend` cs')
+    closureStep (incons1, cs1) =
+      postLog _debugI (
+        \(incons,constraints) ->
+          display $ text "Constraint closure step gives constraints:" </>
+                    indent 2 (makeDoc constraints) </>
+                    if Set.null incons then D.empty else
+                      text "with inconsistencies:" </>
+                      indent 2 (makeDoc incons)
+      ) $
+      let (incons2, cs2) = singleClosurePass cs1 in
+      (incons1 `mappend` incons2, cs1 `mappend` cs2)
   
 singleClosurePass :: ConstraintSet -> (Set Inconsistency, ConstraintSet)
 singleClosurePass cs =

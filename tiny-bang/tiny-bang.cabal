@@ -92,8 +92,7 @@ library
                    Language.TinyBang.TypeSystem.Simple,
                    Language.TinyBang.TypeSystem.Simple.Data,
                    Language.TinyBang.TypeSystem.Simple.InitialAlignment,
-                   Language.TinyBang.TypeSystem.Simple.Compatibility
-  other-modules:   
+                   Language.TinyBang.TypeSystem.Simple.Compatibility,
                    Language.TinyBang.TypeSystem.Simple.Matching,
                    Language.TinyBang.TypeSystem.Simple.Closure,
                    Language.TinyBang.TypeSystem.Simple.Typechecker,

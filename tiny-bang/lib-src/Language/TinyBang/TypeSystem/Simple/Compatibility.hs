@@ -1,17 +1,17 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections, ViewPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TupleSections, ViewPatterns, TemplateHaskell #-}
 module Language.TinyBang.TypeSystem.Simple.Compatibility
 ( findCompatibilityCases
 , sensible
 ) where
 
 import Control.Applicative
-import Control.Arrow
+import Control.Arrow ((***))
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Trans.NonDet
 import qualified Data.Foldable as Foldable
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
@@ -20,7 +20,10 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.TypeSystem.Simple.Data
-import Language.TinyBang.Utils.Display
+import Language.TinyBang.Utils.Display as D
+import Language.TinyBang.Utils.Logger
+
+$(loggingFunctions)
 
 -- |A computable function modeling the behavior of compatibility in the type
 --  system.
@@ -121,6 +124,27 @@ compatibilityTVar :: TVar
                       --  boolean values indicating whether or not each
                       --  pattern matched.
 compatibilityTVar a cpats bindState =
+  bracketLogM _debugI 
+    (display $ text "Starting compatibilityTVar with" <+> makeDoc a <+>
+               text "and patterns:" </>
+                indent 2 (
+                  foldl (</>) D.empty $ map makeDoc $
+                    Foldable.toList cpats
+                )
+    )
+    (\(cs, answers) -> display $
+      text "compatibilityTVar results with type" <+> makeDoc a <> char ':' </>
+      indent 2
+        (let f (cpat,ans) =
+                text (if ans then "Success" else "Failure") <+>
+                text "on" <+> makeDoc cpat
+         in foldl (</>) D.empty $ map f $ Foldable.toList $
+            Seq.zip cpats answers
+        ) </>
+      text "with bindings" </>
+      indent 2 (makeDoc cs)
+    )
+  $
   if Seq.null cpats
     then
       -- Leaf rule
@@ -150,34 +174,53 @@ compatibilityType :: Type
                   -> CompatM ( ConstraintSet
                              , Seq Bool
                              )
-compatibilityType tIn cpatsIn bindState = do
-  -- We proceed first by operating on the non-constructor patterns (empty
-  -- and conjunction) and then by working on constructor patterns in tandem.
-  (bindings, answers) <- compatibilityTypeMaybeWithNonConstrPats tIn cpatsIn
-                          Seq.empty
-  let newBindings = ConstraintSet $
-        case bindState of
-          DontBind -> Set.empty
-          DoBind ->
-            -- Since we need to do binding here, we create the appropriate lower
-            -- bounds for each binding pattern variable which *matched*.  If the
-            -- binding pattern did not match, no bindings are generated.
-            let pairs = Seq.zip cpatsIn answers in
-            let seqToSet = PatternTypeSet . Set.fromList .
-                              map (cpPat . fst) . Foldable.toList in
-            let (posPats,negPats) = seqToSet *** seqToSet $
-                                        Seq.partition snd pairs in
-            Set.unions $ Foldable.toList $ fmap
-              (\(cpat,ans) ->
-                if cpBinding cpat && ans
-                  then
-                    let ft = FilteredType tIn posPats negPats in
-                    let (PatternType a _) = cpPat cpat in
-                    Set.singleton $ ft <: a
-                  else
-                    Set.empty
-              ) $ Seq.zip cpatsIn answers
-  return (bindings `mappend` newBindings, answers)
+compatibilityType tIn cpatsIn bindState =
+  bracketLogM _debugI
+    ( display $ text "Starting compatibilityType with type" <+> makeDoc tIn <+>
+      text "and patterns:" </>
+      indent 2 (foldl (</>) D.empty $ map makeDoc $ Foldable.toList cpatsIn)
+    )
+    (\(cs, answers) -> display $
+      text "compatibilityType results with type" <+> makeDoc tIn <> char ':' </>
+      indent 2
+        (let f (cpat,ans) =
+                text (if ans then "Success" else "Failure") <+>
+                text "on" <+> makeDoc cpat
+         in foldl (</>) D.empty $ map f $ Foldable.toList $
+            Seq.zip cpatsIn answers
+        ) </>
+      text "with bindings" </>
+      indent 2 (makeDoc cs)
+    )
+  $
+  do
+    -- We proceed first by operating on the non-constructor patterns (empty
+    -- and conjunction) and then by working on constructor patterns in tandem.
+    (bindings, answers) <- compatibilityTypeMaybeWithNonConstrPats tIn cpatsIn
+                            Seq.empty
+    let newBindings = ConstraintSet $
+          case bindState of
+            DontBind -> Set.empty
+            DoBind ->
+              -- Since we need to do binding here, we create the appropriate lower
+              -- bounds for each binding pattern variable which *matched*.  If the
+              -- binding pattern did not match, no bindings are generated.
+              let pairs = Seq.zip cpatsIn answers in
+              let seqToSet = PatternTypeSet . Set.fromList .
+                                map (cpPat . fst) . Foldable.toList in
+              let (posPats,negPats) = seqToSet *** seqToSet $
+                                          Seq.partition snd pairs in
+              Set.unions $ Foldable.toList $ fmap
+                (\(cpat,ans) ->
+                  if cpBinding cpat && ans
+                    then
+                      let ft = FilteredType tIn posPats negPats in
+                      let (PatternType a _) = cpPat cpat in
+                      Set.singleton $ ft <: a
+                    else
+                      Set.empty
+                ) $ Seq.zip cpatsIn answers
+    return (bindings `mappend` newBindings, answers)
   where
     -- |Breaks down each pattern until all of them are in constructor pattern
     --  form.
@@ -188,11 +231,42 @@ compatibilityType tIn cpatsIn bindState = do
                                                        , Seq Bool
                                                        )
     compatibilityTypeMaybeWithNonConstrPats t cpats cpatsCtrOnly =
+      bracketLogM _debugI
+        (display $
+          text "Starting compatibilityTypeMaybeWithNonConstrPats with type" <+>
+          makeDoc t <+> text "and" <+>
+          indent 2 (
+            text "constructor-only patterns:" <+>
+              makeDoc (Foldable.toList cpatsCtrOnly) </>
+            text "general patterns:" <+>
+              makeDoc (Foldable.toList cpats)
+          )
+        )
+        (\(cs, answers) -> display $
+          text "compatibilityTypeMaybeWithNonConstrPats" </>
+          indent 2 (
+            text "takes inputs:" </>
+            indent 2 (
+              text "type:" <+> makeDoc t </>
+              text "constructor-only patterns:" <+>
+                makeDoc (Foldable.toList cpatsCtrOnly) </>
+              text "general patterns:" <+>
+                makeDoc (Foldable.toList cpats)
+            ) </>
+            text "and yields:" </>
+            indent 2 (
+              text "answers:" <+> makeDoc (Foldable.toList answers) </>
+              text "bindings:" <+> makeDoc cs
+            )
+          )
+        ) $
       case Seq.viewl cpats of
         EmptyL -> compatibilityTypeOnlyConstrPats t cpatsCtrOnly
         cpat :< cpats' ->
           let PatternType a pftm = cpPat cpat in
           let filt = pfLookup a pftm in
+          _debugI (display $ text "compatibilityTypeMaybeWithNonConstrPats:" <+>
+                    text "Proceeding with" <+> makeDoc filt) $
           case filt of
             TFEmpty -> do
               -- Empty Pattern rule: always matches
@@ -237,6 +311,31 @@ compatibilityType tIn cpatsIn bindState = do
                                                , Seq Bool
                                                )
     compatibilityTypeOnlyConstrPats t cpats =
+      bracketLogM _debugI
+        (display $
+          text "Starting compatibilityTypeOnlyConstrPats with type" <+>
+          makeDoc t <+> text "and" <+>
+          indent 2 (
+            text "constructor-only patterns:" <+>
+              makeDoc (Foldable.toList cpats)
+          )
+        )
+        (\(cs, answers) -> display $
+          text "compatibilityTypeOnlyConstrPats" </>
+          indent 2 (
+            text "takes inputs:" </>
+            indent 2 (
+              text "type:" <+> makeDoc t </>
+              text "constructor-only patterns:" <+>
+                makeDoc (Foldable.toList cpats)
+            ) </>
+            text "and yields:" </>
+            indent 2 (
+              text "answers:" <+> makeDoc (Foldable.toList answers) </>
+              text "bindings:" <+> makeDoc cs
+            )
+          )
+        ) $
       case t of
         TPrimitive tprim ->
           let answerPrimPat (PatternType a pftm) =
@@ -413,3 +512,13 @@ pfLookup a pftm =
   fromMaybe
     (error $ "Pattern variable with no bound: " ++ display (PatternType a pftm))
     (Map.lookup a pftm)
+
+instance Display CompatibilityPattern where
+  makeDoc cpat =
+    text (if cpBinding cpat then "binding" else "non-binding") <+>
+    text "pattern" <+>
+    (case cpExpectMatch cpat of
+      Nothing -> D.empty
+      Just True -> text "expecting match"
+      Just False -> text "expecting failure"
+    ) <> char ':' <+> makeDoc (cpPat cpat)
