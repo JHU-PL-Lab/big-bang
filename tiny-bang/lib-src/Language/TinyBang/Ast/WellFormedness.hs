@@ -48,7 +48,6 @@ instance Display IllFormedness where
 checkWellFormed :: Expr -> Set IllFormedness
 checkWellFormed e =
   let (out,ills,varCounts) = runWellFormedM executeChecks in
-  _debugI (display $ text "Variable counts:" <+> makeDoc (unVarCountMap varCounts)) $
   let dupeVars =
         filter (\x -> snd x > 1) $ Map.toList $ unVarCountMap varCounts in
   Set.unions
@@ -160,6 +159,12 @@ boundAndFreeVarsOfPattern (Pattern _ x'' (PatternFilterMap pfm)) = do
   where
     bafAbsF :: Var -> WellFormedM (Set Var, Set Var)
     bafAbsF x =
+      postLogM _debugI (
+        \(bound, free) ->
+          display $ text "Pattern" <+> makeDoc x <+> char '\\' <+>
+                      makeDoc pfm <+> text "has bound" <+> makeDoc bound <+>
+                      text "and has free" <+> makeDoc free
+      ) $
       case Map.lookup x pfm of
         Nothing -> return (Set.empty, Set.singleton x)
         Just (_,filt) -> do
@@ -169,13 +174,19 @@ boundAndFreeVarsOfPattern (Pattern _ x'' (PatternFilterMap pfm)) = do
           return (bound, free)
     bafConF :: Filter -> WellFormedM (Set Var, Set Var)
     bafConF pf =
+      postLogM _debugI (
+        \(bound, free) ->
+          display $ text "Pattern" <+> makeDoc pf <+> char '\\' <+>
+                      makeDoc pfm <+> text "has bound" <+> makeDoc bound <+>
+                      text "and has free" <+> makeDoc free
+      ) $
       case pf of
         FPrimitive _ _ -> return (Set.empty, Set.empty)
         FEmptyOnion _ -> return (Set.empty, Set.empty)
-        FLabel _ _ x -> return (Set.singleton x, Set.singleton x)
+        FLabel _ _ x -> bafAbsF x
         FRef _ x -> do
           confirmOnlyEmptyPattern x
-          return (Set.singleton x, Set.singleton x)
+          bafAbsF x
         FConjunction _ x1 x2 -> do
           baf1 <- bafAbsF x1
           baf2 <- bafAbsF x2
