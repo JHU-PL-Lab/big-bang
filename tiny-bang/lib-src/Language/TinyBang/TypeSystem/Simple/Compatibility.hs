@@ -158,7 +158,9 @@ compatibilityTVar a cpats bindState =
                         Set.toList $ unPatternTypeSet fpP
       let fpNcpats = Seq.fromList $ map (mkCpat $ Just False) $
                         Set.toList $ unPatternTypeSet fpN
-      compatibilityType t (fpPcpats >< fpNcpats >< cpats) bindState
+      (bindings, answers) <-
+          compatibilityType t (cpats >< fpPcpats >< fpNcpats) bindState
+      return (bindings, Seq.take (Seq.length cpats) answers)
   where
     mkCpat :: Maybe Bool -> PatternType -> CompatibilityPattern
     mkCpat mexpect pat =
@@ -196,8 +198,10 @@ compatibilityType tIn cpatsIn bindState =
   do
     -- We proceed first by operating on the non-constructor patterns (empty
     -- and conjunction) and then by working on constructor patterns in tandem.
-    (bindings, answers) <- compatibilityTypeMaybeWithNonConstrPats tIn cpatsIn
-                            Seq.empty
+    (bindings, answers, answersEmpty) <- compatibilityTypeMaybeWithNonConstrPats
+                                            tIn cpatsIn Seq.empty
+    unless (Seq.null answersEmpty) $
+      error "answersEmpty not empty in type compatibility!"
     let newBindings = ConstraintSet $
           case bindState of
             DontBind -> Set.empty
@@ -229,6 +233,7 @@ compatibilityType tIn cpatsIn bindState =
                                             -> Seq CompatibilityPattern
                                             -> CompatM ( ConstraintSet
                                                        , Seq Bool
+                                                       , Seq Bool
                                                        )
     compatibilityTypeMaybeWithNonConstrPats t cpats cpatsCtrOnly =
       bracketLogM _debugI
@@ -242,7 +247,7 @@ compatibilityType tIn cpatsIn bindState =
               makeDoc (Foldable.toList cpats)
           )
         )
-        (\(cs, answers) -> display $
+        (\(cs, answers, answersCtrOnly) -> display $
           text "compatibilityTypeMaybeWithNonConstrPats" </>
           indent 2 (
             text "takes inputs:" </>
@@ -255,13 +260,17 @@ compatibilityType tIn cpatsIn bindState =
             ) </>
             text "and yields:" </>
             indent 2 (
-              text "answers:" <+> makeDoc (Foldable.toList answers) </>
+              text "constructor-only answers:" <+>
+                makeDoc (Foldable.toList answersCtrOnly) </>
+              text "general answers:" <+> makeDoc (Foldable.toList answers) </>
               text "bindings:" <+> makeDoc cs
             )
           )
         ) $
       case Seq.viewl cpats of
-        EmptyL -> compatibilityTypeOnlyConstrPats t cpatsCtrOnly
+        EmptyL -> do
+          (bindings, answers) <- compatibilityTypeOnlyConstrPats t cpatsCtrOnly
+          return (bindings, Seq.empty, answers)
         cpat :< cpats' ->
           let PatternType a pftm = cpPat cpat in
           let filt = pfLookup a pftm in
@@ -270,10 +279,10 @@ compatibilityType tIn cpatsIn bindState =
           case filt of
             TFEmpty -> do
               -- Empty Pattern rule: always matches
-              (bindings, answers) <- compatibilityTypeMaybeWithNonConstrPats
-                                        t cpats' cpatsCtrOnly
+              (bindings, answers, answersCtrOnly) <-
+                  compatibilityTypeMaybeWithNonConstrPats t cpats' cpatsCtrOnly
               guardMatch True cpat
-              return (bindings, True <| answers)
+              return (bindings, True <| answers, answersCtrOnly)
             TFConjunction a1 a2 -> do
               -- Conjunction Pattern rule
               let (leftExpect, rightExpect) =
@@ -289,19 +298,22 @@ compatibilityType tIn cpatsIn bindState =
                                                , cpBinding = cpBinding cpat
                                                , cpExpectMatch = rightExpect
                                                }              
-              (bindings, answers) <- compatibilityTypeMaybeWithNonConstrPats
-                                        t (lCpat <| rCpat <|cpats')
-                                        cpatsCtrOnly
+              (bindings, answers, answersCtrOnly) <-
+                  compatibilityTypeMaybeWithNonConstrPats t
+                    (lCpat <| rCpat <|cpats') cpatsCtrOnly
               -- Because we put two new patterns in, we should get two new
               -- patterns out.
               let (Seq.viewl -> lans :< (Seq.viewl -> rans :< ans')) = answers
               let successful = lans && rans
               guardMatch successful cpat
-              return (bindings, successful <| ans')
-            _ ->
+              return (bindings, successful <| ans', answersCtrOnly)
+            _ -> do
               -- Pattern is a data constructor pattern.  Pass it along.
-              compatibilityTypeMaybeWithNonConstrPats t cpats'
-                  (cpatsCtrOnly |> cpat)
+              (bindings, answers, answersCtrOnly) <-
+                compatibilityTypeMaybeWithNonConstrPats t
+                  cpats' (cpatsCtrOnly |> cpat)
+              let (answersCtrOnly' :> ans) = Seq.viewr answersCtrOnly
+              return (bindings, ans <| answers, answersCtrOnly')
           
     -- |Performs pattern matching on a concrete type with the invariant that the
     --  patterns are all type constructor patterns.
