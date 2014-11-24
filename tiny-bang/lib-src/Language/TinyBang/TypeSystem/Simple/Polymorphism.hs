@@ -60,6 +60,8 @@ polyinstFn (TVar _ (PossibleContour pc)) =
     Nothing ->
       error "Attempted to polyinstantiate using non-contoured basis variable!"
     Just cntr ->
+      -- TODO: FIXME: This should be computing the new contour based on the call
+      --              site, not just using the old contour.
       polyinstFnWithContour cntr
 
 polyinstFnWithContour :: Contour -> TVar -> TVar
