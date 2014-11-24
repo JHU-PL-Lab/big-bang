@@ -34,6 +34,7 @@ data Constraint
   = LowerBoundConstraint FilteredType TVar
   | IntermediateConstraint TVar TVar
   | ApplicationConstraint TVar TVar TVar
+  | BuiltinOpConstraint BuiltinOp [TVar] TVar
   deriving (Eq, Ord, Show)
 
 data FilteredType
@@ -83,7 +84,16 @@ data TypecheckError
   deriving (Eq, Ord, Show)
 
 data Inconsistency
-  = Inconsistency -- TODO
+  = BuiltinBadOperandCount TVar BuiltinOp Int Int
+      -- ^Indicates that a builtin operator was used with an incorrect number of
+      --  operands.  The arguments are the use site, the operator used, the
+      --  number of arguments expected, and the number of arguments found.
+  | BuiltinBadOperandType TVar BuiltinOp Int TVar
+      -- ^Indicates that a builtin operator was used with an argument of an
+      --  incorrect type.  The arguments are the use site, the operator used,
+      --  the index of the incorrect argument (from one), and the type variable
+      --  of that argument.
+  | TODO_ReplaceMe_Inconsistency -- TODO
   deriving (Eq, Ord, Show)
 
 -- Convenient instances --------------------------------------------------------
@@ -123,6 +133,8 @@ instance Display Constraint where
       makeDoc a1 <+> text "<:" <+> makeDoc a2
     ApplicationConstraint a0 a1 a2 ->
       makeDoc a0 <+> makeDoc a1 <+> text "<:" <+> makeDoc a2
+    BuiltinOpConstraint op as a ->
+      makeDoc op <+> makeDoc as <+> text "<:" <+> makeDoc a
 
 instance Display FilteredType where
   makeDoc (FilteredType t pp pn) =
@@ -161,7 +173,7 @@ instance Display FilterType where
     TFConjunction x1 x2 -> makeDoc x1 <+> char '*' <+> makeDoc x2
 
 instance Display TypecheckError where
-  makeDoc = undefined -- TODO
+  makeDoc = error "Language.TinyBang.TypeSystem.Simple.Data:makeDoc undefined" -- TODO
 
 instance Display Inconsistency where
   makeDoc = const $ text "Inconsistent!" -- TODO

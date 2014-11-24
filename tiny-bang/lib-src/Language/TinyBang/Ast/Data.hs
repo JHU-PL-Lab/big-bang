@@ -131,7 +131,15 @@ data Var
 --  globally unique variables, such as those used by builtin operations.
 data VarName
   = IdentifierVar String
-  | BuiltinVar BuiltinOp
+      -- ^The type for normal variables like the programmer would use.
+  | BuiltinOutputVar BuiltinOp
+      -- ^The type for variables used as the output for built-in operations.
+  | PrimitiveMatchPatternVar PrimitiveType
+      -- ^The type for variables used in fabricated patterns for the purpose of
+      --  extracting a specific primitive type.
+  | RefMatchPatternVar Int
+      -- ^The type for variables used in fabricated patterns for the purpose of
+      --  extracting the contents of a ref.
   deriving (Eq, Ord, Show)
 
 -- * Destructors
@@ -246,7 +254,9 @@ instance Display Var where
 instance Display VarName where
   makeDoc n = case n of
     IdentifierVar s -> text s
-    BuiltinVar op -> char '(' <> makeDoc op <> char ')'
+    BuiltinOutputVar op -> parens (makeDoc op <+> text "out")
+    PrimitiveMatchPatternVar tprim -> parens (makeDoc tprim <+> text "match")
+    RefMatchPatternVar i -> parens (text "ref match" <+> makeDoc i)
 
 -- * Appropriate @Eq@ and @Ord@ instances for these data types
 

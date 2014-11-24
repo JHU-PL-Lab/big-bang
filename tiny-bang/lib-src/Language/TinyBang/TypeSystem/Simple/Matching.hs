@@ -22,9 +22,9 @@ findApplicationMatches a0 a1 cs =
 -- |A data type containing the pieces of a match result.
 data MatchResult
   = SuccessfulMatchResult
-      { bodyRoot :: TVar
-      , bodyConstraints :: ConstraintSet
-      , bindings :: ConstraintSet
+      { mrBodyRoot :: TVar
+      , mrBodyConstraints :: ConstraintSet
+      , mrBindings :: ConstraintSet
       }
   | FailedMatchResult
 
@@ -58,11 +58,11 @@ matching a0 a1 patsN = do
       let matchResult = case compatResult of
                           Nothing ->
                             FailedMatchResult 
-                          Just bindingsCs ->
+                          Just bindings ->
                             SuccessfulMatchResult
-                              { bodyRoot = a
-                              , bodyConstraints = body
-                              , bindings = bindingsCs
+                              { mrBodyRoot = a
+                              , mrBodyConstraints = body
+                              , mrBindings = bindings
                               }
       return (matchResult, PatternTypeSet $ Set.singleton pat)
     TOnion a2 a3 -> do

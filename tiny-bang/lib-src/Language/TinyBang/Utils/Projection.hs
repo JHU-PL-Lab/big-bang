@@ -7,6 +7,10 @@ module Language.TinyBang.Utils.Projection
 , builtinVar
 ) where
 
+-- TODO: deprecate this module.  The evaluation process should be using some
+--       form of strict pattern matching rather than reinventing this process
+--       using projection.
+
 import Language.TinyBang.Ast
 
 data Projector
@@ -16,5 +20,5 @@ data Projector
   deriving (Eq, Ord, Show)
 
 builtinVar :: BuiltinOp -> Var
-builtinVar op = Var generated (BuiltinVar op) Nothing
+builtinVar op = Var generated (BuiltinOutputVar op) Nothing
 

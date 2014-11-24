@@ -97,7 +97,10 @@ library
                    Language.TinyBang.TypeSystem.Simple.Closure,
                    Language.TinyBang.TypeSystem.Simple.Typechecker,
                    Language.TinyBang.TypeSystem.Simple.Polymorphism,
-                   Language.TinyBang.TypeSystem.Simple.Variables
+                   Language.TinyBang.TypeSystem.Simple.Variables,
+                   Language.TinyBang.TypeSystem.Simple.Closure.Basis,
+                   Language.TinyBang.TypeSystem.Simple.Closure.Builtins,
+                   Language.TinyBang.TypeSystem.Simple.Closure.Rules
 
 executable tiny-bang
   hs-source-dirs:  interp-src

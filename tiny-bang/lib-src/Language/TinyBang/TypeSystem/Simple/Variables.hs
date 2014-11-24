@@ -45,6 +45,7 @@ $(concat <$> mapM (defineTransformIdentityInstance ''TVarSubstitution)
                 [ ''PatternType
                 , ''LabelName
                 , ''PrimitiveType
+                , ''BuiltinOp
                 ]
  )
 
@@ -67,3 +68,4 @@ instance Reduce TVarsDefinedBy Constraint (Set TVar) where
     LowerBoundConstraint _ a -> Set.singleton a
     IntermediateConstraint _ a -> Set.singleton a
     ApplicationConstraint _ _ a -> Set.singleton a
+    BuiltinOpConstraint _ _ a -> Set.singleton a

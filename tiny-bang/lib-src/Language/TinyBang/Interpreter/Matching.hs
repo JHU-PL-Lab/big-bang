@@ -5,9 +5,7 @@ module Language.TinyBang.Interpreter.Matching
 ) where
 
 import Control.Applicative
-import Control.Monad
 import Data.Maybe
-import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Utils.Display

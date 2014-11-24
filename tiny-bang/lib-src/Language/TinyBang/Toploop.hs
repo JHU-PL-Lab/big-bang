@@ -94,7 +94,8 @@ instance Display InterpreterError where
     ParserFailure msg -> text "Parser error:" <+> text msg
     IllFormednessFailure ills -> text "Ill-formed input expression:" </>
       indent 2 (align $ foldl1 (</>) $ map makeDoc (Set.toList ills))
-    TypecheckFailure typeFail -> undefined -- TODO
+    TypecheckFailure typeFail ->
+      error "Language.TinyBang.Toploop:makeDoc undefined for TypecheckFailure" -- TODO
       {-
       text "Type error:" <+> case typeFail of
       TI.InitialDerivationFailed initDerivErr -> case initDerivErr of
@@ -146,7 +147,8 @@ instance Display InterpreterError where
     EvaluationDisabled -> text "(evaluation disabled)"
     where
       docForIncon :: TS.Inconsistency -> Doc
-      docForIncon incon = undefined -- TODO
+      docForIncon incon =
+        error "Language.TinyBang.Toploop:makeDoc undefined for Inconsistency" -- TODO
         {- case incon of
         Language.TinyBang.TypeSystem.Constraints.ApplicationFailure
             sa aa csa as ->

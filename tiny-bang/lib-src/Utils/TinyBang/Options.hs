@@ -12,7 +12,6 @@ module Utils.TinyBang.Options
 
 import Control.Monad.Error
 import Language.TinyBang.TypeSystem
-import Language.TinyBang.Toploop
 import Language.TinyBang.Utils.Logger
 import Utils.GetOpt
 import Utils.CLI.Args.Logging
@@ -56,7 +55,7 @@ tinyBangOptionDescriptors =
       (ReqArg (\x r -> do
           db <- case x of
                   "simple" -> return $ Just simpleTypeSystem
-                  "indexed" -> return $ undefined -- TODO
+                  "indexed" -> return $ error "Utils.TinyBang.Options: data type for indexed database undefined"
                   _ -> throwError $ "Unrecognized type system: " ++ x
           return $ r { typeSystemImplementation = db}) "IMPL") $
       "Selects the constraint database implementation.  This must be one of " ++

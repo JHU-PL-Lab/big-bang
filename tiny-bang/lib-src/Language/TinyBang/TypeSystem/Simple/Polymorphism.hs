@@ -32,6 +32,7 @@ tFresh f (ConstraintSet cs) = ConstraintSet $
       LowerBoundConstraint rt a -> LowerBoundConstraint rt $ f a
       IntermediateConstraint a' a -> IntermediateConstraint a' $ f a
       ApplicationConstraint a0 a1 a2 -> ApplicationConstraint a0 a1 $ f a2
+      BuiltinOpConstraint op as a -> BuiltinOpConstraint op as $ f a
 
 -- |Creates a polyinstantiation function for a given constraint set and call
 --  site.  This function is appropriately restricted to only instantiate the

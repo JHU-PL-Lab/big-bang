@@ -2,6 +2,7 @@
 
 module Language.TinyBang.TypeSystem.Simple.InitialAlignment
 ( initiallyAlign
+, initiallyAlignVar
 ) where
 
 import Control.Arrow
@@ -30,9 +31,9 @@ initiallyAlignClause (Clause _ x r) =
     Def _ v -> initiallyAlignValue v <: a
     Copy _ x' -> initiallyAlignVar x' <: a
     Appl _ x' x'' -> (initiallyAlignVar x', initiallyAlignVar x'') <: a
-    Builtin _ op xs -> undefined -- TODO
+    Builtin _ op xs -> BuiltinOpConstraint op (map initiallyAlignVar xs) a
     GetChar _ -> FilteredType (TPrimitive PrimChar) mempty mempty <: a
-    PutChar _ x -> undefined -- TODO
+    PutChar _ x' -> error "Language.TinyBang.TypeSystem.Simple.InitialAlignment undefined" -- TODO
 
 initiallyAlignValue :: Value -> FilteredType
 initiallyAlignValue v = 

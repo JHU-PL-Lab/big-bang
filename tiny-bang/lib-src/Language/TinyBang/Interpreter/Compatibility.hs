@@ -8,7 +8,6 @@ module Language.TinyBang.Interpreter.Compatibility
 ( compatibility
 ) where
 
-import Control.Applicative
 import Control.Monad
 import Data.Maybe
 import qualified Data.Map as Map
