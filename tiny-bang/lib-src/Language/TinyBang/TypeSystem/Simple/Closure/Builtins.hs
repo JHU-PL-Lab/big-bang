@@ -171,7 +171,7 @@ computeBuiltinType = do
       --       the initial contour freshened the top-level definition of a' and
       --       we must refer to it using its contour (instead of with no
       --       contour).
-      TVar x _ <- initiallyAlignVar <$> builtinVar <$> BuiltinOutputVar <$> biOp
+      TVar x _ <- initiallyAlignVar <$> builtinVar <$> BuiltinVar <$> biOp
       let a' = TVar x $ PossibleContour $ Just initialContour
       choose $
         map (flip TLabel a' . LabelName generated) ["True", "False"] 

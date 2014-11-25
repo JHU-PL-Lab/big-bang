@@ -132,7 +132,7 @@ data Var
 data VarName
   = IdentifierVar String
       -- ^The type for normal variables like the programmer would use.
-  | BuiltinOutputVar BuiltinOp
+  | BuiltinVar BuiltinOp
       -- ^The type for variables used as the output for built-in operations.
   | PrimitiveMatchPatternVar PrimitiveType
       -- ^The type for variables used in fabricated patterns for the purpose of
@@ -254,7 +254,7 @@ instance Display Var where
 instance Display VarName where
   makeDoc n = case n of
     IdentifierVar s -> text s
-    BuiltinOutputVar op -> parens (makeDoc op <+> text "out")
+    BuiltinVar op -> parens (makeDoc op <+> text "var")
     PrimitiveMatchPatternVar tprim -> parens (makeDoc tprim <+> text "match")
     RefMatchPatternVar i -> parens (text "ref match" <+> makeDoc i)
 

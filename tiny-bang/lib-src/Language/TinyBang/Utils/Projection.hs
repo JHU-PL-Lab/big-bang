@@ -20,5 +20,5 @@ data Projector
   deriving (Eq, Ord, Show)
 
 builtinVar :: BuiltinOp -> Var
-builtinVar op = Var generated (BuiltinOutputVar op) Nothing
+builtinVar op = Var generated (BuiltinVar op) Nothing
 
