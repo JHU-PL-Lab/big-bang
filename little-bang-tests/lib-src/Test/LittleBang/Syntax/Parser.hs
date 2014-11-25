@@ -83,33 +83,37 @@ parserTests = TestList
               (TExprLabelExp _ (LB.LabelName _ "C")
                 (TExprValInt _ 1))) -> True
           _ -> False)
-  , postest "application associativity"
-      "a b c"
+  , postest "application"
+      "a(b=c)"
       (\case
-          TExprAppl _ (TExprAppl _ (TExprVar _ _) (TExprVar _ _)) (TExprVar _ _) ->
-            True
+          LExprAppl _ (TExprVar _ (LB.Ident _ "a"))
+            [NamedArg _ (LB.Ident _ "b") (TExprVar _ (LB.Ident _ "c"))]
+              -> True
           _ -> False)
   , postest "application precedence"
-      "a + b & c d"
+      "a + b & c(d)"
       (\case
           TExprBinaryOp _ (TExprVar _ _) (TBN.OpIntPlus _)
             (TExprOnion _ (TExprVar _ _)
-              (TExprAppl _ (TExprVar _ _) (TExprVar _ _))) -> True
+              (LExprAppl _ (TExprVar _ _) [PositionalArg _ _])) -> True
           _ -> False)
-  , postest "scape parse"
-      "`A x -> x + x"
+  , postest "function parse"
+      "fun a:int -> a"
       (\case
-          TExprScape _ (LB.LabelPattern _ (LB.LabelName _ "A") (LB.VariablePattern _ v))
-            (TExprBinaryOp _ (TExprVar _ v') (OpIntPlus _) (TExprVar _ v''))
-              | v == v' && v == v'' -> True
+          LExprScape _ [Param _ (LB.Ident _ "a") (LB.PrimitivePattern _ LB.PrimInt)]
+            (TExprVar _ (LB.Ident _ "a"))
+              -> True
           _ -> False)
   , postest "pattern precedence"
-      "`A int & int -> ()"
+      "fun a:(`A int * int) -> ()"
       (\case
-          TExprScape _
-            (LB.ConjunctionPattern _
-              (LB.LabelPattern _ (LB.LabelName _ "A") (LB.PrimitivePattern _ LB.PrimInt))
-              (LB.PrimitivePattern _ LB.PrimInt))
-            _ -> True
+          LExprScape _
+            [Param _ (LB.Ident _ "a")
+              (LB.ConjunctionPattern _
+                (LB.LabelPattern _ (LB.LabelName _ "A")
+                  (LB.PrimitivePattern _ LB.PrimInt))
+                (LB.PrimitivePattern _ LB.PrimInt))
+            ] (TExprValEmptyOnion _)
+              -> True
           _ -> False)
   ]
