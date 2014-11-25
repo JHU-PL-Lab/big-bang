@@ -79,12 +79,15 @@ import qualified Language.TinyBangNested.Ast as TBN
 %right 'putChar'
 
 %name parseProgram Program
-%name parsePattern Pattern
+%name parsePattern OnlyPattern
 
 %%
 
 Program :: { SPositional Expr }
   : Expr eof                { $1 }
+
+OnlyPattern :: { SPositional Pattern }
+  : Pattern eof             { $1 }
 
 Expr :: { SPositional Expr }
   : 'let' Ident '=' Expr 'in' Expr
