@@ -25,6 +25,9 @@ import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
 
+-- TODO: freak out on non-contractive types
+-- TODO: occurrence check
+
 -- |A computable function modeling the behavior of compatibility in the type
 --  system.
 findCompatibilityCases :: TVar
