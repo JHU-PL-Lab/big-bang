@@ -3,7 +3,8 @@
 # non-contractive application from our implementation (since it isn't terribly
 # useful and is fundamentally exponential in the worst case).
 
-let Y = body -> (w -> w w) (this -> x -> body (this this) x) in
-let buildfn = (Y (this -> n -> f -> if n == 0 then f else f & (this (n-1) f))) in
-((buildfn 4 (`A x -> x)) & (`B x -> x)) (`B 0)
-
+let rec build(n:int,f) =
+  if n == 0 then f else
+    f & build(n=n - 1,f=f)
+in
+(build(n=4,f=(fun a,b -> a+b)))(a=2,b=3)
