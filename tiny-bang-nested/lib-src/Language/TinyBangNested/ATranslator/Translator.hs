@@ -7,7 +7,7 @@ module Language.TinyBangNested.ATranslator.Translator
 import Control.Applicative
 import Control.Arrow hiding ((<+>))
 import qualified Data.Map as Map
-import Data.Sequence (Seq, (|>), (><), ViewL(..))
+import Data.Sequence (Seq, (|>), (><), ViewR(..))
 import qualified Data.Sequence as Seq
 import qualified Data.Foldable as Foldable
 
@@ -186,17 +186,17 @@ innerATranslatePat pat = do
         VariablePattern _ x -> do
           x' <- bindVar x
           return $ Seq.singleton (x',FEmptyOnion generated)
-  return (s, headVarOf s)
+  return (s, tailVarOf s)
 {-
   in Pattern generated x $ PatternFilterMap $ Map.fromList $
         map (second (generated,)) terms
 -}
 
-headVarOf :: Seq (TBA.Var, a) -> TBA.Var
-headVarOf s =
-  case Seq.viewl s of
-    Seq.EmptyL -> error "Empty pattern term sequence!"
-    x :< _ -> fst x
+tailVarOf :: Seq (TBA.Var, a) -> TBA.Var
+tailVarOf s =
+  case Seq.viewr s of
+    Seq.EmptyR -> error "Empty pattern term sequence!"
+    _ :> x -> fst x
       
 aTransLabel :: TBN.LabelName -> TBA.LabelName
 aTransLabel = TBA.LabelName generated . TBN.unLabelName
