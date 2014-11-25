@@ -55,14 +55,15 @@ polyinstFnForConstraintSetWithContour cs cntr =
   restrictPolyinstFn f boundVars
 
 polyinstFn :: TVar -> TVar -> TVar
-polyinstFn (TVar _ (PossibleContour pc)) =
+polyinstFn (TVar a (PossibleContour pc)) =
   case pc of
     Nothing ->
       error "Attempted to polyinstantiate using non-contoured basis variable!"
     Just cntr ->
+      let newCntr = extend a cntr in
       -- TODO: FIXME: This should be computing the new contour based on the call
       --              site, not just using the old contour.
-      polyinstFnWithContour cntr
+      polyinstFnWithContour newCntr
 
 polyinstFnWithContour :: Contour -> TVar -> TVar
 polyinstFnWithContour cntr =
