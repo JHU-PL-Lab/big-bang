@@ -17,6 +17,7 @@ type Token = TypedToken TokenType
 data TokenType a where
   TokEOF :: TokenType ()
   TokLet :: TokenType () -- @let@
+  TokRec :: TokenType () -- @rec@
   TokIs :: TokenType () -- @=@
   TokIn :: TokenType () -- @in@
   TokLambda :: TokenType () -- @fun@
@@ -64,6 +65,7 @@ instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
     Token (SomeToken TokEOF _) -> dquotes $ text "<EOF>"
     Token (SomeToken TokLet _) -> dquotes $ text "let"
+    Token (SomeToken TokRec _) -> dquotes $ text "rec"
     Token (SomeToken TokIs _) -> dquotes $ text "="
     Token (SomeToken TokIn _) -> dquotes $ text "in"
     Token (SomeToken TokLambda _) -> dquotes $ text "fun"

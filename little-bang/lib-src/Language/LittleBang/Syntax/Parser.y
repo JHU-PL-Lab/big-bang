@@ -28,6 +28,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   'char'        { Token (SomeToken TokChar $$) }
   'ref'         { Token (SomeToken TokRef $$) }
   'let'         { Token (SomeToken TokLet $$) }
+  'rec'         { Token (SomeToken TokRec $$) }
   'in'          { Token (SomeToken TokIn $$) }
   'fun'         { Token (SomeToken TokLambda $$) }
   'if'          { Token (SomeToken TokIf $$) }
@@ -91,7 +92,9 @@ OnlyPattern :: { SPositional Pattern }
   : Pattern eof             { $1 }
 
 Expr :: { SPositional Expr }
-  : 'let' Ident '=' Expr 'in' Expr
+  : 'let' 'rec' Ident '(' ParamList ')' '=' Expr 'in' Expr
+                            { oc4 $1 $> LExprLetRec $3 $5 $8 $10 }
+  | 'let' Ident '=' Expr 'in' Expr
                             { oc3 $1 $> TExprLet $2 $4 $6 }
   | 'fun' ParamList '->' Expr %prec LAM
                             { oc2 $1 $> LExprScape $2 $4 }

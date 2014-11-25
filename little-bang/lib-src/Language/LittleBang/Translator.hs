@@ -38,7 +38,8 @@ desugarLittleBang expr =
     -- First desugarer in the list will happen first.
     exprDesugarers :: [DesugarFunction LB.Expr]
     exprDesugarers =
-      [ desugarExprIf
+      [ desugarExprLetRec
+      , desugarExprIf
       , desugarExprObject
       , desugarExprClass
       , desugarExprList
@@ -60,7 +61,7 @@ desugarLittleBang expr =
 runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
 runDesugarM ctx x = fst <$> runStateT (runReaderT x ctx) (DesugarState 0)
 
-type DesugarM = ReaderT (DesugarContext) (StateT DesugarState (Either DesugarError))
+type DesugarM = ReaderT DesugarContext (StateT DesugarState (Either DesugarError))
 type DesugarError = String
 
 type DesugarFunction a = a -> DesugarM a
@@ -125,6 +126,12 @@ walkExprTree expr = do
                                  <$> mapM walkParamTree params
                                  <*> walkExprTree e)
                                 >>= f
+
+    LB.LExprLetRec o i params e1 e2 -> (LB.LExprLetRec o i
+                                        <$> mapM walkParamTree params
+                                        <*> walkExprTree e1
+                                        <*> walkExprTree e2)
+                                       >>= f
 
     LB.LExprAppl o e args -> (LB.LExprAppl o
                               <$> walkExprTree e
@@ -231,6 +238,32 @@ walkClassTermTree term =
       LB.ClassInstanceProperty o <$> walkObjTermTree p
     LB.ClassStaticProperty o p ->
       LB.ClassStaticProperty o <$> walkObjTermTree p
+
+desugarExprLetRec :: LB.Expr -> DesugarM LB.Expr
+desugarExprLetRec expr =
+  case expr of
+    LB.LExprLetRec o name params body rest -> do
+      -- λbody. (λf. f f) (λself. λx. body (self self) x)
+      iBody <- nextFreshVar
+      iF <- nextFreshVar
+      iSelf <- nextFreshVar
+      iX <- nextFreshVar
+      let yCombinator =
+            TExprScape o (LB.VariablePattern o iBody) $
+              TExprAppl o
+                (TExprScape o (LB.VariablePattern o iF)
+                  (TExprAppl o (TExprVar o iF) (TExprVar o iF)))
+                (TExprScape o (LB.VariablePattern o iSelf)
+                  (TExprScape o (LB.VariablePattern o iX) $
+                    TExprAppl o
+                      (TExprAppl o (TExprVar o iBody)
+                        (TExprAppl o (TExprVar o iSelf) (TExprVar o iSelf)))
+                      (TExprVar o iX)))
+      let preFunc =
+            TExprScape o (LB.VariablePattern o name) $
+              LExprScape o params body
+      walkExprTree $ LB.TExprLet o name (LB.TExprAppl o yCombinator preFunc) rest
+    _ -> return expr
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
