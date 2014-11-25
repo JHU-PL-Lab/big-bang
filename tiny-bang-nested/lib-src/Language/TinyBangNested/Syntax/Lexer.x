@@ -45,6 +45,7 @@ tokens :-
   "}"                          { simply TokStopBlock }
   "("                          { simply TokOpenParen }
   ")"                          { simply TokCloseParen }
+  "*"                          { simply TokAsterisk }
   "+"                          { simply TokPlus }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of

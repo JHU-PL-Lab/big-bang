@@ -42,6 +42,7 @@ import Language.TinyBangNested.Syntax.Tokens
   ')'           { Token (SomeToken TokCloseParen $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '*'           { Token (SomeToken TokAsterisk $$) }
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
@@ -105,7 +106,7 @@ LiteralExpr :: { SPositional Expr }
   | litchar                 { oc1 $1 $> ExprValChar $1 }
 
 Pattern :: { SPositional Pattern }
-  : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  : Pattern '*' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
   | PrimaryPattern          { $1 }
 
 PrimaryPattern :: {SPositional Pattern }
