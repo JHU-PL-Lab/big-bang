@@ -57,6 +57,7 @@ data TokenType a where
   TokCons :: TokenType () -- @::@
   TokGetChar :: TokenType () -- @getChar@
   TokPutChar :: TokenType () -- @putChar@
+  TokAsterisk :: TokenType () -- @*@
   -- TODO: what about list patterns (e.g. "...")?
 
 instance TokenDisplay TokenType where
@@ -103,6 +104,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokPutChar _) -> dquotes $ text "putChar"
     Token (SomeToken TokDot _) -> text "."
     Token (SomeToken TokTilde _) -> text "~"
+    Token (SomeToken TokAsterisk _) -> text "*"
 
 instance Display Token where
   makeDoc = tokenPayloadDoc

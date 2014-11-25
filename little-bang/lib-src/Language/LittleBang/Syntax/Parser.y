@@ -65,6 +65,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   '!'           { Token (SomeToken TokDeref $$) }
   '.'           { Token (SomeToken TokDot $$) }
   '~'           { Token (SomeToken TokTilde $$) }
+  '*'           { Token (SomeToken TokAsterisk $$) }
 
 %left LAM
 %right 'in'
@@ -165,7 +166,7 @@ Param :: { SPositional Param }
   | Ident                   { oc2 $1 $> Param $1 (oc0 $1 $> EmptyPattern) } 
 
 Pattern :: { SPositional Pattern }
-  : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  : Pattern '*' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
   | Pattern '::' Pattern    { oc2 $1 $> ConsPattern $1 $3 }
   | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }

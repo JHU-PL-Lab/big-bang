@@ -56,6 +56,7 @@ tokens :-
   "{"                          { simply TokOpenBrace }
   "}"                          { simply TokCloseBrace }
   "+"                          { simply TokPlus }
+  "*"                          { simply TokAsterisk }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
