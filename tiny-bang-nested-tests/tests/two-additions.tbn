@@ -1,4 +1,4 @@
-# EXPECT-MATCH: `True _
+# EXPECT-MATCH: `True ()
 
 (1 + 2 + 3) == 6
 
