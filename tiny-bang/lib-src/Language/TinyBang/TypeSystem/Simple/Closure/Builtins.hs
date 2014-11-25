@@ -165,14 +165,14 @@ computeBuiltinType = do
       (a1,a2) <- demand2
       demandInt 1 a1
       demandInt 2 a2
-      -- NOTE: The variable a' need not be assigned a new () lower bound; it
-      --       will already have one at top level.  But we need to make sure
-      --       that a' is properly contoured; in concept, the instantiation of
-      --       the initial contour freshened the top-level definition of a' and
-      --       we must refer to it using its contour (instead of with no
-      --       contour).
+      -- NOTE: We need to make sure that a' is properly contoured; in concept,
+      --       the instantiation of the initial contour freshened the top-level
+      --       definition of a' and we must refer to it using its contour
+      --       (instead of with no contour).
       TVar x _ <- initiallyAlignVar <$> builtinVar <$> BuiltinVar <$> biOp
       let a' = TVar x $ PossibleContour $ Just initialContour
+      tell $ ConstraintSet $ Set.singleton $
+        FilteredType TEmptyOnion mempty mempty <: a'
       choose $
         map (flip TLabel a' . LabelName generated) ["True", "False"] 
 
