@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns #-}
 
 {-|
   Defines the tokens used in the TinyBang parser.
