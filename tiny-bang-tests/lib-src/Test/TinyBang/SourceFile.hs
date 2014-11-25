@@ -6,6 +6,7 @@ module Test.TinyBang.SourceFile
 , TinyBangSourceFileTestConfig(..)
 ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 
@@ -95,6 +96,9 @@ generateTests (TinyBangSourceFileTestConfig
       let doc = NamedDocument filename
       tokens <- hoistEither $ lexTinyBang doc source
       ast <- hoistEither $ parseTinyBang doc tokens
+      let ills = checkWellFormed ast
+      unless (Set.null ills) $
+        left $ display ills
       let tcResult = typecheck' ast
       case expectation of
         Pass predicate predSrc -> do
