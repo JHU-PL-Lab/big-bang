@@ -78,7 +78,8 @@ import qualified Language.TinyBangNested.Ast as TBN
 %right '<-'
 %right '::'
 %left '['
-%left '+' '-' '*' '/' '%'
+%left '+' '-'
+%left '*' '/' '%'
 %left '&'
 %right 'putChar'
 
