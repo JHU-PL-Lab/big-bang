@@ -53,6 +53,7 @@ import Language.TinyBangNested.Syntax.Tokens
 %nonassoc '<=' '>=' '=='
 %right '<-'
 %left '+' '-'
+%left '*'
 %left '&'
 %right 'putChar'
 
