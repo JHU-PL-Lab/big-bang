@@ -5,7 +5,7 @@
   a semantic wrapper over @ListT@; it is used to signify intentional
   non-deterministic computation.
 -}
-module Language.TinyBang.TypeSystem.Monad.Trans.NonDet
+module Control.Monad.Trans.NonDet
 ( NonDetT
 , runNonDetT
 , mapNonDetT
@@ -21,8 +21,6 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.List
 import Data.Foldable
 
-import Language.TinyBang.TypeSystem.Monad.Trans.CReader
-
 -- |A datatype for constraint flow computations.
 newtype NonDetT m a
   = NonDetT (ListT m a)
@@ -35,10 +33,6 @@ runNonDetT (NonDetT listT) = runListT listT
 -- |Maps an operation through a @NonDetT@.
 mapNonDetT :: (m [a] -> n [b]) -> NonDetT m a -> NonDetT n b
 mapNonDetT f (NonDetT x) = NonDetT $ mapListT f x
-
-instance MonadCReader r m => MonadCReader r (NonDetT m) where
-  askDb   = lift askDb
-  localDb f (NonDetT x) = NonDetT $ localDb f x
 
 instance MonadReader r m => MonadReader r (NonDetT m) where
   ask = lift ask

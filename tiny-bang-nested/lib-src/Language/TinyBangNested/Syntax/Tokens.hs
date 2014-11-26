@@ -30,7 +30,7 @@ data TokenType a where
   TokLabel :: TokenType String  -- The @String@ is only the name of the label, not the @`@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
-  TokMult :: TokenType () -- @*@
+  TokAsterisk :: TokenType () -- @*@
   TokDiv :: TokenType () -- @/@
   TokMod :: TokenType () -- @%@
   TokEq :: TokenType () -- @==@
@@ -64,7 +64,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
-    Token (SomeToken TokMult _) -> text "*"
+    Token (SomeToken TokAsterisk _) -> text "*"
     Token (SomeToken TokDiv _) -> text "/"
     Token (SomeToken TokMod _) -> text "%"
     Token (SomeToken TokEq _) -> text "=="
@@ -79,3 +79,6 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokCloseParen _) -> text ")"
     Token (SomeToken TokGetChar _) -> text "getChar"
     Token (SomeToken TokPutChar _) -> text "putChar"
+
+instance Display Token where
+  makeDoc = tokenPayloadDoc

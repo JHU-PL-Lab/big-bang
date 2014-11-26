@@ -91,14 +91,14 @@ parserTests = TestList
               (ExprAppl _ (ExprVar _ _) (ExprVar _ _))) -> True
           _ -> False)
   , postest "scape parse"
-      "`A x -> x + x"
+      "fun `A x -> x + x"
       (\case
           ExprScape _ (LabelPattern _ (LabelName _ "A") (VariablePattern _ v))
             (ExprBinaryOp _ (ExprVar _ v') (OpIntPlus _) (ExprVar _ v''))
               | v == v' && v == v'' -> True
           _ -> False)
   , postest "pattern precedence"
-      "`A int & int -> ()"
+      "fun `A int * int -> ()"
       (\case
           ExprScape _
             (ConjunctionPattern _

@@ -28,6 +28,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   'char'        { Token (SomeToken TokChar $$) }
   'ref'         { Token (SomeToken TokRef $$) }
   'let'         { Token (SomeToken TokLet $$) }
+  'rec'         { Token (SomeToken TokRec $$) }
   'in'          { Token (SomeToken TokIn $$) }
   'fun'         { Token (SomeToken TokLambda $$) }
   'if'          { Token (SomeToken TokIf $$) }
@@ -54,7 +55,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   '}'           { Token (SomeToken TokCloseBrace $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
-  '*'           { Token (SomeToken TokMult $$) }
+  '*'           { Token (SomeToken TokAsterisk $$) }
   '/'           { Token (SomeToken TokDiv $$) }
   '%'           { Token (SomeToken TokMod $$) }
   ':'           { Token (SomeToken TokColon $$) }
@@ -76,21 +77,26 @@ import qualified Language.TinyBangNested.Ast as TBN
 %nonassoc '<=' '>=' '=='
 %right '<-'
 %right '::'
-%left '+' '-' '*' '/' '%'
 %left '['
+%left '+' '-' '*' '/' '%'
 %left '&'
 %right 'putChar'
 
 %name parseProgram Program
-%name parsePattern Pattern
+%name parsePattern OnlyPattern
 
 %%
 
 Program :: { SPositional Expr }
   : Expr eof                { $1 }
 
+OnlyPattern :: { SPositional Pattern }
+  : Pattern eof             { $1 }
+
 Expr :: { SPositional Expr }
-  : 'let' Ident '=' Expr 'in' Expr
+  : 'let' 'rec' Ident '(' ParamList ')' '=' Expr 'in' Expr
+                            { oc4 $1 $> LExprLetRec $3 $5 $8 $10 }
+  | 'let' Ident '=' Expr 'in' Expr
                             { oc3 $1 $> TExprLet $2 $4 $6 }
   | 'fun' ParamList '->' Expr %prec LAM
                             { oc2 $1 $> LExprScape $2 $4 }
@@ -168,7 +174,7 @@ Param :: { SPositional Param }
   | Ident                   { oc2 $1 $> Param $1 (oc0 $1 $> EmptyPattern) } 
 
 Pattern :: { SPositional Pattern }
-  : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  : Pattern '*' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
   | Pattern '::' Pattern    { oc2 $1 $> ConsPattern $1 $3 }
   | '[' PatternList ']'     { fmap ($ Nothing) (oc1 $1 $> ListPattern $2) }
   | PrimaryPattern          { $1 }

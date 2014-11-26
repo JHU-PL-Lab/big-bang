@@ -1,10 +1,15 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 
 module Language.TinyBangNested.ATranslator.Translator
 ( aTranslate
 ) where
 
 import Control.Applicative
+import Control.Arrow hiding ((<+>))
+import qualified Data.Map as Map
+import Data.Sequence (Seq, (|>), (><), ViewR(..))
+import qualified Data.Sequence as Seq
+import qualified Data.Foldable as Foldable
 
 import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Utils.Display
@@ -15,7 +20,7 @@ import Language.TinyBangNested.ATranslator.Monad
 $(loggingFunctions)
 
 -- TODO: some early failure mechanism for stuff that this translation can
---       detect (e.g. open expressions)
+--       detect
 
 -- |Performs A-translation of a TinyBang Nested expression.
 aTranslate :: TBN.Expr -> TBA.Expr
@@ -46,11 +51,13 @@ innerATranslate e =
              )
     ExprScape _ pat expr -> do
       x <- freshVar
-      (pcls, ecls) <- bracketScope $
+      ((pfcs,px), ecls) <- bracketScope $
                             (,) <$>
-                              (fst <$> innerATranslatePat pat) <*>
+                              innerATranslatePat pat <*>
                               (fst <$> innerATranslate expr)
-      let pat' = TBA.Pattern generated pcls
+      let pat' = TBA.Pattern generated px $ PatternFilterMap $
+                    Map.fromList $ map (second (generated,)) $
+                    Foldable.toList pfcs
       let expr' = TBA.Expr generated ecls
       return ( [ TBA.Clause generated x $ TBA.Def generated $
                     VScape generated pat' expr'
@@ -151,51 +158,48 @@ innerATranslate e =
              , x'
              )
 
+-- |Generates a list of ANF pattern mappings for a given pattern.  The ANF
+--  pattern which should be created is rooted at the rightmost variable in the
+--  sequence.
 innerATranslatePat :: TBN.Pattern
-                   -> ATranslationM ([TBA.PatternClause], TBA.Var)
-innerATranslatePat pat =
+                   -> ATranslationM (Seq (TBA.Var, Filter), TBA.Var)
+innerATranslatePat pat = do
   -- TODO: propagate origin data from TBN pattern to TBA pattern
-  case pat of
-    PrimitivePattern _ t -> do
-      x <- freshVar
-      return ( [ PatternClause generated x $ PPrimitive generated $ 
-                    aTransPrimitiveType t ]
-             , x
-             )
-    LabelPattern _ n p -> do
-      (pcls, x) <- innerATranslatePat p
-      x' <- freshVar
-      return ( pcls ++
-               [ PatternClause generated x' $
-                    PLabel generated (aTransLabel n) x ]
-             , x'
-             )
-    RefPattern _ p -> do
-      (pcls, x) <- innerATranslatePat p
-      x' <- freshVar
-      return ( pcls ++ [ PatternClause generated x' $ PRef generated x ]
-             , x'
-             )
-    ConjunctionPattern _ p1 p2 -> do
-      (pcls1, x1) <- innerATranslatePat p1
-      (pcls2, x2) <- innerATranslatePat p2
-      x' <- freshVar
-      return ( pcls1 ++
-               pcls2 ++
-               [ PatternClause generated x' $
-                    PConjunction generated x1 x2 ]
-             , x'
-             )
-    TBN.EmptyPattern _ -> do
-      x' <- freshVar
-      return ( [ PatternClause generated x' $ PEmptyOnion generated ]
-             , x'
-             )
-    VariablePattern _ x -> do
-      x' <- bindVar x
-      return ( [ PatternClause generated x' $ PEmptyOnion generated ]
-             , x'
-             )
+  s <- case pat of
+        PrimitivePattern _ t -> do
+          x <- freshVar
+          return $ Seq.singleton
+                    (x,FPrimitive generated $ aTransPrimitiveType t)
+        LabelPattern _ n p -> do
+          (pfcs, x) <- innerATranslatePat p
+          x' <- freshVar
+          return $ pfcs |> (x',FLabel generated (aTransLabel n) x)
+        RefPattern _ p -> do
+          (pfcs, x) <- innerATranslatePat p
+          x' <- freshVar
+          return $ pfcs |> (x',FRef generated x)
+        ConjunctionPattern _ p1 p2 -> do
+          (pfcs1, x1) <- innerATranslatePat p1
+          (pfcs2, x2) <- innerATranslatePat p2
+          x' <- freshVar
+          return $ (pfcs1 >< pfcs2) |> (x',FConjunction generated x1 x2)
+        TBN.EmptyPattern _ -> do
+          x' <- freshVar
+          return $ Seq.singleton (x',FEmptyOnion generated)
+        VariablePattern _ x -> do
+          x' <- bindVar x
+          return $ Seq.singleton (x',FEmptyOnion generated)
+  return (s, tailVarOf s)
+{-
+  in Pattern generated x $ PatternFilterMap $ Map.fromList $
+        map (second (generated,)) terms
+-}
+
+tailVarOf :: Seq (TBA.Var, a) -> TBA.Var
+tailVarOf s =
+  case Seq.viewr s of
+    Seq.EmptyR -> error "Empty pattern term sequence!"
+    _ :> x -> fst x
       
 aTransLabel :: TBN.LabelName -> TBA.LabelName
 aTransLabel = TBA.LabelName generated . TBN.unLabelName

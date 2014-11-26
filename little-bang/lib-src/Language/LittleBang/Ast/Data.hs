@@ -41,6 +41,7 @@ data Expr
   | TExprPutChar Origin Expr
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
+  | LExprLetRec Origin Ident [Param] Expr Expr
   | LExprBinaryOp Origin Expr BinaryOperator Expr
   | LExprAppl Origin Expr [Arg]
   | LExprCondition Origin Expr Expr Expr
@@ -144,6 +145,7 @@ instance HasOrigin Expr where
     TExprGetChar orig -> orig
     TExprPutChar orig _ -> orig
     LExprScape orig _ _ -> orig
+    LExprLetRec orig _ _ _ _ -> orig
     LExprBinaryOp orig _ _ _ -> orig
     LExprAppl orig _ _ -> orig
     LExprCondition orig _ _ _ -> orig
@@ -200,6 +202,9 @@ instance Display Expr where
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
    LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)
+   LExprLetRec _ i ps e1 e2 -> text "let" <+> text "rec" <+> makeDoc i <>
+                              parens (makeDoc ps) <+> text "=" <+>
+                              makeDoc e1 <+> text "in" <+> makeDoc e2
    LExprCondition _ e1 e2 e3 -> text "if" <+> makeDoc e1 <+> text "then" <+>
                                 makeDoc e2 <+> text "else" <+> makeDoc e3
    LExprList _ e -> text "[" <> foldl (<+>) (text "") (map makeDoc e) <> text "]"

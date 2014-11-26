@@ -1,5 +1,5 @@
 # EXPECT-TYPEFAIL
 # This should type error due to the application to the wrong argument type.
-let f = (`A x -> x) in
-(f & (f & f)) (`B 0)
+let f = fun a:(`A x) -> x in
+(f & (f & f))(a=`B 0)
 

@@ -28,6 +28,7 @@ tokens :-
   $white+                      ;
   "#".*                        ;
   let                          { simply TokLet }
+  rec                          { simply TokRec }
   in                           { simply TokIn }
   fun                          { simply TokLambda }
   if                           { simply TokIf }
@@ -56,9 +57,10 @@ tokens :-
   "{"                          { simply TokOpenBrace }
   "}"                          { simply TokCloseBrace }
   "+"                          { simply TokPlus }
-  "*"                          { simply TokMult }
+  "*"                          { simply TokAsterisk }
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
+>>>>>>> filter-types
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->

@@ -16,7 +16,6 @@ import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
 import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Toploop
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
 import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
@@ -33,8 +32,9 @@ versionStr = "LittleBang Interpreter version " ++ showVersion version
 
 -- |Creates an evaluation routine for a single expression.  Requires an initial
 --  configuration.
-interpretLBSource :: (CDb.ConstraintDatabase db, Display db) => db -> InterpreterConfiguration -> String -> EitherT (InterpreterError db) IO (InterpreterResult)
-interpretLBSource dummy interpConf src = do
+interpretLBSource :: InterpreterConfiguration -> String
+                  -> EitherT InterpreterError IO (InterpreterResult)
+interpretLBSource interpConf src = do
   tokens <- hoistEither $ postLog _debugI
     ( \tokens -> display $
         text "LittleBang tokens:" <+> makeDoc tokens ) $
@@ -52,28 +52,25 @@ interpretLBSource dummy interpConf src = do
         text "Converted to TBN AST:" <> lineNest tbnAst ) $
     mapLeft OtherFailure $ convertToTBNExpr dlbAst
   let tbAst = postLog _debugI ( \tbAst' -> display $ text "A-translated AST:" <> lineNest tbAst' ) (aTranslate tbnAst)
-  interpretAst dummy interpConf tbAst
+  interpretAst interpConf tbAst
   where
   lineNest x = line <> indent 2 (align $ makeDoc x)
 
 stringyInterpretTBNSource :: InterpreterConfiguration -> String -> IO String
-stringyInterpretTBNSource interpConf exprSrc =
-  case emptyDatabaseFromType $ databaseType interpConf of
-    CDb.SomeDisplayableConstraintDatabase dummy -> do
-      res <- runEitherT $ interpretLBSource dummy interpConf exprSrc
-      case res of
-        Left err -> return $ display err
-        Right result -> return $ display result
+stringyInterpretTBNSource interpConf exprSrc = do
+  res <- runEitherT $ interpretLBSource interpConf exprSrc
+  case res of
+    Left err -> return $ display err
+    Right result -> return $ display result
 
 -- |Creates an evaluation routine for a single expression.  Requires an initial
 --  configuration.
 makeEval :: TinyBangOptions -> IO (String -> IO String)
 makeEval opts = do
-  let dtype = databaseConfigType opts
+  let ts = typeSystemImplementation opts
   let config = InterpreterConfiguration
-                    { typechecking = not $ noTypecheck opts
-                    , evaluating = not $ noEval opts
-                    , databaseType = dtype }
+                    { evaluating = not $ noEval opts
+                    , typeSystem = ts }
   return $ stringyInterpretTBNSource config
 
 main :: IO ()

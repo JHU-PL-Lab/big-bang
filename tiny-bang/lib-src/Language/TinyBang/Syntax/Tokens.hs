@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification, GADTs, ViewPatterns #-}
 
 {-|
   Defines the tokens used in the TinyBang parser.
@@ -18,6 +18,7 @@ data TokenType a where
   TokEOF :: TokenType ()
   TokIs :: TokenType () -- @=@
   TokArrow :: TokenType () -- @->@
+  TokBackslash :: TokenType () -- @\@
   TokStartBlock :: TokenType () -- @{@
   TokStopBlock :: TokenType () -- @}@
   TokEmptyOnion :: TokenType () -- @()@
@@ -31,7 +32,7 @@ data TokenType a where
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
-  TokMult :: TokenType () -- @*@
+  TokAsterisk :: TokenType () -- @*@
   TokDiv :: TokenType () -- @/@
   TokMod :: TokenType () -- @%@
   TokEq :: TokenType () -- @==@
@@ -52,6 +53,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokInt _) -> dquotes $ text "int"
     Token (SomeToken TokChar _) -> dquotes $ text "char"
     Token (SomeToken TokSemi _) -> dquotes $ text ";"
+    Token (SomeToken TokBackslash _) -> dquotes $ text "\\"
     Token (SomeToken TokStartBlock _) -> dquotes $ text "{"
     Token (SomeToken TokStopBlock _) -> dquotes $ text "}"
     Token (SomeToken TokIdentifier (posData -> s)) -> text "id#" <> dquotes (text s)
@@ -60,7 +62,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
-    Token (SomeToken TokMult _) -> text "*"
+    Token (SomeToken TokAsterisk _) -> text "*"
     Token (SomeToken TokDiv _) -> text "/"
     Token (SomeToken TokMod _) -> text "%"
     Token (SomeToken TokEq _) -> text "=="

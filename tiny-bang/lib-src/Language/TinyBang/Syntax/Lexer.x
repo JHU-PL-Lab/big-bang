@@ -40,10 +40,11 @@ tokens :-
   "&"                          { simply TokOnion }
   "="                          { simply TokIs }
   ";"                          { simply TokSemi }
+  "\"                          { simply TokBackslash }
   "{"                          { simply TokStartBlock }
   "}"                          { simply TokStopBlock }
   "+"                          { simply TokPlus }
-  "*"                          { simply TokMult }
+  "*"                          { simply TokAsterisk }                         
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->

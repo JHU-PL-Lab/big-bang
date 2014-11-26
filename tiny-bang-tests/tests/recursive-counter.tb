@@ -1,10 +1,13 @@
 # EXPECT: 0
 
-Y = { pbody = ()
+Y = pbody \
+    { pbody = ()
     } ->
-    { xwrapper = { pthis = ();
+    { xwrapper = pthis \
+		 { pthis = ();
                  } ->
-                 { xwrapperL2 = { parg = ();
+                 { xwrapperL2 = parg \
+				{ parg = ();
                                 } ->
                                 { tt = pthis pthis;
                                   btt = pbody tt;
@@ -14,18 +17,22 @@ Y = { pbody = ()
       Yr = xwrapper xwrapper;
     };
 
-decountS = { pself = ();
+decountS = pself \
+	   { pself = ();
            } ->
-           { decountR = { p1 = ();
+           { decountR = p1 \
+			{ p1 = ();
                         } ->
                         { x1 = 0;
                           x2 = == p1 x1;
-                          x3 = { p2 = ();
+                          x3 = p3 \
+			       { p2 = ();
                                  p3 = `True p2;
                                } ->
                                { x4 = 0;
                                };
-                          x5 = { p4 = ();
+                          x5 = p5 \
+			       { p4 = ();
                                  p5 = `False p4;
                                } ->
                                { x6 = 1;

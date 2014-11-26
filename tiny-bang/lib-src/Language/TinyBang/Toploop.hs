@@ -7,8 +7,6 @@ module Language.TinyBang.Toploop
 , InterpreterConfiguration(..)
 , InterpreterResult(..)
 , InterpreterError(..)
-, ConstraintDatabaseType(..)
-, emptyDatabaseFromType
 ) where
 
 import Control.Monad
@@ -16,6 +14,7 @@ import Control.Monad.Trans.Either
 import Data.Either.Combinators
 import Data.List
 import Data.Map (Map)
+import Data.Set (Set)
 import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
@@ -24,16 +23,14 @@ import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Syntax.Parser
-import qualified Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
-import Language.TinyBang.TypeSystem.Constraints
-import qualified Language.TinyBang.TypeSystem.InitialDerivation as ID
-import qualified Language.TinyBang.TypeSystem.TypeInference as TI
+import qualified Language.TinyBang.TypeSystem as TS
 import Language.TinyBang.Utils.Display
 
-data InterpreterError db
+data InterpreterError
   = LexerFailure String
   | ParserFailure String
-  | TypecheckFailure (TI.TypecheckingError db)
+  | IllFormednessFailure (Set IllFormedness)
+  | TypecheckFailure (Set TS.TypecheckError)
   | EvaluationFailure I.EvalError [Clause]
   | EvaluationDisabled
   | OtherFailure String
@@ -54,39 +51,35 @@ instance Display InterpreterResult where
                                 text "in result!"
       Right value -> makeDoc value
 
--- TODO: perhaps this should go somewhere else.  The unit tests would like to
---       use these as well and unit tests shouldn't need the toploop, right?
-data ConstraintDatabaseType
-  = Simple
-  | Indexed
-  deriving (Show)
-
 data InterpreterConfiguration
   = InterpreterConfiguration
-    { typechecking :: Bool
+    { typeSystem :: Maybe TS.TypeSystem
     , evaluating :: Bool
-    , databaseType :: ConstraintDatabaseType
     }
   
 -- |Interprets the provided String as a TinyBang expression.  This value will be
---  lexed, parsed, typechecked, and executed.  This function takes a dummy
---  constraint database to drive the database type used by type inference.
-interpretSource :: (CDb.ConstraintDatabase db, Display db)
-                => db -> InterpreterConfiguration
-                -> String -> EitherT (InterpreterError db) IO InterpreterResult
-interpretSource dummy interpConf src = do
+--  lexed, parsed, typechecked, and executed.
+interpretSource :: InterpreterConfiguration -> String
+                -> EitherT InterpreterError IO InterpreterResult
+interpretSource interpConf src = do
   let doc = UnknownDocument
   tokens <- hoistEither $ mapLeft LexerFailure $ lexTinyBang doc src
   ast <- hoistEither $ mapLeft ParserFailure $ parseTinyBang doc tokens
-  interpretAst dummy interpConf ast
+  interpretAst interpConf ast
 
 -- |Interprets the provided TinyBang AST.
-interpretAst :: (CDb.ConstraintDatabase db, Display db)
-                => db -> InterpreterConfiguration
-                -> Expr -> EitherT (InterpreterError db) IO InterpreterResult
-interpretAst _ interpConf ast = do
-  when (typechecking interpConf) $
-    void $ hoistEither $ mapLeft TypecheckFailure $ TI.typecheck ast
+interpretAst :: InterpreterConfiguration -> Expr
+             -> EitherT InterpreterError IO InterpreterResult
+interpretAst interpConf ast = do
+  let ills = checkWellFormed ast
+  unless (Set.null ills) $ left $ IllFormednessFailure ills
+  case typeSystem interpConf of
+    Just ts -> do
+      let tsResult = TS.typecheck ts ast
+      let errs = TS.typeErrors tsResult
+      unless (Set.null errs) $ left $ TypecheckFailure errs
+    Nothing ->
+      return ()
   if evaluating interpConf
     then
       let transErr = uncurry EvaluationFailure in
@@ -95,11 +88,16 @@ interpretAst _ interpConf ast = do
     else
       left EvaluationDisabled
     
-instance (Display db) => Display (InterpreterError db) where
+instance Display InterpreterError where
   makeDoc ierr = case ierr of
     LexerFailure msg -> text "Lexer error:" <+> text msg
     ParserFailure msg -> text "Parser error:" <+> text msg
-    TypecheckFailure typeFail -> text "Type error:" <+> case typeFail of
+    IllFormednessFailure ills -> text "Ill-formed input expression:" </>
+      indent 2 (align $ foldl1 (</>) $ map makeDoc (Set.toList ills))
+    TypecheckFailure typeFail ->
+      error "Language.TinyBang.Toploop:makeDoc undefined for TypecheckFailure" -- TODO
+      {-
+      text "Type error:" <+> case typeFail of
       TI.InitialDerivationFailed initDerivErr -> case initDerivErr of
         ID.IllFormedExpression ills -> text "Ill-formed expression:" </>
           indent 2 (align $ foldl1 (</>) $ flip map (Set.toList ills) $ \ill ->
@@ -117,6 +115,7 @@ instance (Display db) => Display (InterpreterError db) where
         text "Database" </> nest 2 (makeDoc db) </> text "has inconsistencies:"
         <> nest 2 (linebreak <> nest 2 (foldr1 (<$$>) $ map docForIncon $
                                           Set.toList incons))
+      -}
     EvaluationFailure evalErr _ -> text "Evaluation error:" <+> case evalErr of
       I.IllFormedExpression ills -> text "Ill-formed expression:" </>
         indent 2 (align $ foldl1 (</>) $
@@ -126,8 +125,12 @@ instance (Display db) => Display (InterpreterError db) where
             OpenExpression xs -> text "Expression is open in variables: "
                                       <+> foldl1 (<>) (intersperse (char ',') $
                                             map makeDoc $ Set.toList xs)
+            OpenPattern xs -> text "Pattern is open in variables: "
+                                      <+> foldl1 (<>) (intersperse (char ',') $
+                                            map makeDoc $ Set.toList xs)
             EmptyExpression o -> text "Empty expression at " <+> makeDoc o
-            EmptyPattern o -> text "Empty pattern at " <+> makeDoc o
+            RefPatternNotExactlyEmpty x ->
+              text "Ref pattern contents not empty for variable" <+> makeDoc x
             ) $ Set.toList ills)
       I.ApplicationFailure x1 x2 -> text "Could not apply" <+> makeDoc x1
                                       <+> text "to" <+> makeDoc x2
@@ -143,8 +146,10 @@ instance (Display db) => Display (InterpreterError db) where
     OtherFailure oFailure -> text oFailure
     EvaluationDisabled -> text "(evaluation disabled)"
     where
-      docForIncon :: (Display db) => Inconsistency db -> Doc
-      docForIncon incon = case incon of
+      docForIncon :: TS.Inconsistency -> Doc
+      docForIncon incon =
+        error "Language.TinyBang.Toploop:makeDoc undefined for Inconsistency" -- TODO
+        {- case incon of
         Language.TinyBang.TypeSystem.Constraints.ApplicationFailure
             sa aa csa as ->
           text "Application failure:" </> nest 2
@@ -172,28 +177,15 @@ instance (Display db) => Display (InterpreterError db) where
               text "had an incorrect type (original variable" <+> makeDoc a <>
               char ')'
             )
+            -}
 
 -- |Interprets the provided String as a TinyBang expression.  This routine is
 --  similar to @interpretSource@ but converts the result to a user-readable
 --  string.  This function takes a dummy constraint database to drive the
 --  database type used by type inference.
 stringyInterpretSource :: InterpreterConfiguration -> String -> IO String
-stringyInterpretSource interpConf exprSrc =
-  case emptyDatabaseFromType $ databaseType interpConf of
-    CDb.SomeDisplayableConstraintDatabase dummy -> do
-      res <- runEitherT $ interpretSource dummy interpConf exprSrc
-      case res of
-        Left err -> return $ display err
-        Right result -> return $ display result
-
--- |Creates an empty database of a recognized type.
-emptyDatabaseFromType :: ConstraintDatabaseType
-                      -> CDb.SomeDisplayableConstraintDatabase
-emptyDatabaseFromType dbt = case dbt of
-  Simple ->
-    CDb.SomeDisplayableConstraintDatabase
-      (CDb.empty :: CDb.SimpleConstraintDatabase)
-  Indexed ->
-    CDb.SomeDisplayableConstraintDatabase
-      (CDb.empty :: CDb.IndexedConstraintDatabase)
-
+stringyInterpretSource interpConf exprSrc = do
+  res <- runEitherT $ interpretSource interpConf exprSrc
+  case res of
+    Left err -> return $ display err
+    Right result -> return $ display result
