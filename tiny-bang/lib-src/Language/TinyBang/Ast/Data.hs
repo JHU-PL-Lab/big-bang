@@ -64,6 +64,9 @@ data Redex
 data BuiltinOp
   = OpIntPlus
   | OpIntMinus
+  | OpIntMult
+  | OpIntDiv
+  | OpIntMod
   | OpIntEq
   | OpIntLessEq
   | OpIntGreaterEq
@@ -186,6 +189,9 @@ instance Display BuiltinOp where
   makeDoc o = case o of
     OpIntPlus -> char '+'
     OpIntMinus -> char '-'
+    OpIntMult -> char '*'
+    OpIntDiv -> char '/'
+    OpIntMod -> char '%'
     OpIntEq -> text "=="
     OpIntLessEq -> text "<="
     OpIntGreaterEq -> text ">="

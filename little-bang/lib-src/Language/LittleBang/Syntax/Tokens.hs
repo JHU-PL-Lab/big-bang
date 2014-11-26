@@ -28,6 +28,9 @@ data TokenType a where
   TokClass :: TokenType () -- @class@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
+  TokMult :: TokenType () -- @*@
+  TokDiv :: TokenType () -- @/@
+  TokMod :: TokenType () -- @%@
   TokEq :: TokenType () -- @==@
   TokLessEq :: TokenType () -- @<=@
   TokGreaterEq :: TokenType () -- @>=@
@@ -74,6 +77,9 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokClass _) -> dquotes $ text "class"
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
+    Token (SomeToken TokMult _) -> text "*"
+    Token (SomeToken TokDiv _) -> text "/"
+    Token (SomeToken TokMod _) -> text "%"
     Token (SomeToken TokEq _) -> text "=="
     Token (SomeToken TokLessEq _) -> text "<="
     Token (SomeToken TokGreaterEq _) -> text ">="

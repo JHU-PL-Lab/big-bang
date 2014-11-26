@@ -375,19 +375,21 @@ classTermToExpr term = case term of
 desugarExprObject :: LB.Expr -> DesugarM LB.Expr
 desugarExprObject expr =
   case expr of
-    LB.LExprObject o tms -> seal o =<< onionExprList <$> mapM objectTermToExpr tms
+    LB.LExprObject o tms -> do
+        objExprList <- mapM objectTermToExpr tms
+        let objOnion = onionExprList objExprList
+        letChain <- makeLetChain o (zip (map termName tms) objExprList) objOnion
+        seal o letChain
     _ -> return expr
-
-{-    
-  addSelf :: TB.Origin -> LB.RecordTerm -> LB.RecordTerm
-  addSelf o tm =
-    let selfPart = LB.LabelPattern o (LB.LabelName o "self") (LB.VariablePattern o (LB.Var o "self")) in
-    let e = unTermExpr tm in
-    case e of
-      LB.TExprScape o' pat z -> LB.TermNativeExpr o' (LB.TExprScape o'
-        (LB.ConjunctionPattern o' selfPart pat) z)
-      _ -> tm
--}
+  where
+  termName :: LB.ObjectTerm -> LB.Ident
+  termName (LB.ObjectMethod _ i _ _) = i
+  termName (LB.ObjectField _ i _) = i
+  makeLetChain :: TB.Origin -> [(LB.Ident, LB.Expr)] -> LB.Expr -> DesugarM LB.Expr
+  makeLetChain o tmNames objOnion =
+    case tmNames of
+      [] -> return objOnion
+      (n,texpr):t -> (return . (LB.TExprLet o n texpr)) =<< makeLetChain o t objOnion
 
 desugarExprClass :: LB.Expr -> DesugarM LB.Expr
 desugarExprClass expr =

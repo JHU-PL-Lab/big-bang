@@ -31,6 +31,9 @@ data TokenType a where
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
+  TokMult :: TokenType () -- @*@
+  TokDiv :: TokenType () -- @/@
+  TokMod :: TokenType () -- @%@
   TokEq :: TokenType () -- @==@
   TokLessEq :: TokenType () -- @<=@
   TokGreaterEq :: TokenType () -- @>=@
@@ -57,6 +60,9 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
+    Token (SomeToken TokMult _) -> text "*"
+    Token (SomeToken TokDiv _) -> text "/"
+    Token (SomeToken TokMod _) -> text "%"
     Token (SomeToken TokEq _) -> text "=="
     Token (SomeToken TokLessEq _) -> text "<="
     Token (SomeToken TokGreaterEq _) -> text ">="

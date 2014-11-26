@@ -46,14 +46,16 @@ tokens :-
   "("                          { simply TokOpenParen }
   ")"                          { simply TokCloseParen }
   "+"                          { simply TokPlus }
+  "*"                          { simply TokMult }
+  "/"                          { simply TokDiv }
+  "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
                                         return $ \ss -> S.token TokLitInt ss i
                                      Nothing ->
                                        alexError $
-                                         "Invalid integer literal: " ++ s
-                               }
+                                         "Invalid integer literal: " ++ s }
   "-"                          { simply TokMinus }
   "'" [\\]? $character "'"     { wrapM $ \s ->
                                    case readMaybe s of

@@ -56,6 +56,9 @@ tokens :-
   "{"                          { simply TokOpenBrace }
   "}"                          { simply TokCloseBrace }
   "+"                          { simply TokPlus }
+  "*"                          { simply TokMult }
+  "/"                          { simply TokDiv }
+  "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
@@ -65,7 +68,15 @@ tokens :-
                                          "Invalid integer literal: " ++ s
                                }
   "-"                          { simply TokMinus }
-  "'" [\\]? $character "'"        { wrapM $ \s ->
+  "'" \\ $character+ "'"       { wrapM $ \s ->
+                                   case readMaybe s of
+                                     Just i ->
+                                        return $ \ss -> S.token TokLitChar ss i
+                                     Nothing ->
+                                       alexError $
+                                         "Invalid character literal: " ++ s
+                               }
+  "'" $character "'"           { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->
                                         return $ \ss -> S.token TokLitChar ss i

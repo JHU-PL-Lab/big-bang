@@ -43,6 +43,9 @@ tokens :-
   "{"                          { simply TokStartBlock }
   "}"                          { simply TokStopBlock }
   "+"                          { simply TokPlus }
+  "*"                          { simply TokMult }
+  "/"                          { simply TokDiv }
+  "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->

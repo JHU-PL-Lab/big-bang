@@ -42,6 +42,9 @@ import Language.TinyBangNested.Syntax.Tokens
   ')'           { Token (SomeToken TokCloseParen $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '*'           { Token (SomeToken TokMult $$) }
+  '/'           { Token (SomeToken TokDiv $$) }
+  '%'           { Token (SomeToken TokMod $$) }
   ident         { Token (SomeToken TokIdentifier $$) }
   label         { Token (SomeToken TokLabel $$) }
   litint        { Token (SomeToken TokLitInt $$) }
@@ -70,6 +73,9 @@ Expr :: { SPositional Expr }
                             { oc2 $1 $> ExprScape $2 $4 }
   | Expr '+' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntPlus `oat` $2) $3 }
   | Expr '-' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntMinus `oat` $2) $3 }
+  | Expr '*' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntMult `oat` $2) $3 }
+  | Expr '/' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntDiv `oat` $2) $3 }
+  | Expr '%' Expr           { oc3 $1 $> ExprBinaryOp $1 (OpIntMod `oat` $2) $3 }
   | Expr '==' Expr          { oc3 $1 $> ExprBinaryOp $1 (OpIntEq `oat` $2) $3 }
   | Expr '>=' Expr          { oc3 $1 $> ExprBinaryOp $1 (OpIntGreaterEq `oat` $2) $3 }
   | Expr '<=' Expr          { oc3 $1 $> ExprBinaryOp $1 (OpIntLessEq `oat` $2) $3 }
