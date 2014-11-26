@@ -26,7 +26,6 @@ import Language.TinyBang.Utils.Logger
 $(loggingFunctions)
 
 -- TODO: freak out on non-contractive types
--- TODO: occurrence check
 
 -- |A computable function modeling the behavior of compatibility in the type
 --  system.
@@ -76,13 +75,25 @@ makeCompatibilityPattern binding expectMatch pattern =
 -- |The compatibility monad.  The reader provides a global constraint set.
 --  Non-determinism is provided when lower bounds must be selected.
 newtype CompatM a
-  = CompatM { unCompatM :: NonDetT (Reader ConstraintSet) a }
-  deriving ( Functor, Applicative, Monad, MonadPlus, MonadReader ConstraintSet
+  = CompatM { unCompatM :: ReaderT (Set CompatibilityOccurrence)
+                              (NonDetT (Reader ConstraintSet)) a
+            }
+  deriving ( Functor, Applicative, Monad, MonadPlus
+           , MonadReader (Set CompatibilityOccurrence)
            , MonadNonDet)
 
 runCompatM :: ConstraintSet -> CompatM a -> [a]
 runCompatM cs x =
-  runReader (runNonDetT $ unCompatM x) cs
+  runReader (runNonDetT $ runReaderT (unCompatM x) Set.empty) cs
+
+withOccurrence :: CompatibilityOccurrence -> CompatM a -> CompatM a
+withOccurrence occ = local (Set.insert occ)
+
+hasOccurrence :: CompatibilityOccurrence -> CompatM Bool
+hasOccurrence occ = Set.member occ <$> ask
+
+globalConstraints :: CompatM ConstraintSet
+globalConstraints = CompatM $ lift $ lift ask
 
 -- |A structure to describe the expectations of patterns as compatibility
 --  proceeds.
@@ -108,6 +119,22 @@ data BindState
              --  result of the proof must have all bindings.  From the point of
              --  view of the computable function, this means that binding must
              --  be finished upon returning.
+  deriving (Eq, Ord, Show)
+
+-- |A data structure representing an occurrence check to eliminate cycles in
+--  compatibility proofs.  Due to how the Type Selection rule introduces new
+--  proof obligations (in the form of patterns), it is possible within a proof
+--  tree to reach the same type selection as has already been reached.  Because
+--  all rules are idempotent in their effect on the result, it is sound to
+--  eliminate such cycles.  We capture the proof obligations at each type
+--  selection within this data structure and use a set of them to determine
+--  when a cycle has occurred.
+data CompatibilityOccurrence
+  = CompatibilityOccurrence
+      { coTypeSelected :: FilteredType
+      , coUpperBound :: TVar
+      , coCpats :: Set CompatibilityPattern
+      }
   deriving (Eq, Ord, Show)
 
 -- |Computes a compatibility check with a given type variable.  This function
@@ -150,19 +177,37 @@ compatibilityTVar a cpats bindState =
   $
   if Seq.null cpats
     then
-      -- Leaf rule
+      -- ## Leaf rule
       return (ConstraintSet Set.empty, Seq.empty)
     else do
-      -- Type Selection rule
-      cs <- unConstraintSet <$> ask
-      LowerBoundConstraint (FilteredType t fpP fpN) a' <- choose cs
+      -- ## Type Selection rule
+      cs <- unConstraintSet <$> globalConstraints
+      LowerBoundConstraint ft@(FilteredType t fpP fpN) a' <- choose cs
       guard $ a == a'
       let fpPcpats = Seq.fromList $ map (mkCpat $ Just True) $
                         Set.toList $ unPatternTypeSet fpP
       let fpNcpats = Seq.fromList $ map (mkCpat $ Just False) $
                         Set.toList $ unPatternTypeSet fpN
-      (bindings, answers) <-
+      -- This is the bit where we do our occurrence check.
+      let occurrence = CompatibilityOccurrence
+                          { coTypeSelected = ft
+                          , coUpperBound = a
+                          , coCpats = Set.unions $
+                              map (Set.fromList . Foldable.toList)
+                              [ cpats
+                              , fpPcpats
+                              , fpNcpats
+                              ]
+                          }
+      -- If the occurrence has already appeared in a previous recursion, then
+      -- this state represents a cycle and can be destroyed.
+      join $ guard . not <$> hasOccurrence occurrence
+      -- Otherwise, proceed using this occurrence so we can recognize it if it
+      -- appears in this (mutually) recursive call. 
+      (bindings, answers) <- withOccurrence occurrence $
           compatibilityType t (cpats >< fpPcpats >< fpNcpats) bindState
+      -- Now provide the results (eliminating the answers for the patterns which
+      -- were involved just because of the type we selected).
       return (bindings, Seq.take (Seq.length cpats) answers)
   where
     mkCpat :: Maybe Bool -> PatternType -> CompatibilityPattern
@@ -281,13 +326,13 @@ compatibilityType tIn cpatsIn bindState =
                     text "Proceeding with" <+> makeDoc filt) $
           case filt of
             TFEmpty -> do
-              -- Empty Pattern rule: always matches
+              -- ## Empty Pattern rule: always matches
               (bindings, answers, answersCtrOnly) <-
                   compatibilityTypeMaybeWithNonConstrPats t cpats' cpatsCtrOnly
               guardMatch True cpat
               return (bindings, True <| answers, answersCtrOnly)
             TFConjunction a1 a2 -> do
-              -- Conjunction Pattern rule
+              -- ## Conjunction Pattern rule
               let (leftExpect, rightExpect) =
                     case cpExpectMatch cpat of
                       Nothing -> (Nothing, Nothing)
