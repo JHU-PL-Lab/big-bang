@@ -116,6 +116,9 @@ computeBuiltinType = do
   case op of
     OpIntPlus -> intComputeOp
     OpIntMinus  -> intComputeOp
+    OpIntMult -> intComputeOp
+    OpIntDiv -> intComputeOp
+    OpIntMod -> intComputeOp
     OpIntEq -> intCompareOp
     OpIntLessEq -> intCompareOp
     OpIntGreaterEq -> intCompareOp
