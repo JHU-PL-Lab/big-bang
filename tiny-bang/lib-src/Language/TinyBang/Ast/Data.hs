@@ -58,22 +58,21 @@ data Redex
   | Copy Origin Var
   | Appl Origin Var Var
   | Builtin Origin BuiltinOp [Var]
-  -- TODO: GetChar and PutChar should really be builtins of arity 0 and 1, resp.
-  | GetChar Origin
-  | PutChar Origin Var
   deriving (Show)
 
 -- |A data type enumerating the builtins supported by the semantics.
 data BuiltinOp
-  = OpIntPlus
-  | OpIntMinus
-  | OpIntMult
-  | OpIntDiv
-  | OpIntMod
-  | OpIntEq
-  | OpIntLessEq
-  | OpIntGreaterEq
-  | OpSet
+  = OpIntPlus -- ^Integer addition.
+  | OpIntMinus -- ^Integer subtraction.
+  | OpIntMult -- ^Integer multiplication.
+  | OpIntDiv -- ^Integer (rounding) division.
+  | OpIntMod -- ^Integer modulus.
+  | OpIntEq -- ^Integer equality.
+  | OpIntLessEq -- ^Integer inequality.
+  | OpIntGreaterEq -- ^Integer inequality.
+  | OpSet -- ^Cell assignment.  Arguments are the cell and the value to store.
+  | OpGetChar -- ^I/O character read.  No arguments.
+  | OpPutChar -- ^I/O character write.  Single argument is the char to write.
   deriving (Eq, Ord, Show, Enum, Bounded) 
 
 -- |A data type representing value forms.
@@ -195,8 +194,6 @@ instance Display Redex where
     Appl _ x x' -> makeDoc x <+> makeDoc x'
     Builtin _ bop xs ->
       makeDoc bop <+> sepDoc (char ' ') (map makeDoc xs)
-    GetChar _ -> text "getChar"
-    PutChar _ _ -> text "putChar"
 
 instance Display BuiltinOp where
   makeDoc o = case o of
@@ -209,6 +206,8 @@ instance Display BuiltinOp where
     OpIntLessEq -> text "<="
     OpIntGreaterEq -> text ">="
     OpSet -> text "<-"
+    OpGetChar -> text "getChar"
+    OpPutChar -> text "putChar"
     
 instance Display Value where
   makeDoc v = case v of
@@ -302,8 +301,6 @@ instance HasOrigin Redex where
     Copy orig _ -> orig
     Appl orig _ _ -> orig
     Builtin orig _ _ -> orig
-    GetChar orig -> orig
-    PutChar orig _ -> orig
 
 instance HasOrigin Value where
   originOf x = case x of

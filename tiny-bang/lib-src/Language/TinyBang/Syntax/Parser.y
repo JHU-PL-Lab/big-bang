@@ -70,8 +70,6 @@ Redex
   | BuiltinOp Vars          { oc2 $1 $> Builtin $1 $2 }
   | Var                     { oc1 $1 $> Copy $1 }
   | Value                   { oc1 $1 $> Def $1 }
-  | 'getChar'               { oc0 $1 $> GetChar }
-  | 'putChar' Var           { oc1 $1 $> PutChar $2 }
  
 Var
   : Ident                   { oc1 $1 $> mkvar $1 }
@@ -134,6 +132,8 @@ BuiltinOp
   | '<='                    { posOver $1 $> OpIntLessEq }
   | '>='                    { posOver $1 $> OpIntGreaterEq }
   | '<-'                    { posOver $1 $> OpSet }
+  | 'getChar'               { posOver $1 $> OpGetChar }
+  | 'putChar'               { posOver $1 $> OpPutChar }
 
 -- Generalizations of common grammar patterns.
 

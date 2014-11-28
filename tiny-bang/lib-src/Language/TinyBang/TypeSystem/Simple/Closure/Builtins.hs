@@ -126,8 +126,27 @@ computeBuiltinType = do
       (a1,a2) <- demand2
       a' <- demandRef 1 a1
       tell $ ConstraintSet $ Set.singleton $ a2 <: a'
-      return TEmptyOnion 
+      return TEmptyOnion
+    OpGetChar -> do
+      demand0
+      return $ TPrimitive PrimChar
+    OpPutChar -> do
+      a <- demand1
+      demandChar 1 a
+      return TEmptyOnion
   where
+    demand0 :: BuiltinClosureM ()
+    demand0 = do
+      operands <- biArgs
+      case operands of
+        [] -> return ()
+        _ -> biBadOperandCount 0 $ length operands
+    demand1 :: BuiltinClosureM TVar
+    demand1 = do
+      operands <- biArgs
+      case operands of
+        [x1] -> return x1
+        _ -> biBadOperandCount 1 $ length operands
     demand2 :: BuiltinClosureM (TVar,TVar)
     demand2 = do
       operands <- biArgs
@@ -142,10 +161,14 @@ computeBuiltinType = do
         Nothing -> biBadOperandType index a
         Just bindings -> return bindings
     demandInt :: Int -> TVar -> BuiltinClosureM ()
-    demandInt index a = do
+    demandInt = demandPrim PrimInt
+    demandChar :: Int -> TVar -> BuiltinClosureM ()
+    demandChar = demandPrim PrimChar
+    demandPrim :: PrimitiveType -> Int -> TVar -> BuiltinClosureM ()
+    demandPrim tprim index a = do
       let pvar = initiallyAlignVar $ builtinVar $
-                    PrimitiveMatchPatternVar PrimInt
-      let pat = PatternType pvar $ Map.singleton pvar $ TFPrim PrimInt
+                    PrimitiveMatchPatternVar tprim
+      let pat = PatternType pvar $ Map.singleton pvar $ TFPrim tprim
       void $ demandMatch pat index a
     demandRef :: Int -> TVar -> BuiltinClosureM TVar
     demandRef index a = do

@@ -32,8 +32,6 @@ initiallyAlignClause (Clause _ x r) =
     Copy _ x' -> initiallyAlignVar x' <: a
     Appl _ x' x'' -> (initiallyAlignVar x', initiallyAlignVar x'') <: a
     Builtin _ op xs -> BuiltinOpConstraint op (map initiallyAlignVar xs) a
-    GetChar _ -> FilteredType (TPrimitive PrimChar) mempty mempty <: a
-    PutChar _ x' -> error "Language.TinyBang.TypeSystem.Simple.InitialAlignment undefined" -- TODO
 
 initiallyAlignValue :: Value -> FilteredType
 initiallyAlignValue v = 

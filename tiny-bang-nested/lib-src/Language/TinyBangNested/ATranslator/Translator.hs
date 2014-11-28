@@ -131,7 +131,7 @@ innerATranslate e =
              )
     ExprGetChar _ -> do
       x <- freshVar
-      return ( [ TBA.Clause generated x $ TBA.GetChar generated
+      return ( [ TBA.Clause generated x $ TBA.Builtin generated TBA.OpGetChar []
                ]
              , x
              )
@@ -139,7 +139,8 @@ innerATranslate e =
       x <- freshVar
       (cls,x') <- innerATranslate e'
       return ( cls ++
-               [ TBA.Clause generated x $ TBA.PutChar generated x'
+               [ TBA.Clause generated x $ TBA.Builtin generated TBA.OpPutChar
+                  [x']
                ]
              , x
              )

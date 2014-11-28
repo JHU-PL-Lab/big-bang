@@ -94,7 +94,28 @@ computeBuiltin = do
       v <- biLift $ varLookup x2
       biLift $ setVar x' v
       return $ VEmptyOnion generated
+    OpGetChar -> do
+      demand0
+      o <- biOrigin
+      biLift $ inputTBChar o
+    OpPutChar -> do
+      x <- demand1
+      c <- demandChar 1 x
+      biLift $ outputTBChar c
+      return $ VEmptyOnion generated
   where
+    demand0 :: BuiltinEvalM ()
+    demand0 = do
+      operands <- biArgs
+      case operands of
+        [] -> return ()
+        _ -> biBadOperandCount 0 $ length operands
+    demand1 :: BuiltinEvalM Var
+    demand1 = do
+      operands <- biArgs
+      case operands of
+        [x] -> return x
+        _ -> biBadOperandCount 1 $ length operands
     demand2 :: BuiltinEvalM (Var,Var)
     demand2 = do
       operands <- biArgs
@@ -115,6 +136,11 @@ computeBuiltin = do
     demandInt = demandProjection (ProjPrim PrimInt) $
                   \v -> case v of
                           VPrimitive _ (VInt _ n) -> Just n
+                          _ -> Nothing
+    demandChar :: Int -> Var -> BuiltinEvalM Char
+    demandChar = demandProjection (ProjPrim PrimChar) $
+                  \v -> case v of
+                          VPrimitive _ (VChar _ c) -> Just c
                           _ -> Nothing
     demandRef :: Int -> Var -> BuiltinEvalM Var
     demandRef = demandProjection ProjRef $

@@ -132,8 +132,6 @@ freeVarsOfClause (Clause _ _ r) =
     Copy _ x -> return $ Set.singleton x
     Appl _ x1 x2 -> return $ Set.fromList [x1,x2]
     Builtin _ _ xs -> return $ Set.fromList xs
-    GetChar _ -> return Set.empty
-    PutChar _ x -> return $ Set.singleton x
 
 -- |Determines the free variables appearing in a value.
 freeVarsOfValue :: Value -> WellFormedM (Set Var)
