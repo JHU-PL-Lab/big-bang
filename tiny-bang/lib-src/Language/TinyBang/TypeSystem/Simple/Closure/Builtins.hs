@@ -41,15 +41,15 @@ builtinTypeEval :: BuiltinOp -> [TVar] -> TVar
 builtinTypeEval op as a = do
   (result, cs) <- runBuiltinClosureM op as a computeBuiltinType
   case result of
-    Left incon ->
-      reportInconsistency incon
+    Left err ->
+      reportTypecheckError err
     Right t ->
       return (cs, t)
   
 newtype BuiltinClosureM a
   = BuiltinClosureM
       { unBuiltinClosureM ::
-          EitherT Inconsistency
+          EitherT TypecheckError
             (WriterT ConstraintSet
               (ReaderT BuiltinClosureStepContext ClosureM))
           a
@@ -65,7 +65,7 @@ runBuiltinClosureM :: BuiltinOp
                    -> [TVar]
                    -> TVar
                    -> BuiltinClosureM a
-                   -> ClosureM (Either Inconsistency a, ConstraintSet)
+                   -> ClosureM (Either TypecheckError a, ConstraintSet)
 runBuiltinClosureM bop operands defnSite x = do
   cs <- ask
   let context = BuiltinClosureStepContext cs bop operands defnSite
@@ -90,7 +90,10 @@ biLift :: ClosureM a -> BuiltinClosureM a
 biLift = BuiltinClosureM . lift . lift . lift
 
 raiseInconsistency :: Inconsistency -> BuiltinClosureM a
-raiseInconsistency incon = BuiltinClosureM $ left incon
+raiseInconsistency = raiseTypecheckError . TypecheckInconsistent
+
+raiseTypecheckError :: TypecheckError -> BuiltinClosureM a
+raiseTypecheckError err = BuiltinClosureM $ left err
 
 biBadOperandCount :: Int -> Int -> BuiltinClosureM a
 biBadOperandCount expected appeared =
@@ -156,10 +159,11 @@ computeBuiltinType = do
     demandMatch :: PatternType -> Int -> TVar -> BuiltinClosureM ConstraintSet
     demandMatch pat index a = do
       cs <- biCs
-      mbindings <- choose $ Set.toList $ findCompatibilityCases a cs pat mempty
-      case mbindings of
-        Nothing -> biBadOperandType index a
-        Just bindings -> return bindings
+      embindings <- choose $ Set.toList $ findCompatibilityCases a cs pat mempty
+      case embindings of
+        Left err -> raiseTypecheckError err
+        Right Nothing -> biBadOperandType index a
+        Right (Just bindings) -> return bindings
     demandInt :: Int -> TVar -> BuiltinClosureM ()
     demandInt = demandPrim PrimInt
     demandChar :: Int -> TVar -> BuiltinClosureM ()

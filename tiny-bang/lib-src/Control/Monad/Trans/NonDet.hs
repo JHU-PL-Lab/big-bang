@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, TupleSections #-}
 
 {-|
   Represents a monad transformer which describes multiple type flows.  This is
@@ -38,6 +38,9 @@ instance MonadReader r m => MonadReader r (NonDetT m) where
   ask = lift ask
   local f (NonDetT x) = NonDetT $ local f x
 
+-- NOTE: MonadWriter cannot be defined over NonDetT because listen and pass
+--       cannot be defined on it sensibly.
+  
 class (Monad m) => MonadNonDet m where
   choose :: (Foldable f) => f a -> m a
 

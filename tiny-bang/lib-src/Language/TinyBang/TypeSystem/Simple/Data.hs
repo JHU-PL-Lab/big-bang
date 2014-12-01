@@ -173,7 +173,8 @@ instance Display FilterType where
     TFConjunction x1 x2 -> makeDoc x1 <+> char '*' <+> makeDoc x2
 
 instance Display TypecheckError where
-  makeDoc = error "Language.TinyBang.TypeSystem.Simple.Data:makeDoc undefined" -- TODO
+  makeDoc err = case err of
+    TypecheckInconsistent incon -> makeDoc incon
 
 instance Display Inconsistency where
   makeDoc = const $ text "Inconsistent!" -- TODO

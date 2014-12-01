@@ -23,7 +23,7 @@ import Language.TinyBang.Utils.Logger
 
 $(loggingFunctions)
 
-computeClosure :: ConstraintSet -> (Set Inconsistency, ConstraintSet)
+computeClosure :: ConstraintSet -> (Set TypecheckError, ConstraintSet)
 computeClosure cs =
   _debugI (display $ text "Performing constraint closure on:" </>
                      indent 2 (makeDoc cs)) $ 
@@ -33,9 +33,9 @@ computeClosure cs =
     closeToFixedPoint x f =
       let out = f x in
       if x == out then out else closeToFixedPoint out f
-    closureStep :: (Set Inconsistency, ConstraintSet)
-                -> (Set Inconsistency, ConstraintSet)
-    closureStep (incons1, cs1) =
+    closureStep :: (Set TypecheckError, ConstraintSet)
+                -> (Set TypecheckError, ConstraintSet)
+    closureStep (errs1, cs1) =
       postLog _debugI (
         \(incons,constraints) ->
           display $ text "Constraint closure step gives constraints:" </>
@@ -44,10 +44,10 @@ computeClosure cs =
                       text "with inconsistencies:" </>
                       indent 2 (makeDoc incons)
       ) $
-      let (incons2, cs2) = singleClosurePass cs1 in
-      (incons1 `mappend` incons2, cs1 `mappend` cs2)
+      let (errs2, cs2) = singleClosurePass cs1 in
+      (errs1 `mappend` errs2, cs1 `mappend` cs2)
   
-singleClosurePass :: ConstraintSet -> (Set Inconsistency, ConstraintSet)
+singleClosurePass :: ConstraintSet -> (Set TypecheckError, ConstraintSet)
 singleClosurePass cs =
   mconcat $ map runClosureRule
     [ transitivityRule
@@ -56,7 +56,7 @@ singleClosurePass cs =
     ]
   where
     runClosureRule :: ClosureM ConstraintSet
-                   -> (Set Inconsistency, ConstraintSet)
+                   -> (Set TypecheckError, ConstraintSet)
     runClosureRule rule = second mconcat $ runClosureM rule cs
   
 transitivityRule :: ClosureM ConstraintSet
@@ -72,7 +72,7 @@ applicationRule = do
   cs <- Set.toList <$> unConstraintSet <$> ask
   ApplicationConstraint a0 a1 a2 <- choose cs
   matches <- findApplicationMatches a0 a1 <$> ask
-  match <- choose matches
+  match <- mergeTypecheckError $ choose matches
   case match of
     SuccessfulMatchResult
       { mrBodyRoot = a1'
@@ -85,7 +85,7 @@ applicationRule = do
       return $ mconcat [cs2', cs2'', ConstraintSet $ Set.singleton $ a2' <: a2]
     FailedMatchResult ->
       -- TODO: put info in the inconsistency type
-      reportInconsistency TODO_ReplaceMe_Inconsistency
+      reportTypecheckError $ TypecheckInconsistent TODO_ReplaceMe_Inconsistency
 
 builtinRule :: ClosureM ConstraintSet
 builtinRule = do

@@ -5,13 +5,15 @@ module Language.TinyBang.TypeSystem.Simple.Compatibility
 ) where
 
 import Control.Applicative
-import Control.Arrow ((***))
+import Control.Arrow ((***), first)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Monad.Trans.Either
 import Control.Monad.Trans.NonDet
+import Control.Monad.Writer hiding ((<>))
+import Data.Either
 import qualified Data.Foldable as Foldable
-import Data.Monoid hiding ((<>))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
@@ -38,18 +40,20 @@ findCompatibilityCases :: TVar
                        -> PatternTypeSet
                             -- ^The patterns which have been excluded and should
                             --  not match.
-                       -> Set (Maybe ConstraintSet)
-                            -- ^The resulting sets of constraints which
-                            --  represent successful compatibility proofs given
-                            --  the provided parameters.  A @Nothing@ indicates
-                            --  a case in which the argument did not match the
-                            --  provided binding pattern.
+                       -> Set (Either TypecheckError (Maybe ConstraintSet))
+                            -- ^The results of the compatibility check.  Each
+                            --  result is either a typechecking error (in the
+                            --  case of non-contractiveness) or a compatibility
+                            --  case.  A compatibility case of @Nothing@
+                            --  indicates an argument failing to match; a case
+                            --  of @Just@ indicates a successful match with
+                            --  specified bindings.
 findCompatibilityCases a cs pB psN =
   let cpatB = CompatibilityPattern pB True Nothing in
   let cpatsN = Seq.fromList $ map (makeCompatibilityPattern False False) $
                   Set.toList $ unPatternTypeSet psN in
   let x = compatibilityTVar a (cpatB <| cpatsN) DoBind in
-  Set.fromList $ map processResult $ runCompatM cs x
+  Set.fromList $ map (either Left $ Right . processResult) $ runCompatM cs x
   where
     processResult (bindings,answers) =
       let (ans :< _) = viewl answers in
@@ -57,14 +61,15 @@ findCompatibilityCases a cs pB psN =
 
 -- |A computable function to determine whether a given restricted type is
 --  "sensible" according to the theory.
-sensible :: FilteredType -> ConstraintSet -> Bool
+sensible :: FilteredType -> ConstraintSet -> [Either TypecheckError Bool]
 sensible (FilteredType t patsP patsN) cs =
   let cpatsP = Seq.fromList $ map (makeCompatibilityPattern False True) $
                   Set.toList $ unPatternTypeSet patsP in
   let cpatsN = Seq.fromList $ map (makeCompatibilityPattern False False) $
                   Set.toList $ unPatternTypeSet patsN in
   let x = compatibilityType t (cpatsP >< cpatsN) DoBind in
-  not $ Prelude.null $ runCompatM cs x
+  let (errs,results) = partitionEithers $ runCompatM cs x in
+  (Right $ not $ Prelude.null results) : map Left errs
 
 -- |A utility function shared by @findCompatibleBindings@ and @sensible@.
 makeCompatibilityPattern :: Bool -> Bool -> PatternType
@@ -75,16 +80,22 @@ makeCompatibilityPattern binding expectMatch pattern =
 -- |The compatibility monad.  The reader provides a global constraint set.
 --  Non-determinism is provided when lower bounds must be selected.
 newtype CompatM a
-  = CompatM { unCompatM :: ReaderT (Set CompatibilityOccurrence)
-                              (NonDetT (Reader ConstraintSet)) a
+  = CompatM { unCompatM :: EitherT TypecheckError
+                              (ReaderT (Set CompatibilityOccurrence)
+                                (NonDetT (Reader ConstraintSet))) a
             }
-  deriving ( Functor, Applicative, Monad, MonadPlus
+  deriving ( Functor, Applicative, Monad
            , MonadReader (Set CompatibilityOccurrence)
            , MonadNonDet)
 
-runCompatM :: ConstraintSet -> CompatM a -> [a]
+instance MonadPlus CompatM where
+  mzero = CompatM $ EitherT $ Right <$> mzero
+  mplus (CompatM (EitherT x)) (CompatM (EitherT y)) =
+    CompatM $ EitherT $ mplus x y
+           
+runCompatM :: ConstraintSet -> CompatM a -> [Either TypecheckError a]
 runCompatM cs x =
-  runReader (runNonDetT $ runReaderT (unCompatM x) Set.empty) cs
+  runReader (runNonDetT $ runReaderT (runEitherT $ unCompatM x) Set.empty) cs
 
 withOccurrence :: CompatibilityOccurrence -> CompatM a -> CompatM a
 withOccurrence occ = local (Set.insert occ)
@@ -94,6 +105,9 @@ hasOccurrence occ = Set.member occ <$> ask
 
 globalConstraints :: CompatM ConstraintSet
 globalConstraints = CompatM $ lift $ lift ask
+
+typecheckError :: TypecheckError -> CompatM a
+typecheckError = CompatM . left
 
 -- |A structure to describe the expectations of patterns as compatibility
 --  proceeds.

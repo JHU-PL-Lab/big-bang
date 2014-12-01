@@ -3,8 +3,6 @@ module Language.TinyBang.TypeSystem.Simple.Typechecker
 ( simpleTypeSystem
 ) where
 
-import qualified Data.Set as Set
-
 import Language.TinyBang.Ast
 import Language.TinyBang.TypeSystem.Contours
 import Language.TinyBang.TypeSystem.Interface
@@ -29,8 +27,8 @@ simpleTypecheck expr =
   let f = polyinstFnForConstraintSetWithContour cs initialContour in
   let cs' = substituteVars f cs in
   _debugI (display $ text "Performing constraint closure on" <+> makeDoc cs') $
-  let (incons,cs'') = computeClosure cs' in
+  let (errs,cs'') = computeClosure cs' in
   TypecheckResult
     { allConstraints = cs''
-    , typeErrors = Set.map TypecheckInconsistent incons
+    , typeErrors = errs
     }
