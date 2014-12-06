@@ -37,6 +37,7 @@ import qualified Language.TinyBangNested.Ast as TBN
   'class'       { Token (SomeToken TokClass $$) }
   'getChar'     { Token (SomeToken TokGetChar $$) }
   'putChar'     { Token (SomeToken TokPutChar $$) }
+  'import'      { Token (SomeToken TokImport $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -81,10 +82,14 @@ import qualified Language.TinyBangNested.Ast as TBN
 %left '&'
 %right 'putChar'
 
+%name parseModule Module
 %name parseProgram Program
 %name parsePattern Pattern
 
 %%
+
+Module :: { SPositional Module }
+  : ModuleTermList          { oc1 $1 $> Module $1 }
 
 Program :: { SPositional Expr }
   : Expr eof                { $1 }
@@ -197,6 +202,17 @@ Arg :: { SPositional Arg }
   : Expr                    { oc1 $1 $> PositionalArg $1 }
   | Ident '=' Expr          { oc2 $1 $> NamedArg $1 $3 }
 
+ModuleTermList :: { VPositional [ModuleTerm] }
+  : many( ModuleTerm )      { $1 }
+
+ModuleTerm :: { SPositional ModuleTerm }
+  : Ident '(' ParamList ')' '=' Expr
+                            { oc3 $1 $> ModuleFunction $1 $3 $6 }
+  | Ident '()' '=' Expr
+                            { oc3 $1 $> ModuleFunction $1 (vpos []) $4 }
+  | Ident '=' Expr          { oc2 $1 $> ModuleField $1 $3 }
+  | 'import' ident          { oc1 $1 $> ModuleImport $2 }
+
 ObjTermList :: { VPositional [ObjectTerm] }
   : many( ObjTerm )         { $1 }
 
@@ -239,6 +255,10 @@ many1SepOpt(p,s)
   | p s many1SepOpt(p,s)    { posOver $1 $> $ posData $1 : posData $3 }
 
 {
+
+parseLittleBangModule :: SourceDocument -> [Token] -> Either String Module 
+parseLittleBangModule _ toks =
+    posData <$> parseModule toks
 
 parseLittleBang :: SourceDocument -> [Token] -> Either String Expr
 parseLittleBang _ toks =

@@ -40,6 +40,7 @@ tokens :-
   class                        { simply TokClass }
   getChar                      { simply TokGetChar }
   putChar                      { simply TokPutChar }
+  import                       { simply TokImport }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }

@@ -60,6 +60,7 @@ data TokenType a where
   TokCons :: TokenType () -- @::@
   TokGetChar :: TokenType () -- @getChar@
   TokPutChar :: TokenType () -- @putChar@
+  TokImport :: TokenType ()
   -- TODO: what about list patterns (e.g. "...")?
 
 instance TokenDisplay TokenType where
@@ -107,6 +108,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokCons _) -> text "::"
     Token (SomeToken TokGetChar _) -> dquotes $ text "getChar"
     Token (SomeToken TokPutChar _) -> dquotes $ text "putChar"
+    Token (SomeToken TokImport _) -> dquotes $ text "import"
     Token (SomeToken TokDot _) -> text "."
     Token (SomeToken TokTilde _) -> text "~"
 

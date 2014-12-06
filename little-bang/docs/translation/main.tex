@@ -1,19 +1,10 @@
 \documentclass{article}
 \usepackage{mathtools}
 \usepackage{stmaryrd}
+\usepackage{relsize}
 \usepackage{listings}
 
-\newcommand{\setlb}{%
-    \lstset{%
-        basicstyle=\small\ttfamily,%
-        numbers=none,%
-        firstnumber=auto,%
-    }%
-}
-\lstnewenvironment{code}%
-    {\setlb}%
-    {}%
-\newcommand{\lbil}{\setlb\lstinline[mathescape]}
+\input{macros}
 
 \setlength{\parindent}{0cm}
 
@@ -37,32 +28,32 @@ Within a translation, we use the symbol $\fresh{n}$ to denote the $n$th fresh va
 \vspace*{3mm}
 \secheader{Expressions}
 
-\translate{e}{fun $P_1$,$\ldots$,$P_n$ -> $e$} = \verb|fun |\translate{P}{$P_1$}\verb| & |$\ldots$\verb| & |\translate{P}{$P_n$}\verb| -> |\translate{e}{$e$} \\
-\translate{e}{$x$\texttt{(}$a_1$,$\ldots$,$a_n$\texttt{)}} = $x$\verb| (|\translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\verb|)|\\
-\translate{e}{if $e_1$ then $e_2$ else $e_3$} = \verb|((`True () -> |\translate{e}{$e_2$}\verb|) & (`False () -> |\translate{e}{$e_3$}\verb|)) |\translate{e}{$e_1$}\\
-\translate{e}{[$e_1$,$...$,$e_n$]} = \verb|`Hd |\translate{e}{$e_1$}\verb| & `Tl (...(`Hd |\translate{e}{$e_n$}\verb| & `Tl `Nil ()))|\\
-\translate{e}{$e_1$; $e_2$} = \verb|(|\fresh{1}\verb| -> |\translate{e}{$e_2$}\verb|) |\translate{e}{$e_1$}\\
-\translate{e}{$e_1$ :: $e_2$} = \verb|`Hd |\translate{e}{$e_1$}\verb| & `Tl |\translate{e}{$e_2$}\\
-\translate{e}{\char`\{$a_1$,$\ldots$,$a_n$\char`\}} = \translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\\
-\translate{e}{object \char`\{$m_1$ $\ldots$ $m_n$\char`\}} = \verb|seal (|\translate{m}{$m_1$}\verb| & ... & |\translate{m}{$m_n$}\verb|)|\\
-\translate{e}{$e$.$x$} = \verb|(fun `$|$x~x$\verb| -> |$x$\verb|) (|$e$\verb|)| \\
-\translate{e}{$e$.$m$($a_1$,$\ldots$,$a_n$)} = $e$\verb! (!\translate{a}{$a_1$}\verb| & ... & |\translate{a}{$a_n$}\verb!)! \\
+\translate{e}{fun $P_1$,$\ldots$,$P_n$ -> $e$} = \lbil!fun !\bigamp{i=1}{n}\translate{P}{$P_i$} \lbil!->! \translate{e}{$e$} \\
+\translate{e}{$x$\texttt{(}$a_1$,$\ldots$,$a_n$\texttt{)}} = $x$\lbil!(! \bigamp{i=1}{n}\translate{a}{$a_i$}\lbil!)!\\
+\translate{e}{if $e_1$ then $e_2$ else $e_3$} = \lbil!((`True () -> !\translate{e}{$e_2$}\lbil!) & (`False () -> !\translate{e}{$e_3$}\lbil!)) !\translate{e}{$e_1$}\\
+\translate{e}{[$e_1$,$...$,$e_n$]} = \listhd \translate{e}{$e_1$}\lbonion\listtl \lbil!(...(!\listhd\translate{e}{$e_n$}\lbonion\listtl \lbil!`Nil ()))!\\
+\translate{e}{$e_1$; $e_2$} = \lbil!(!\fresh{1} \lbil!->! \translate{e}{$e_2$}\lbil!)! \translate{e}{$e_1$}\\
+\translate{e}{$e_1$ :: $e_2$} = \listhd\translate{e}{$e_1$}\lbonion\listtl\translate{e}{$e_2$}\\
+\translate{e}{\char`\{$a_1$,$\ldots$,$a_n$\char`\}} = \bigamp{i=1}{n} \translate{a}{$a_i$}\\
+\translate{e}{object \char`\{$m_1$ $\ldots$ $m_n$\char`\}} = \lbseal\lbil!(!\bigamp{i=1}{n} \translate{m}{$m_i$}\lbil!)!\\
+\translate{e}{$e$.$x$} = \lbil!(fun `!$x~x$ \lbil!->! $x$\lbil!) (!$e$\lbil!)! \\
+\translate{e}{$e$.$m$($a_1$,$\ldots$,$a_n$)} = $e$\lbil!(!\bigamp{i=1}{n}\translate{a}{$a_i$}\lbil!)! \\
 
 \secheader{Parameters}
 
-\translate{P}{$x$} = \verb|(`$|$x\texttt{ }x$\verb|)| \\
-\translate{P}{$x$:$p$} = \verb|(`$|$x$\verb! (!$x$\verb| & |\translate{p}{$p$}\verb|))| \\
+\translate{P}{$x$} = \verb|(`|$x\texttt{ }x$\verb|)| \\
+\translate{P}{$x$:$p$} = \verb|(`|$x$\verb! (!$x$\verb| & |\translate{p}{$p$}\verb|))| \\
 
 \secheader{Patterns}
 
-\translate{p}{[$p_1$,$...$,$p_n$]} = \verb|`Hd |\translate{p}{$p_1$}\verb| & `Tl (`Hd |\translate{p}{$p_2$}\verb| & |$\ldots$\verb| `Tl `Nil ()|$\ldots$\verb|)| \\
+\translate{p}{[$p_1$,$...$,$p_n$]} = \listhd\translate{p}{$p_1$}\lbonion\listtl \lbil!(!\listhd\translate{p}{$p_2$} \listtl $\ldots$\listtl\lbil!`Nil ()!$\ldots$\lbil!)! \\
 
 \secheader{Arguments}
 
-\translate{a}{$x$=$e$} = \verb|`$|$x$\verb| |\translate{e}{$e$} \\
+\translate{a}{$x$=$e$} = \bt$x$\verb| |\translate{e}{$e$} \\
 
 \secheader{Members}
 
-\translate{m}{$x$=$e$} = \verb|`$|$x$\verb| |\translate{e}{$e$} \\
-\translate{m}{$x$($P_1$,$\ldots$,$P_n$)=$e$} = \verb|fun |\translate{P}{$P_1$}\verb| & |$\ldots$\verb| & |\translate{P}{$P_n$}\verb| -> |\translate{e}{$e$} \\
+\translate{m}{$x$=$e$} = \bt$x$\verb| |\translate{e}{$e$} \\
+\translate{m}{$x$($P_1$,$\ldots$,$P_n$)=$e$} = \lbil!fun !\bigamp{i=1}{n}\translate{P}{$P_i$} \lbil!->! \translate{e}{$e$} \\
 \end{document}

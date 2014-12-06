@@ -58,6 +58,7 @@ data Redex
   | Builtin Origin BuiltinOp [Var]
   | GetChar Origin
   | PutChar Origin Var
+  | Load Origin String
   deriving (Show)
 
 -- |A data type enumerating the builtins supported by the semantics.
@@ -184,6 +185,7 @@ instance Display Redex where
       makeDoc bop <+> sepDoc (char ' ') (map makeDoc xs)
     GetChar _ -> text "getChar"
     PutChar _ _ -> text "putChar"
+    Load _ n -> text "load" <+> text n
 
 instance Display BuiltinOp where
   makeDoc o = case o of
@@ -285,6 +287,7 @@ instance HasOrigin Redex where
     Builtin orig _ _ -> orig
     GetChar orig -> orig
     PutChar orig _ -> orig
+    Load orig _ -> orig
 
 instance HasOrigin Value where
   originOf x = case x of

@@ -10,8 +10,10 @@ module Language.LittleBang.Ast.Data
 , LabelName(..)
 , ObjectTerm(..)
 , ClassTerm(..)
-, unLabelName
+, Module(..)
+, ModuleTerm(..)
 , PrimitiveType(..)
+, unLabelName
 ) where
 
 import Control.Applicative
@@ -91,6 +93,23 @@ data ClassTerm
   = ClassInstanceProperty Origin ObjectTerm
   | ClassStaticProperty Origin ObjectTerm
   deriving (Show)
+
+data Module = Module Origin [ModuleTerm]
+
+data ModuleTerm
+  = ModuleField Origin Ident Expr
+  | ModuleFunction Origin Ident [Param] Expr
+  | ModuleImport Origin String
+  | ModuleDiffExprAdapter Origin (Expr -> Expr) -- FIXME more nasty hacks :(
+
+-- We need to manually define Show for ModuleTerm
+-- since Expr -> Expr is not showable
+instance Show ModuleTerm where
+  show x = case x of
+    ModuleField o i e -> "ModuleField(" ++ (show o) ++ ", " ++ (show i) ++ ", " ++ (show e) ++ ")"
+    ModuleFunction o i p e -> "ModuleFunction(" ++ (show o) ++ ", " ++ (show i) ++ ", " ++ (show p) ++ ", " ++ (show e) ++ ")"
+    ModuleImport o s -> "ModuleImport(" ++ (show o) ++ s ++ ")"
+    ModuleDiffExprAdapter o _ -> "ModuleDiffExprAdapter(" ++ (show o) ++ ", <fun>)"
 
 data Ident
   = Ident Origin String
@@ -176,6 +195,17 @@ instance HasOrigin ObjectTerm where
     ObjectMethod orig _ _ _ -> orig
     ObjectField orig _ _ -> orig
 
+instance HasOrigin ClassTerm where
+  originOf x = case x of
+    ClassInstanceProperty orig _ -> orig
+    ClassStaticProperty orig _ -> orig
+
+instance HasOrigin ModuleTerm where
+  originOf x = case x of
+    ModuleField orig _ _ -> orig
+    ModuleFunction orig _ _ _ -> orig
+    ModuleImport orig _ -> orig
+
 instance HasOrigin LabelName where
   originOf x = case x of
     LabelName orig _ -> orig
@@ -253,6 +283,16 @@ instance Display ClassTerm where
   makeDoc tm = case tm of
     ClassInstanceProperty _ p -> makeDoc p
     ClassStaticProperty _ p -> text "~" <> makeDoc p
+
+instance Display ModuleTerm where
+  makeDoc tm = case tm of
+    ModuleFunction _ n params e ->
+      text "method" <+> makeDoc n <>
+      encloseSep lparen rparen comma (map makeDoc params) <+> text "=" <+>
+      makeDoc e
+    ModuleField _ n e ->
+      makeDoc n <+> text "=" <+> makeDoc e
+    ModuleImport _ s -> text "import" <+> text s
 
 instance Display Ident where
   makeDoc x = case x of

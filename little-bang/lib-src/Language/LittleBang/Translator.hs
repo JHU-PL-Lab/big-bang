@@ -4,6 +4,7 @@ module Language.LittleBang.Translator
 
 import Data.List
 import Data.Maybe
+import qualified Data.Set as S
 
 import Control.Applicative
 import Control.Monad.State
@@ -28,9 +29,11 @@ desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
 desugarLittleBang expr =
   let desugarAllExpr = foldl1 (>=>) exprDesugarers in -- Note: there is a monoid alternative
   let desugarAllPat = foldl1 (>=>) patDesugarers in
+  let desugarAllMod = foldl1 (>=>) modDesugarers in
   let desugarContext = DesugarContext
         { desugarExprFn = desugarAllExpr,
-          desugarPatFn  = desugarAllPat
+          desugarPatFn  = desugarAllPat,
+          desugarModFn  = desugarAllMod
         } in
   runDesugarM desugarContext $ walkExprTree expr
   --runDesugarM (return expr >>= walkExprTree)
@@ -56,20 +59,36 @@ desugarLittleBang expr =
       [ desugarPatList
       , desugarPatCons
       ]
+    modDesugarers :: [LB.ModuleTerm -> DesugarM LB.ModuleTerm]
+    modDesugarers =
+      [ desugarModField
+      , desugarModFunction
+      , desugarModImport
+      ]
 
 runDesugarM :: DesugarContext -> DesugarM a -> Either DesugarError a
-runDesugarM ctx x = fst <$> runStateT (runReaderT x ctx) (DesugarState 0)
+runDesugarM ctx x = fst <$> runStateT (runReaderT x ctx) (DesugarState 0 S.empty S.empty)
+
+type NameSet = S.Set LB.Ident
 
 type DesugarM = ReaderT (DesugarContext) (StateT DesugarState (Either DesugarError))
 type DesugarError = String
 
 type DesugarFunction a = a -> DesugarM a
 
-data DesugarState = DesugarState { freshVarIdx :: Int }
+-- qm <- fieldDefns <$> get
+-- qf <- funcDefns <$> get
+-- can be used in desugaring of various module terms
+data DesugarState = DesugarState
+    { freshVarIdx :: Int
+    , fieldDefns :: NameSet
+    , funcDefns :: NameSet
+    }
 data DesugarContext
   = DesugarContext
       { desugarExprFn :: DesugarFunction LB.Expr
       , desugarPatFn :: DesugarFunction LB.Pattern
+      , desugarModFn :: DesugarFunction LB.ModuleTerm
       }
 
 -- | Apply desugarers to the entire AST
@@ -231,6 +250,73 @@ walkClassTermTree term =
       LB.ClassInstanceProperty o <$> walkObjTermTree p
     LB.ClassStaticProperty o p ->
       LB.ClassStaticProperty o <$> walkObjTermTree p
+
+walkModTermTree :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
+walkModTermTree term =
+  case term of
+    LB.ModuleField o n e ->
+      LB.ModuleField o n <$> walkExprTree e
+    LB.ModuleFunction o n params e ->
+      LB.ModuleFunction o n
+        <$> mapM walkParamTree params
+        <*> walkExprTree e
+    -- ModuleImport doesn't need to be recursed into
+    _ -> return term
+
+-- | Translate a module into an onion
+desugarModule :: LB.Module -> DesugarM LB.Expr
+desugarModule (LB.Module o tms) =
+  do
+    f <- desugarModFn <$> ask
+    let start = LB.TExprLet o (LB.Ident o "mod") (LB.TExprValEmptyOnion o)
+    let end = LB.TExprVar o (LB.Ident o "mod")
+    let stackFn = foldl1 (liftM2 (.)) . (map $ (\x -> diffExpr <$> f x))
+    stack <- stackFn tms
+    return $ (start . stack) end
+  where
+  diffExpr (LB.ModuleDiffExprAdapter _ f) = f
+
+desugarModField :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
+desugarModField tm =
+  case tm of
+    LB.ModuleField o n e ->
+      let (LB.Ident _ x) = n in
+      do
+          sealing <- mseal o (LB.TExprVar o (LB.Ident o "$modraw"))
+          let termExpr = LB.TExprLet o n e
+          let modrawExpr = (LB.TExprLet o
+                (LB.Ident o "$modraw")
+                (LB.TExprOnion o
+                    (LB.TExprLabelExp o
+                        (LB.LabelName o x)
+                        (LB.TExprVar o n)
+                    )
+                    (LB.TExprVar o (LB.Ident o "$modraw"))
+                ))
+          let modExpr = (LB.TExprLet o (LB.Ident o "mod") sealing) 
+          (DesugarState a qm b) <- get
+          -- update Qm
+          _ <- if (n `S.member` qm) then return () else put (DesugarState a (S.insert n qm) b)
+          return $ LB.ModuleDiffExprAdapter o $ foldl1 (.) [termExpr, modrawExpr, modExpr]
+                    
+    _ -> return tm
+
+desugarModFunction :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
+desugarModFunction tm =
+  case tm of
+  LB.ModuleFunction o n a e ->
+    do
+      (DesugarState a b qf) <- get
+      if (n `S.member` qf)
+          then
+          -- TODO type it allllll out.
+          return tm
+          else
+          return tm
+  _ -> return tm
+
+desugarModImport :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
+desugarModImport tm = return tm
 
 -- |Desugar (if e1 then e2 else e3)
 -- For en' := desugar en
@@ -656,6 +742,26 @@ seal o e = -- parse this function directly until we have a prelude/stdlib for se
       -- TODO: generate an appropriate error once DesugarM supports desugaring
       --       failures.
       error $ "Failed to parse seal function: " ++ msg
+    Right sealExpr ->
+      return $ LB.TExprAppl o (tbnLift sealExpr) e
+
+--TODO clean this up
+mseal :: TB.Origin -> LB.Expr -> DesugarM LB.Expr
+mseal o e = -- parse this function directly until we have a prelude/stdlib for seal to load from
+  -- generating seal directly until we have a prelude or stdlib to use
+  let src =
+        "(fun body -> (fun wrapper -> fun arg -> wrapper wrapper arg) (fun this -> fun arg -> body (this this) arg)) " ++
+        "(fun mseal -> fun obj -> (fun msg -> obj (msg & `mod (mseal obj))) & obj)" in
+  let eitherAst = do -- Either
+          tokens <- lexTinyBangNested UnknownDocument src
+          parseTinyBangNested UnknownDocument tokens
+  in
+  case eitherAst of
+    Left msg ->
+      -- This should never happen.
+      -- TODO: generate an appropriate error once DesugarM supports desugaring
+      --       failures.
+      error $ "Failed to parse mseal function: " ++ msg
     Right sealExpr ->
       return $ LB.TExprAppl o (tbnLift sealExpr) e
           

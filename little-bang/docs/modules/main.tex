@@ -34,7 +34,7 @@
 % 	let mod = mseal $modraw in [?]
 %
 % 
-\indent It is natural to be able to extend our encoding of objects and classes into modules. In many languages, modules and objects have largely similar properties, as containers for values and self-aware functions. We extend this definition to give modules limited self-awareness in fields as well.\\
+\indent It is natural to be able to extend our encoding of objects and classes into modules. In many languages, modules and objects have largely similar properties, as containers for fields and self-aware functions. We extend this definition to give modules limited self-awareness in fields as well: any field is aware of all fields and functions defined before it.\\
 \indent In order to encode this, we introduce the concept of a \textit{let-stack} which allows us to build up a module one member at a time.
 \begin{figure}[h]
 \secheader{Module declaration}\\
@@ -67,7 +67,7 @@ $\left\langle
 	\texttt{mod} & \texttt{mseal \$modraw} & $\boxdot$ \\
 \end{tabular}
 \;, Q_m
-\;, \{x\}\cup Q_f
+\;, Q_f
 \right\rangle x \in Q_f$
 \end{figure}\\
 \indent This desugaring is notably more involved than other basic desugarings, and this is for a variety of reasons. First is that the desugaring \translate{d}{d} returns incomplete expressions; in other words, \translate{d}{d} $\colon e \rightarrow e$. Each declaration fills the hole of the previous declaration, with the final one being filled by the variable \texttt{mod}. The whole structure is prepended by \texttt{let mod = () in }. This has a convenient implementation similar to the familiar construction of a DiffList.
@@ -85,7 +85,7 @@ type DiffLet = Expr -> Expr
 
 This representation is surprisingly convenient: a function which builds a simple let-stack can be implemented as \hsil!(foldl1 $\diffhat{in}$) . (map $\diffhat{let}$)!. Inserting lines with \texttt{let \$modraw = ...} and \texttt{let mod = ...} simply require a modified definition of \diffhat{let}.\\
 \indent While the lines beginning with \texttt{let} $x \ldots$ are rather self explanatory, the definitions of \texttt{\$modraw} and \texttt{mod} are present in order to express the notion of limited self-awareness discussed above. At the time of desugaring of the declaration $d_i$, \translate{d}{$d_1$}$\cdots$\translate{d}{$d_{i-1}$} are projectable from a variable \texttt{mod}. The intermediate definition of \texttt{\$modraw} is introduced to prevent resealing existing definitions of \texttt{mod}, so that each \texttt{mod} has only one \texttt{mseal} invocation.\\
-\indent Lastly, each desugaring operates over a pair of sets $Q_m, Q_f$ in addition to expressions. These sets accumulate the names of defined fields and functions, respectively. These sets allow us to make a distinction between the definition of a name and the \emph{re}definition of a name. For field redefinition, we overwrite the previous definition regardless, whereas function redefinitions are onioned onto old definitions if they exist. The sets $Q_m, Q_f$ have further applications, explored in \S \ref{sss-mod-name-binding}.
+\indent Lastly, each desugaring operates over a pair of sets $Q_m, Q_f$ in addition to expressions. These sets accumulate the names of defined fields and functions, respectively. These sets allow us to make a distinction between the definition of a name and the \emph{re}definition of a name. For field redefinition, we overwrite the previous definition regardless, whereas function definitions are onioned onto old definitions if they exist. The sets $Q_m, Q_f$ have further applications, explored in \S \ref{sss-mod-name-binding}.
 \subsection{Importing}
 \label{ss-mod-imports}
 % load holds a mapping M from names to modules
@@ -96,14 +96,14 @@ This representation is surprisingly convenient: a function which builds a simple
 			 LBModuleTerm
 		\gor LBImport
 	}
-	\\
 	\grule[]{LBImport}{\lbimport LBModuleName}
+	\\
 	\grule[TinyBang loads]{TBRedex}{
 			 TBRedex
 		\gor TBLoad
 	}
-	\\
 	\grule[]{TBLoad}{\lbload ModuleName}
+	\\
 	\grule[Module names]{ModuleName}{
 			 ident
 		\gor ident\moddot ModuleName
@@ -121,7 +121,7 @@ $\mathlarger{\frac{M[n] = \langle v, Q_{m}, Q_{f}\rangle}{\lbload n \longrightar
 \caption{The operational semantics of the \lbload operator}
 \label{fig-opsem-load}
 \end{figure}
-\indent The operational semantics of \lbload are shown in Figure~\ref{fig-opsem-load}. TODO make a nicer figure. The mapping $M$ is implicit in the semantics of \lbload . $M$ is a mapping from module names to onions, and how it is constructed is left up to implementation. This intentional vagueness allows for the inclusion of additions to the LittleBang software stack such as a package manager. In our implementation, module names directly represent file paths from some global root directory. With \lbload available, we are now able to define a desugaring for the \lbimport expression.
+\indent The operational semantics of \lbload are shown in Figure~\ref{fig-opsem-load}. TODO make a nicer figure. The definition and existence of the mapping $M$ are implicit in the semantics of \lbload . $M$ is a mapping from module names to onions, and how it is constructed is left up to implementation. This intentional vagueness allows for the easy inclusion of additions to the LittleBang software stack such as a package manager. In our implementation, module names directly represent file paths from some global root directory. With \lbload available, we are now able to define a desugaring for the \lbimport expression.
 \subsubsection{Global Namespace Subtrees}
 \label{sss-glob-name-subtr}
 \indent Consider the list of \lbimport statements shown in Figure ~\ref{fig-mod-import-subtree}. We cannot represent the first import as a value with the label \bt\lbil!util.time.timedelta!, as this is not a syntactically valid name for a label. Instead, our value may have a structure akin to \lbil!`util `time `timedelta!. In matching with the desugaring of general module fields (which is identical to that of object fields), this statement could also be written as \lbil!util = `time `timedelta ...!.\\
@@ -156,5 +156,5 @@ In the above example, our imported modules must ultimately be referred to by the
 	& \lbimport $LBModuleName$ \texttt{as} $ident$\\
 \end{tabular}
 \end{figure}
-The behavior we defined in Figure~\ref{fig-mod-import-trans} maps to the \lbimportq statement; this is the most specific form of import which can be written. 
+The behavior we defined in Figure~\ref{fig-mod-import-trans} maps to the \lbimportq statement; this is the most specific form of import which can be written. The \lbimporta statement represents the feature described in the above paragraph, in which a specific module is bound to an arbitrary name. The basic \lbimport is a special case: \lbimport $z_1\cdots z_n = $ \lbimport $z_1\cdots z_n$ \texttt{as} $z_n$.
 \end{document}
