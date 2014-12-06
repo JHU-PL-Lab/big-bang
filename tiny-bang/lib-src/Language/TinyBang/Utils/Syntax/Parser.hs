@@ -11,6 +11,8 @@ module Language.TinyBang.Utils.Syntax.Parser
 , oc1
 , oc2
 , oc3
+, oc4
+, oc5
 
 , oc1S
 , oat
@@ -80,7 +82,7 @@ oc2 s1 s2 f a1 a2 =
   let ss = posSpan s1 <--> posSpan s2 in
   spos ss $ f (SourceOrigin ss) (posData a1) (posData a2)
 
--- |A version of @oc2@ for constructors with /one/ additional argument rather
+-- |A version of @oc2@ for constructors with /three/ additional arguments rather
 --  than two.
 oc3 :: SPositional s1
     -> SPositional s2
@@ -92,6 +94,37 @@ oc3 :: SPositional s1
 oc3 s1 s2 f a1 a2 a3 =
   let ss = posSpan s1 <--> posSpan s2 in
   spos ss $ f (SourceOrigin ss) (posData a1) (posData a2) (posData a3)
+
+-- |A version of @oc2@ for constructors with /four/ additional arguments rather
+--  than two.
+oc4 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> a1 -> a2 -> a3 -> a4 -> r)
+    -> Positional f1 a1
+    -> Positional f2 a2
+    -> Positional f3 a3
+    -> Positional f4 a4
+    -> SPositional r
+oc4 s1 s2 f a1 a2 a3 a4 =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss) (posData a1) (posData a2) (posData a3)
+              (posData a4)
+
+-- |A version of @oc2@ for constructors with /five/ additional arguments rather
+--  than two.
+oc5 :: SPositional s1
+    -> SPositional s2
+    -> (Origin -> a1 -> a2 -> a3 -> a4 -> a5 -> r)
+    -> Positional f1 a1
+    -> Positional f2 a2
+    -> Positional f3 a3
+    -> Positional f4 a4
+    -> Positional f5 a5
+    -> SPositional r
+oc5 s1 s2 f a1 a2 a3 a4 a5 =
+  let ss = posSpan s1 <--> posSpan s2 in
+  spos ss $ f (SourceOrigin ss) (posData a1) (posData a2) (posData a3)
+              (posData a4) (posData a5)
 
 -- |A utility for handling tokens which represent single-token AST subtrees.
 oc1S :: (Origin -> a -> r) -> SPositional a -> SPositional r

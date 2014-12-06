@@ -3,20 +3,22 @@ module Test.TinyBangNested.SourceFile
 , TinyBangNestedSourceFileTestConfig(..)
 ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.List
 import Data.List.Split (splitOn)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Test.HUnit
 
 import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
+import Language.TinyBang.TypeSystem
 import Language.TinyBang.Utils.Syntax.Location
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
-import Language.TinyBang.TypeSystem.TypeInference
 import Language.TinyBang.Utils.Display
 import Language.TinyBangNested.Ast as TBN
 import Language.TinyBangNested.ATranslator
@@ -33,7 +35,7 @@ import Test.TinyBangNested.SourceFile.Expectation
 data TinyBangNestedSourceFileTestConfig
   = TinyBangNestedSourceFileTestConfig
       { tbnsftFilter :: Maybe String
-      , tbnsftDatabase :: SomeDisplayableConstraintDatabase
+      , tbnsftTypeSystem :: TypeSystem
       }
 
 testsPath :: FilePath
@@ -42,8 +44,7 @@ testsPath = "tests"
 generateTests :: TinyBangNestedSourceFileTestConfig -> IO Test
 generateTests (TinyBangNestedSourceFileTestConfig
                 { tbnsftFilter = configFilter
-                , tbnsftDatabase =
-                    SomeDisplayableConstraintDatabase configDatabase
+                , tbnsftTypeSystem = ts
                 }) =
   let sftConfig = SourceFileTestConfig
                     { sftDirectory = testsPath
@@ -76,7 +77,7 @@ generateTests (TinyBangNestedSourceFileTestConfig
       tokens <- hoistEither $ lexTinyBangNested doc source
       ast <- hoistEither $ parseTinyBangNested doc tokens
       let tbAst = aTranslate ast
-      let tcResult = typecheck' configDatabase tbAst
+      let tcResult = typecheck' tbAst
       case expectation of
         ExpectMatches pattern patSrc -> do
           -- We're going to build a catch-all scape that determines whether or
@@ -135,6 +136,9 @@ generateTests (TinyBangNestedSourceFileTestConfig
               left $ "Expected type failure but typechecking produced a " ++
                      "valid database: " ++ display db
       where
-        typecheck' :: (ConstraintDatabase db, Display db)
-                   => db -> TBA.Expr -> Either (TypecheckingError db) db
-        typecheck' _ = typecheck
+        typecheck' :: TBA.Expr -> Either (Set TypecheckError) ConstraintSet
+        typecheck' expr = do
+          let result = typecheck ts expr
+          unless (Set.null $ typeErrors result) $ Left $ typeErrors result
+          return $ allConstraints result
+

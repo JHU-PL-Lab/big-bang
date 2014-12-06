@@ -1,22 +1,24 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleContexts, UndecidableInstances, FlexibleInstances, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
 module Language.TinyBang.Ast.WellFormedness
 ( checkWellFormed
 , IllFormedness(..)
 ) where
 
-import Control.Applicative
+import Control.Monad
+import Control.Monad.Writer hiding ((<>))
+import Control.Monad.Trans.Either
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Monoid
-import Language.Haskell.TH (mkName)
 
 import Language.TinyBang.Ast.Data
 import Language.TinyBang.Ast.Origin
 import Language.TinyBang.Utils.Display
-import Language.TinyBang.Utils.TemplateHaskell.Reduce
+import Language.TinyBang.Utils.Logger
+
+$(loggingFunctions)
 
 -- |A data structure representing types of ill-formed expressions.
 data IllFormedness
@@ -24,142 +26,178 @@ data IllFormedness
       -- ^Generated when a variable is declared twice.
   | OpenExpression (Set Var)
       -- ^Generated when the expression is not closed.
+  | OpenPattern (Set Var)
+      -- ^Generated when a pattern is not closed.
   | EmptyExpression Origin
       -- ^Generated when an empty expression (an expression with no clauses) is
       --  encountered
-  | EmptyPattern Origin
-      -- ^Generated when an empty pattern (a pattern with no clauses) is
-      --  encountered.
+  | RefPatternNotExactlyEmpty Var
+      -- ^Generated when a ref pattern has anything other than an empty
+      --  pattern beneath it.
   deriving (Eq, Ord, Show)
 
 instance Display IllFormedness where
   makeDoc ill = case ill of
     DuplicateDefinition x -> text "Duplicate definition:" <+> makeDoc x
     OpenExpression xs -> text "Expression is open in:" <+> makeDoc xs
+    OpenPattern xs -> text "Pattern is open in:" <+> makeDoc xs
     EmptyExpression o -> text "Empty expression at:" <+> makeDoc o
-    EmptyPattern o -> text "Empty pattern at:" <+> makeDoc o
+    RefPatternNotExactlyEmpty x ->
+      text "Ref pattern not empty at:" <+> makeDoc x
 
 checkWellFormed :: Expr -> Set IllFormedness
 checkWellFormed e =
-  Set.unions checks
+  let (out,ills,varCounts) = runWellFormedM executeChecks in
+  let dupeVars =
+        filter (\x -> snd x > 1) $ Map.toList $ unVarCountMap varCounts in
+  Set.unions
+    [ ills
+    , either id (const Set.empty) out
+    , Set.fromList $ map (DuplicateDefinition . fst) dupeVars
+    ]
   where
-    checks :: [Set IllFormedness]
-    checks =
-      [
-        -- Check to see if any variables are defined as duplicates
-        Set.map DuplicateDefinition $
-          Set.fromList (map fst $ filter ((> 1) . snd) $
-            Map.toList $ unVarCountMap $ countVariableBindings e)
-      , -- Check to see if any variables are free
-        let free = findFreeVariables e in
-        if Set.null free then Set.empty else Set.singleton $ OpenExpression free
-      ]
+    executeChecks :: WellFormedM ()
+    executeChecks = do
+      (_,free) <- boundAndFreeVarsOfExpr e
+      unless (Set.null free) $
+        reportIllFormednesses $ Set.singleton $ OpenExpression free
 
--- |A routine to locate all variables bound by the provided expression.
-countVariableBindings :: Expr -> VarCountMap
-countVariableBindings = reduce CountVariableBindings
-
-data CountVariableBindings = CountVariableBindings
-newtype VarCountMap = VarCountMap (Map Var Int)
-unVarCountMap :: VarCountMap -> Map Var Int
-unVarCountMap (VarCountMap m) = m
-
--- |A routine to locate variables free in the provided expression.
-findFreeVariables :: Expr -> Set Var
-findFreeVariables e = fvdFree $ reduce FindFreeVariables e
-
-data FindFreeVariables = FindFreeVariables
-data FreeVarData = FreeVarData
-  { fvdBound :: Set Var
-  , fvdFree :: Set Var
-  }
-
--- == Template Haskell jiggery-pokery begins here == ---------------------------
-
--- For countVariableBindings ---------------------------------------------------
+-- |Defines a monoid for a variable counting map which merges by addition.
+newtype VarCountMap = VarCountMap { unVarCountMap :: Map Var Int }
 
 instance Monoid VarCountMap where
   mempty = VarCountMap Map.empty
-  mappend (VarCountMap m1) (VarCountMap m2) =
-    VarCountMap $ Map.unionWith (+) m1 m2
+  mappend (VarCountMap x) (VarCountMap y) =
+    VarCountMap $ Map.unionWith (+) x y
+  mconcat xs =
+    VarCountMap $ Map.unionsWith (+) $ map unVarCountMap xs
 
-$(concat <$> mapM (defineCatInstance [t|VarCountMap|] ''CountVariableBindings)
-                  [ ''Expr
-                  , ''Pattern
-                  ])
-$(concat <$> mapM (defineReduceEmptyInstance [t|VarCountMap|] ''CountVariableBindings)
-                  [ ''Origin
-                  ])
-$(defineCommonCatInstances [t|VarCountMap|] ''CountVariableBindings)
+-- |Defines a monad in which well-formedness checks are executed.
+newtype WellFormedM a
+  = WellFormedM { unWellFormedM ::
+                    EitherT (Set IllFormedness)
+                      (Writer (Set IllFormedness, VarCountMap))
+                        a }
+  deriving (Monad, MonadWriter (Set IllFormedness, VarCountMap))
+  
+runWellFormedM :: WellFormedM a
+               -> (Either (Set IllFormedness) a, Set IllFormedness, VarCountMap)
+runWellFormedM x =
+  let (result, written) = runWriter $ runEitherT $ unWellFormedM x in
+  let (reportedIlls, bindCounts) = written in
+  (result, reportedIlls, bindCounts)
 
-instance Reduce CountVariableBindings Clause (VarCountMap) where
-  reduce CountVariableBindings (Clause _ x v) =
-    VarCountMap (Map.singleton x 1) `mappend` reduce CountVariableBindings v
+reportVariablesBound :: Set Var -> WellFormedM ()
+reportVariablesBound xs =
+  tell (Set.empty, VarCountMap $ Map.fromList $ map (,1) $ Set.toList xs)
 
-instance Reduce CountVariableBindings Redex (VarCountMap) where
-  reduce CountVariableBindings redex =
-    case redex of
-      Def _ (VScape _ pattern expr) ->
-        reduce CountVariableBindings pattern `mappend`
-        reduce CountVariableBindings expr
-      _ -> VarCountMap Map.empty
+reportIllFormednesses :: Set IllFormedness -> WellFormedM ()
+reportIllFormednesses ills = tell (ills,mempty)
 
-instance Reduce CountVariableBindings PatternClause VarCountMap where
-  reduce CountVariableBindings (PatternClause _ x _) =
-    VarCountMap (Map.singleton x 1)
+haltOnIllFormednesses :: Set IllFormedness -> WellFormedM a
+haltOnIllFormednesses ills = WellFormedM $ left ills
 
--- For findFreeVariables -------------------------------------------------------
+-- |Determines which variables are bound by a given expression and which are
+--  free.  In the process, gathers well-formedness complaints.
+boundAndFreeVarsOfExpr :: Expr -> WellFormedM (Set Var, Set Var)
+boundAndFreeVarsOfExpr (Expr o cls) =
+  if null cls
+    then haltOnIllFormednesses $ Set.singleton $ EmptyExpression o
+    else do
+      (bound,free) <- foldM accumulateBoundAndFreeVarsOfClause
+                        (Set.empty, Set.empty) cls
+      reportVariablesBound bound
+      return (bound,free)
+  where
+    accumulateBoundAndFreeVarsOfClause :: (Set Var, Set Var)
+                                       -> Clause
+                                       -> WellFormedM (Set Var, Set Var)
+    accumulateBoundAndFreeVarsOfClause (bound,free) cl = do
+      clauseBound <- boundVarsOfClause cl
+      clauseFree <- freeVarsOfClause cl
+      let allBound = Set.union bound clauseBound
+      return ( allBound
+             , free `Set.union` (clauseFree Set.\\ allBound)
+             )
 
--- FIXME: this incorrectly assumes that anything bound within the pattern is
---        also bound outside of the pattern
+-- |Determines the bound variables of a given clause.
+boundVarsOfClause :: Clause -> WellFormedM (Set Var)
+boundVarsOfClause (Clause _ x _) = return $ Set.singleton x
 
-instance Monoid FreeVarData where
-  mempty = FreeVarData Set.empty Set.empty
-  mappend fvd1 fvd2 =
-    FreeVarData
-      (fvdBound fvd1 `Set.union` fvdBound fvd2)
-      (fvdFree fvd1 `Set.union` (fvdFree fvd2 Set.\\ fvdBound fvd1))
+-- |Determines the free variables of a given clause.
+freeVarsOfClause :: Clause -> WellFormedM (Set Var)
+freeVarsOfClause (Clause _ _ r) =
+  case r of
+    Def _ v -> freeVarsOfValue v
+    Copy _ x -> return $ Set.singleton x
+    Appl _ x1 x2 -> return $ Set.fromList [x1,x2]
+    Builtin _ _ xs -> return $ Set.fromList xs
 
-$(concat <$> mapM (defineCatInstance [t|FreeVarData|] ''FindFreeVariables)
-    [ ''Expr
-    , ''Redex
-    , ''Pattern
-    , ''PatternValue
-    ]
- )
-$(concat <$> mapM (defineReduceEmptyInstance [t|FreeVarData|] ''FindFreeVariables)
-    [ ''Origin
-    , ''LabelName
-    , ''PrimitiveValue
-    , ''PrimitiveType
-    , ''BuiltinOp
-    ]
- )
-$(defineCommonCatInstances [t|FreeVarData|] ''FindFreeVariables)
+-- |Determines the free variables appearing in a value.
+freeVarsOfValue :: Value -> WellFormedM (Set Var)
+freeVarsOfValue v = case v of
+  VPrimitive _ _ -> return Set.empty
+  VEmptyOnion _ -> return Set.empty
+  VLabel _ _ x -> return $ Set.singleton x
+  VRef _ x -> return $ Set.singleton x
+  VOnion _ x1 x2 -> return $ Set.fromList [x1,x2]
+  VScape _ p e -> do
+    bafExpr <- boundAndFreeVarsOfExpr e
+    bafPat <- boundAndFreeVarsOfPattern p
+    return $ snd bafExpr Set.\\ fst bafPat
 
-instance Reduce FindFreeVariables Clause FreeVarData where
-  reduce FindFreeVariables (Clause _ x r) =
-    FreeVarData (Set.singleton x) Set.empty `mappend`
-      reduce FindFreeVariables r
-
-instance Reduce FindFreeVariables PatternClause FreeVarData where
-  reduce FindFreeVariables pcl =
-    case pcl of
-      PatternClause _ x pv ->
-        FreeVarData (Set.singleton x) Set.empty `mappend`
-          reduce FindFreeVariables pv
-
-instance Reduce FindFreeVariables Var FreeVarData where
-  reduce FindFreeVariables x = FreeVarData Set.empty $ Set.singleton x
-
-$(defineCatFunc [t|FreeVarData|] (mkName "ffvValue") ''FindFreeVariables ''Value) 
-
-instance Reduce FindFreeVariables Value FreeVarData where
-  reduce FindFreeVariables v =
-    case v of
-      VScape _ pat expr ->
-        let inpat = reduce FindFreeVariables pat in
-        let inexpr = reduce FindFreeVariables expr in
-        -- But the bindings don't leave the scope of the scape
-        FreeVarData Set.empty $ fvdFree $ inpat `mappend` inexpr
-      _ -> ffvValue FindFreeVariables v
+-- |Determines the bound and free variables appearing within a given pattern.
+boundAndFreeVarsOfPattern :: Pattern -> WellFormedM (Set Var, Set Var)
+boundAndFreeVarsOfPattern (Pattern _ x'' (PatternFilterMap pfm)) = do
+  (bound,free) <- bafAbsF x''
+  reportVariablesBound bound
+  unless (Set.null free) $
+    reportIllFormednesses $ Set.singleton $ OpenPattern free
+  return (bound,free)
+  where
+    bafAbsF :: Var -> WellFormedM (Set Var, Set Var)
+    bafAbsF x =
+      postLogM _debugI (
+        \(bound, free) ->
+          display $ text "Pattern" <+> makeDoc x <+> char '\\' <+>
+                      makeDoc pfm <+> text "has bound" <+> makeDoc bound <+>
+                      text "and has free" <+> makeDoc free
+      ) $
+      case Map.lookup x pfm of
+        Nothing -> return (Set.empty, Set.singleton x)
+        Just (_,filt) -> do
+          subBaf <- bafConF filt
+          let bound = Set.insert x $ fst subBaf
+          let free = snd subBaf Set.\\ bound
+          return (bound, free)
+    bafConF :: Filter -> WellFormedM (Set Var, Set Var)
+    bafConF pf =
+      postLogM _debugI (
+        \(bound, free) ->
+          display $ text "Pattern" <+> makeDoc pf <+> char '\\' <+>
+                      makeDoc pfm <+> text "has bound" <+> makeDoc bound <+>
+                      text "and has free" <+> makeDoc free
+      ) $
+      case pf of
+        FPrimitive _ _ -> return (Set.empty, Set.empty)
+        FEmptyOnion _ -> return (Set.empty, Set.empty)
+        FLabel _ _ x -> bafAbsF x
+        FRef _ x -> do
+          confirmOnlyEmptyPattern x
+          bafAbsF x
+        FConjunction _ x1 x2 -> do
+          baf1 <- bafAbsF x1
+          baf2 <- bafAbsF x2
+          return ( fst baf1 `Set.union` fst baf2
+                 , snd baf1 `Set.union` snd baf2
+                 )
+    confirmOnlyEmptyPattern :: Var -> WellFormedM ()
+    confirmOnlyEmptyPattern x =      
+      let bad = case Map.lookup x pfm of
+                  Nothing -> True
+                  Just (_,filt) -> case filt of
+                              FEmptyOnion _ -> False
+                              _ -> True
+      in
+      when bad $
+        reportIllFormednesses $ Set.singleton $ RefPatternNotExactlyEmpty x

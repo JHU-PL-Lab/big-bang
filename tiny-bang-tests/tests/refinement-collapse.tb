@@ -1,0 +1,79 @@
+# EXPECT: typefail
+
+# This test determines whether a previously-identified problem with decidability
+# exists.  In that previous model, it was possible to write pathological code to
+# build up an unboundedly precise type using patterns.  In the pattern filtering
+# system, this should be prevented.  Here, we test that the language is
+# incapable of building up unbounded context by recursively building up some
+# context and then confirming that recursive collapse will lose it for us.
+
+Y = pbody \
+    { pbody = ()
+    } ->
+    { xwrapper = pthis \
+                 { pthis = ();
+                 } ->
+                 { xwrapperL2 = parg \
+                                { parg = ();
+                                } ->
+                                { tt = pthis pthis;
+                                  btt = pbody tt;
+                                  btta = btt parg
+                                };
+                 };
+      Yr = xwrapper xwrapper;
+    };
+
+f = pself \
+    { pself = ()
+    } ->
+    { fr = pn \
+           { pn = int
+           } ->
+           { frr = p0 \
+                   { p0 = `A p1
+                   ; p1 = ()
+                   } ->
+                   { # If pn == 0, then match all `A; else build up another `A.
+                     fT = p2 \
+                          { p2 = `True p3
+                          ; p3 = ()
+                          } ->
+                          { # At this point, unbounded context would know that
+                            # we have `A `A `A `A ().  This match will prove
+                            # that we don't know that.
+                            testFn = p4 \
+                                     { p4 = `A p5
+                                     ; p5 = `A p6
+                                     ; p6 = `A p7
+                                     ; p7 = `A p8
+                                     ; p8 = ()
+                                     } ->
+                                     { testFnRet = ()
+                                     };
+                            fTr = testFn p0;
+                          };
+                     fF = p9 \
+                          { p9 = `False p10
+                          ; p10 = ()
+                          } ->
+                          { # Build up more context!
+                            arg = `A p0
+                          ; one = 1
+                          ; pnm1 = - pn one
+                          ; fFr0 = pself pnm1
+                          ; fFr = fFr0 arg
+                          };
+                     cond = fT & fF;
+                     zero = 0;
+                     check = == zero pn;
+                     frrr = cond check
+                   };
+	   };
+    };
+f0 = Y f;
+three = 3;
+f1 = f0 three;
+x = ();
+y = `A x;
+f2 = f1 y

@@ -7,6 +7,10 @@ module Language.TinyBang.Utils.Projection
 , builtinVar
 ) where
 
+-- TODO: deprecate this module.  The evaluation process should be using some
+--       form of strict pattern matching rather than reinventing this process
+--       using projection.
+
 import Language.TinyBang.Ast
 
 data Projector

@@ -124,7 +124,16 @@ defineCatFuncX rtype fname tname dname = do
     makeBranch :: Name -> Con -> Q Match
     makeBranch tagName con =
       case con of
-        NormalC cname typs -> do
+        NormalC cname typs ->
+          handleNormalC cname typs
+        RecC cname vtyps ->
+          -- we can do the same thing as with NormalC since record types can
+          -- use normal constructors
+          handleNormalC cname $ map (\(_,s,t) -> (s,t)) vtyps
+        _ -> error $ "defineCatFunc: " ++ show con
+              ++ " is not a normal constructor"
+      where
+        handleNormalC cname typs =do
           -- get some names for the argument variables
           argNames <- mapM (newName . ("x" ++) . show) [1..(length typs)]
           -- the pattern is now pretty straightforward
@@ -133,8 +142,7 @@ defineCatFuncX rtype fname tname dname = do
           let redc nm = [|reduce $(varE tagName) $(varE nm)|]
           let e = [| mconcat $(listE $ map redc argNames) |]
           match pattern (normalB e) []
-        _ -> error $ "defineCatFunc: " ++ show con
-              ++ " is not a normal constructor"
+        
 
 -- |Creates a common identity instance for @Reduce@.
 defineReduceEmptyInstance :: Q Type -> Name -> Name -> Q [Dec]

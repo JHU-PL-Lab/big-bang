@@ -15,12 +15,11 @@ module Test.TinyBangNested.SourceFile.Expectation
 , parseExpectation
 ) where
 
-import Control.Monad
 import Data.Either.Combinators
 import Data.List
 
-import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Utils.Logger
+import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBangNested.Ast
 import Language.TinyBangNested.Syntax.Lexer
 import Language.TinyBangNested.Syntax.Parser
@@ -41,7 +40,8 @@ parseExpectation src =
   let ans = find ((`isPrefixOf` src') . fst) parsers in
   case ans of
     Nothing -> Right Nothing
-    Just (s, p) -> mapBoth (src',) Just $ p $ drop (length s) src'
+    Just (s, p) ->
+      mapBoth (src',) Just $ p $ drop (length s) src'
   where
     trim = dropWhile (== ' ') . reverse . dropWhile (== ' ') . reverse
     parsers =
@@ -49,7 +49,7 @@ parseExpectation src =
       , ("# EXPECT-TYPEFAIL", const $ Right ExpectTypeFail)
       ]
     parseExpectMatch :: String -> Either String Expectation
-    parseExpectMatch str =
-      liftM (flip ExpectMatches str) $
-        lexTinyBangNested UnknownDocument str >>=
-        parseTinyBangNestedPattern UnknownDocument
+    parseExpectMatch str = do
+      tokens <- lexTinyBangNested UnknownDocument str
+      tpat <- parseTinyBangNestedPattern UnknownDocument tokens
+      return $ ExpectMatches tpat str

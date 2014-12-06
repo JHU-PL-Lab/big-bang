@@ -45,8 +45,8 @@ tokens :-
   "}"                          { simply TokStopBlock }
   "("                          { simply TokOpenParen }
   ")"                          { simply TokCloseParen }
+  "*"                          { simply TokAsterisk }
   "+"                          { simply TokPlus }
-  "*"                          { simply TokMult }
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->

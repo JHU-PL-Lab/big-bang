@@ -6,23 +6,25 @@ module Test.TinyBang.SourceFile
 , TinyBangSourceFileTestConfig(..)
 ) where
 
+import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 
 import Data.List
 import Data.List.Split (splitOn)
 import Data.Maybe
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Test.HUnit
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Interpreter
 import Language.TinyBang.Interpreter.DeepValues
+import Language.TinyBang.TypeSystem
 import Language.TinyBang.Syntax.Lexer
-import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Syntax.Parser
-import Language.TinyBang.TypeSystem.ConstraintDatabase as CDb
-import Language.TinyBang.TypeSystem.TypeInference
+import Language.TinyBang.Utils.Syntax.Location
 import Test.TinyBang.TestUtils.ExpectDsl
 import Test.TinyBang.TestUtils.SourceFileTest
 
@@ -34,7 +36,7 @@ import Test.TinyBang.TestUtils.SourceFileTest
 data TinyBangSourceFileTestConfig
   = TinyBangSourceFileTestConfig
       { tbsftFilter :: Maybe String
-      , tbsftDatabase :: SomeDisplayableConstraintDatabase
+      , tbsftTypeSystem :: TypeSystem
       }
       
 testsPath :: FilePath
@@ -43,8 +45,7 @@ testsPath = "tests"
 generateTests :: TinyBangSourceFileTestConfig -> IO Test
 generateTests (TinyBangSourceFileTestConfig
                 { tbsftFilter = configFilter
-                , tbsftDatabase =
-                    SomeDisplayableConstraintDatabase configDatabase
+                , tbsftTypeSystem = ts
                 }) =
   let sftConfig = SourceFileTestConfig
                     { sftDirectory = testsPath
@@ -95,7 +96,10 @@ generateTests (TinyBangSourceFileTestConfig
       let doc = NamedDocument filename
       tokens <- hoistEither $ lexTinyBang doc source
       ast <- hoistEither $ parseTinyBang doc tokens
-      let tcResult = typecheck' configDatabase ast
+      let ills = checkWellFormed ast
+      unless (Set.null ills) $
+        left $ display ills
+      let tcResult = typecheck' ast
       case expectation of
         Pass predicate predSrc -> do
           res <- liftIO $ runEitherT $ eval ast
@@ -116,15 +120,18 @@ generateTests (TinyBangSourceFileTestConfig
                   if predicate onion then right () else
                     left $ "Expected " ++ display predSrc ++
                            " but evaluation produced: " ++ display onion
-        TypeFailure -> do
+        TypeFailure ->
             case tcResult of
               Left _ -> right ()
               Right db ->
                 left $ "Expected type failure but typechecking produced a " ++
                        "valid database: " ++ display db
       where
-        typecheck' :: (ConstraintDatabase db, Display db)
-                   => db -> Expr -> Either (TypecheckingError db) db
-        typecheck' _ = typecheck
+        typecheck' :: Expr -> Either (Set TypecheckError) ConstraintSet
+        typecheck' expr =
+          let result = typecheck ts expr in
+          if Set.null $ typeErrors result
+            then return $ allConstraints result
+            else Left $ typeErrors result
     strip :: String -> String
     strip = reverse . dropWhile (== ' ') . reverse . dropWhile (== ' ')

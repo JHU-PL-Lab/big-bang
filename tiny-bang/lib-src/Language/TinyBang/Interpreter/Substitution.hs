@@ -27,8 +27,7 @@ $(concat <$> mapM (defineHomInstance ''VariableSubstitution)
                   , ''Redex
                   , ''Value
                   , ''Pattern
-                  , ''PatternClause
-                  , ''PatternValue
+                  , ''Filter
                   ])
 $(concat <$> mapM (defineTransformIdentityInstance ''VariableSubstitution)
                   [ ''PrimitiveType
@@ -38,8 +37,13 @@ $(concat <$> mapM (defineTransformIdentityInstance ''VariableSubstitution)
                   ])
 $(defineCommonHomInstances ''VariableSubstitution)
 
+instance Transform VariableSubstitution PatternFilterMap where
+  transform subst (PatternFilterMap pfm) =
+    PatternFilterMap $ Map.fromList $ transform subst $ Map.toList pfm
+
 instance Transform VariableSubstitution Var where
   transform (VariableSubstitution m) x = Map.findWithDefault x x m
+  
 instance Transform VariableSubstitution Origin where
   -- TODO: more informative generated location
   transform _ _ = generated

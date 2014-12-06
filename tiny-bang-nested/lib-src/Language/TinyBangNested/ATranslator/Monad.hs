@@ -66,7 +66,7 @@ newVar ident = do
 
 -- |Obtains an A-translation fresh variable.
 freshVar :: ATranslationM TBA.Var
-freshVar = newVar "a"
+freshVar = newVar "__a"
 
 -- |Retrieves a mapping of all bound variables.
 curVarMap :: ATranslationM (Map TBN.Ident TBA.Var)

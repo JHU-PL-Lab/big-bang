@@ -1,11 +1,11 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances, TupleSections #-}
 
 {-|
   Represents a monad transformer which describes multiple type flows.  This is
   a semantic wrapper over @ListT@; it is used to signify intentional
   non-deterministic computation.
 -}
-module Language.TinyBang.TypeSystem.Monad.Trans.NonDet
+module Control.Monad.Trans.NonDet
 ( NonDetT
 , runNonDetT
 , mapNonDetT
@@ -21,8 +21,6 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.List
 import Data.Foldable
 
-import Language.TinyBang.TypeSystem.Monad.Trans.CReader
-
 -- |A datatype for constraint flow computations.
 newtype NonDetT m a
   = NonDetT (ListT m a)
@@ -36,14 +34,13 @@ runNonDetT (NonDetT listT) = runListT listT
 mapNonDetT :: (m [a] -> n [b]) -> NonDetT m a -> NonDetT n b
 mapNonDetT f (NonDetT x) = NonDetT $ mapListT f x
 
-instance MonadCReader r m => MonadCReader r (NonDetT m) where
-  askDb   = lift askDb
-  localDb f (NonDetT x) = NonDetT $ localDb f x
-
 instance MonadReader r m => MonadReader r (NonDetT m) where
   ask = lift ask
   local f (NonDetT x) = NonDetT $ local f x
 
+-- NOTE: MonadWriter cannot be defined over NonDetT because listen and pass
+--       cannot be defined on it sensibly.
+  
 class (Monad m) => MonadNonDet m where
   choose :: (Foldable f) => f a -> m a
 

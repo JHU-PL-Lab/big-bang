@@ -8,6 +8,8 @@ module Language.TinyBang.Syntax.Parser
 import Control.Applicative
 import Control.Monad
 import Data.Functor.Identity
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Language.TinyBang.Ast
 import Language.TinyBang.Syntax.Tokens
@@ -36,11 +38,12 @@ import Language.TinyBang.Utils.Syntax
   '&'           { Token (SomeToken TokOnion $$) }
   '='           { Token (SomeToken TokIs $$) }
   ';'           { Token (SomeToken TokSemi $$) }
+  '\\'          { Token (SomeToken TokBackslash $$) }
   '{'           { Token (SomeToken TokStartBlock $$) }
   '}'           { Token (SomeToken TokStopBlock $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
-  '*'           { Token (SomeToken TokMult $$) }
+  '*'           { Token (SomeToken TokAsterisk $$) }
   '/'           { Token (SomeToken TokDiv $$) }
   '%'           { Token (SomeToken TokMod $$) }
   ident         { Token (SomeToken TokIdentifier $$) }
@@ -67,8 +70,6 @@ Redex
   | BuiltinOp Vars          { oc2 $1 $> Builtin $1 $2 }
   | Var                     { oc1 $1 $> Copy $1 }
   | Value                   { oc1 $1 $> Def $1 }
-  | 'getChar'               { oc0 $1 $> GetChar }
-  | 'putChar' Var           { oc1 $1 $> PutChar $2 }
  
 Var
   : Ident                   { oc1 $1 $> mkvar $1 }
@@ -82,25 +83,34 @@ Value
   | Label Var               { oc2 $1 $> VLabel $1 $2 }
   | 'ref' Var               { oc1 $1 $> VRef $2 }
   | Var '&' Var             { oc2 $1 $> VOnion $1 $3 }
-  | '{' Pattern '}' '->' '{' Expr '}'
-                            { oc2 $1 $> VScape $2 $6 }
+  | Pattern '->' '{' Expr '}'
+                            { oc2 $1 $> VScape $1 $4 }
+                            
 Pattern
-  : PatternClauses          { oc1 $1 $> Pattern $1 }
+  : Var '\\' '{' PatternFilterConstraints '}'
+                            { oc2 $1 $> Pattern $1 $4 }
 
-PatternClauses
-  : many1SepOpt(PatternClause, ';')
-                            { $1 }
-  
-PatternClause
-  : Var '=' PatternValue    { oc2 $1 $> PatternClause $1 $3 }
+PatternFilterConstraints :: { SPositional PatternFilterMap }
+  : many1SepOpt(PatternFilterConstraint, ';')
+                            { let pfcs = posData $1 in
+                              let mkmap (o,v,f) = Map.singleton v (o,f) in
+                              let maps = map mkmap pfcs in
+                              -- TODO: better error handling
+                              let handleDupe k x' x'' = error $ "Duplicate in pattern: " ++ display k in
+                              let theMap = foldl (Map.unionWithKey handleDupe) Map.empty maps in
+                              posOver $1 $> $ PatternFilterMap theMap  
+                            }
 
-PatternValue
-  : 'int'                   { oc0 $1 $> (\o -> PPrimitive o PrimInt) }
-  | 'char'                  { oc0 $1 $> (\o -> PPrimitive o PrimChar) }
-  | '()'                    { oc0 $1 $> PEmptyOnion }
-  | Label Var               { oc2 $1 $> PLabel $1 $2 }
-  | 'ref' Var               { oc1 $1 $> PRef $2 }
-  | Var '&' Var             { oc2 $1 $> PConjunction $1 $3 }
+PatternFilterConstraint :: { SPositional (Origin, Var, Filter) }
+  : Var '=' PatternFilter   { oc2 $1 $> (,,) $1 $3 }
+
+PatternFilter
+  : 'int'                   { oc0 $1 $> (\o -> FPrimitive o PrimInt) }
+  | 'char'                  { oc0 $1 $> (\o -> FPrimitive o PrimChar) }
+  | '()'                    { oc0 $1 $> FEmptyOnion }
+  | Label Var               { oc2 $1 $> FLabel $1 $2 }
+  | 'ref' Var               { oc1 $1 $> FRef $2 }
+  | Var '*' Var             { oc2 $1 $> FConjunction $1 $3 }
 
 Ident
   : ident                   { posOver $1 $> $ posData $1 }
@@ -122,6 +132,8 @@ BuiltinOp
   | '<='                    { posOver $1 $> OpIntLessEq }
   | '>='                    { posOver $1 $> OpIntGreaterEq }
   | '<-'                    { posOver $1 $> OpSet }
+  | 'getChar'               { posOver $1 $> OpGetChar }
+  | 'putChar'               { posOver $1 $> OpPutChar }
 
 -- Generalizations of common grammar patterns.
 

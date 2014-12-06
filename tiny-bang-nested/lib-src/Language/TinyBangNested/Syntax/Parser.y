@@ -42,7 +42,7 @@ import Language.TinyBangNested.Syntax.Tokens
   ')'           { Token (SomeToken TokCloseParen $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
-  '*'           { Token (SomeToken TokMult $$) }
+  '*'           { Token (SomeToken TokAsterisk $$) }
   '/'           { Token (SomeToken TokDiv $$) }
   '%'           { Token (SomeToken TokMod $$) }
   ident         { Token (SomeToken TokIdentifier $$) }
@@ -55,15 +55,20 @@ import Language.TinyBangNested.Syntax.Tokens
 %nonassoc '<=' '>=' '=='
 %right '<-'
 %left '+' '-'
+%left '*' '/' '%'
 %left '&'
+%right 'putChar'
 
 %name parseProgram Program
-%name parsePattern Pattern
+%name parsePattern OnlyPattern
 
 %%
 
 Program :: { SPositional Expr }
   : Expr eof                { $1 }
+
+OnlyPattern :: { SPositional Pattern }
+  : Pattern eof             { $1 }
 
 Expr :: { SPositional Expr }
   : 'let' Ident '=' Expr 'in' Expr
@@ -110,7 +115,7 @@ LiteralExpr :: { SPositional Expr }
   | litchar                 { oc1 $1 $> ExprValChar $1 }
 
 Pattern :: { SPositional Pattern }
-  : Pattern '&' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
+  : Pattern '*' Pattern     { oc2 $1 $> ConjunctionPattern $1 $3 }
   | PrimaryPattern          { $1 }
 
 PrimaryPattern :: {SPositional Pattern }

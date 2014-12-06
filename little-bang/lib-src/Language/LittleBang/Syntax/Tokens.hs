@@ -17,6 +17,7 @@ type Token = TypedToken TokenType
 data TokenType a where
   TokEOF :: TokenType ()
   TokLet :: TokenType () -- @let@
+  TokRec :: TokenType () -- @rec@
   TokIs :: TokenType () -- @=@
   TokIn :: TokenType () -- @in@
   TokLambda :: TokenType () -- @fun@
@@ -28,7 +29,7 @@ data TokenType a where
   TokClass :: TokenType () -- @class@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
-  TokMult :: TokenType () -- @*@
+  TokAsterisk :: TokenType () -- @*@
   TokDiv :: TokenType () -- @/@
   TokMod :: TokenType () -- @%@
   TokEq :: TokenType () -- @==@
@@ -67,6 +68,7 @@ instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
     Token (SomeToken TokEOF _) -> dquotes $ text "<EOF>"
     Token (SomeToken TokLet _) -> dquotes $ text "let"
+    Token (SomeToken TokRec _) -> dquotes $ text "rec"
     Token (SomeToken TokIs _) -> dquotes $ text "="
     Token (SomeToken TokIn _) -> dquotes $ text "in"
     Token (SomeToken TokLambda _) -> dquotes $ text "fun"
@@ -78,7 +80,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokClass _) -> dquotes $ text "class"
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
-    Token (SomeToken TokMult _) -> text "*"
+    Token (SomeToken TokAsterisk _) -> text "*"
     Token (SomeToken TokDiv _) -> text "/"
     Token (SomeToken TokMod _) -> text "%"
     Token (SomeToken TokEq _) -> text "=="

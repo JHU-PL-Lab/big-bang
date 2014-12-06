@@ -24,11 +24,10 @@ versionStr = "TinyBang Interpreter version " ++ showVersion version
 --  configuration.
 makeEval :: TinyBangOptions -> IO (String -> IO String)
 makeEval opts = do
-  let dtype = databaseConfigType opts
   let config = InterpreterConfiguration
-                    { typechecking = not $ noTypecheck opts
-                    , evaluating = not $ noEval opts
-                    , databaseType = dtype }
+                    { evaluating = not $ noEval opts
+                    , typeSystem = typeSystemImplementation opts
+                    }
   return $ stringyInterpretSource config
 
 -- |Executes the TinyBang interpreter.
@@ -47,9 +46,9 @@ main = do
     then do
       -- |Method for batchMode
       let config = InterpreterConfiguration
-                 { typechecking = not $ noTypecheck opts
-                 , evaluating = not $ noEval opts
-                 , databaseType = Simple }          
+                    { evaluating = not $ noEval opts
+                    , typeSystem = typeSystemImplementation opts
+                    }
       batchLoop config
 
     else do 

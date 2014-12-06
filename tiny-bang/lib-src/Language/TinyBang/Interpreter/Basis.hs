@@ -10,7 +10,7 @@ module Language.TinyBang.Interpreter.Basis
 , setVar
 , setMostRecent
 , getEnv
-, returnTBChar
+, inputTBChar
 , outputTBChar
 , raiseEvalError
 , getClauses
@@ -84,23 +84,18 @@ runEvalM s x =
   unStated
   --runIdentity $ runStateT (runEitherT (unEvalM x)) s  -- Identity (EvalState, Either EvalError a)
 
-returnTBChar :: Origin -> EvalM Value
-returnTBChar o =
+inputTBChar :: Origin -> EvalM Value
+inputTBChar o =
   getTBChar >>= processTBChar o
   where
   processTBChar :: Origin -> Char -> EvalM Value
   processTBChar o' c =
     return $ VPrimitive o' (VChar o' c)
   getTBChar :: EvalM Char
-  getTBChar = do
-    c <- liftIO getChar
-    return c  
+  getTBChar = liftIO getChar
 
-outputTBChar :: Value -> EvalM Value
-outputTBChar ch = do
-  let val@(VPrimitive o (VChar _ c)) = ch
-  _ <- liftIO $ putChar c
-  return $ VEmptyOnion o
+outputTBChar :: Char -> EvalM ()
+outputTBChar c = liftIO $ putChar c
 
 -- |Performs a value lookup on a given variable.
 varLookup :: Var -> EvalM Value
