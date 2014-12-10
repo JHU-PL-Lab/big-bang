@@ -244,8 +244,8 @@ instance Display Expr where
     text "object" <+> encloseSep lbrace rbrace comma (map makeDoc terms)
    LExprClass _ args terms subclass -> -- TODO include subclass
     text "class" <+> encloseSep lparen rparen comma (map makeDoc args) <+> encloseSep lbrace rbrace comma (map makeDoc terms)
-   LExprProjection _ e i -> makeDoc e <> text "." <> makeDoc i
-   LExprDispatch _ e i a -> makeDoc e <> text "." <> makeDoc i <>
+   LExprProjection _ e i -> text "projection" <+> makeDoc e <> text "." <> makeDoc i
+   LExprDispatch _ e i a -> text "dispatch" <+> makeDoc e <> text "." <> makeDoc i <>
                               encloseSep lparen rparen comma (map makeDoc a)
    LExprDeref _ e -> text "!" <> makeDoc e
    LExprIndexedList _ e i -> makeDoc e <> text "[" <> makeDoc i <> text "]"
@@ -298,6 +298,10 @@ instance Display ModuleTerm where
     ModuleField _ n e ->
       makeDoc n <+> text "=" <+> makeDoc e
     ModuleImport _ s -> text "import" <+> text s
+
+instance Display Module where
+  makeDoc tm = case tm of
+    Module _ tms -> text "module" <> encloseSep lparen rparen comma (map makeDoc tms)
 
 instance Display Ident where
   makeDoc x = case x of

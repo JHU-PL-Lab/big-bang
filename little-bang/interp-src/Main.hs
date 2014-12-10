@@ -42,11 +42,13 @@ interpretLBSource interpConf src = do
   lbAst <- hoistEither $ postLog _debugI
     ( \lbAst -> display $
         text "Parsed LittleBang AST:" <> lineNest lbAst ) $
-    mapLeft ParserFailure $ parseLittleBang UnknownDocument tokens
+    --mapLeft ParserFailure $ parseLittleBang UnknownDocument tokens
+    mapLeft ParserFailure $ parseLittleBangModule UnknownDocument tokens
   dlbAst <- hoistEither $ postLog _debugI
     ( \dlbAst -> display $
         text "Desugared LittleBang AST:" <> lineNest dlbAst ) $
-    mapLeft OtherFailure $ desugarLittleBang lbAst
+    --mapLeft OtherFailure $ desugarLittleBang walkExprTree lbAst
+    mapLeft OtherFailure $ desugarLittleBang desugarModule lbAst
   tbnAst <- hoistEither $ postLog _debugI
     ( \tbnAst -> display $
         text "Converted to TBN AST:" <> lineNest tbnAst ) $

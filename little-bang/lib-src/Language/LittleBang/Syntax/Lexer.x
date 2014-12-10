@@ -61,7 +61,6 @@ tokens :-
   "*"                          { simply TokAsterisk }
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
->>>>>>> filter-types
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->

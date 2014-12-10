@@ -1,5 +1,7 @@
 module Language.LittleBang.Translator
 ( desugarLittleBang,
+  walkExprTree,
+  desugarModule,
 ) where
 
 import Data.List
@@ -25,8 +27,10 @@ import Language.TinyBangNested.Syntax.Parser
 -}
 
 -- | Desugar LittleBang. Do nothing for now
-desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
-desugarLittleBang expr =
+--desugarLittleBang :: LB.Expr -> Either DesugarError LB.Expr
+--TODO: is the return type really Either DesugarError b?
+desugarLittleBang :: (a -> DesugarM b) -> a -> Either DesugarError b 
+desugarLittleBang walker expr =
   let desugarAllExpr = foldl1 (>=>) exprDesugarers in -- Note: there is a monoid alternative
   let desugarAllPat = foldl1 (>=>) patDesugarers in
   let desugarAllMod = foldl1 (>=>) modDesugarers in
@@ -35,7 +39,7 @@ desugarLittleBang expr =
           desugarPatFn  = desugarAllPat,
           desugarModFn  = desugarAllMod
         } in
-  runDesugarM desugarContext $ walkExprTree expr
+  runDesugarM desugarContext $ walker expr
   --runDesugarM (return expr >>= walkExprTree)
   where
     -- First desugarer in the list will happen first.
@@ -259,14 +263,15 @@ walkClassTermTree term =
       LB.ClassStaticProperty o <$> walkObjTermTree p
 
 walkModTermTree :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
-walkModTermTree term =
+walkModTermTree term = do
+  f <- desugarModFn <$> ask
   case term of
     LB.ModuleField o n e ->
-      LB.ModuleField o n <$> walkExprTree e
+      (LB.ModuleField o n <$> walkExprTree e) >>= f
     LB.ModuleFunction o n params e ->
-      LB.ModuleFunction o n
+      (LB.ModuleFunction o n
         <$> mapM walkParamTree params
-        <*> walkExprTree e
+        <*> walkExprTree e) >>= f
     -- ModuleImport doesn't need to be recursed into
     _ -> return term
 
@@ -274,10 +279,9 @@ walkModTermTree term =
 desugarModule :: LB.Module -> DesugarM LB.Expr
 desugarModule (LB.Module o tms) =
   do
-    f <- desugarModFn <$> ask
-    let start = LB.TExprLet o (LB.Ident o "mod") (LB.TExprValEmptyOnion o)
+    let start = LB.TExprLet o (LB.Ident o "$modraw") (LB.TExprValEmptyOnion o)
     let end = LB.TExprVar o (LB.Ident o "mod")
-    let stackFn = foldl1 (liftM2 (.)) . (map $ (\x -> diffExpr <$> f x))
+    let stackFn = foldl1 (liftM2 (.)) . (map $ (\x -> diffExpr <$> walkModTermTree x))
     stack <- stackFn tms
     return $ (start . stack) end
   where
@@ -311,15 +315,51 @@ desugarModField tm =
 desugarModFunction :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
 desugarModFunction tm =
   case tm of
-  LB.ModuleFunction o n a e ->
+  LB.ModuleFunction o n p e ->
     do
       (DesugarState a b qf) <- get
       if (n `S.member` qf)
           then
-          -- TODO type it allllll out.
-          return tm
+            do
+                v <- nextFreshVar
+                sealing <- mseal o (LB.TExprVar o (LB.Ident o "$modraw"))
+                argPat <- desugarParams p
+                let x = (LB.TExprScape o
+                        (LB.ConjunctionPattern o
+                        (LB.LabelPattern o methodTagLabelName
+                        (LB.LabelPattern o (methodNameToLabelName n) (LB.EmptyPattern o))
+                        ) argPat) e)
+                let freshExpr = LB.TExprLet o v x
+                let termExpr = (LB.TExprLet o n (LB.TExprOnion o
+                        (LB.TExprVar o n)
+                        (LB.TExprVar o v)))
+                let modrawExpr = (LB.TExprLet o (LB.Ident o "$modraw")
+                        (LB.TExprOnion o
+                        (LB.TExprVar o n)
+                        (LB.TExprVar o (LB.Ident o "$modraw"))))
+                let modExpr = (LB.TExprLet o (LB.Ident o "mod") sealing)
+                -- since this is a redef, we don't update qf
+                return $ LB.ModuleDiffExprAdapter o $ foldl1 (.) [freshExpr, termExpr, modrawExpr, modExpr]
           else
-          return tm
+              --FIXME wtf is wrong with the parser here
+            do
+                sealing <- mseal o (LB.TExprVar o (LB.Ident o "$modraw"))
+                argPat <- desugarParams p
+                --let x = (LB.TExprScape o argPat e)
+                let x = (LB.TExprScape o
+                        (LB.ConjunctionPattern o
+                        (LB.LabelPattern o methodTagLabelName
+                        (LB.LabelPattern o (methodNameToLabelName n) (LB.EmptyPattern o))
+                        ) argPat) e)
+                let termExpr = LB.TExprLet o n x
+                let modrawExpr = (LB.TExprLet o (LB.Ident o "$modraw")
+                        (LB.TExprOnion o
+                        (LB.TExprVar o n)
+                        (LB.TExprVar o (LB.Ident o "$modraw"))))
+                let modExpr = (LB.TExprLet o (LB.Ident o "mod") sealing)
+                -- since this is not a redefinition, update Qf
+                _ <- put (DesugarState a b (S.insert n qf))
+                return $ LB.ModuleDiffExprAdapter o $ foldl1 (.) [termExpr, modrawExpr, modExpr]
   _ -> return tm
 
 -- TODO
@@ -589,7 +629,8 @@ distinguishedSymbol = '$'
 
 paramNameToLabelName :: LB.Ident -> LB.LabelName
 paramNameToLabelName (LB.Ident o n) =
-  LB.LabelName o $ userSpecifiedInternalName n
+  --LB.LabelName o $ userSpecifiedInternalName n
+  LB.LabelName o n
 
 methodNameToLabelName :: LB.Ident -> LB.LabelName
 methodNameToLabelName (LB.Ident o n) =
