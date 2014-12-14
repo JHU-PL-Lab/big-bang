@@ -41,6 +41,7 @@ data Expr
   | TExprValEmptyOnion Origin 
   | TExprGetChar Origin
   | TExprPutChar Origin Expr
+  | TExprLoad Origin ModuleName
   -- Constructors representing LB-specific nodes
   | LExprScape Origin [Param] Expr
   | LExprLetRec Origin Ident [Param] Expr Expr
@@ -100,7 +101,7 @@ data Module = Module Origin [ModuleTerm]
 data ModuleTerm
   = ModuleField Origin Ident Expr
   | ModuleFunction Origin Ident [Param] Expr
-  | ModuleImport Origin String
+  | ModuleImport Origin ModuleName
   | ModuleDiffExprAdapter Origin (Expr -> Expr) -- FIXME more nasty hacks :(
 
 -- We need to manually define Show for ModuleTerm
@@ -118,6 +119,10 @@ data Ident
   
 data LabelName
   = LabelName Origin String
+  deriving (Show)
+
+data ModuleName
+  = ModuleName Origin [String]
   deriving (Show)
   
 unLabelName :: LabelName -> String
@@ -143,6 +148,7 @@ $(concat <$> sequence
       , ''ClassTerm
       , ''Ident
       , ''LabelName
+      , ''ModuleName
       ]
   ])
 
@@ -310,6 +316,10 @@ instance Display Ident where
 instance Display LabelName where
   makeDoc x = case x of
     LabelName _ l -> text $ '`' : l
+
+instance Display ModuleName where
+  makeDoc x = case x of
+    ModuleName _ ns -> foldl1 (<>) (map (\x -> text "." <> text x) ns)
 
 instance Display PrimitiveType where
   makeDoc p = case p of
