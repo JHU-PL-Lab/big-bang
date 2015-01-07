@@ -17,6 +17,7 @@ module Language.TinyBang.Ast.Data
 , Filter(..)
 , PrimitiveType(..)
 , LabelName(..)
+, ModuleName(..)
 , Var(..)
 , VarName(..)
 
@@ -34,6 +35,7 @@ module Language.TinyBang.Ast.Data
 import Control.Applicative ((<$>))
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.List
 import Text.PrettyPrint.Leijen hiding ((<$>),list)
 
 import Language.TinyBang.Ast.Origin
@@ -58,7 +60,7 @@ data Redex
   | Copy Origin Var
   | Appl Origin Var Var
   | Builtin Origin BuiltinOp [Var]
-  | Load Origin String
+  | Load Origin ModuleName
   deriving (Show)
 
 -- |A data type enumerating the builtins supported by the semantics.
@@ -123,6 +125,12 @@ data PrimitiveType
 data LabelName
   = LabelName Origin String
   deriving (Show)
+
+data ModuleName
+  = ModuleName Origin [String]
+
+instance Show ModuleName where
+  show (ModuleName _ s) = concat $ intersperse "." s
   
 -- |A semantic wrapper for variables.  The @Maybe Integer@ contains a freshening
 --  index; it is @Nothing@ for an original (unfreshened) variable.
@@ -195,7 +203,7 @@ instance Display Redex where
     Appl _ x x' -> makeDoc x <+> makeDoc x'
     Builtin _ bop xs ->
       makeDoc bop <+> sepDoc (char ' ') (map makeDoc xs)
-    Load _ n -> text "load" <+> text n
+    Load _ mn -> text "load" <+> makeDoc mn
 
 instance Display BuiltinOp where
   makeDoc o = case o of
@@ -253,6 +261,10 @@ instance Display PrimitiveType where
 
 instance Display LabelName where
   makeDoc n = text "`" <> text (unLabelName n)
+
+instance Display ModuleName where
+  makeDoc n = case n of
+    ModuleName _ i -> foldl1 (<>) (map (\x -> text "." <> text x) i)
   
 instance Display Var where
   makeDoc (Var _ n mf) =
@@ -279,6 +291,7 @@ $(concat <$> sequence
       , ''Pattern
       , ''Filter
       , ''LabelName
+      , ''ModuleName
       , ''Var
       ]
   ])
@@ -326,6 +339,10 @@ instance HasOrigin Pattern where
 instance HasOrigin LabelName where
   originOf x = case x of
     LabelName orig _ -> orig
+
+instance HasOrigin ModuleName where
+  originOf x = case x of
+    ModuleName orig _ -> orig
 
 instance HasOrigin Var where
   originOf x = case x of

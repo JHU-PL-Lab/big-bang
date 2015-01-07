@@ -13,9 +13,12 @@ module Language.TinyBang.Interpreter
 , EvalState(..)
 ) where
 
+import System.IO
 import Control.Monad
+import Control.Monad.State
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
+import Control.Applicative
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
@@ -27,6 +30,7 @@ import Language.TinyBang.Interpreter.Matching
 import Language.TinyBang.Interpreter.Variables
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger
+import Language.TinyBang.Namespace
 
 $(loggingFunctions)
 
@@ -34,10 +38,10 @@ $(loggingFunctions)
 --  environment (representing the heap) and a flow variable (representing the
 --  result of evaluation).  If an error occurs, it is accompanied by the list
 --  of unevaluated clauses when evaluation failed.
-eval :: Expr -> EitherT (EvalError, [Clause]) IO (EvalEnv, Var)
-eval (Expr o cls) = do
+eval :: Expr -> LoadContext -> EitherT (EvalError, [Clause]) IO (EvalEnv, Var)
+eval (Expr o cls) loadCtx = do
   let e'@(Expr _ cls') = Expr o $ builtinEnv ++ cls
-  let initialState = EvalState ( EvalEnv Map.empty Nothing ) cls' 1
+  let initialState = EvalState (EvalEnv Map.empty Nothing) cls' 1 loadCtx
   (merr, rstate) <- liftIO $ runEvalM initialState $
                           wellFormednessCheck e' >> smallStepMany
   case merr of
@@ -89,6 +93,26 @@ smallStep = do
           Builtin o bop xs -> do
             v <- evalBuiltin o bop xs
             replaceFirstClause [Clause orig' x2 $ Def orig' v]
+          Load o mn -> do
+            ctx <- evalLoadCtx <$> get
+            let suffix = loadSuffix ctx
+            let pathName = loadPathName ctx
+            modPath <- liftIO $ loadFirst mn suffix pathName
+            case modPath of
+              Left _ -> raiseEvalError $ NonExistentModule mn
+              Right handle -> do
+                --1. read the file from the provided handle
+                let loadFunc = loadFn ctx
+                -- ensure we start from the beginning
+                liftIO $ hSeek handle AbsoluteSeek 0
+                src <- liftIO $ hGetContents handle
+                -- close the handle when done
+                liftIO $ hClose handle
+                --2. parse into an Expr
+                (Expr _ cs) <- loadFunc src
+                --place the evaluated clauses at the front
+                --TODO this is far from the best way to do this business
+                modify $ \s -> EvalState (evalEnv s) (cs ++ (evalClauses s)) (evalVarIndex s) (evalLoadCtx s)
   where
     rvexpr :: Expr -> EvalM Var
     rvexpr (Expr o cls) =

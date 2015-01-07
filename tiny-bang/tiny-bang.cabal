@@ -25,6 +25,7 @@ library
                    stable-memo,
                    void,
                    array,
+                   directory,
                    tagged
   build-tools:     happy,
                    alex
@@ -49,6 +50,8 @@ library
                    Language.TinyBang.Interpreter.Matching,
                    Language.TinyBang.Interpreter.Substitution,
                    Language.TinyBang.Interpreter.Variables,
+                   Language.TinyBang.Namespace,
+                   Language.TinyBang.Namespace.Directories,
                    Language.TinyBang.Syntax.Lexer,
                    Language.TinyBang.Syntax.Parser,
                    Language.TinyBang.Syntax.Tokens,

@@ -29,6 +29,7 @@ import Language.TinyBang.Utils.Syntax
   'ref'         { Token (SomeToken TokRef $$) }
   'getChar'     { Token (SomeToken TokGetChar $$) }
   'putChar'     { Token (SomeToken TokPutChar $$) }
+  'load'        { Token (SomeToken TokLoad $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
   '=='          { Token (SomeToken TokEq $$) }
@@ -43,6 +44,7 @@ import Language.TinyBang.Utils.Syntax
   '}'           { Token (SomeToken TokStopBlock $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '.'           { Token (SomeToken TokDot $$) }
   '*'           { Token (SomeToken TokAsterisk $$) }
   '/'           { Token (SomeToken TokDiv $$) }
   '%'           { Token (SomeToken TokMod $$) }
@@ -70,6 +72,7 @@ Redex
   | BuiltinOp Vars          { oc2 $1 $> Builtin $1 $2 }
   | Var                     { oc1 $1 $> Copy $1 }
   | Value                   { oc1 $1 $> Def $1 }
+  | 'load' ModName          { oc1 $1 $> Load $2 }
  
 Var
   : Ident                   { oc1 $1 $> mkvar $1 }
@@ -117,6 +120,9 @@ Ident
 
 Label
   : label                   { oc1 $1 $> LabelName $1 }
+
+ModName
+  : many1SepOpt(ident,'.') { oc1 $1 $> ModuleName $1 }
 
 LiteralPrimitive
   : litint                  { oc1 $1 $> VInt $1 }

@@ -8,6 +8,7 @@ import System.IO
 
 import Language.TinyBang.Toploop
 import Language.TinyBang.Utils.Assertions
+import Language.TinyBang.Interpreter.Basis
 import Utils.GetOpt
 import Utils.TinyBang.Options
 import Utils.Toploop
@@ -27,6 +28,11 @@ makeEval opts = do
   let config = InterpreterConfiguration
                     { evaluating = not $ noEval opts
                     , typeSystem = typeSystemImplementation opts
+                    , loadContext = LoadContext
+                      { loadFn = exprFromSource
+                      , loadSuffix = ".tb"
+                      , loadPathName = "TBPATH"
+                      }
                     }
   return $ stringyInterpretSource config
 
@@ -48,6 +54,11 @@ main = do
       let config = InterpreterConfiguration
                     { evaluating = not $ noEval opts
                     , typeSystem = typeSystemImplementation opts
+                    , loadContext = LoadContext
+                      { loadFn = exprFromSource
+                      , loadSuffix = ".tb"
+                      , loadPathName = "TBPATH"
+                      }
                     }
       batchLoop config
 
