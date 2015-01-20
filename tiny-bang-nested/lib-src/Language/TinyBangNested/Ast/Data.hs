@@ -4,6 +4,7 @@ module Language.TinyBangNested.Ast.Data
 ( Expr(..)
 , Ident(..)
 , LabelName(..)
+, ModuleName(..)
 , BinaryOperator(..)
 , Pattern(..)
 , PrimitiveType(..)
@@ -34,6 +35,7 @@ data Expr
   | ExprValEmptyOnion Origin 
   | ExprGetChar Origin
   | ExprPutChar Origin Expr
+  | ExprLoad Origin ModuleName
   deriving (Show)
 
 data BinaryOperator
@@ -64,6 +66,10 @@ data Ident
 data LabelName
   = LabelName Origin String
   deriving (Show)
+
+data ModuleName
+  = ModuleName Origin [String]
+  deriving (Show)
   
 unLabelName :: LabelName -> String
 unLabelName (LabelName _ s) = s
@@ -84,6 +90,7 @@ $(concat <$> sequence
       , ''Pattern
       , ''Ident
       , ''LabelName
+      , ''ModuleName
       ]
   ])
 
@@ -104,6 +111,7 @@ instance HasOrigin Expr where
     ExprValEmptyOnion orig -> orig
     ExprGetChar orig -> orig
     ExprPutChar orig _ -> orig
+    ExprLoad orig _ -> orig
 
 instance HasOrigin Ident where
   originOf x = case x of
@@ -121,6 +129,10 @@ instance HasOrigin Pattern where
 instance HasOrigin LabelName where
   originOf x = case x of
     LabelName orig _ -> orig
+
+instance HasOrigin ModuleName where
+  originOf x = case x of
+    ModuleName orig _ -> orig
 
 
 -- | Display instances for Expr 
@@ -165,6 +177,10 @@ instance Display Pattern where
 instance Display Ident where
   makeDoc x = case x of
     Ident _ i -> text i
+
+instance Display ModuleName where
+  makeDoc x = case x of
+    ModuleName _ i -> foldl1 (<>) (map (\x -> text "." <> text x) i)
 
 instance Display LabelName where
   makeDoc x = case x of

@@ -8,6 +8,7 @@ module Language.LittleBang.Ast.Data
 , Arg(..)
 , Ident(..)
 , LabelName(..)
+, ModuleName(..)
 , ObjectTerm(..)
 , ClassTerm(..)
 , Module(..)
@@ -110,7 +111,7 @@ instance Show ModuleTerm where
   show x = case x of
     ModuleField o i e -> "ModuleField(" ++ (show o) ++ ", " ++ (show i) ++ ", " ++ (show e) ++ ")"
     ModuleFunction o i p e -> "ModuleFunction(" ++ (show o) ++ ", " ++ (show i) ++ ", " ++ (show p) ++ ", " ++ (show e) ++ ")"
-    ModuleImport o s -> "ModuleImport(" ++ (show o) ++ s ++ ")"
+    ModuleImport o mn -> "ModuleImport(" ++ (show o) ++ (show mn) ++ ")"
     ModuleDiffExprAdapter o _ -> "ModuleDiffExprAdapter(" ++ (show o) ++ ", <fun>)"
 
 data Ident
@@ -235,6 +236,7 @@ instance Display Expr where
    TExprValEmptyOnion _ -> text "()"
    TExprGetChar _ -> text "getChar"
    TExprPutChar _ e -> text "putChar" <+> makeDoc e
+   TExprLoad _ mn -> text "load" <+> makeDoc mn
    LExprScape _ op e -> parens (makeDoc op) <+> text "->" <+> parens (makeDoc e)
    LExprBinaryOp _ e1 ao e2 -> parens (makeDoc e1) <+> makeDoc ao <+> parens (makeDoc e2)
    LExprAppl _ e args -> parens (makeDoc e) <+> encloseSep lparen rparen comma (map makeDoc args)
@@ -303,7 +305,7 @@ instance Display ModuleTerm where
       makeDoc e
     ModuleField _ n e ->
       makeDoc n <+> text "=" <+> makeDoc e
-    ModuleImport _ s -> text "import" <+> text s
+    ModuleImport _ mn -> text "import" <+> makeDoc mn
 
 instance Display Module where
   makeDoc tm = case tm of

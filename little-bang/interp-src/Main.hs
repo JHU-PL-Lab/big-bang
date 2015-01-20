@@ -14,8 +14,10 @@ import Language.LittleBang.Syntax.Lexer
 import Language.LittleBang.Syntax.Parser
 import Language.LittleBang.TBNConversion
 import Language.LittleBang.Translator
+import Language.TinyBang.Ast as TBA
 import Language.TinyBang.Utils.Syntax.Location
 import Language.TinyBang.Toploop
+import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Utils.Assertions
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Logger (loggingFunctions, postLog)
@@ -58,6 +60,19 @@ interpretLBSource interpConf src = do
   where
   lineNest x = line <> indent 2 (align $ makeDoc x)
 
+exprFromLBSource :: String -> EvalM TBA.Expr
+exprFromLBSource src = 
+  let doc = UnknownDocument in
+  case lexLittleBang doc src of
+    Left s -> raiseEvalError $ LoadError s
+    Right tokens -> case parseLittleBangModule UnknownDocument tokens of
+      Left s -> raiseEvalError $ LoadError s
+      Right lbAst -> case desugarLittleBang desugarModule lbAst of
+        Left s -> raiseEvalError $ LoadError s
+        Right dlbAst -> case convertToTBNExpr dlbAst of
+          Left s -> raiseEvalError $ LoadError s
+          Right tbnAst -> return $ aTranslate tbnAst
+
 stringyInterpretTBNSource :: InterpreterConfiguration -> String -> IO String
 stringyInterpretTBNSource interpConf exprSrc = do
   res <- runEitherT $ interpretLBSource interpConf exprSrc
@@ -72,7 +87,13 @@ makeEval opts = do
   let ts = typeSystemImplementation opts
   let config = InterpreterConfiguration
                     { evaluating = not $ noEval opts
-                    , typeSystem = ts }
+                    , typeSystem = ts
+                    , loadContext = LoadContext
+                      { loadFn = exprFromLBSource
+                      , loadSuffix = ".lb"
+                      , loadPathName = "LBPATH"
+                      }
+                    }
   return $ stringyInterpretTBNSource config
 
 main :: IO ()
