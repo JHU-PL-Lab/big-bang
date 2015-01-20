@@ -155,6 +155,8 @@ instance Display InterpreterError where
         text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
           makeDoc bop <+> text "had an invalid operand type in position" <+>
           text (show n) <+> text "(variable" <+> makeDoc x <+> text ")"
+      I.NonExistentModule mn -> text "Could not find module" <+> makeDoc mn
+      I.LoadError s -> text "Error while loading module:" <+> text s
     OtherFailure oFailure -> text oFailure
     EvaluationDisabled -> text "(evaluation disabled)"
     where

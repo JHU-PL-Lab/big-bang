@@ -106,13 +106,15 @@ smallStep = do
                 -- ensure we start from the beginning
                 liftIO $ hSeek handle AbsoluteSeek 0
                 src <- liftIO $ hGetContents handle
+                liftIO $ putStrLn $ "full file source is " ++ src
                 -- close the handle when done
                 liftIO $ hClose handle
                 --2. parse into an Expr
                 (Expr _ cs) <- loadFunc src
                 --place the evaluated clauses at the front
+                --don't forget to remove the current clause!!
                 --TODO this is far from the best way to do this business
-                modify $ \s -> EvalState (evalEnv s) (cs ++ (evalClauses s)) (evalVarIndex s) (evalLoadCtx s)
+                modify $ \s -> EvalState (evalEnv s) (cs ++ (tail $ evalClauses s)) (evalVarIndex s) (evalLoadCtx s)
   where
     rvexpr :: Expr -> EvalM Var
     rvexpr (Expr o cls) =
