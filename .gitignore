@@ -9,6 +9,7 @@ cabal-sandbox
 .cabal-sandbox
 cabal.sandbox.config
 .metadata
+.eclipsefp
 RemoteSystemsTempFiles
 *.prof
 
