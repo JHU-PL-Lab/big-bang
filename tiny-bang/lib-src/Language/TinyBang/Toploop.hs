@@ -2,6 +2,7 @@
 
 module Language.TinyBang.Toploop
 ( stringyInterpretSource
+, exprFromSource
 , interpretSource
 , interpretAst
 , InterpreterConfiguration(..)
@@ -19,6 +20,7 @@ import qualified Data.Set as Set
 
 import Language.TinyBang.Ast
 import qualified Language.TinyBang.Interpreter as I
+import Language.TinyBang.Interpreter.Basis
 import Language.TinyBang.Interpreter.DeepValues
 import Language.TinyBang.Syntax.Lexer
 import Language.TinyBang.Utils.Syntax.Location
@@ -55,6 +57,7 @@ data InterpreterConfiguration
   = InterpreterConfiguration
     { typeSystem :: Maybe TS.TypeSystem
     , evaluating :: Bool
+    , loadContext :: LoadContext
     }
   
 -- |Interprets the provided String as a TinyBang expression.  This value will be
@@ -66,6 +69,15 @@ interpretSource interpConf src = do
   tokens <- hoistEither $ mapLeft LexerFailure $ lexTinyBang doc src
   ast <- hoistEither $ mapLeft ParserFailure $ parseTinyBang doc tokens
   interpretAst interpConf ast
+
+exprFromSource :: String -> EvalM Expr
+exprFromSource src = do
+  let doc = UnknownDocument
+  case lexTinyBang doc src of
+    Left s -> raiseEvalError $ LoadError s
+    Right t -> case parseTinyBang doc t of
+      Left s -> raiseEvalError $ LoadError s
+      Right e -> return e
 
 -- |Interprets the provided TinyBang AST.
 interpretAst :: InterpreterConfiguration -> Expr
@@ -84,7 +96,7 @@ interpretAst interpConf ast = do
     then
       let transErr = uncurry EvaluationFailure in
       let transVal (env,var) = InterpreterResult var (I.varMap env) in
-      bimapEitherT transErr transVal $ I.eval ast
+      bimapEitherT transErr transVal $ I.eval ast (loadContext interpConf)
     else
       left EvaluationDisabled
     
@@ -143,6 +155,8 @@ instance Display InterpreterError where
         text "At" <+> makeDoc o <> char ',' <+> text "builtin operation " <+>
           makeDoc bop <+> text "had an invalid operand type in position" <+>
           text (show n) <+> text "(variable" <+> makeDoc x <+> text ")"
+      I.NonExistentModule mn -> text "Could not find module" <+> makeDoc mn
+      I.LoadError s -> text "Error while loading module:" <+> text s
     OtherFailure oFailure -> text oFailure
     EvaluationDisabled -> text "(evaluation disabled)"
     where

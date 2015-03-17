@@ -29,6 +29,7 @@ import Language.TinyBangNested.Syntax.Tokens
   'in'          { Token (SomeToken TokIn $$) }
   'getChar'     { Token (SomeToken TokGetChar $$) }
   'putChar'     { Token (SomeToken TokPutChar $$) }
+  'load'        { Token (SomeToken TokLoad $$) }
   'fun'         { Token (SomeToken TokLambda $$) }
   '->'          { Token (SomeToken TokArrow $$) }
   '()'          { Token (SomeToken TokEmptyOnion $$) }
@@ -42,6 +43,7 @@ import Language.TinyBangNested.Syntax.Tokens
   ')'           { Token (SomeToken TokCloseParen $$) }
   '+'           { Token (SomeToken TokPlus $$) }
   '-'           { Token (SomeToken TokMinus $$) }
+  '.'           { Token (SomeToken TokDot $$) }
   '*'           { Token (SomeToken TokAsterisk $$) }
   '/'           { Token (SomeToken TokDiv $$) }
   '%'           { Token (SomeToken TokMod $$) }
@@ -88,6 +90,7 @@ Expr :: { SPositional Expr }
   | ApplExpr                { $1 }
   | 'getChar'               { oc0 $1 $> ExprGetChar }
   | 'putChar' Expr          { oc1 $1 $> ExprPutChar $2 }
+  | 'load' ModName       { oc1 $1 $> ExprLoad $2 }
 
 ApplExpr :: { SPositional Expr }
   : ApplExpr PrefixExpr     { oc2 $1 $> ExprAppl $1 $2 }
@@ -108,6 +111,9 @@ Ident :: { SPositional Ident }
   
 Label :: { SPositional LabelName }
   : label                   { oc1 $1 $> LabelName $1 }
+
+ModName :: { SPositional ModuleName }
+  : many1SepOpt(ident,'.')  { oc1 $1 $> ModuleName $1 }
 
 LiteralExpr :: { SPositional Expr }
   : '()'                    { oc0 $1 $> ExprValEmptyOnion }
@@ -139,6 +145,11 @@ many1(p)
 many(p)
   : many1(p)                { forgetSpan $1 }
   |                         { vpos [] }
+
+many1SepOpt(p,s)
+  : p                       { fmap (:[]) $1 }
+  | p s                     { posOver $1 $2 $ [posData $1] }
+  | p s many1SepOpt(p,s)    { posOver $1 $3 $ posData $1 : posData $3 }
 
 {
 

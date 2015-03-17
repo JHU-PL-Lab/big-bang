@@ -222,7 +222,10 @@ ModuleTerm :: { SPositional ModuleTerm }
                             { oc3 $1 $> ModuleFunction $1 $3 $6 }
   | Ident '()' '=' Expr
                             { oc3 $1 $> ModuleFunction $1 (vpos []) $4 }
-  | 'import' ident          { oc1 $1 $> ModuleImport $2 }
+  | 'import' ModuleName     { oc1 $1 $> ModuleImport $2 }
+
+ModuleName :: { SPositional ModuleName }
+  : many1SepOpt(ident, '.') { oc1 $1 $> ModuleName $1 }
 
 ObjTermList :: { VPositional [ObjectTerm] }
   : many( ObjTerm )         { $1 }

@@ -9,6 +9,7 @@ module Language.TinyBang.Syntax.Tokens
 , TokenType(..)
 ) where
 
+import Data.List
 import Language.TinyBang.Utils.Display
 import Language.TinyBang.Utils.Syntax
 
@@ -32,6 +33,7 @@ data TokenType a where
   TokLabel :: TokenType String -- The @String@ is only the name of the label, not the @`@
   TokPlus :: TokenType () -- @+@
   TokMinus :: TokenType () -- @-@
+  TokDot :: TokenType () -- @.@
   TokAsterisk :: TokenType () -- @*@
   TokDiv :: TokenType () -- @/@
   TokMod :: TokenType () -- @%@
@@ -42,6 +44,7 @@ data TokenType a where
   TokRef :: TokenType () -- @ref@
   TokGetChar :: TokenType () -- @getChar@
   TokPutChar :: TokenType () -- @putChar@
+  TokLoad :: TokenType () -- @load@
 
 instance TokenDisplay TokenType where
   tokenPayloadDoc t = case t of
@@ -62,6 +65,7 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokLabel (posData -> n)) -> text "label#" <> dquotes (text n)
     Token (SomeToken TokPlus _) -> text "+"
     Token (SomeToken TokMinus _) -> text "-"
+    Token (SomeToken TokDot _) -> text "."
     Token (SomeToken TokAsterisk _) -> text "*"
     Token (SomeToken TokDiv _) -> text "/"
     Token (SomeToken TokMod _) -> text "%"
@@ -72,3 +76,4 @@ instance TokenDisplay TokenType where
     Token (SomeToken TokRef _) -> text "ref"
     Token (SomeToken TokGetChar _) -> text "getChar"
     Token (SomeToken TokPutChar _) -> text "putChar"
+    Token (SomeToken TokLoad _) -> text "load"

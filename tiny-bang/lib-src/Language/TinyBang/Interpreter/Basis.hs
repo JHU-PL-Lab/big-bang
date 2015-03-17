@@ -5,6 +5,7 @@ module Language.TinyBang.Interpreter.Basis
 , EvalState(..)
 , EvalError(..)
 , EvalM(..)
+, LoadContext(..)
 , runEvalM
 , varLookup
 , setVar
@@ -50,8 +51,26 @@ data EvalState = EvalState
                   -- ^ The current evaluation clauses
                 , evalVarIndex :: Integer
                   -- ^ The index of the next fresh varaible
+                , evalLoadCtx :: LoadContext
+                  -- ^ The function used by the `load' instruction
                 }
   deriving (Eq, Ord, Show)
+
+data LoadContext
+  = LoadContext
+    { loadFn :: String -> EvalM Expr
+    , loadSuffix :: String
+    , loadPathName :: String
+    }
+
+instance Eq LoadContext where
+    a == b = (loadSuffix a == loadSuffix b) && (loadPathName a == loadPathName b)
+
+instance Ord LoadContext where
+    a <= b = (loadSuffix a <= loadSuffix b) && (loadPathName a <= loadPathName b)
+
+instance Show LoadContext where
+    show a = "LoadContext(suffix=" ++ loadSuffix a ++ ", path=" ++ loadPathName a ++ ")"
 
 -- |A data structure representing evaluation errors.
 data EvalError
@@ -65,6 +84,10 @@ data EvalError
   | BuiltinBadOperandType Origin BuiltinOp Int Var
       -- ^Generated when a builtin operation has the wrong type of argument.
       --  Includes the argument index and the variable which appeared there.
+  | NonExistentModule ModuleName
+      -- ^Generated when a module is requested which does not exist.
+  | LoadError String
+      -- ^Generated when an ill-formed module is loaded.
   deriving (Eq, Ord, Show)
 
 instance Display EvalError where
@@ -74,6 +97,9 @@ instance Display EvalError where
 newtype EvalM a
   = EvalM { unEvalM :: EitherT EvalError (StateT EvalState IO) a }
   deriving (Functor, Applicative, Monad, MonadState EvalState, MonadIO)
+
+--hoistEvalM :: IO a -> EvalM a
+--hoistEvalM a = EvalM (hoistEither $ unsafePerformIO a)
 
 -- |Executes an evaluation.
 runEvalM :: EvalState -> EvalM a -> IO (Either EvalError a, EvalState)
@@ -134,20 +160,20 @@ getClauses = evalClauses <$> get
 -- |Sets the clauses in a given small-step evaluation.
 setClauses :: [Clause] -> EvalM ()
 setClauses cls =
-  modify $ \s -> EvalState (evalEnv s) cls (evalVarIndex s)
+  modify $ \s -> EvalState (evalEnv s) cls (evalVarIndex s) (evalLoadCtx s)
 
 -- |Replaces the first clause of the clause list with the provided clauses.
 replaceFirstClause :: [Clause] -> EvalM ()
 replaceFirstClause cls =
   modify $ \s -> EvalState (evalEnv s) (cls ++ drop 1 (evalClauses s))
-                           (evalVarIndex s)
+                           (evalVarIndex s) (evalLoadCtx s)
                            
 -- |Fetches the next fresh variable index and increments the fresh variable
 --  counter.
 freshVarIndex :: EvalM Integer
 freshVarIndex = do
   s <- get
-  put $ EvalState (evalEnv s) (evalClauses s) (evalVarIndex s + 1)
+  put $ EvalState (evalEnv s) (evalClauses s) (evalVarIndex s + 1) (evalLoadCtx s)
   return $ evalVarIndex s
   
 -- |Obtains fresh variables.  This is a general form of the fresh variable

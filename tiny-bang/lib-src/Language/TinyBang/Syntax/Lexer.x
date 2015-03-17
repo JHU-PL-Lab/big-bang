@@ -31,6 +31,7 @@ tokens :-
   ref                          { simply TokRef }
   getChar                      { simply TokGetChar }
   putChar                      { simply TokPutChar }
+  load                         { simply TokLoad }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
   "=="                         { simply TokEq }
@@ -47,6 +48,7 @@ tokens :-
   "*"                          { simply TokAsterisk }                         
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
+  "."                          { simply TokDot }
   "-"?$digit+                  { wrapM $ \s ->
                                    case readMaybe s of
                                      Just i ->

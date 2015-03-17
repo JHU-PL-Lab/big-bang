@@ -31,6 +31,7 @@ tokens :-
   in                           { simply TokIn }
   getChar                      { simply TokGetChar }
   putChar                      { simply TokPutChar }
+  load                         { simply TokLoad }
   "fun"                        { simply TokLambda }
   "->"                         { simply TokArrow }
   "()"                         { simply TokEmptyOnion }
@@ -47,6 +48,7 @@ tokens :-
   ")"                          { simply TokCloseParen }
   "*"                          { simply TokAsterisk }
   "+"                          { simply TokPlus }
+  "."                          { simply TokDot }
   "/"                          { simply TokDiv }
   "%"                          { simply TokMod }
   "-"?$digit+                  { wrapM $ \s ->
@@ -69,7 +71,6 @@ tokens :-
   `$identcont*                 { wrap $ \s ss ->
                                     S.token TokLabel ss $ drop 1 s
                                } 
-
 {
 
 alexEOF :: Alex (PosAlexReturnType TokenType)

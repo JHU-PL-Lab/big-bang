@@ -144,6 +144,7 @@ walkExprTree expr = do
     LB.TExprValInt o int -> (LB.TExprValInt o <$> return int) >>= f
     LB.TExprValChar o char -> (LB.TExprValChar o <$> return char) >>= f
     LB.TExprValEmptyOnion o -> f (LB.TExprValEmptyOnion o)
+    LB.TExprLoad o mn -> (LB.TExprLoad o <$> return mn) >>= f
     
     LB.LExprScape o params e -> (LB.LExprScape o
                                  <$> mapM walkParamTree params
@@ -272,7 +273,8 @@ walkModTermTree term = do
       (LB.ModuleFunction o n
         <$> mapM walkParamTree params
         <*> walkExprTree e) >>= f
-    -- ModuleImport doesn't need to be recursed into
+    LB.ModuleImport o mn ->
+      (LB.ModuleImport o <$> return mn) >>= f
     _ -> return term
 
 -- | Translate a module into an onion
@@ -287,6 +289,7 @@ desugarModule (LB.Module o tms) =
     return $ (startRaw . start . stack) end
   where
   diffExpr (LB.ModuleDiffExprAdapter _ f) = f
+  diffExpr e = error $ "instead of a DiffExprAdapter, got this: " ++ (show e)
 
 desugarModField :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
 desugarModField tm =
@@ -409,7 +412,85 @@ desugarModFunction tm =
 
 -- TODO
 desugarModImport :: LB.ModuleTerm -> DesugarM LB.ModuleTerm
-desugarModImport tm = return tm
+desugarModImport tm =
+  case tm of
+    LB.ModuleImport o n ->
+      let (LB.ModuleName _ s) = n in
+      do
+          -- build the namespace subtree
+          v1 <- nextFreshVar
+          v2 <- nextFreshVar
+          v3 <- nextFreshVar
+          subtree <- buildNameTree (init s) [last s] v1 v2 v3
+          subtreeAppl <- walkExprTree (LB.LExprAppl o subtree [LB.NamedArg o v2 (LB.TExprVar o (LB.Ident o "mod"))])
+          -- now construct the statement
+          -- TODO figure out how to get P_m, P_f from load
+          sealing <- mseal o (LB.TExprVar o (LB.Ident o "$modraw"))
+          let dollarZ1 = LB.Ident o ('$':(head s))
+          let loadExpr = LB.TExprLet o v1 (LB.TExprLoad o n)
+          let termExprToSeal = LB.TExprLet o dollarZ1 subtreeAppl
+          termExprToBind' <- walkExprTree (LB.LExprProjection o (LB.TExprVar o dollarZ1) (LB.Ident o $ head s))
+          let termExprToBind = LB.TExprLet o (LB.Ident o (head s)) termExprToBind'
+          let modrawExpr = (LB.TExprLet o
+                (LB.Ident o "$modraw")
+                (LB.TExprOnion o 
+                    (LB.TExprVar o dollarZ1)
+                    (LB.TExprVar o (LB.Ident o "$modraw"))
+                ))
+          let modExpr = LB.TExprLet o (LB.Ident o "mod") sealing
+          -- TODO figure out what to do with Q_m, Q_f
+          return $ LB.ModuleDiffExprAdapter o $ foldl1 (.) [loadExpr, termExprToSeal, termExprToBind, modrawExpr, modExpr]
+    _ -> return tm
+  where
+  --arg0 is the list of strings to turn into labels
+  --arg1 accumulates strings that have already turned into labels
+  --arg2 is x1*, the new branch of the subtree
+  --arg3 is x2*, the module
+  --arg4 is x3*, the old branch of the subtree
+  buildNameTree :: [String] -> [String] -> LB.Ident -> LB.Ident -> LB.Ident -> DesugarM LB.Expr
+  buildNameTree names acc x1 x2 x3 = do
+    let o = generated
+    case names of
+      [] -> walkExprTree $ (LB.LExprScape o [LB.Param o x2 (LB.EmptyPattern o)]
+                (labelChainExpr acc (LB.TExprVar o x1)))
+      _ -> do
+        nextScape <- buildNameTree (init names) ((last names):acc) x1 x2 x3
+        walkExprTree $ LB.TExprOnion o (LB.LExprScape o [labelChainParam names x2 x3] (
+                        labelChainExpr names (
+                            LB.TExprOnion o (labelChainExpr acc (LB.TExprVar o x1)) (LB.TExprVar o x3)))) nextScape
+  {-
+    -- build from smallest to largest in terms of backNames
+    let (frontNames:backNames) = names
+    let o = generated
+    case backNames of
+      x:y ->
+        do
+            e <- buildNameTree (frontNames:[x]) y x1
+            walkExprTree $ LB.TExprOnion o e (
+                LB.LExprScape o [labelChainParam frontNames x2 x3] (
+                  labelChainExpr [frontNames] (
+                    LB.TExprOnion o (labelChainExpr backNames (LB.TExprVar o x1)) (LB.TExprVar o x3)
+                  )
+                )
+             )
+      [] -> 
+        walkExprTree $ (LB.LExprScape o [LB.Param o x2 (LB.EmptyPattern o)]
+          (labelChainExpr [frontNames] (LB.TExprVar o x1)))
+  -}
+  
+  labelChainParam :: [String] -> LB.Ident -> LB.Ident -> LB.Param
+  labelChainParam s name var =
+    let pat = labelChainParam' s var in (LB.Param generated name pat)
+  labelChainParam' :: [String] -> LB.Ident -> LB.Pattern
+  labelChainParam' labels i =
+    case labels of
+      x:y -> LB.LabelPattern generated (LB.LabelName generated x) (labelChainParam' y i)
+      [] -> LB.VariablePattern generated i
+  labelChainExpr :: [String] -> LB.Expr -> LB.Expr
+  labelChainExpr labels expr = 
+    case labels of
+      x:y -> LB.TExprLabelExp generated (LB.LabelName generated x) (labelChainExpr y expr)
+      [] -> expr
 
 desugarExprLetRec :: LB.Expr -> DesugarM LB.Expr
 desugarExprLetRec expr =

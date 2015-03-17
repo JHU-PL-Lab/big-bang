@@ -32,6 +32,7 @@ $(concat <$> mapM (defineHomInstance ''VariableSubstitution)
 $(concat <$> mapM (defineTransformIdentityInstance ''VariableSubstitution)
                   [ ''PrimitiveType
                   , ''LabelName
+                  , ''ModuleName
                   , ''PrimitiveValue
                   , ''BuiltinOp
                   ])
