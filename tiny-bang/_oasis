@@ -1,0 +1,17 @@
+Name: TinyBang
+Version: 0.3
+Synopsis: The TinyBang core language project.
+Authors: JHU PL Lab <pl.cs@jhu.edu>
+License: BSD-4-clause
+
+Description: A small core language upon which a typed scripting language may be built.
+Homepage: http://www.big-bang-lang.org/
+
+OASISFormat: 0.4
+BuildTools: ocamlbuild
+Plugins: META (0.4), DevFiles (0.4)
+
+Executable "tiny-bang"
+  Path: src
+  MainIs: tinybang_main.ml
+
