@@ -13,5 +13,5 @@ Plugins: META (0.4), DevFiles (0.4)
 
 Executable "tiny-bang"
   Path: src
-  MainIs: tinybang_main.ml
+  MainIs: tinybang.ml
 
