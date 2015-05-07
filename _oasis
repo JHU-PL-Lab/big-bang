@@ -13,22 +13,30 @@ Plugins: META (0.4), DevFiles (0.4)
 AlphaFeatures: ocamlbuild_more_args
 XOCamlbuildExtraArgs: -use-menhir
 
-Library "TinyBang"
-  Path: src
+Library "tiny-bang-ast"
+  Path: src/tiny-bang-ast
   Modules:
-    TinyBang_Ast,
-    TinyBang_Lexer,
-    TinyBang_Parser
+    Tiny_bang_ast
   BuildDepends:
     batteries
+
+Library "tiny-bang-parser"
+  Path: src/tiny-bang-parser
+  Modules:
+    Tiny_bang_lexer,
+    Tiny_bang_parser
+  BuildDepends:
+    batteries,
+    tiny-bang-ast
   BuildTools+:
     ocamllex,
     menhir
 
 Executable "tiny-bang-toploop"
-  Path: src
-  MainIs: TinyBang_Toploop.ml
+  Path: src/tiny-bang-toploop
+  MainIs: tiny_bang_toploop.ml
   BuildDepends:
-    batteries,
-    TinyBang
+    tiny-bang-ast,
+    tiny-bang-parser,
+    batteries
 

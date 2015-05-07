@@ -1,5 +1,5 @@
 %{
-open TinyBang_Ast;;
+open Tiny_bang_ast;;
 %}
   
 %token <string> IDENTIFIER
@@ -15,7 +15,7 @@ open TinyBang_Ast;;
 %token ASTERISK
 %token EOF
 
-%start <TinyBang_Ast.expr> prog
+%start <Tiny_bang_ast.expr> prog
 
 %%
 

@@ -1,6 +1,5 @@
-(* file: TinyBang_Lexer.mll *)
 {
-  open TinyBang_Parser;;
+  open Tiny_bang_parser;;
 }
 
 let digit = ['0'-'9']
