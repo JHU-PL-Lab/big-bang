@@ -10,15 +10,24 @@ Homepage: http://www.big-bang-lang.org/
 OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
+AlphaFeatures: ocamlbuild_more_args
+XOCamlbuildExtraArgs: -use-menhir
+
+Library "TinyBang"
+  Path: src
+  Modules:
+    TinyBang_Ast,
+    TinyBang_Lexer,
+    TinyBang_Parser
+  BuildDepends:
+    batteries
+  BuildTools+:
+    ocamllex,
+    menhir
 
 Executable "tiny-bang-toploop"
   Path: src
   MainIs: TinyBang_Toploop.ml
   BuildDepends:
-    batteries, TinyBang
-
-Library "TinyBang"
-  Path: src
-  Modules: TinyBang_Ast
-  BuildDepends:
-    batteries
+    batteries,
+    TinyBang
