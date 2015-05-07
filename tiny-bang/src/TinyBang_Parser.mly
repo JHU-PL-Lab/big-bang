@@ -51,41 +51,40 @@ identifier:
 
 redex:
   | value
-      { ValueRedex $1 }
+      { Value_redex $1 }
   | variable
-      { VarRedex $1 }
+      { Var_redex $1 }
   | variable variable
-      { ApplRedex($1,$2) }
+      { Appl_redex($1,$2) }
   ;
 
 value:
   | EMPTY_ONION
-      { EmptyOnionValue }
+      { Empty_onion_value }
   | label variable
-      { LabelValue($1,$2) }
+      { Label_value($1,$2) }
   | variable AMPERSAND variable
-      { OnionValue($1,$3) }
+      { Onion_value($1,$3) }
   | pattern ARROW OPEN_BRACE expr CLOSE_BRACE
-      { FunctionValue($1,$4) }
+      { Function_value($1,$4) }
 
 pattern:
-  | variable BACKSLASH OPEN_BRACE filterRuleSet CLOSE_BRACE
+  | variable BACKSLASH OPEN_BRACE filter_rule_set CLOSE_BRACE
       { Pattern($1,$4) }
 
-filterRuleSet:
-  | separated_nonempty_list(SEMICOLON, filterRule) SEMICOLON?
-      { PatternFilterRuleSet.of_list $1 }
+filter_rule_set:
+  | separated_nonempty_list(SEMICOLON, filter_rule) SEMICOLON?
+      { Pattern_filter_rule_set.of_list $1 }
 
-filterRule:
+filter_rule:
   | variable EQUALS filter
-      { PatFilterRule($1,$3) }
+      { Pattern_filter_rule($1,$3) }
 
 filter:
   | EMPTY_ONION
-      { EmptyFilter }
+      { Empty_filter }
   | label variable
-      { LabelFilter($1,$2) }
+      { Label_filter($1,$2) }
   | variable ASTERISK variable
-      { ConjunctionFilter($1,$3) }
-
+      { Conjunction_filter($1,$3) }
 

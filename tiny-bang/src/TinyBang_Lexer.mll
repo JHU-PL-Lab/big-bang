@@ -7,8 +7,8 @@ let digit = ['0'-'9']
 let alpha = ['a'-'z'] | ['A'-'Z']
 let whitespace = [' ' '\t' '\n']
 
-let identStart = alpha
-let identCont = alpha | digit
+let ident_start = alpha
+let ident_cont = alpha | digit
 
 rule token = parse
   | whitespace                       { token lexbuf }
@@ -21,5 +21,5 @@ rule token = parse
   | "->"                             { ARROW }
   | "()"                             { EMPTY_ONION }
   | "*"                              { ASTERISK }
-  | identStart identCont* as s       { IDENTIFIER s }
-  | "`" (identCont* as s)            { LABEL s }
+  | ident_start ident_cont* as s     { IDENTIFIER s }
+  | "`" (ident_cont* as s)           { LABEL s }
