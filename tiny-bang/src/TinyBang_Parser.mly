@@ -25,7 +25,7 @@ prog:
   ;
 
 expr:
-  | separated_nonempty_list(SEMICOLON, clause) SEMICOLON?
+  | separated_nonempty_trailing_list(SEMICOLON, clause)
       { Expr $1 }
   ;
 
@@ -73,7 +73,7 @@ pattern:
       { Pattern($1,$4) }
 
 filter_rule_set:
-  | separated_nonempty_list(SEMICOLON, filter_rule) SEMICOLON?
+  | separated_nonempty_trailing_list(SEMICOLON, filter_rule)
       { Pattern_filter_rule_set.of_list $1 }
 
 filter_rule:
@@ -88,3 +88,8 @@ filter:
   | variable ASTERISK variable
       { Conjunction_filter($1,$3) }
 
+separated_nonempty_trailing_list(separator, rule):
+  | nonempty_list(terminated(rule, separator))
+      { $1 }
+  | separated_nonempty_list(separator,rule)
+      { $1 }
