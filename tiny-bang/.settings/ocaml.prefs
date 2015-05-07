@@ -1,6 +1,0 @@
-compil_mode//_build/myocamlbuild=native
-compil_mode//_build/src/TinyBang_Toploop.byte=byte-code
-compil_mode//_build/src/tinybang.byte=byte-code
-compil_mode//_build/src/tinybang_main.byte=byte-code
-compil_mode/configure=native
-eclipse.preferences.version=1
