@@ -11,7 +11,14 @@ OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 
-Executable "tiny-bang"
+Executable "tiny-bang-toploop"
   Path: src
-  MainIs: tinybang.ml
+  MainIs: TinyBang_Toploop.ml
+  BuildDepends:
+    batteries, TinyBang
 
+Library "TinyBang"
+  Path: src
+  Modules: TinyBang_Ast
+  BuildDepends:
+    batteries
