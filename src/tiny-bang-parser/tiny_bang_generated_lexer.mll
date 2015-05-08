@@ -1,5 +1,6 @@
 {
-  open Tiny_bang_parser;;
+  open Tiny_bang_parser_support;;
+  open Tiny_bang_generated_parser;;
 }
 
 let digit = ['0'-'9']
@@ -22,3 +23,4 @@ rule token = parse
   | "*"                              { ASTERISK }
   | ident_start ident_cont* as s     { IDENTIFIER s }
   | "`" (ident_cont* as s)           { LABEL s }
+  | ";;"                             { DOUBLE_SEMICOLON }

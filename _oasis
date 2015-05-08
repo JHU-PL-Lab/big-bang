@@ -16,15 +16,19 @@ XOCamlbuildExtraArgs: -use-menhir
 Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
   Modules:
-    Tiny_bang_ast
+    Tiny_bang_ast,
+    Tiny_bang_ast_uid
   BuildDepends:
     batteries
 
 Library "tiny-bang-parser"
   Path: src/tiny-bang-parser
   Modules:
-    Tiny_bang_lexer,
-    Tiny_bang_parser
+    Tiny_bang_generated_lexer,
+    Tiny_bang_generated_parser,
+    Tiny_bang_parser,
+    Tiny_bang_parser_support,
+    Tiny_bang_parser_types
   BuildDepends:
     batteries,
     tiny-bang-ast
