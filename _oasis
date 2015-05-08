@@ -17,6 +17,7 @@ Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
   Modules:
     Tiny_bang_ast,
+    Tiny_bang_ast_pretty,
     Tiny_bang_ast_uid
   BuildDepends:
     batteries

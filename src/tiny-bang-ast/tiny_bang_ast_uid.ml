@@ -10,6 +10,8 @@ let next_uid () =
   Ast_uid(x)
 ;;
 
+let int_of_uid (Ast_uid n) = n;;
+
 module Ast_uid_hash =
 struct
   type t = ast_uid

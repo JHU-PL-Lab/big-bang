@@ -16,7 +16,7 @@ let next_uid startpos endpos =
                ; file_region_start = start
                ; file_region_end = stop
                } in
-  Ast_uid_hashtbl.add !ast_position_hash uid region;
+  Ast_uid_hashtbl.add (get_ast_position_hash()) uid region;
   uid
 %}
   
@@ -35,7 +35,7 @@ let next_uid startpos endpos =
 %token EOF
 
 %start <Tiny_bang_ast.expr> prog
-%start <Tiny_bang_ast.expr * bool> delim_expr
+%start <Tiny_bang_ast.expr option> delim_expr
 
 %%
 
@@ -45,10 +45,12 @@ prog:
   ;
   
 delim_expr:
-  | expr EOF
-      { ($1,true) }
+  | EOF
+      { None }
   | expr DOUBLE_SEMICOLON
-      { ($1,false) }
+      { Some($1) }
+  | expr EOF
+      { Some($1) }
   ;
 
 expr:
@@ -63,7 +65,7 @@ clause:
 
 variable:
   | identifier
-      { Var((next_uid $startpos $endpos),$1,Freshening_stack None) }
+      { Var((next_uid $startpos $endpos),$1,None) }
   ;
   
 label:

@@ -10,6 +10,9 @@ type ast_uid = Tiny_bang_ast_uid.ast_uid;;
 (** A function for retrieving the next UID to use in a TinyBang AST. *)
 let next_uid = Tiny_bang_ast_uid.next_uid;;
 
+(** A function to extract the integer value of a UID. *)
+let int_of_uid = Tiny_bang_ast_uid.int_of_uid;;
+
 (** A module for hashtables keyed by UIDs. *)
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
@@ -25,10 +28,10 @@ type label = Label of ident;;
     list is the topmost element in the stack.  If this stack is absent, then
     the variable in question has not been instantiated (and remains within the
     body of a function). *)
-type freshening_stack = Freshening_stack of ident list option;;
+type freshening_stack = Freshening_stack of ident list;;
 
 (** Variables in the TinyBang AST. *)
-type var = Var of ast_uid * ident * freshening_stack;;
+type var = Var of ast_uid * ident * freshening_stack option;;
 
 (** Individual pattern filters. *)
 type pat_filter =
