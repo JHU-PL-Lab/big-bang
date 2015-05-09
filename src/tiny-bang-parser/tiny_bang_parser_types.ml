@@ -13,5 +13,5 @@ type file_region = { file_region_filename : string
 
 type src_origin =
   | File_origin of file_region
-  | Gen_origin of src_origin option
+  | Gen_origin of src_origin list
   ;;

@@ -3,15 +3,8 @@ Contains data type definitions for the TinyBang AST.
 *)
 
 open Batteries;;
-
-(** The type for the UIDs attached to TinyBang ASTs. *)
-type ast_uid = Tiny_bang_ast_uid.ast_uid;;
-
-(** A function for retrieving the next UID to use in a TinyBang AST. *)
-let next_uid = Tiny_bang_ast_uid.next_uid;;
-
-(** A function to extract the integer value of a UID. *)
-let int_of_uid = Tiny_bang_ast_uid.int_of_uid;;
+open Tiny_bang_ast_uid;;
+open Tiny_bang_utils;;
 
 (** A module for hashtables keyed by UIDs. *)
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
@@ -33,24 +26,38 @@ type freshening_stack = Freshening_stack of ident list;;
 (** Variables in the TinyBang AST. *)
 type var = Var of ast_uid * ident * freshening_stack option;;
 
+let var_compare (Var(_,i1,fso1)) (Var(_,i2,fso2)) =
+  natural_compare_seq
+    [ (fun () -> compare i1 i2)
+    ; (fun () -> compare fso1 fso2)
+    ];;
+
+let var_hash (Var(_,i,fso)) =
+  Hashtbl.hash i lxor Hashtbl.hash fso;;
+
+let var_equal (Var(_,i1,fso1)) (Var(_,i2,fso2)) = i1 = i2 && fso1 = fso2;;
+
+module VarOrder =
+  struct
+    type t = var
+    let compare = var_compare
+  end;;
+
+module VarSet = Set.Make(VarOrder);;
+
+module VarMap = Map.Make(VarOrder);;
+
 (** Individual pattern filters. *)
 type pat_filter =
   | Empty_filter of ast_uid
   | Label_filter of ast_uid * label * var
   | Conjunction_filter of ast_uid * var * var;;
 
-(** Pattern filter rules. *)
-type pat_filter_rule = Pattern_filter_rule of ast_uid * var * pat_filter;;
-
 (** Sets of pattern filter rules that comprise a pattern. *)
-module Pattern_filter_rule_set = Set.Make(
-  struct
-    type t = pat_filter_rule
-    let compare = compare
-  end);;
+type pattern_filter_rules = pat_filter VarMap.t;;
 
 (** The type of a TinyBang pattern. *)
-type pattern = Pattern of ast_uid * var * Pattern_filter_rule_set.t;;
+type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
 
 (** The type of a TinyBang expression. *)
 type expr = Expr of ast_uid * clause list

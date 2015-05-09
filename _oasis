@@ -13,6 +13,13 @@ Plugins: META (0.4), DevFiles (0.4)
 AlphaFeatures: ocamlbuild_more_args
 XOCamlbuildExtraArgs: -use-menhir
 
+Library "tiny-bang-utils"
+  Path: src/tiny-bang-utils
+  Modules:
+    Tiny_bang_utils
+  BuildDepends:
+    batteries
+
 Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
   Modules:
@@ -20,7 +27,8 @@ Library "tiny-bang-ast"
     Tiny_bang_ast_pretty,
     Tiny_bang_ast_uid
   BuildDepends:
-    batteries
+    batteries,
+    tiny-bang-utils
 
 Library "tiny-bang-parser"
   Path: src/tiny-bang-parser
@@ -32,16 +40,28 @@ Library "tiny-bang-parser"
     Tiny_bang_parser_types
   BuildDepends:
     batteries,
-    tiny-bang-ast
+    tiny-bang-ast,
+    tiny-bang-utils
   BuildTools+:
     ocamllex,
     menhir
+
+Library "tiny-bang-interpreter"
+  Path: src/tiny-bang-interpreter
+  Modules:
+    Tiny_bang_interpreter,
+    Tiny_bang_interpreter_types
+  BuildDepends:
+    batteries,
+    tiny-bang-ast,
+    tiny-bang-utils
 
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
   MainIs: tiny_bang_toploop.ml
   BuildDepends:
     tiny-bang-ast,
+    tiny-bang-interpreter,
     tiny-bang-parser,
     batteries
 

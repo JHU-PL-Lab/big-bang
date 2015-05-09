@@ -1,11 +1,12 @@
 %{
 open Tiny_bang_ast;;
+open Tiny_bang_ast_uid;;
 open Tiny_bang_parser_support;;
 open Tiny_bang_parser_types;;
 open Lexing;;
 
 let next_uid startpos endpos =
-  let uid : ast_uid = Tiny_bang_ast.next_uid () in
+  let uid : ast_uid = next_uid () in
   let start = { file_pos_lineno = startpos.pos_lnum
               ; file_pos_colno = startpos.pos_bol
               } in
@@ -103,11 +104,25 @@ pattern:
 
 filter_rule_set:
   | separated_nonempty_trailing_list(SEMICOLON, filter_rule)
-      { Pattern_filter_rule_set.of_list $1 }
+      { 
+        let rules = $1 in
+        (* Confirm that there are no duplicate variables. *)
+        ignore
+          (List.fold_left
+            (fun s -> fun (x,_) ->
+              if VarSet.mem x s
+                then raise (Tiny_bang_utils.Not_yet_implemented
+                              "Duplicate filter rule variable")
+                else VarSet.add x s
+            )
+            VarSet.empty
+            rules);
+        VarMap.of_enum (BatList.enum $1)
+      }
 
 filter_rule:
   | variable EQUALS filter
-      { Pattern_filter_rule((next_uid $startpos $endpos),$1,$3) }
+      { ($1,$3) }
 
 filter:
   | EMPTY_ONION

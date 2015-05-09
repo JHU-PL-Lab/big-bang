@@ -17,7 +17,7 @@ let pretty_freshening_stack (Freshening_stack ids) =
 let pretty_var (Var(_, i, mfs)) =
   match mfs with
   | None -> pretty_ident i
-  | Some fs -> pretty_ident i ^ "__" ^ pretty_freshening_stack fs
+  | Some fs -> pretty_ident i ^ pretty_freshening_stack fs
 ;;
 
 let pretty_pat_filter pf =
@@ -27,21 +27,20 @@ let pretty_pat_filter pf =
   | Conjunction_filter(_, x1, x2) -> pretty_var x1 ^ " * " ^ pretty_var x2
 ;;
 
-let pretty_pat_filter_rule (Pattern_filter_rule(_, x, pf)) =
-  pretty_var x ^ " = " ^ pretty_pat_filter pf
-;;
-
-let pretty_pat_filter_rule_set pfrs =
-  let strs = List.map pretty_pat_filter_rule
-      (Pattern_filter_rule_set.to_list pfrs) in
-  "{ " ^ (List.fold_left
-      (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)
-      ""
-      strs) ^ " }"
+let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =
+  let inner = 
+    pfrs
+    |> VarMap.enum
+    |> Enum.map (fun (x,pf) -> pretty_var x ^ " = " ^ pretty_pat_filter pf)
+    |> Enum.fold
+        (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)
+        ""
+  in
+  "{ " ^ inner ^ " }"
 ;;
 
 let pretty_pattern (Pattern(_, x, pfrs)) =
-  pretty_var x ^ " \ " ^ pretty_pat_filter_rule_set pfrs
+  pretty_var x ^ " \ " ^ pretty_pat_filter_rules pfrs
 ;;
 
 let rec pretty_expr (Expr(_, cls)) =
