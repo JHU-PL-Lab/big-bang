@@ -1,5 +1,5 @@
 (**
-Contains data type definitions for the TinyBang AST.
+   Contains data type definitions for the TinyBang AST.
 *)
 
 open Batteries;;
@@ -11,6 +11,15 @@ module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
 (** A data type for identifiers in TinyBang. *)
 type ident = Ident of string;;
+
+module IdentOrder =
+struct
+  type t = ident
+  let compare = compare
+end
+;;
+
+module IdentSet = Set.Make(IdentOrder);;
 
 (** The label type.  The identifier stored in this label does not contain the
     leading backtick. *)
@@ -38,10 +47,10 @@ let var_hash (Var(_,i,fso)) =
 let var_equal (Var(_,i1,fso1)) (Var(_,i2,fso2)) = i1 = i2 && fso1 = fso2;;
 
 module VarOrder =
-  struct
-    type t = var
-    let compare = var_compare
-  end;;
+struct
+  type t = var
+  let compare = var_compare
+end;;
 
 module VarSet = Set.Make(VarOrder);;
 
