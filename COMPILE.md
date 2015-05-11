@@ -8,7 +8,15 @@ OASIS is needed to compile this project.  OASIS may be installed via opam:
 Building
 ========
 
-First, we must use the OASIS metadata to generate a configuration script:
+It's recommended that you build the project in an appropriate `opam` switch:
+
+    opam switch 4.02.1
+
+First, install the dependencies:
+
+    opam install batteries menhir
+
+Then, we must use the OASIS metadata to generate a configuration script:
 
     oasis setup -setup-update dynamic
 
