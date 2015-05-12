@@ -28,5 +28,5 @@ And finally, we can make the project:
 
     make
 
-The re-execution of the "oasis setup" step is only necessary when the _oasis configuration file changes.
-
+From this point onward, the re-execution of "make" is sufficient to rebuild the
+project (even when the _oasis file changes).
