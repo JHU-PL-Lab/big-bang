@@ -30,7 +30,7 @@ let pretty_pat_filter pf =
 let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =
   let inner = 
     pfrs
-    |> VarMap.enum
+    |> Var_map.enum
     |> Enum.map (fun (x,pf) -> pretty_var x ^ " = " ^ pretty_pat_filter pf)
     |> Enum.fold
         (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)

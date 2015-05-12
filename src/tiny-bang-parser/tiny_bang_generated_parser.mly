@@ -110,14 +110,14 @@ filter_rule_set:
         ignore
           (List.fold_left
             (fun s -> fun (x,_) ->
-              if VarSet.mem x s
+              if Var_set.mem x s
                 then raise (Tiny_bang_utils.Not_yet_implemented
                               "Duplicate filter rule variable")
-                else VarSet.add x s
+                else Var_set.add x s
             )
-            VarSet.empty
+            Var_set.empty
             rules);
-        VarMap.of_enum (BatList.enum $1)
+        Var_map.of_enum (BatList.enum $1)
       }
 
 filter_rule:

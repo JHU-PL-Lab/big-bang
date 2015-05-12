@@ -3,9 +3,10 @@ open Batteries;;
 open Tiny_bang_ast;;
 open Tiny_bang_ast_pretty;;
 open Tiny_bang_ast_uid;;
-open Tiny_bang_interpreter_types;;
 
-let pretty_env env =
+module Environment = Var_hashtbl;;
+
+let pretty_env (env : value Environment.t) =
   let inner =
     env
     |> Environment.enum
@@ -23,23 +24,23 @@ let lookup env x =
 let bound_vars_of_expr (Expr(_, cls)) =
   cls
   |> List.map (fun (Clause(_, x, _)) -> x)
-  |> VarSet.of_list
+  |> Var_set.of_list
 ;;
 
-let rec compatibility env first_x_arg pat : value VarMap.t option =
+let rec compatibility env first_x_arg pat : value Var_map.t option =
   let (Pattern(_, first_x_pat, pfcs)) = pat in
-  let rec compat x_arg x_pat : value VarMap.t option =
+  let rec compat x_arg x_pat : value Var_map.t option =
     (* TODO: deal with the Not_found here more gracefully? *)
-    let pf = VarMap.find x_pat pfcs in
+    let pf = Var_map.find x_pat pfcs in
     match pf with
     (* Starting with conjunction, since we need to address that first. *)
     | Conjunction_filter(_, x_pat_1, x_pat_2) ->
         begin
           match (compat x_arg x_pat_1, compat x_arg x_pat_2) with
           | (Some cl1, Some cl2) ->
-              let m = VarMap.fold
+              let m = Var_map.fold
                   (fun k -> fun v -> fun m ->
-                                VarMap.add k v m)
+                                Var_map.add k v m)
                   cl1 cl2 in
               Some m
           | _ ->
@@ -59,7 +60,7 @@ let rec compatibility env first_x_arg pat : value VarMap.t option =
                 (compat x_arg_1 x_pat) (compat x_arg_2 x_pat)
           | _, Empty_filter(_) ->
           (* Everything matches an empty filter. *)
-              Some VarMap.empty
+              Some Var_map.empty
           | Label_value(_, l, x), Label_filter(_, l', x') ->
               if l = l' then compat x x' else None
           | _, _ ->
@@ -69,7 +70,7 @@ let rec compatibility env first_x_arg pat : value VarMap.t option =
 				(* premature (because, for instance, the next level up is an       *)
 				(* onion), the fact that this occurs postfix will erase this       *)
 				(* binding for the appropriate one.                                *)
-        Option.map (VarMap.add x_pat v) lower_map
+        Option.map (Var_map.add x_pat v) lower_map
   in
   compat first_x_arg first_x_pat
 ;;
@@ -91,7 +92,7 @@ let rec application_match env x_fn x_arg : clause list option =
         (* Turn the bindings into generated clauses. *)
             let binding_clauses =
               bindings
-              |> VarMap.enum
+              |> Var_map.enum
               |> Enum.map
                 (fun (x, v) ->
                       let ruid = next_uid() in
@@ -140,10 +141,10 @@ let var_freshen freshening_stack cls =
   let bound_variables =
     cls
     |> List.map (fun (Clause(_, x, _)) -> x)
-    |> VarSet.of_list 
+    |> Var_set.of_list 
   in
   let repl_fn (Var(_, i, fso) as x) =
-    if VarSet.mem x bound_variables
+    if Var_set.mem x bound_variables
       then Var(next_uid(), i, Some freshening_stack)
       else x
   in

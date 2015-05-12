@@ -4,8 +4,11 @@ src/tiny-bang-toploop
 src/tiny-bang-parser
 src/tiny-bang-ast
 /home/zpalmer/.opam/4.02.1/lib
-_build/src/tiny-bang-toploop
 src/tiny-bang-interpreter
-_build/src/tiny-bang-interpreter
 src/tiny-bang-utils
 _build/src/tiny-bang-utils
+src/tiny-bang-typechecker
+_build/src/tiny-bang-interpreter
+_build/src/tiny-bang-parser
+_build/src/tiny-bang-toploop
+_build/src/tiny-bang-typechecker

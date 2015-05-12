@@ -12,14 +12,23 @@ module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 (** A data type for identifiers in TinyBang. *)
 type ident = Ident of string;;
 
-module IdentOrder =
+module Ident_hash =
+struct
+  type t = ident
+  let equal = (=)
+  let hash = Hashtbl.hash
+end;;
+
+module Ident_hashtbl = Hashtbl.Make(Ident_hash);;
+
+module Ident_order =
 struct
   type t = ident
   let compare = compare
 end
 ;;
 
-module IdentSet = Set.Make(IdentOrder);;
+module Ident_set = Set.Make(Ident_order);;
 
 (** The label type.  The identifier stored in this label does not contain the
     leading backtick. *)
@@ -46,15 +55,24 @@ let var_hash (Var(_,i,fso)) =
 
 let var_equal (Var(_,i1,fso1)) (Var(_,i2,fso2)) = i1 = i2 && fso1 = fso2;;
 
-module VarOrder =
+module Var_hash =
+struct
+  type t = var
+  let equal = var_equal
+  let hash = var_hash
+end;;
+
+module Var_hashtbl = Hashtbl.Make(Var_hash);;
+
+module Var_order =
 struct
   type t = var
   let compare = var_compare
 end;;
 
-module VarSet = Set.Make(VarOrder);;
+module Var_set = Set.Make(Var_order);;
 
-module VarMap = Map.Make(VarOrder);;
+module Var_map = Map.Make(Var_order);;
 
 (** Individual pattern filters. *)
 type pat_filter =
@@ -63,7 +81,7 @@ type pat_filter =
   | Conjunction_filter of ast_uid * var * var;;
 
 (** Sets of pattern filter rules that comprise a pattern. *)
-type pattern_filter_rules = pat_filter VarMap.t;;
+type pattern_filter_rules = pat_filter Var_map.t;;
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * var * pattern_filter_rules;;

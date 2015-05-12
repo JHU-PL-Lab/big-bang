@@ -49,8 +49,7 @@ Library "tiny-bang-parser"
 Library "tiny-bang-interpreter"
   Path: src/tiny-bang-interpreter
   Modules:
-    Tiny_bang_interpreter,
-    Tiny_bang_interpreter_types
+    Tiny_bang_interpreter
   BuildDepends:
     batteries,
     tiny-bang-ast,
