@@ -1,20 +1,8 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
+open Tiny_bang_contours_types;;
 open Tiny_bang_utils;;
-
-type contour_part =
-  | Single_part of ident
-  | Multi_part of Ident_set.t
-;;
-
-type contour =
-  | Contour of contour_part list
-;;
-
-(** Raised when an ill-formed contour is used where a well-formed contour is
-    required. *)
-exception Ill_formed_contour of contour;;
 
 let members_of_part part =
   match part with

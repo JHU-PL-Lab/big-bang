@@ -58,7 +58,8 @@ Library "tiny-bang-interpreter"
 Library "tiny-bang-typechecker"
   Path: src/tiny-bang-typechecker
   Modules:
-    Tiny_bang_contours
+    Tiny_bang_contours,
+    Tiny_bang_contours_types
   BuildDepends:
     batteries,
     tiny-bang-ast,
