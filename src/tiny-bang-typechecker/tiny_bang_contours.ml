@@ -22,6 +22,7 @@ let members_of_part part =
   | MultiPart(is) -> is
 ;;
 
+(** Determines whether or not a contour is well-formed. *)
 let check_well_formed (Contour(contour_parts)) : bool =
   let disjoint_union a b =
     if Ident_set.is_empty (Ident_set.inter a b)
@@ -42,7 +43,17 @@ let check_well_formed (Contour(contour_parts)) : bool =
   check_parts Ident_set.empty contour_parts
 ;;
 
-let derive_well_formed (Contour(original_contour_parts)) : contour =
+(** Asserts that a contour is well-formed.  If it is not, then
+    [Not_yet_implemented] is raised. *)
+let assert_well_formed contour =
+  if check_well_formed contour
+    then ()
+    else raise (Ill_formed_contour contour)
+;;
+
+(** Determines the least contour greater than the provided contour which is
+    well-formed. *)
+let derive_least_well_formed (Contour(original_contour_parts) as c) : contour =
   (* Our first step merges duplicate elements. *)
   let merge_duplicates contour_parts =
     (* We'll start by building a hashtable counting the number of occurrences of
@@ -122,11 +133,12 @@ let derive_well_formed (Contour(original_contour_parts)) : contour =
     | part1::part2::contour_parts' ->
       part1::(merge_adjacent (part2::contour_parts'))
   in
-  (* Now do the work! *)
-  Contour
-    (original_contour_parts
-     |> merge_duplicates
-     |> merge_adjacent)
+  if check_well_formed c then c else
+    (* Now do the work! *)
+    Contour
+      (original_contour_parts
+       |> merge_duplicates
+       |> merge_adjacent)
 ;;
 
 let is_all_multi_parts parts =
@@ -183,8 +195,69 @@ let rec subsumes_by_parts contour_parts_1 contour_parts_2 =
                 else false
 ;;
 
-(** Determines if the first contour subsumes the second. *)
-let subsumes (Contour(contour_parts_1)) (Contour(contour_parts_2)) =
+(** Determines if the first contour subsumes the second.  Both contours must be
+    well-formed. *)
+let subsumes (Contour(contour_parts_1) as c1) (Contour(contour_parts_2) as c2) =
+  assert_well_formed c1; assert_well_formed c2;
   subsumes_by_parts contour_parts_1 contour_parts_2
 ;;
 
+let rec overlaps_by_parts contour_parts_1 contour_parts_2 =
+  match contour_parts_1,contour_parts_2 with
+    | [],[] -> true
+    | [],_ ->
+        (* Then contour 2 has more parts than contour 1.  As long as those parts
+           are multi-parts, everthing is fine. *)
+        is_all_multi_parts contour_parts_2
+    | _,[] ->
+        (* Then contour 1 has more parts than contour 2.  As long as those parts
+           are multi-parts, everthing is fine. *)
+        is_all_multi_parts contour_parts_1
+    | part_1::contour_parts_1',part_2::contour_parts_2' ->
+        match part_1,part_2 with
+          | SinglePart(i1),SinglePart(i2) ->
+              (* In this case, both contours require that the call string have a
+                 single character at this position.  It must be the same
+                 character or no call string satisfies them both. *)
+              if i1 == i2
+                then overlaps_by_parts contour_parts_1' contour_parts_2'
+                else false
+          | MultiPart(is1),SinglePart(i2) ->
+              (* We have two cases.  Either the SinglePart is covered by the
+                 MultiPart (in which case we drop the SinglePart and move on)
+                 or it is not (in which case we drop the MultiPart and hope to
+                 find something to match the SinglePart on recursion). *)
+              if Ident_set.mem i2 is1
+                then overlaps_by_parts contour_parts_1 contour_parts_2'
+                else overlaps_by_parts contour_parts_1' contour_parts_2
+          | SinglePart(i1),MultiPart(is2) ->
+              (* Same as above, as this relation is symmetric. *)
+              if Ident_set.mem i1 is2
+                then overlaps_by_parts contour_parts_1' contour_parts_2
+                else overlaps_by_parts contour_parts_1 contour_parts_2'
+          | MultiPart(is1),MultiPart(is2) ->
+              (* In this case, the two contours both have Kleene closures here.
+                 This gets a bit trickier: even if there is no intersection
+                 between them, dropping one might cover the cases of the other.
+                 So we simply try both paths: one in which the first is dropped
+                 and another in which the second is dropped.  As an
+                 optimization, we ignore paths which can be proven not to make
+                 progress based on a subset relation (if one holds). *)
+              if Ident_set.subset is1 is2 then
+                (* The first set is entirely covered by the second one. *)
+                overlaps_by_parts contour_parts_1' contour_parts_2
+              else if Ident_set.subset is2 is1 then
+                (* The second set is entirely covered by the first one. *)
+                overlaps_by_parts contour_parts_1 contour_parts_2'
+              else
+                (* We'll just have to try both paths. *)
+                overlaps_by_parts contour_parts_1' contour_parts_2 ||
+                  overlaps_by_parts contour_parts_1 contour_parts_2'
+
+(** Determines if the two contours overlap; that is, returns true when any call
+    string exists which is accepted by both contours.  Both contours must be
+    well-formed. *)
+let overlaps (Contour(contour_parts_1) as c1) (Contour(contour_parts_2) as c2) =
+  assert_well_formed c1; assert_well_formed c2;
+  overlaps_by_parts contour_parts_1 contour_parts_2
+;;
