@@ -12,6 +12,10 @@ type contour =
   | Contour of contour_part list
 ;;
 
+(** Raised when an ill-formed contour is used where a well-formed contour is
+    required. *)
+exception Ill_formed_contour of contour;;
+
 let members_of_part part =
   match part with
   | SinglePart(i) -> Ident_set.singleton i
@@ -124,3 +128,63 @@ let derive_well_formed (Contour(original_contour_parts)) : contour =
      |> merge_duplicates
      |> merge_adjacent)
 ;;
+
+let is_all_multi_parts parts =
+  parts
+  |> List.map (fun part -> match part with
+                            | MultiPart(_) -> true
+                            | _ -> false)
+  |> List.fold_left (&&) true
+;;
+
+let rec subsumes_by_parts contour_parts_1 contour_parts_2 =
+  match contour_parts_1,contour_parts_2 with
+    | [],[] -> true
+    | [],_ ->
+        (* Then contour 2 has more parts than contour 1.  Regardless of what
+           those parts are, there exists some string that contour 2 accepts and
+           contour 1 does not. *)
+        false
+    | _,[] ->
+        (* Then contour 1 has more parts than contour 2.  If any of those parts
+           are single, however, then contour 1 cannot accept any string from
+           contour 2. *)
+        is_all_multi_parts contour_parts_1
+    | part_1::contour_parts_1',part_2::contour_parts_2' ->
+        match part_1,part_2 with
+          | SinglePart(i1),SinglePart(i2) ->
+              (* In this case, both contours require that the call string have a
+                 single character at this position.  It must be the same
+                 character or no call string satisfies them both. *)
+              if i1 == i2
+                then subsumes_by_parts contour_parts_1' contour_parts_2'
+                else false
+          | MultiPart(is1),SinglePart(i2) ->
+              (* In this case, contour 1 can accept many things here but contour
+                 2 can only accept one thing.  If contour 1's head option does
+                 not contain contour 2's identifier, then we must hope that the
+                 MultiPart on contour 1 is unnecessary here.  Otherwise, we've
+                 satisfied contour 2's requirement (but we keep the MultiPart
+                 around in case it's useful again). *)
+              if Ident_set.mem i2 is1
+                then subsumes_by_parts contour_parts_1 contour_parts_2'
+                else subsumes_by_parts contour_parts_1' contour_parts_2
+          | SinglePart(i1),MultiPart(is2) ->
+              (* In this case, contour 2 has more options than contour 1.  Even
+                 if they have some string in common, contour 2 necessarily has
+                 some string which is not in contour 1. *)
+              false
+          | MultiPart(is1),MultiPart(is2) ->
+              (* In this case, both contours have multi-parts.  If contour 1's
+                 set of symbols is greater or equal, then it still has a chance;
+                 otherwise, we're already finished. *)
+              if Ident_set.subset is2 is1
+                then subsumes_by_parts contour_parts_1 contour_parts_2'
+                else false
+;;
+
+(** Determines if the first contour subsumes the second. *)
+let subsumes (Contour(contour_parts_1)) (Contour(contour_parts_2)) =
+  subsumes_by_parts contour_parts_1 contour_parts_2
+;;
+
