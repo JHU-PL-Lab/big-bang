@@ -60,6 +60,7 @@ Library "tiny-bang-typechecker"
   Modules:
     Tiny_bang_contours,
     Tiny_bang_contours_types,
+    Tiny_bang_initial_alignment,
     Tiny_bang_types
   BuildDepends:
     batteries,

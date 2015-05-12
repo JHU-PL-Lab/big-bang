@@ -7,7 +7,7 @@ open Tiny_bang_contours_types;;
    origin (or some other type origin stuff). *)
   
 type tvar =
-  | Tvar of ident * contour
+  | Tvar of ident * contour option
 ;;
 
 module Tvar_order =
@@ -38,11 +38,11 @@ module Pattern_type_set = Set.Make(Pattern_type_order);;
 
 module rec Types :
 sig
-  type tbconstraint =
-    | Lower_bound_constraint of
-        tbtype * Pattern_type_set.t * Pattern_type_set.t * tvar
-    | Intermediate_constraint of tvar * tvar
-    | Application_constraint of tvar * tvar * tvar
+  type tbconstraint = Constraint of lower_bound * tvar
+  and lower_bound =
+    | Type_lower_bound of tbtype * Pattern_type_set.t * Pattern_type_set.t
+    | Intermediate_lower_bound of tvar
+    | Application_lower_bound of tvar * tvar
   and tbtype =
     | Empty_onion_type
     | Label_type of label * tvar
@@ -60,5 +60,4 @@ and Constraint_set : (Set.S with type elt = Types.tbconstraint) =
   Set.Make(Constraint_order)
 ;;
 
-type tbconstraint = Types.tbconstraint;;
-type tbtype = Types.tbtype;;
+include Types;;

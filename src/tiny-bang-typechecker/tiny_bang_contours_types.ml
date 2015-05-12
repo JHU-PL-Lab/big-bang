@@ -12,4 +12,3 @@ type contour =
 (** Raised when an ill-formed contour is used where a well-formed contour is
     required. *)
 exception Ill_formed_contour of contour;;
-
