@@ -75,13 +75,13 @@ module Var_set = Set.Make(Var_order);;
 module Var_map = Map.Make(Var_order);;
 
 (** Individual pattern filters. *)
-type pat_filter =
+type pattern_filter =
   | Empty_filter of ast_uid
   | Label_filter of ast_uid * label * var
   | Conjunction_filter of ast_uid * var * var;;
 
 (** Sets of pattern filter rules that comprise a pattern. *)
-type pattern_filter_rules = pat_filter Var_map.t;;
+type pattern_filter_rules = pattern_filter Var_map.t;;
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
