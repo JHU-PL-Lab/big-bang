@@ -4,8 +4,8 @@ open Tiny_bang_ast;;
 open Tiny_bang_utils;;
 
 type contour_part =
-  | SinglePart of ident
-  | MultiPart of Ident_set.t
+  | Single_part of ident
+  | Multi_part of Ident_set.t
 ;;
 
 type contour =
@@ -18,8 +18,8 @@ exception Ill_formed_contour of contour;;
 
 let members_of_part part =
   match part with
-  | SinglePart(i) -> Ident_set.singleton i
-  | MultiPart(is) -> is
+  | Single_part(i) -> Ident_set.singleton i
+  | Multi_part(is) -> is
 ;;
 
 (** Determines whether or not a contour is well-formed. *)
@@ -32,7 +32,7 @@ let check_well_formed (Contour(contour_parts)) : bool =
   let rec check_parts seen contour_parts =
     match contour_parts with
     | [] -> true
-    | (MultiPart(_))::(MultiPart(_))::_ -> false
+    | (Multi_part(_))::(Multi_part(_))::_ -> false
     | part::t ->
       begin
         match disjoint_union seen (members_of_part part) with
@@ -114,7 +114,7 @@ let derive_least_well_formed (Contour(original_contour_parts) as c) : contour =
             if not (Ident_set.is_empty gathered_set) then
               (* There are no open identifiers, but we just finished collapsing
                  some. Emit the appropriate MultiSet before continuing. *)
-              (MultiPart(Ident_set.union gathered_set part_idents))
+              (Multi_part(Ident_set.union gathered_set part_idents))
             else
               (* There are no open identifiers and everything is normal! *)
               part
@@ -128,8 +128,8 @@ let derive_least_well_formed (Contour(original_contour_parts) as c) : contour =
     match contour_parts with
     | [] -> []
     | part::[] -> part::[]
-    | (MultiPart(is1))::(MultiPart(is2))::contour_parts' ->
-      merge_adjacent ((MultiPart(Ident_set.union is1 is2))::contour_parts')
+    | (Multi_part(is1))::(Multi_part(is2))::contour_parts' ->
+      merge_adjacent ((Multi_part(Ident_set.union is1 is2))::contour_parts')
     | part1::part2::contour_parts' ->
       part1::(merge_adjacent (part2::contour_parts'))
   in
@@ -144,7 +144,7 @@ let derive_least_well_formed (Contour(original_contour_parts) as c) : contour =
 let is_all_multi_parts parts =
   parts
   |> List.map (fun part -> match part with
-                            | MultiPart(_) -> true
+                            | Multi_part(_) -> true
                             | _ -> false)
   |> List.fold_left (&&) true
 ;;
@@ -164,29 +164,29 @@ let rec subsumes_by_parts contour_parts_1 contour_parts_2 =
         is_all_multi_parts contour_parts_1
     | part_1::contour_parts_1',part_2::contour_parts_2' ->
         match part_1,part_2 with
-          | SinglePart(i1),SinglePart(i2) ->
+          | Single_part(i1),Single_part(i2) ->
               (* In this case, both contours require that the call string have a
                  single character at this position.  It must be the same
                  character or no call string satisfies them both. *)
               if i1 == i2
                 then subsumes_by_parts contour_parts_1' contour_parts_2'
                 else false
-          | MultiPart(is1),SinglePart(i2) ->
+          | Multi_part(is1),Single_part(i2) ->
               (* In this case, contour 1 can accept many things here but contour
                  2 can only accept one thing.  If contour 1's head option does
                  not contain contour 2's identifier, then we must hope that the
-                 MultiPart on contour 1 is unnecessary here.  Otherwise, we've
-                 satisfied contour 2's requirement (but we keep the MultiPart
+                 Multi_part on contour 1 is unnecessary here.  Otherwise, we've
+                 satisfied contour 2's requirement (but we keep the Multi_part
                  around in case it's useful again). *)
               if Ident_set.mem i2 is1
                 then subsumes_by_parts contour_parts_1 contour_parts_2'
                 else subsumes_by_parts contour_parts_1' contour_parts_2
-          | SinglePart(i1),MultiPart(is2) ->
+          | Single_part(i1),Multi_part(is2) ->
               (* In this case, contour 2 has more options than contour 1.  Even
                  if they have some string in common, contour 2 necessarily has
                  some string which is not in contour 1. *)
               false
-          | MultiPart(is1),MultiPart(is2) ->
+          | Multi_part(is1),Multi_part(is2) ->
               (* In this case, both contours have multi-parts.  If contour 1's
                  set of symbols is greater or equal, then it still has a chance;
                  otherwise, we're already finished. *)
@@ -215,27 +215,27 @@ let rec overlaps_by_parts contour_parts_1 contour_parts_2 =
         is_all_multi_parts contour_parts_1
     | part_1::contour_parts_1',part_2::contour_parts_2' ->
         match part_1,part_2 with
-          | SinglePart(i1),SinglePart(i2) ->
+          | Single_part(i1),Single_part(i2) ->
               (* In this case, both contours require that the call string have a
                  single character at this position.  It must be the same
                  character or no call string satisfies them both. *)
               if i1 == i2
                 then overlaps_by_parts contour_parts_1' contour_parts_2'
                 else false
-          | MultiPart(is1),SinglePart(i2) ->
-              (* We have two cases.  Either the SinglePart is covered by the
-                 MultiPart (in which case we drop the SinglePart and move on)
-                 or it is not (in which case we drop the MultiPart and hope to
-                 find something to match the SinglePart on recursion). *)
+          | Multi_part(is1),Single_part(i2) ->
+              (* We have two cases.  Either the Single_part is covered by the
+                 Multi_part (in which case we drop the Single_part and move on)
+                 or it is not (in which case we drop the Multi_part and hope to
+                 find something to match the Single_part on recursion). *)
               if Ident_set.mem i2 is1
                 then overlaps_by_parts contour_parts_1 contour_parts_2'
                 else overlaps_by_parts contour_parts_1' contour_parts_2
-          | SinglePart(i1),MultiPart(is2) ->
+          | Single_part(i1),Multi_part(is2) ->
               (* Same as above, as this relation is symmetric. *)
               if Ident_set.mem i1 is2
                 then overlaps_by_parts contour_parts_1' contour_parts_2
                 else overlaps_by_parts contour_parts_1 contour_parts_2'
-          | MultiPart(is1),MultiPart(is2) ->
+          | Multi_part(is1),Multi_part(is2) ->
               (* In this case, the two contours both have Kleene closures here.
                  This gets a bit trickier: even if there is no intersection
                  between them, dropping one might cover the cases of the other.
