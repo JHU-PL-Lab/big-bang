@@ -4,6 +4,8 @@ open Tiny_bang_ast;;
 open Tiny_bang_ast_pretty;;
 open Tiny_bang_ast_uid;;
 
+let logger = Tiny_bang_logger.make_logger "Tiny_bang_interpreter";;
+
 module Environment = Var_hashtbl;;
 
 let pretty_env (env : value Environment.t) =
@@ -76,8 +78,8 @@ let rec compatibility env first_x_arg pat : value Var_map.t option =
 ;;
 
 let rec application_match env x_fn x_arg : clause list option =
-  print_string ("Environment: " ^ pretty_env env ^ "\n");
-  print_string ("Lookup: " ^ pretty_var x_fn ^ "\n");
+  logger `debug ("Environment: " ^ pretty_env env ^ "\n");
+  logger `debug ("Lookup: " ^ pretty_var x_fn ^ "\n");
   match lookup env x_fn with
   | Onion_value(_, x_left, x_right) ->
       Option.map_default Option.some
@@ -153,7 +155,7 @@ let var_freshen freshening_stack cls =
 ;;
 
 let rec evaluate env lastvar cls =
-  print_string (
+  logger `debug (
       pretty_env env ^ "\n" ^
       (Option.default "?" (Option.map pretty_var lastvar)) ^ "\n" ^
       (cls
