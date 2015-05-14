@@ -20,7 +20,7 @@ let pretty_env (env : value Environment.t) =
   ;;
 
 let lookup env x =
-  (* Handle Not_found in a more graceful manner? Custom exception? *)
+  (* TODO: Handle Not_found in a more graceful manner? Custom exception? *)
   Environment.find env x
 
 let bound_vars_of_expr (Expr(_, cls)) =
@@ -29,6 +29,19 @@ let bound_vars_of_expr (Expr(_, cls)) =
   |> Var_set.of_list
 ;;
 
+(**
+  Evaluates value compatibility for the provided arguments.  Only one argument
+  and one pattern are provided; this is because, in practice, it is simpler and
+  easier to check patterns one at a time.  Although the formal specification
+  dictates that these patterns be checked simultaneously, Lemma 4.13 of
+  Building a Typed Scripting Language justifies why the two approaches are the
+  same on the value level.
+  @param env The environment in which to perform the computation.
+  @param first_x_arg The argument variable.
+  @param pat The pattern to check for compatibility with the argument.
+  @return A mapping from variables to values describing the bindings of this
+          compatibility or None if compatibility does not hold.
+ *)
 let rec compatibility env first_x_arg pat : value Var_map.t option =
   let (Pattern(_, first_x_pat, pfcs)) = pat in
   let rec compat x_arg x_pat : value Var_map.t option =

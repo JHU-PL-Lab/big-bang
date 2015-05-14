@@ -40,9 +40,11 @@ module rec Types :
 sig
   type tbconstraint = Constraint of lower_bound * tvar
   and lower_bound =
-    | Type_lower_bound of tbtype * Pattern_type_set.t * Pattern_type_set.t
+    | Type_lower_bound of filtered_type
     | Intermediate_lower_bound of tvar
     | Application_lower_bound of tvar * tvar
+  and filtered_type =
+    | Filtered_type of tbtype * Pattern_type_set.t * Pattern_type_set.t
   and tbtype =
     | Empty_onion_type
     | Label_type of label * tvar
