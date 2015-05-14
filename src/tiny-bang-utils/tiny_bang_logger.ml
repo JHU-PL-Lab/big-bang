@@ -45,6 +45,10 @@
  *    it in the start of the application or selectively for your module, by later
  *    reseting the level.
  *
+ * ---
+ *
+ * WARNING: Be aware that, due to I/O buffering, log entries may not show up on
+ *          the terminal as soon as you might expect.
  *
  * [1]: http://12factor.net/logs
  *)
