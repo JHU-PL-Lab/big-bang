@@ -11,11 +11,13 @@ OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 AlphaFeatures: ocamlbuild_more_args
-XOCamlbuildExtraArgs: -use-menhir
+XOCamlbuildExtraArgs: -use-menhir -use-ocamlfind
 
 Library "tiny-bang-utils"
   Path: src/tiny-bang-utils
   Modules:
+    Tiny_bang_list_monad,
+    Tiny_bang_monad,
     Tiny_bang_utils
   BuildDepends:
     batteries
@@ -58,6 +60,7 @@ Library "tiny-bang-interpreter"
 Library "tiny-bang-typechecker"
   Path: src/tiny-bang-typechecker
   Modules:
+    Tiny_bang_compatibility,
     Tiny_bang_contours,
     Tiny_bang_contours_types,
     Tiny_bang_initial_alignment,

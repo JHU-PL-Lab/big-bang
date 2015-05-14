@@ -61,10 +61,10 @@ and initial_align_clause cl =
 and initial_align_redex r =
   match r with
     | Value_redex(_,v) ->
-        Type_lower_bound(
+        Type_lower_bound(Filtered_type(
           initial_align_value v,
           Pattern_type_set.empty,
-          Pattern_type_set.empty)
+          Pattern_type_set.empty))
     | Var_redex(_,x) -> Intermediate_lower_bound(initial_align_var x)
     | Appl_redex(_,x1,x2) ->
         Application_lower_bound(initial_align_var x1,initial_align_var x2)

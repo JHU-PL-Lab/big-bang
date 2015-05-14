@@ -1,0 +1,5 @@
+# OASIS_START
+# OASIS_STOP
+
+<**/*.ml>: syntax(camlp4o), package(camlp4.macro), package(monad-custom)
+
