@@ -16,7 +16,8 @@ XOCamlbuildExtraArgs: -use-menhir -use-ocamlfind
 Library "tiny-bang-utils"
   Path: src/tiny-bang-utils
   Modules:
-    Tiny_bang_utils
+    Tiny_bang_utils,
+    Tiny_bang_logger
   BuildDepends:
     batteries
 
@@ -77,3 +78,13 @@ Executable "tiny-bang-toploop"
     tiny-bang-parser,
     batteries
 
+Executable "test-tiny-bang"
+  Path: test/
+  MainIs: test_tiny_bang.ml
+  BuildDepends:
+    tiny-bang-utils,
+    oUnit,
+    batteries
+
+Test test_tiny_bang
+  Command: $test_tiny_bang
