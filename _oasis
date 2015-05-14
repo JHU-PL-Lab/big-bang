@@ -16,7 +16,8 @@ XOCamlbuildExtraArgs: -use-menhir
 Library "tiny-bang-utils"
   Path: src/tiny-bang-utils
   Modules:
-    Tiny_bang_utils
+    Tiny_bang_utils,
+    Tiny_bang_logger
   BuildDepends:
     batteries
 
