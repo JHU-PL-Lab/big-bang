@@ -29,3 +29,17 @@ Coding Style
 This project uses the standard coding conventions for the OCaml language, which
 are summarized at `http://caml.inria.fr/resources/doc/guides/guidelines.en.html`,
 particularly with regard to identifier naming.
+
+Tests
+=====
+
+Define
+------
+
+Add a module to the `test/` folder that defines `tests`. Then add the module to
+the `test/test_tiny_bang.ml`.
+
+Run
+---
+
+After building the project successfully, run `make test`.

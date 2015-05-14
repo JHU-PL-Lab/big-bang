@@ -14,7 +14,7 @@ It's recommended that you build the project in an appropriate `opam` switch:
 
 First, install the dependencies:
 
-    opam install batteries menhir
+    opam install batteries menhir ounit
 
 Then, we must use the OASIS metadata to generate a configuration script:
 

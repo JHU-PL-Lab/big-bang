@@ -77,3 +77,13 @@ Executable "tiny-bang-toploop"
     tiny-bang-parser,
     batteries
 
+Executable "test-tiny-bang"
+  Path: test/
+  MainIs: test_tiny_bang.ml
+  BuildDepends:
+    tiny-bang-utils,
+    oUnit,
+    batteries
+
+Test test_tiny_bang
+  Command: $test_tiny_bang
