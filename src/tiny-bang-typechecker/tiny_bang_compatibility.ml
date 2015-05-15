@@ -15,6 +15,7 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
+open Tiny_bang_compatibility_types;;
 open Tiny_bang_types;;
 open Tiny_bang_utils;;
 
@@ -98,18 +99,6 @@ struct
 end;;
 
 module Occurrence_set = Set.Make(Occurrence_ord);;
-
-type compatibility_result =
-  | Compatibility_result of Constraint_set.t * bool list
-;;
-
-module Compatibility_result_ord =
-struct
-  type t = compatibility_result
-  let compare = compare
-end;;
-
-module Compatibility_result_set = Set.Make(Compatibility_result_ord);;
 
 type internal_digest_result =
   | Internal_digest_result of Constraint_set.t * bool list * bool list

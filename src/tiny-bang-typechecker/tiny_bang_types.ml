@@ -6,6 +6,11 @@ open Tiny_bang_contours_types;;
 (* TODO: consider adding (optional?) AST UIDs to these types to signify their
    origin (or some other type origin stuff). *)
   
+(* ************************************************************************** *)
+(* DATA TYPES *)
+(* The core data types which represent the grammar of the TinyBang type
+   system. *) 
+  
 type tvar =
   | Tvar of ident * contour option
 ;;
@@ -63,3 +68,18 @@ and Constraint_set : (Set.S with type elt = Types.tbconstraint) =
 ;;
 
 include Types;;
+
+(* ************************************************************************** *)
+(* UTILITIES *)
+(* Functions for working with the above data types. *)
+
+let lower_bounds_of tv cs =
+  cs
+    |> Constraint_set.enum
+    |> Enum.filter_map
+          (fun (Constraint(lb,tv')) ->
+            match lb with
+              | Type_lower_bound(ft) ->
+                  if tv == tv' then Some ft else None
+              | _ -> None)
+;;
