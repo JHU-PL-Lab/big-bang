@@ -161,14 +161,7 @@ let rec compatibility_by_tvar
     else
       (* TYPE SELECTION RULE *)
       (* Step 1: Select appropriate lower bounds for this type variable. *)
-      let restricted_types =
-        Constraint_database.enum cs
-          |> Enum.filter_map
-                (fun c -> match c with
-                  | Constraint(Type_lower_bound(rt),a') ->
-                      if a == a' then Some rt else None
-                  | _ -> None)
-      in
+      let restricted_types = Constraint_database.type_lower_bounds_of a cs in
       let results = restricted_types
         |> Enum.map
             (fun (Filtered_type(t,filts_pos,filts_neg) as ft) ->
