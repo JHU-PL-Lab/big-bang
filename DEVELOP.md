@@ -42,4 +42,5 @@ the `test/test_tiny_bang.ml`.
 Run
 ---
 
-After building the project successfully, run `make test`.
+After building the project successfully, enable tests with `ocaml setup.ml
+-configure --enable-tests` (only necessary for the first time) and run `make test`.
