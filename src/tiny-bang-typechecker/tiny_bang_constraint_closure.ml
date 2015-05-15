@@ -12,7 +12,7 @@ open Tiny_bang_types;;
 *)
 let close_by_transitivity cs =
   cs
-    |> Constraint_set.enum
+    |> Constraint_database.enum
     (* Find all the intermediate constraints *)
     |> Enum.filter_map
         (fun c -> match c with
@@ -23,21 +23,11 @@ let close_by_transitivity cs =
     (* For each one, find all applicable lower bounds. *)
     |> Enum.map
         (fun (a1,a2) ->
-          cs
-            |> Constraint_set.enum
-            |> Enum.filter_map
-                (fun c ->
-                  match c with
-                    | Constraint(Type_lower_bound(_) as tlb,a') ->
-                        if a' = a1
-                          then Some (Constraint(tlb,a2))
-                          else None
-                    | _ -> None
-                )
+          let rts = Constraint_database.type_lower_bounds_of a1 cs in
+          Enum.map (fun rt -> Constraint(Type_lower_bound(rt),a2)) rts
         )
     (* Now merge the enums to get the resulting stream. *)
     |> Enum.concat
     (* And now it should be a set. *)
     |> Constraint_set.of_enum
 ;;
-
