@@ -64,6 +64,8 @@ sig
   type tbtype
   (** Creates a constraint database from a set of constraints. *)
   val of_set : tbconstraint_set -> t
+  (** Creates a constraint database from an enumeration of constraints. *)
+  val of_enum : tbconstraint Enum.t -> t
   (** Extracts all of the constraints from a constraint database. *)
   val to_set : t -> tbconstraint_set
   (** The empty constraint database. *)
@@ -140,6 +142,8 @@ struct
     | Constraint_database_impl of Constraint_set.t;;
 
   let of_set cs = Constraint_database_impl cs;;
+
+  let of_enum cs = Constraint_database_impl(Constraint_set.of_enum cs);;
 
   let to_set (Constraint_database_impl cs) = cs;;
 
