@@ -59,7 +59,11 @@ Library "tiny-bang-interpreter"
 Library "tiny-bang-typechecker"
   Path: src/tiny-bang-typechecker
   Modules:
+    Tiny_bang_application_matching,
+    Tiny_bang_application_matching_types,
     Tiny_bang_compatibility,
+    Tiny_bang_compatibility_types,
+    Tiny_bang_constraint_closure,
     Tiny_bang_contours,
     Tiny_bang_contours_types,
     Tiny_bang_initial_alignment,
