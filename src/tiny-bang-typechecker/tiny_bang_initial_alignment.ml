@@ -46,8 +46,8 @@ let rec initial_align_expr (Expr(_,cls)) =
     cls
     |> List.map initial_align_clause
     |> List.fold_left
-        (fun (ao,cs) -> fun (a,c) -> (Some a, Constraint_set.add c cs))
-        (None, Constraint_set.empty)
+        (fun (ao,cs) -> fun (a,c) -> (Some a, Constraint_database.add c cs))
+        (None, Constraint_database.empty)
   in
   match a_option with
     | None -> raise (Align_error "Cannot align empty expression")

@@ -31,7 +31,7 @@ module Internal_result_set = Set.Make(Internal_result_ord);;
 let application_match
       (fun_var_init : tvar)
       (arg_var : tvar)
-      (cs : Constraint_set.t)
+      (cs : Constraint_database.t)
       : Application_matching_result_set.t =
   let rec app_match
             (fun_var : tvar)
@@ -42,7 +42,7 @@ let application_match
        discard the filters on that type (as we no longer care about them after
        the sensibility check). *)
     let typs = cs
-                |> lower_bounds_of fun_var
+                |> Constraint_database.type_lower_bounds_of fun_var
                 |> Enum.filter (fun rt -> sensible rt cs)
                 |> Enum.map (fun (Filtered_type(t,_,_)) -> t)
     in

@@ -6,7 +6,7 @@ open Batteries;;
 open Tiny_bang_types;;
     
 type compatibility_result =
-  | Compatibility_result of Constraint_set.t * bool list
+  | Compatibility_result of Constraint_database.t * bool list
 ;;
 
 module Compatibility_result_ord =
