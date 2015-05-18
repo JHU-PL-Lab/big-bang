@@ -30,11 +30,13 @@ let typecheck e =
   (* Step 3: Perform constraint closure. *)
   let cs'' = perform_closure cs' in
   (* Step 4: Look for inconsistencies. *)
-  cs''
+  let inconsistencies = cs''
     |> Constraint_database.enum
     |> Enum.exists
           (fun c ->
             match c with
               | Inconsistency_constraint -> true
               | _ -> false)
+  in
+  not inconsistencies
   ;;
