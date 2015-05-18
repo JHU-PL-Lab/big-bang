@@ -228,7 +228,8 @@ struct
   let compare = compare
 end
 
-and Constraint_set : (Set.S with type elt = Types.tbconstraint) = Set.Make(Constraint_ord)
+and Constraint_set : (Set.S with type elt = Types.tbconstraint)
+  = Set.Make(Constraint_ord)
 
 and Types : Types_basis
               with type tbconstraint_database = Constraint_database.t
