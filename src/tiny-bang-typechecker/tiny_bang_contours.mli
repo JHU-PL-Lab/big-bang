@@ -4,6 +4,9 @@ open Tiny_bang_ast;;
 open Tiny_bang_contours_types;;
 open Tiny_bang_utils;;
 
+(** The initial contour. *)
+val initial_contour : contour
+
 (** Determines whether or not a contour is well-formed. *)
 val check_well_formed : contour -> bool
 

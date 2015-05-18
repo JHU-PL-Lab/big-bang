@@ -119,3 +119,28 @@ let close_by_application cs =
     |> Enum.concat
     |> Constraint_database.of_enum
 ;;
+
+(* ************************************************************************** *)
+(* CLOSURE *)
+(* The mechanism by which a complete closure occurs. *)
+
+(**
+  Performs a complete deductive closure on the provided set of type system
+  constraints.
+*)
+let rec perform_closure cs =
+  let closure_functions =
+    [ close_by_transitivity
+    ; close_by_application
+    ] in
+  let cs' =
+    List.fold_left
+      (fun cs1 fn ->
+        let cs2 = fn cs1 in
+        Constraint_database.union cs1 cs2)
+      cs
+      closure_functions
+  in
+  if Constraint_database.size cs <> Constraint_database.size cs'
+    then perform_closure cs' else cs'
+;;

@@ -4,6 +4,8 @@ open Tiny_bang_ast;;
 open Tiny_bang_contours_types;;
 open Tiny_bang_utils;;
 
+let initial_contour = Contour([]);;
+
 let members_of_part part =
   match part with
   | Single_part(i) -> Ident_set.singleton i

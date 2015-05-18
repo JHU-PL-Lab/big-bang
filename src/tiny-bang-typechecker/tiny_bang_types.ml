@@ -73,7 +73,9 @@ sig
   val to_set : t -> tbconstraint_set
   (** The empty constraint database. *)
   val empty : t
-  (** Enumerates over all constraints in this database. *)
+  (** Determines the size of a constraint database. *)
+  val size : t -> int
+  (** Enumerates over all constraints in a database. *)
   val enum : t -> tbconstraint Enum.t
   (** Adds a constraint to this database. *)
   val add : tbconstraint -> t -> t
@@ -262,6 +264,8 @@ struct
   let to_set (Constraint_database_impl cs) = cs;;
 
   let empty = Constraint_database_impl (Constraint_set.empty);;
+
+  let size (Constraint_database_impl cs) = Constraint_set.cardinal cs;;
 
   let enum db = Constraint_set.enum @@ to_set db;;
 
