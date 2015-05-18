@@ -101,7 +101,7 @@ end;;
 module Occurrence_set = Set.Make(Occurrence_ord);;
 
 type internal_digest_result =
-  | Internal_digest_result of Constraint_database.t * bool list * bool list
+  | Internal_digest_result of compatibility_bindings * bool list * bool list
 ;;
 
 module Internal_digest_result_ord =
@@ -157,7 +157,7 @@ let rec compatibility_by_tvar
     then
       (* LEAF RULE *)
       Compatibility_result_set.singleton
-            (Compatibility_result(Constraint_database.empty, []))
+            (Compatibility_result([], []))
     else
       (* TYPE SELECTION RULE *)
       (* Step 1: Select appropriate lower bounds for this type variable. *)
@@ -259,7 +259,7 @@ and compatibility_by_type
             (* Now we consider binding if it is appropriate to do so. *)
             let new_bindings = match bind_state with
               | Dont_bind ->
-                  Constraint_database.empty
+                  []
               | Do_bind ->
                   (* BINDING RULE *)
                   (* Since we need to do binding here, we create the appropriate
@@ -287,17 +287,15 @@ and compatibility_by_type
                         then
                           let ft = Filtered_type(typ,filts_pos,filts_neg) in
                           let (Pattern_type(a,_)) = task.ct_pat in
-                          let c = Constraint(Type_lower_bound(ft),a) in
-                          Constraint_database.add c bindings
+                          (ft, a) :: bindings
                         else
                           bindings
                     )
-                    Constraint_database.empty
+                    []
                     tasks
                     answers
             in
-            Compatibility_result(
-              Constraint_database.union bindings new_bindings, answers)
+            Compatibility_result(bindings @ new_bindings, answers)
           )
     |> Compatibility_result_set.of_enum
 
@@ -468,7 +466,7 @@ and compatibility_by_type_with_only_constr_pats
         |> List.of_enum
     in
     Compatibility_result_set.singleton
-      (Compatibility_result(Constraint_database.empty, answers))
+      (Compatibility_result([], answers))
     
   (** Solves each task foor a single-argument type constructor.  This function
       takes a filter type handler which yields an inner variable on which to
@@ -522,7 +520,7 @@ and compatibility_by_type_with_only_constr_pats
         -> ('a -> 'b compatibility_query option)
         -> 'a list
         -> bind_state
-        -> (Constraint_database.t * 'b list) Enum.t =
+        -> (compatibility_bindings * 'b list) Enum.t =
     fun tv query_generator data bind_state ->
       let queries_cases = List.map query_generator data in
       let results = queries_cases
@@ -667,8 +665,7 @@ and compatibility_by_type_with_only_constr_pats
                 results_right
                   |> Enum.map
                       (fun (bindings_right, answers) ->
-                        let bindings = Constraint_database.union
-                                          bindings_left bindings_right in
+                        let bindings = bindings_left @ bindings_right in
                         Compatibility_result(bindings, answers)
                       )
               )
@@ -697,7 +694,7 @@ let find_compatibility_cases
       (cs : Constraint_database.t)
       (pat_b : pattern_type)
       (pats_n : Pattern_type_set.t)
-      : Constraint_database.t option list =
+      : compatibility_bindings option list =
   let task_b = compatibility_task pat_b true Must_report in
   let tasks_n = List.map
                   (fun p -> compatibility_task p false Must_not_match)

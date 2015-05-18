@@ -4,9 +4,11 @@
 open Batteries;;
 
 open Tiny_bang_types;;
+
+type compatibility_bindings = (filtered_type * tvar) list;;
     
 type compatibility_result =
-  | Compatibility_result of Constraint_database.t * bool list
+  | Compatibility_result of compatibility_bindings * bool list
 ;;
 
 module Compatibility_result_ord =
