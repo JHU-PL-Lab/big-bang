@@ -23,7 +23,7 @@ let close_by_transitivity cs =
     (* Find all the intermediate constraints *)
     |> Enum.filter_map
         (fun c -> match c with
-                    | Constraint(Intermediate_lower_bound(a1),a2) ->
+                    | Lower_bound_constraint(Intermediate_lower_bound(a1),a2) ->
                         Some (a1,a2)
                     | _ -> None
         )
@@ -31,7 +31,8 @@ let close_by_transitivity cs =
     |> Enum.map
         (fun (a1,a2) ->
           let rts = Constraint_database.type_lower_bounds_of a1 cs in
-          Enum.map (fun rt -> Constraint(Type_lower_bound(rt),a2)) rts
+          rts |> Enum.map
+                    (fun rt -> Lower_bound_constraint(Type_lower_bound(rt),a2))
         )
     (* Now merge the enums to get the resulting stream. *)
     |> Enum.concat
@@ -50,10 +51,11 @@ let close_by_application cs =
     |> Constraint_database.enum
     (* Find all of the applications. *)
     |> Enum.filter_map
-        (fun c -> match c with
-                    | Constraint(Application_lower_bound(a1,a2),a3) ->
-                        Some(a1,a2,a3)
-                    | _ -> None
+        (fun c ->
+          match c with
+            | Lower_bound_constraint(Application_lower_bound(a1,a2),a3) ->
+                Some(a1,a2,a3)
+            | _ -> None
         )
     (* For each one, perform the appropriate application matching check.  Then,
        freshen the variables and such. *)
@@ -65,7 +67,7 @@ let close_by_application cs =
                 (fun (Application_matching_result(result)) ->
                   match result with
                     | None ->
-                        raise (Not_yet_implemented "close_by_application")
+                        Enum.singleton Inconsistency_constraint
                     | Some(a1',cs1',cs1'') ->
                         (* We need to start by building the variable
                            substitution function. *)
@@ -104,9 +106,11 @@ let close_by_application cs =
                               |> List.enum
                               |> Enum.map
                                   (fun (rt,a) ->
-                                    Constraint(Type_lower_bound(rt),a))
+                                    Lower_bound_constraint(
+                                      Type_lower_bound(rt),a))
                           ; Enum.singleton
-                              (Constraint(Intermediate_lower_bound(a2'),a2))
+                              (Lower_bound_constraint(
+                                Intermediate_lower_bound(a2'),a2))
                           ]
                 )
             |> Enum.concat

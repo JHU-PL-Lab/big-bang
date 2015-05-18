@@ -96,7 +96,9 @@ sig
       types. *)
   type tbconstraint_database
   (** The type of constraints in TinyBang. *)
-  type tbconstraint = Constraint of lower_bound * tvar
+  type tbconstraint =
+    | Lower_bound_constraint of lower_bound * tvar
+    | Inconsistency_constraint (* TODO: payload describing why! *)
   (** The lower bounds appearing on constraints. *)
   and lower_bound =
     | Type_lower_bound of filtered_type
@@ -208,8 +210,12 @@ struct
           T.Application_lower_bound(f a1, f a2)
   ;;
 
-  let replace_vars_of_constraint f (T.Constraint(lb,a)) =
-    T.Constraint(replace_vars_of_lower_bound f lb, f a)
+  let replace_vars_of_constraint f c =
+    match c with
+      | T.Lower_bound_constraint(lb,a) ->
+          T.Lower_bound_constraint(replace_vars_of_lower_bound f lb, f a)
+      | T.Inconsistency_constraint ->
+          c
   ;;
 end;;
 
@@ -269,19 +275,26 @@ struct
     cs
       |> Constraint_set.enum
       |> Enum.filter_map
-          (fun (Constraint(lb,a')) ->
-            match lb with
-              | Type_lower_bound(rt) ->
-                  if a = a' then Some rt else None
-              | _ ->
-                  None
+          (fun c -> match c with
+            | Lower_bound_constraint(lb,a') ->
+                begin
+                  match lb with
+                    | Type_lower_bound(rt) ->
+                        if a = a' then Some rt else None
+                    | _ ->
+                        None
+                end
+            | Inconsistency_constraint -> None
           )
   ;;
 
   let bound_variables_of (Constraint_database_impl cs) =
     cs
       |> Constraint_set.enum
-      |> Enum.map (fun (Constraint(_,a)) -> a)
+      |> Enum.filter_map
+          (fun c -> match c with
+            | Lower_bound_constraint(_,a) -> Some a
+            | Inconsistency_constraint -> None)
       |> Tvar_set.of_enum
   ;;
 

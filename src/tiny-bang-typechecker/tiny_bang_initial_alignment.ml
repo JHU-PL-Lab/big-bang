@@ -56,7 +56,7 @@ let rec initial_align_expr (Expr(_,cls)) =
 and initial_align_clause cl =
   let (Clause(_,x,r)) = cl in
   let a = initial_align_var x in
-  (a, Constraint(initial_align_redex r, a))
+  (a, Lower_bound_constraint(initial_align_redex r, a))
 
 and initial_align_redex r =
   match r with
