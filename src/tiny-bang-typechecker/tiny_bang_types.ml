@@ -17,6 +17,8 @@ struct
   let compare = compare 
 end;;
 
+module Tvar_set = Set.Make(Tvar_order);;
+
 module Tvar_map = Map.Make(Tvar_order);;
 
 type pattern_filter_type =
@@ -78,6 +80,8 @@ sig
   val union : t -> t -> t
   (** Retrieves all type lower bounds of the provided type variable. *)
   val type_lower_bounds_of : tvar -> t -> filtered_type Enum.t
+  (** Determines all of the type variables bound by a constraint database. *)
+  val bound_variables_of : t -> Tvar_set.t
 end;;
 
 (** The signature of modules providing basic TinyBang type structures.  This is
@@ -169,7 +173,13 @@ struct
                   None
           )
   ;;
-    
+
+  let bound_variables_of (Constraint_database_impl cs) =
+    cs
+      |> Constraint_set.enum
+      |> Enum.map (fun (Constraint(_,a)) -> a)
+      |> Tvar_set.of_enum
+  ;;
 end;;
 
 (* ************************************************************************** *)
