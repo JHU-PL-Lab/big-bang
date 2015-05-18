@@ -81,6 +81,7 @@ Executable "tiny-bang-toploop"
     tiny-bang-ast,
     tiny-bang-interpreter,
     tiny-bang-parser,
+    tiny-bang-typechecker,
     batteries
 
 Executable "test-tiny-bang"
