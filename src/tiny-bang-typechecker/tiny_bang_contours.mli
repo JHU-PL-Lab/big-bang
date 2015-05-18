@@ -23,3 +23,7 @@ val subsumes : contour -> contour -> bool
     string exists which is accepted by both contours.  Both contours must be
     well-formed. *)
 val overlaps : contour -> contour -> bool
+
+(** Extends the provided contour with the provided call site.  The result is
+    the least well-formed contour which covers that case. *)
+val extend : contour -> ident -> contour

@@ -249,3 +249,8 @@ let overlaps (Contour(contour_parts_1) as c1) (Contour(contour_parts_2) as c2) =
   assert_well_formed c1; assert_well_formed c2;
   overlaps_by_parts contour_parts_1 contour_parts_2
 ;;
+
+let extend (Contour(contour_parts)) i =
+  let cntr = Contour(contour_parts @ [Single_part(i)]) in
+  derive_least_well_formed cntr
+;;
