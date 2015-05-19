@@ -1,0 +1,7 @@
+# EXPECT-TYPECHECK
+
+x = ();
+y = `B x;
+f = p \ { p = `B p1; p1 = () } -> { r = p1 };
+z = f y;
+
