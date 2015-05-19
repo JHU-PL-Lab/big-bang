@@ -165,7 +165,7 @@ let pretty_task_list tasks =
 ;;
 
 let pretty_binding (ft,a) =
-  pretty_filtered_type ft ^ " " ^ pretty_tvar a
+  pretty_filtered_type ft ^ " <: " ^ pretty_tvar a
 ;;
 
 let pretty_binding_set bindings =
@@ -311,7 +311,7 @@ let rec compatibility_by_tvar
                   results_by_type
                     |> Compatibility_result_set.map
                           (fun (Compatibility_result(bindings,answers)) ->
-                            let answers' = List.take
+                            let answers' = List.drop
                               (List.length pos_tasks + List.length neg_tasks)
                               answers
                             in Compatibility_result(bindings,answers'))
@@ -586,8 +586,8 @@ and compatibility_by_type_with_only_constr_pats
     in
     Compatibility_result_set.singleton
       (Compatibility_result([], answers))
-    
-  (** Solves each task foor a single-argument type constructor.  This function
+
+  (** Solves each task for a single-argument type constructor.  This function
       takes a filter type handler which yields an inner variable on which to
       recurse.  It performs this recursion where appropriate.  When the
       recursive match is successful, the larger match is successful; if it is
@@ -701,7 +701,7 @@ and compatibility_by_type_with_only_constr_pats
         recursive_single_constructor_solve a
           (fun filt -> match filt with
                         | Label_filter_type(l',a') ->
-                            if l == l' then Some a' else None
+                            if l = l' then Some a' else None
                         | _ -> None)
           tasks
           Do_bind
