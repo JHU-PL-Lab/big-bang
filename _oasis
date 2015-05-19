@@ -16,8 +16,9 @@ XOCamlbuildExtraArgs: -use-menhir -use-ocamlfind
 Library "tiny-bang-utils"
   Path: src/tiny-bang-utils
   Modules:
-    Tiny_bang_utils,
-    Tiny_bang_logger
+    Tiny_bang_logger,
+    Tiny_bang_string_utils,
+    Tiny_bang_utils
   BuildDepends:
     batteries
 
@@ -68,7 +69,8 @@ Library "tiny-bang-typechecker"
     Tiny_bang_contours_types,
     Tiny_bang_initial_alignment,
     Tiny_bang_typechecker,
-    Tiny_bang_types
+    Tiny_bang_types,
+    Tiny_bang_types_pretty
   BuildDepends:
     batteries,
     tiny-bang-ast,

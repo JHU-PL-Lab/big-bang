@@ -1,7 +1,9 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
+open Tiny_bang_ast_pretty;;
 open Tiny_bang_contours_types;;
+open Tiny_bang_string_utils;;
 open Tiny_bang_utils;;
 
 let initial_contour = Contour([]);;
@@ -255,4 +257,17 @@ let overlaps (Contour(contour_parts_1) as c1) (Contour(contour_parts_2) as c2) =
 let extend (Contour(contour_parts)) i =
   let cntr = Contour(contour_parts @ [Single_part(i)]) in
   derive_least_well_formed cntr
+;;
+
+let pretty_contour_part part =
+  match part with
+    | Single_part(i) -> pretty_ident i
+    | Multi_part(is) ->
+        concat_sep_delim "{" "}" ","
+          (is |> Ident_set.enum |> Enum.map pretty_ident)
+;;
+
+let pretty_contour (Contour(contour_parts)) =
+  concat_sep_delim "[" "]" ", "
+    (Enum.map pretty_contour_part @@ List.enum contour_parts)
 ;;

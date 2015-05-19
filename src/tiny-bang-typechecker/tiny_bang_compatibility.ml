@@ -13,11 +13,19 @@
  *)
 
 open Batteries;;
+open Printf;;
 
 open Tiny_bang_ast;;
 open Tiny_bang_compatibility_types;;
+open Tiny_bang_string_utils;;
 open Tiny_bang_types;;
+open Tiny_bang_types_pretty;;
 open Tiny_bang_utils;;
+
+(* ************************************************************************** *)
+(* LOGGER *)
+
+let logger = Tiny_bang_logger.make_logger "Tiny_bang_compatibility";;
 
 (* ************************************************************************** *)
 (* UTILITIES *)
@@ -124,6 +132,36 @@ type 'a compatibility_query =
 ;;
 
 (* ************************************************************************** *)
+(* PRETTY PRINTING *)
+(* Pretty printing for the above data structures for logging purposes. *)
+
+let pretty_bind_state bind_state =
+  match bind_state with
+    | Do_bind -> "Do_bind"
+    | Dont_bind -> "Dont_bind"
+;;
+
+let pretty_compatibility_task_expectation expect =
+  match expect with
+    | Must_match -> "Must_match"
+    | Must_not_match -> "Must_not_match"
+    | Must_report -> "Must_report"
+;;
+
+let pretty_task task =
+  sprintf
+    "Task: %s %s %s"
+    (pretty_compatibility_task_expectation task.ct_expect_match)
+    (pretty_pattern_type task.ct_pat)
+    (if task.ct_binding then " (binding)" else "")
+;;
+
+let pretty_task_list tasks =
+  concat_sep_delim "[" "]" ", "
+    (tasks |> List.enum |> Enum.map pretty_task)
+;;
+
+(* ************************************************************************** *)
 (* INTERNAL ROUTINES *)
 (* This section contains a number of routines used internally when computing
    compatibility. *)
@@ -153,6 +191,13 @@ let rec compatibility_by_tvar
       (tasks : compatibility_task list)
       (bind_state : bind_state)
       : Compatibility_result_set.t =
+  logger `trace @@
+    sprintf
+    "compatibility_by_tvar: Checking compatibility of %s in binding state %s\n    with tasks %s"
+    (pretty_tvar a)
+    (pretty_bind_state bind_state)
+    (pretty_task_list tasks)
+  ;
   if List.is_empty tasks
     then
       (* LEAF RULE *)
@@ -241,7 +286,13 @@ and compatibility_by_type
       (tasks : compatibility_task list)
       (bind_state : bind_state)
       : Compatibility_result_set.t =
-  
+  logger `trace @@
+    sprintf
+    "compatibility_by_type: Checking compatibility of %s in binding state %s\n    with tasks %s"
+    (pretty_type typ)
+    (pretty_bind_state bind_state)
+    (pretty_task_list tasks)
+  ;  
   (* We start by operating on the non-constructor patterns one at a time.  After
      every non-constructor pattern has been digested, we operate on all of the
      constructor patterns in tandem.  The following invocation accomplishes
@@ -321,6 +372,13 @@ and compatibility_by_type_maybe_with_non_constr_pats
       (tasks : compatibility_task list)
       (ctr_tasks : compatibility_task list)
       : Internal_digest_result_set.t =
+  logger `trace @@
+    sprintf
+    "compatibility_by_type_maybe_with_non_constr_pats: Checking compatibility of %s\n    with tasks %s\n    and constr tasks %s"
+    (pretty_type typ)
+    (pretty_task_list tasks)
+    (pretty_task_list ctr_tasks)
+  ;
   (* This function must recurse until it has eliminated all of the
      non-constructor patterns from the task list, at which point it sends the
      constructor patterns to compatibility_by_type_with_only_constr_pats.  Note
@@ -450,6 +508,12 @@ and compatibility_by_type_with_only_constr_pats
       (typ : tbtype)
       (tasks : compatibility_task list)
       : Compatibility_result_set.t =
+  logger `trace @@
+    sprintf
+    "compatibility_by_type_with_only_constr_pats: Checking compatibility of %s\n    with tasks %s"
+    (pretty_type typ)
+    (pretty_task_list tasks)
+  ;
   (* At this point, the only tasks that exist have constructor patterns.  We
      begin by defining some utilities which are useful in this process. *)
   (** Solves each task immediately.  Given the list of tasks and a handler for

@@ -30,3 +30,6 @@ val overlaps : contour -> contour -> bool
 (** Extends the provided contour with the provided call site.  The result is
     the least well-formed contour which covers that case. *)
 val extend : contour -> ident -> contour
+
+(** A pretty printer for contours. *)
+val pretty_contour : contour -> string

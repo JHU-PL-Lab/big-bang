@@ -19,6 +19,7 @@ let toploop_operate e =
 ;;
 
 let () =
+  Tiny_bang_logger.level `trace;
   print_string "TinyBang 0.3 Toploop\n";
   print_string "--------------------\n";
   print_string "\n";
