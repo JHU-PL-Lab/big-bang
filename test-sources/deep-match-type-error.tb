@@ -1,0 +1,12 @@
+# EXPECT-TYPEFAIL
+x1 = p3 \
+     { p1 = ();
+       p2 = `B p1;
+       p3 = `A p2;
+     } ->
+     { r = ()
+     };
+x2 = ();
+x3 = `C x2;
+x4 = `A x3;
+x5 = x1 x4;
