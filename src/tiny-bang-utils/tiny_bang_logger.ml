@@ -66,6 +66,6 @@ let make_logger prefix level message =
 let bracket_log logger level pre_message post_message_fn thunk =
   logger level pre_message;
   let value = thunk () in
-  logger level (pre_message ^ ": " ^ post_message_fn value);
+  logger level (pre_message ^ "\n  : " ^ post_message_fn value);
   value
 ;;
