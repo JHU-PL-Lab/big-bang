@@ -108,6 +108,10 @@ end;;
 
 module Occurrence_set = Set.Make(Occurrence_ord);;
 
+(** The type of internal digest results.  In addition to the bindings, two
+    task result lists are present.  The rightmost list contains answers for
+    constructor tasks; the leftmost list contains answers for tasks which may
+    include non-constructor patterns. *)
 type internal_digest_result =
   | Internal_digest_result of compatibility_bindings * bool list * bool list
 ;;
@@ -161,6 +165,52 @@ let pretty_task_list tasks =
     (tasks |> List.enum |> Enum.map pretty_task)
 ;;
 
+let pretty_binding (ft,a) =
+  pretty_filtered_type ft ^ " " ^ pretty_tvar a
+;;
+
+let pretty_binding_set bindings =
+  bindings
+    |> List.enum
+    |> Enum.map pretty_binding
+    |> concat_sep_delim "{" "}" ","
+;;
+
+let answers_to_str answers =
+  answers
+    |> List.enum
+    |> Enum.map (fun ans -> if ans then "Y" else "N")
+    |> concat_sep_delim "[" "]" ","
+;;
+
+let pretty_result (Compatibility_result (bindings,answers)) =
+  let answers_str = answers_to_str answers in
+  let bindings_str = pretty_binding_set bindings in
+  answers_str ^ "@" ^ bindings_str
+;;
+
+let pretty_result_set results =
+  results
+    |> Compatibility_result_set.enum
+    |> Enum.map pretty_result
+    |> concat_sep_delim "{" "}" ", "
+;;
+
+let pretty_internal_result (Internal_digest_result(
+      bindings,answers,ctr_answers)) =
+  let answers_str = answers_to_str answers in
+  let ctr_answers_str = answers_to_str ctr_answers in
+  let bindings_str = pretty_binding_set bindings in
+  answers_str ^ "," ^ ctr_answers_str ^ "@" ^ bindings_str
+;;
+
+let pretty_internal_result_set results =
+  results
+    |> Internal_digest_result_set.enum
+    |> Enum.map pretty_internal_result
+    |> concat_sep_delim "{" "}" ", "
+;;
+
 (* ************************************************************************** *)
 (* INTERNAL ROUTINES *)
 (* This section contains a number of routines used internally when computing
@@ -191,13 +241,15 @@ let rec compatibility_by_tvar
       (tasks : compatibility_task list)
       (bind_state : bind_state)
       : Compatibility_result_set.t =
-  logger `trace @@
-    sprintf
-    "compatibility_by_tvar: Checking compatibility of %s in binding state %s\n    with tasks %s"
-    (pretty_tvar a)
-    (pretty_bind_state bind_state)
-    (pretty_task_list tasks)
-  ;
+  Tiny_bang_logger.bracket_log logger `trace
+    (sprintf
+      ("compatibility_by_tvar: Checking compatibility of %s in binding state %s\n    with tasks %s")
+      (pretty_tvar a)
+      (pretty_bind_state bind_state)
+      (pretty_task_list tasks)
+    )
+    pretty_result_set
+  @@ fun () ->
   if List.is_empty tasks
     then
       (* LEAF RULE *)
@@ -286,13 +338,15 @@ and compatibility_by_type
       (tasks : compatibility_task list)
       (bind_state : bind_state)
       : Compatibility_result_set.t =
-  logger `trace @@
-    sprintf
-    "compatibility_by_type: Checking compatibility of %s in binding state %s\n    with tasks %s"
-    (pretty_type typ)
-    (pretty_bind_state bind_state)
-    (pretty_task_list tasks)
-  ;  
+  Tiny_bang_logger.bracket_log logger `trace
+    (sprintf
+      "compatibility_by_type: Checking compatibility of %s in binding state %s\n    with tasks %s"
+      (pretty_type typ)
+      (pretty_bind_state bind_state)
+      (pretty_task_list tasks)
+    )
+    pretty_result_set
+  @@ fun () ->
   (* We start by operating on the non-constructor patterns one at a time.  After
      every non-constructor pattern has been digested, we operate on all of the
      constructor patterns in tandem.  The following invocation accomplishes
@@ -372,13 +426,15 @@ and compatibility_by_type_maybe_with_non_constr_pats
       (tasks : compatibility_task list)
       (ctr_tasks : compatibility_task list)
       : Internal_digest_result_set.t =
-  logger `trace @@
-    sprintf
-    "compatibility_by_type_maybe_with_non_constr_pats: Checking compatibility of %s\n    with tasks %s\n    and constr tasks %s"
-    (pretty_type typ)
-    (pretty_task_list tasks)
-    (pretty_task_list ctr_tasks)
-  ;
+  Tiny_bang_logger.bracket_log logger `trace
+    (sprintf
+      "compatibility_by_type_maybe_with_non_constr_pats: Checking compatibility of %s\n    with tasks %s\n    and constr tasks %s"
+      (pretty_type typ)
+      (pretty_task_list tasks)
+      (pretty_task_list ctr_tasks)
+    )
+    pretty_internal_result_set
+  @@ fun () ->
   (* This function must recurse until it has eliminated all of the
      non-constructor patterns from the task list, at which point it sends the
      constructor patterns to compatibility_by_type_with_only_constr_pats.  Note

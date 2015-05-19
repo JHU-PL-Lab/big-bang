@@ -25,7 +25,7 @@ let pretty_pattern_filter_type pf =
 ;;
 
 let pretty_pattern_type (Pattern_type(a,pfm)) =
-  pretty_tvar a ^ " \\ " ^
+  pretty_pattern_tvar a ^ " \\ " ^
   (concat_sep_delim "{" "}" "; "
     (pfm
       |> Tvar_map.enum
