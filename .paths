@@ -14,3 +14,4 @@ _build/src/tiny-bang-typechecker
 test
 _build/src/tiny-bang-toploop
 _build/test
+test-sources

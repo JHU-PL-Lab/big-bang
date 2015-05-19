@@ -90,6 +90,9 @@ Executable "test-tiny-bang"
   Path: test/
   MainIs: test_tiny_bang.ml
   BuildDepends:
+    tiny-bang-interpreter,
+    tiny-bang-parser,
+    tiny-bang-typechecker,
     tiny-bang-utils,
     oUnit,
     batteries

@@ -1,9 +1,8 @@
-open OUnit
+open OUnit2
 
 let all_tests =
-  [
-    Test_tiny_bang_utils.tests
-  ]
+  [ Test_tiny_bang_utils.tests
+  ; Test_tiny_bang_files.tests
+  ];;
 
-let () =
-  ignore(run_test_tt ("Tiny_bang" >::: all_tests))
+run_test_tt_main ("Tiny_bang" >::: all_tests);;
