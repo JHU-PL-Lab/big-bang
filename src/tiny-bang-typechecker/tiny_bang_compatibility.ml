@@ -126,9 +126,8 @@ module Internal_digest_result_set = Set.Make(Internal_digest_result_ord);;
 
 (**
   A structure representing generic compatibility queries.  Each such query is
-  either an [Immediate_answer] or it is a [Recursive_compatibility_query].  In
-  the latter case, the recursive query carries a task (which should be
-  performed) and a function which generates data from the result of that task.
+  either an [Immediate_answer] or it is a [Recursive_compatibility_query] which
+  TODO: document
 *)
 type 'a compatibility_query =
   | Recursive_compatibility_query of compatibility_task * (bool -> 'a list)
@@ -600,7 +599,7 @@ and compatibility_by_type_with_only_constr_pats
         (bind_state : bind_state)
         : Compatibility_result_set.t =
     let query_generator (task : compatibility_task)
-          : bool compatibility_query option =
+          : bool compatibility_query list =
       let Pattern_type(a'',pfm) = task.ct_pat in
       let filt = Tvar_map.find a'' pfm in
       match handler filt with
@@ -609,14 +608,14 @@ and compatibility_by_type_with_only_constr_pats
                         ; ct_binding = task.ct_binding
                         ; ct_expect_match = task.ct_expect_match
                         } in
-            Some (Recursive_compatibility_query(task',
+            [Recursive_compatibility_query(task',
               fun answer ->
                 if check_expectation task.ct_expect_match answer
                   then [answer] else []
-            ))
+            )]
         | None ->
             if check_expectation task.ct_expect_match false
-              then Some (Immediate_answer false) else None
+              then [Immediate_answer false] else []
     in
     recursive_solve tv query_generator tasks bind_state
       |> Enum.map (fun (bnd,ans) -> Compatibility_result(bnd,ans))
@@ -637,15 +636,15 @@ and compatibility_by_type_with_only_constr_pats
   and recursive_solve
          : 'a 'b.
            tvar
-        -> ('a -> 'b compatibility_query option)
+        -> ('a -> 'b compatibility_query list)
         -> 'a list
         -> bind_state
         -> (compatibility_bindings * 'b list) Enum.t =
     fun tv query_generator data bind_state ->
       let queries_cases = List.map query_generator data in
       let results = queries_cases
-        |> List.filter_map identity
-        |> (fun queries ->
+        |> List.map
+            (fun queries ->
               (* At this point, we have a series of queries which give us
                  recursive tasks to perform.  We *must* perform these tasks in
                  tandem, so we'll extract the questions from the list and
@@ -692,6 +691,8 @@ and compatibility_by_type_with_only_constr_pats
             )
       in
       results
+        |> List.enum
+        |> Enum.concat
   in
   match typ with
     | Empty_onion_type ->
@@ -723,8 +724,7 @@ and compatibility_by_type_with_only_constr_pats
            each of those which *failed* is sent to the right with its original
            expectation.  Finally, we aggregate the results.
         *)
-        let left_query_generator (task : compatibility_task)
-            : bool compatibility_query compatibility_query option =
+        let left_query_generator task =
           (* This is the first task our query will perform. *)
           let left_task = { ct_pat = task.ct_pat
                           ; ct_binding = task.ct_binding
@@ -771,7 +771,10 @@ and compatibility_by_type_with_only_constr_pats
                         )]
           in
           (* Now we build the query that we need to generate. *)
-          Some (Recursive_compatibility_query(left_task, query_result_handler))
+          let query = Recursive_compatibility_query(
+            left_task, query_result_handler) in
+          (* This generator only yields one query. *)
+          [query]
         in
         let results_left =
           recursive_solve a1 left_query_generator tasks Dont_bind
@@ -780,7 +783,7 @@ and compatibility_by_type_with_only_constr_pats
           |> Enum.map
               (fun (bindings_left, right_side_queries) ->
                 let results_right =
-                  recursive_solve a2 Option.some right_side_queries Dont_bind
+                  recursive_solve a2 (fun x -> [x]) right_side_queries Dont_bind
                 in
                 results_right
                   |> Enum.map
