@@ -5,7 +5,13 @@ open Tiny_bang_application_matching_types;;
 open Tiny_bang_contours;;
 open Tiny_bang_contours_types;;
 open Tiny_bang_types;;
+open Tiny_bang_types_pretty;;
 open Tiny_bang_utils;;
+
+(* ************************************************************************** *)
+(* LOGGER *)
+
+let logger = Tiny_bang_logger.make_logger "Tiny_bang_constraint_closure";;
 
 (* ************************************************************************** *)
 (* CLOSURE RULES *)
@@ -79,7 +85,8 @@ let close_by_application cs =
                               | None ->
                                   raise @@ Invariant_failure(
                                     "Attempt to polyinstantiate type " ^
-                                    "variable without contour!")
+                                    "variable " ^ pretty_tvar a1' ^
+                                    " without contour!")
                           end
                         in
                         let cntr' = extend cntr i in
