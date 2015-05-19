@@ -77,7 +77,7 @@ let close_by_application cs =
                     | Some(a1',cs1',cs1'') ->
                         (* We need to start by building the variable
                            substitution function. *)
-                        let Tvar(i,cntr_option) = a1' in
+                        let Tvar(i,cntr_option) = a2 in
                         let cntr =
                           begin
                             match cntr_option with
