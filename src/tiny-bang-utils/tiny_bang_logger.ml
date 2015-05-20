@@ -4,11 +4,15 @@
  * Features
  * --------
  *
- * 1. Always logs to the stderr, which is the best thing to do [1].
+ * 1. Always logs to the stderr, which is the best thing to do [1]. Note that the
+ *    article in [1] says to log to stdout, but currently the interpreter is only
+ *    run in interactive mode, so stdout is already taken and we log the next best
+ *    thing, which is stderr.
  *
  * 2. Handles different log levels.
  *
- * 3. Is contextualized by the module.
+ * 3. Is contextualized by the module and different log levels per module can
+ *    be configured.
  *
  * 4. Is a thin layer around BatLog.
  *
@@ -34,22 +38,15 @@
  *    Allowed log levels are: `trace | `debug | `info | `warn | `error
  *                            | `fatal | `always.
  *
- * 4. (Optional) Adjust the log level. The default is `always, to set it to `debug,
- *    for example:
- *
- *    ```ocaml
- *    Tiny_bang_logger.level `trace
- *    ```
- *
- *    This is a global level that applies to all loggers. You may wish to change
- *    it in the start of the application or selectively for your module, by later
- *    reseting the level.
+ * 4. (Optional) Log levels can be selected for the entire executable or on a
+ *               per-module basis using command line arguments. Refer to the
+ *               `README.md' for more information.
  *
  * ---
  *
  * WARNING: Be aware that, due to I/O buffering, log entries may not show up on
  *          the terminal as soon as you might expect. To solve that, you might want
- *          to call `flush stdout'.
+ *          to call `flush stdout' after logging.
  *
  * [1]: http://12factor.net/logs
  *)

@@ -1,6 +1,29 @@
 Big Bang
 ========
 
+Usage
+-----
+
+### TinyBang toploop
+
+The TinyBang toploop accepts the following command line arguments:
+
+- `--log [<module>=]<log-level>`: If `<module>` is not given, change the log
+  level of the whole executable to the given `<log-level>`. If `<module>` is
+  given, overwrite the log level for that module.
+
+  Available log levels are:
+
+  - `trace`.
+  - `debug`.
+  - `info`.
+  - `warn`.
+  - `error`.
+  - `fatal`.
+  - `always`.
+
+  The default log level is `warn`.
+
 Setup development environment
 -----------------------------
 
@@ -38,8 +61,11 @@ the project. Here are some useful things you might want to do next:
 - Run TinyBang toploop:
 
   ```console
-  $ docker-compose run --rm bigbang 'ocamlrun tiny_bang_toploop.byte'
+  $ docker-compose run --rm bigbang 'ocamlrun tiny_bang_toploop.byte [arguments]'
   ```
+
+  Refer to the Usage > TinyBang toploop section for more information on available
+  arguments.
 
 - Run a console in the container:
 
@@ -85,8 +111,11 @@ the project. Here are some useful things you might want to do next:
 - Run TinyBang toploop:
 
   ```console
-  $ ocamlrun tiny_bang_toploop.byte
+  $ ocamlrun tiny_bang_toploop.byte [arguments]
   ```
+
+  Refer to the Usage > TinyBang toploop section for more information on available
+  arguments.
 
 Project Organization
 --------------------
