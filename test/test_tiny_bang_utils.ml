@@ -1,19 +1,12 @@
 open OUnit2
 
+open Tiny_bang_string_utils;;
+
 let natural_compare_seq_returns_0_for_empty_list _ =
   assert_equal 0 (Tiny_bang_utils.natural_compare_seq [])
   
 let pretty_list_list pretty lst =
-    "[" ^
-    (List.fold_left
-        (fun a l -> a ^ (if String.length a > 0 then ";" else "") ^ "[" ^
-            (List.fold_left
-                (fun a x -> a ^ (if String.length a > 0 then ";" else "") ^ pretty x)
-                "" l)
-            ^ "]"
-        )
-        "" lst)
-    ^ "]"
+  pretty_list (pretty_list pretty) lst
 ;;
 
 let cartesian_product_tests =
