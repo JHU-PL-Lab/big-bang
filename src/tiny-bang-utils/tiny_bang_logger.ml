@@ -4,11 +4,15 @@
  * Features
  * --------
  *
- * 1. Always logs to the stderr, which is the best thing to do [1].
+ * 1. Always logs to the stderr, which is the best thing to do [1]. Note that the
+ *    article in [1] says to log to stdout, but currently the interpreter is only
+ *    run in interactive mode, so stdout is already taken and we log the next best
+ *    thing, which is stderr.
  *
  * 2. Handles different log levels.
  *
- * 3. Is contextualized by the module.
+ * 3. Is contextualized by the module and different log levels per module can
+ *    be configured.
  *
  * 4. Is a thin layer around BatLog.
  *
@@ -34,32 +38,80 @@
  *    Allowed log levels are: `trace | `debug | `info | `warn | `error
  *                            | `fatal | `always.
  *
- * 4. (Optional) Adjust the log level. The default is `always, to set it to `debug,
- *    for example:
- *
- *    ```ocaml
- *    Tiny_bang_logger.level `trace
- *    ```
- *
- *    This is a global level that applies to all loggers. You may wish to change
- *    it in the start of the application or selectively for your module, by later
- *    reseting the level.
+ * 4. (Optional) Log levels can be selected for the entire executable or on a
+ *               per-module basis using command line arguments. Refer to the
+ *               `README.md' for more information.
  *
  * ---
  *
  * WARNING: Be aware that, due to I/O buffering, log entries may not show up on
- *          the terminal as soon as you might expect.
+ *          the terminal as soon as you might expect. To solve that, you might want
+ *          to call `flush stdout' after logging.
  *
  * [1]: http://12factor.net/logs
  *)
 
 open Batteries
 
-let level level =
-  BatLog.Easy.level := level
+let default_level =
+  let rec parse_command_line_parameters arguments result =
+    match arguments with
+    | [] -> result
+    | [single_parameter] -> if single_parameter = "--log" then
+                              failwith "Missing log level after `--log'."
+                            else
+                              result
+    | flag :: argument :: arguments_tail ->
+       if flag = "--log" then
+         if BatString.exists argument "=" then
+           result
+         else
+           argument
+       else
+         parse_command_line_parameters (argument :: arguments_tail) result
+  in
+  parse_command_line_parameters (BatArray.to_list Sys.argv) "warn"
+;;
+let level_map =
+  let rec parse_command_line_parameters arguments result =
+    match arguments with
+    | [] -> result
+    | [single_parameter] -> if single_parameter = "--log" then
+                              failwith "Missing log level after `--log'."
+                            else
+                              result
+    | flag :: argument :: arguments_tail ->
+       if flag = "--log" then
+         if BatString.exists argument "=" then
+           let (module_name, level_string) = BatString.split argument "=" in
+           BatMap.add module_name level_string result
+         else
+           result
+       else
+         parse_command_line_parameters (argument :: arguments_tail) result
+  in
+  parse_command_line_parameters (BatArray.to_list Sys.argv) BatMap.empty
+;;
+
+let level_for prefix =
+  let level_string =
+    if BatMap.mem prefix level_map then
+      BatMap.find prefix level_map
+    else
+      default_level
+  in match level_string with
+     | "trace" -> `trace
+     | "debug" -> `debug
+     | "info" -> `info
+     | "warn" -> `warn
+     | "error" -> `error
+     | "fatal" -> `fatal
+     | "always" -> `always
+     | _ -> failwith ("Invalid log level `" ^ level_string ^ "'.")
 ;;
 
 let make_logger prefix level message =
+  BatLog.Easy.level := level_for prefix;
   BatLog.Easy.log level ("[" ^ prefix ^ "]: " ^ message)
 ;;
 
