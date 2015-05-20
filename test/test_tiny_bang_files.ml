@@ -13,6 +13,7 @@
 open Batteries;;
 open OUnit2;;
 
+open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
 open Tiny_bang_parser;;
 open Tiny_bang_typechecker;;
@@ -50,6 +51,8 @@ let make_test filename expectation =
       let (expr,_) =
         File.with_file_in filename Tiny_bang_parser.parse_tiny_bang_program
       in
+      (* Verify that it is well-formed. *)
+      check_wellformed_expr expr;
       (* Next, typecheck it. *)
       let typecheck_result = typecheck expr in
       match expectation with

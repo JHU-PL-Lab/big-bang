@@ -27,7 +27,8 @@ Library "tiny-bang-ast"
   Modules:
     Tiny_bang_ast,
     Tiny_bang_ast_pretty,
-    Tiny_bang_ast_uid
+    Tiny_bang_ast_uid,
+    Tiny_bang_ast_wellformedness
   BuildDepends:
     batteries,
     tiny-bang-utils
