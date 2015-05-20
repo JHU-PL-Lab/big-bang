@@ -638,7 +638,7 @@ and compatibility_by_type_with_only_constr_pats
       )
     ;
     let query_generator (task : compatibility_task)
-          : bool compatibility_query list =
+          : bool compatibility_query option =
       let Pattern_type(a'',pfm) = task.ct_pat in
       let filt = Tvar_map.find a'' pfm in
       match handler filt with
@@ -647,14 +647,14 @@ and compatibility_by_type_with_only_constr_pats
                         ; ct_binding = task.ct_binding
                         ; ct_expect_match = task.ct_expect_match
                         } in
-            [Recursive_compatibility_query(task',
+            Some (Recursive_compatibility_query(task',
               fun answer ->
                 if check_expectation task.ct_expect_match answer
                   then [answer] else []
-            )]
+            ))
         | None ->
             if check_expectation task.ct_expect_match false
-              then [Immediate_answer false] else []
+              then Some (Immediate_answer false) else None
     in
     Tiny_bang_logger.bracket_log logger `trace
       (sprintf
@@ -677,7 +677,11 @@ and compatibility_by_type_with_only_constr_pats
     aligns each recursive answer with the position of the input which generated
     the question.
     @param tv The type variable of the argument being checked for compatibility.
-    @param query_generator The function which generates recursive queries.
+    @param query_generator The function which generates a recursive query for
+                           each data element.  If [None] is yielded by this
+                           query generator, the current computation is
+                           considered defunct and [recursive_solve] yields no
+                           results.
     @param data The sequence of data accepted by the query generator.
     @param bind_state The current binding state of this operation.
     @param pretty_output A pretty printer for the output type of the generated
@@ -687,7 +691,7 @@ and compatibility_by_type_with_only_constr_pats
   and recursive_solve
          : 'a 'b.
            tvar
-        -> ('a -> 'b compatibility_query list)
+        -> ('a -> 'b compatibility_query option)
         -> 'a list
         -> bind_state
         -> ('b -> string)
@@ -696,119 +700,128 @@ and compatibility_by_type_with_only_constr_pats
       (* Begin by generating each of the possible queries for each of the
          corresponding inputs. *)
       let generated_queries = List.map query_generator data in
-      (* Next, extract the query list cases for each of those possibilities. *)
-      let queries_cases = cartesian_product_of_list generated_queries in
-      Tiny_bang_logger.bracket_log logger `trace
-        (sprintf
-          "recursive_solve: Solving at %s with queries %s"
-          (pretty_tvar tv)
-          (pretty_list (pretty_list (pretty_query pretty_output)) queries_cases) 
-        )
-        (function result ->
-            result
-              |> Enum.clone
-              |> List.of_enum
-              |> pretty_list @@ pretty_tuple pretty_binding_set @@ pretty_list pretty_output
-        )
-      @@ function () ->
-      queries_cases
-        |> List.enum
-        |> Enum.map
-            (fun queries ->
-              (* At this point, we have a series of queries which give us
-                 recursive tasks to perform.  We *must* perform these tasks in
-                 tandem, so we'll extract the questions from the list and
-                 recurse. *)
-              let tasks = List.filter_map
-                (fun question ->
-                  match question with
-                    | Recursive_compatibility_query(task,_) -> Some task
-                    | Immediate_answer _ -> None)
-                queries
-              in
-              let recursion_results =
-                compatibility_by_tvar cs occurrences tv tasks bind_state
-              in
-              (* Now that we have the results from the recursive call, we need
-                 to use each answer list to produce an appropriate collection of
-                 answer lists for this routine.  Notably, the recursive
-                 compatibility queries consume an answer from the recursion
-                 result while the immediate answers do not.  Also, the recursive
-                 queries may yield multiple results; we must fold this
-                 non-determinism into our collection.  We start by generating
-                 for each answer a list of possible outcomes; we then take the
-                 Cartesian product of each outcome list.
-              *)
-              recursion_results
-                |> Compatibility_result_set.enum
-                |> Enum.map
-                    (fun (Compatibility_result(bindings,answers)) ->
-                      (* For each answer in the answer list above, we yield
-                         the result of passing it through the appropriate
-                         handler function.  For each answer, this produces a
-                         list of possibilities. *)
-                      logger `trace
-                        (sprintf
-                          "recursive_solve: compatibility result:\n    bindings: %s\n    answers: %s"
-                          (pretty_binding_set bindings)
-                          (pretty_list string_of_bool answers)
-                        );
-                      let possibilities_list =
-                        (* We're going to accomplish this by keeping a stack
-                           of available result handlers.  If the original
-                           query was immediate, we need not consume a
-                           handler; if it was a recursive result, it does. *)
-                        List.rev @@ fst @@ List.fold_left
-                          (fun (results, rec_answers') -> fun query ->
-                            match query with
-                              | Recursive_compatibility_query(_,f) ->
-                                  begin
-                                    match rec_answers' with
-                                      | [] -> raise (Invariant_failure
-                                                "missing answers in recursive_solve")
-                                      | rec_ans::rec_answers'' ->
-                                          ((f rec_ans :: results),rec_answers'')
-                                  end
-                              | Immediate_answer ans ->
-                                  ([ans] :: results,rec_answers')
-                          )
-                          ([],answers) queries
-                      in
-                      (* We now have a list where each position represents all
-                         of the possibilities at that index.  For instance, if
-                         the list is of the form [[1;2];[3];[4;5]] then we
-                         know that the first position of the list may be
-                         either a 1 or a 2, the second is always a 3, and so
-                         on.  We need to flatten out all of these
-                         possibilities.  Fortunately, we have a utility 
-                         function for that. *)
-                      logger `trace
-                        (sprintf
-                          "recursive_solve: original possibilities: %s" @@
-                          pretty_list
-                            (pretty_list pretty_output)
-                            possibilities_list
-                        );
-                      let results_lists =
-                        cartesian_product_of_list possibilities_list in
-                      logger `trace
-                        (sprintf
-                          "recursive_solve: Cartesian product of possibilities: %s" @@
-                          pretty_list
-                            (pretty_list pretty_output)
-                            possibilities_list
-                        );
-                      (* Now enumerate this structure so we can merge it with
-                         the ones from the other compatibility results.  Pair
-                         up the bindings with each of these lists so we don't
-                         lose them. *)
-                      results_lists
-                        |> List.enum
-                        |> Enum.map (fun lst -> (bindings,lst))
+      if not @@ List.for_all (Option.is_some) generated_queries then
+        (* In this case, one of the generators indicated that no sensible query
+           could be made and that this computation is defunct. *)
+        Enum.empty ()
+      else
+        let queries =
+          generated_queries
+            |> List.map
+                  (fun qo -> match qo with
+                              | Some q -> q
+                              | None ->
+                                  raise (Invariant_failure(
+                                    "Found a None in the generated queries "^
+                                    "list after they should've been noticed!"))
+                  )
+        in
+        (* Next, extract the query list cases for each of those possibilities. *)
+        Tiny_bang_logger.bracket_log logger `trace
+          (sprintf
+            "recursive_solve: Solving at %s with queries %s"
+            (pretty_tvar tv)
+            (pretty_list (pretty_query pretty_output) queries) 
+          )
+          (function result ->
+              result
+                |> Enum.clone
+                |> List.of_enum
+                |> pretty_list @@ pretty_tuple pretty_binding_set @@ pretty_list pretty_output
+          )
+        @@ function () ->
+        (* At this point, we have a series of queries which give us
+           recursive tasks to perform.  We *must* perform these tasks in
+           tandem, so we'll extract the questions from the list and
+           recurse. *)
+        let tasks = List.filter_map
+          (fun question ->
+            match question with
+              | Recursive_compatibility_query(task,_) -> Some task
+              | Immediate_answer _ -> None)
+          queries
+        in
+        let recursion_results =
+          compatibility_by_tvar cs occurrences tv tasks bind_state
+        in
+        (* Now that we have the results from the recursive call, we need
+           to use each answer list to produce an appropriate collection of
+           answer lists for this routine.  Notably, the recursive
+           compatibility queries consume an answer from the recursion
+           result while the immediate answers do not.  Also, the recursive
+           queries may yield multiple results; we must fold this
+           non-determinism into our collection.  We start by generating
+           for each answer a list of possible outcomes; we then take the
+           Cartesian product of each outcome list.
+        *)
+        recursion_results
+          |> Compatibility_result_set.enum
+          |> Enum.map
+              (fun (Compatibility_result(bindings,answers)) ->
+                (* For each answer in the answer list above, we yield
+                   the result of passing it through the appropriate
+                   handler function.  For each answer, this produces a
+                   list of possibilities. *)
+                logger `trace
+                  (sprintf
+                    "recursive_solve: compatibility result:\n    bindings: %s\n    answers: %s"
+                    (pretty_binding_set bindings)
+                    (pretty_list string_of_bool answers)
+                  );
+                let possibilities_list =
+                  (* We're going to accomplish this by keeping a stack
+                     of available result handlers.  If the original
+                     query was immediate, we need not consume a
+                     handler; if it was a recursive result, it does. *)
+                  List.rev @@ fst @@ List.fold_left
+                    (fun (results, rec_answers') -> fun query ->
+                      match query with
+                        | Recursive_compatibility_query(_,f) ->
+                            begin
+                              match rec_answers' with
+                                | [] -> raise (Invariant_failure
+                                          "missing answers in recursive_solve")
+                                | rec_ans::rec_answers'' ->
+                                    ((f rec_ans :: results),rec_answers'')
+                            end
+                        | Immediate_answer ans ->
+                            ([ans] :: results,rec_answers')
                     )
-                |> Enum.concat
-            )
-        |> Enum.concat
+                    ([],answers) queries
+                in
+                (* We now have a list where each position represents all
+                   of the possibilities at that index.  For instance, if
+                   the list is of the form [[1;2];[3];[4;5]] then we
+                   know that the first position of the list may be
+                   either a 1 or a 2, the second is always a 3, and so
+                   on.  We need to flatten out all of these
+                   possibilities.  Fortunately, we have a utility 
+                   function for that. *)
+                logger `trace
+                  (sprintf
+                    "recursive_solve: original possibilities: %s" @@
+                    pretty_list
+                      (pretty_list pretty_output)
+                      possibilities_list
+                  );
+                let results_lists =
+                  cartesian_product_of_list possibilities_list in
+                logger `trace
+                  (sprintf
+                    "recursive_solve: Cartesian product of possibilities: %s" @@
+                    pretty_list
+                      (pretty_list pretty_output)
+                      possibilities_list
+                  );
+                (* Now enumerate this structure so we can merge it with
+                   the ones from the other compatibility results.  Pair
+                   up the bindings with each of these lists so we don't
+                   lose them. *)
+                results_lists
+                  |> List.enum
+                  |> Enum.map (fun lst -> (bindings,lst))
+              )
+          |> Enum.concat
   in
   match typ with
     | Empty_onion_type ->
@@ -887,10 +900,7 @@ and compatibility_by_type_with_only_constr_pats
                         )]
           in
           (* Now we build the query that we need to generate. *)
-          let query = Recursive_compatibility_query(
-            left_task, query_result_handler) in
-          (* This generator only yields one query. *)
-          [query]
+          Some(Recursive_compatibility_query(left_task, query_result_handler))
         in
         let results_left =
           recursive_solve
@@ -906,7 +916,7 @@ and compatibility_by_type_with_only_constr_pats
                 let results_right =
                   recursive_solve
                     a2
-                    (fun x -> [x])
+                    Option.some
                     right_side_queries
                     Dont_bind
                     string_of_bool
