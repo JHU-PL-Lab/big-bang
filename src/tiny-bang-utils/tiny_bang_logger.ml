@@ -53,8 +53,10 @@
 
 open Batteries
 
-let default_level =
-  let rec parse_command_line_parameters arguments result =
+let rec parse_command_line_parameters arguments 
+                                      result 
+                                      module_log_level_function 
+                                      default_log_level_function =
     match arguments with
     | [] -> result
     | [single_parameter] -> if single_parameter = "--log" then
@@ -64,33 +66,30 @@ let default_level =
     | flag :: argument :: arguments_tail ->
        if flag = "--log" then
          if BatString.exists argument "=" then
-           result
+           module_log_level_function argument result
          else
-           argument
+           default_log_level_function argument result
        else
-         parse_command_line_parameters (argument :: arguments_tail) result
-  in
-  parse_command_line_parameters (BatArray.to_list Sys.argv) "warn"
+         parse_command_line_parameters (argument :: arguments_tail) 
+                                       result 
+                                       module_log_level_function 
+                                       default_log_level_function
 ;;
-let level_map =
-  let rec parse_command_line_parameters arguments result =
-    match arguments with
-    | [] -> result
-    | [single_parameter] -> if single_parameter = "--log" then
-                              failwith "Missing log level after `--log'."
-                            else
-                              result
-    | flag :: argument :: arguments_tail ->
-       if flag = "--log" then
-         if BatString.exists argument "=" then
-           let (module_name, level_string) = BatString.split argument "=" in
-           BatMap.add module_name level_string result
-         else
-           result
-       else
-         parse_command_line_parameters (argument :: arguments_tail) result
-  in
-  parse_command_line_parameters (BatArray.to_list Sys.argv) BatMap.empty
+
+let default_level =
+  parse_command_line_parameters (BatArray.to_list Sys.argv)
+                                 "warn"
+                                 (fun argument result-> result)
+                                 (fun argument result-> argument)
+;;
+
+let level_map =  
+  parse_command_line_parameters (BatArray.to_list Sys.argv)
+                                BatMap.empty
+                                (fun argument result->
+                                  let (module_name, level_string) = BatString.split argument "=" in
+                                  BatMap.add module_name level_string result)
+                                (fun argument result-> result)
 ;;
 
 let level_for prefix =
