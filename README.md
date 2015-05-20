@@ -61,7 +61,7 @@ the project. Here are some useful things you might want to do next:
 - Run TinyBang toploop:
 
   ```console
-  $ docker-compose run --rm bigbang 'ocamlrun tiny_bang_toploop.byte [arguments]'
+  $ docker-compose run --rm bigbang 'ocamlrun tiny_bang_toploop.byte [<arguments>]'
   ```
 
   Refer to the Usage > TinyBang toploop section for more information on available
@@ -111,7 +111,7 @@ the project. Here are some useful things you might want to do next:
 - Run TinyBang toploop:
 
   ```console
-  $ ocamlrun tiny_bang_toploop.byte [arguments]
+  $ ocamlrun tiny_bang_toploop.byte [<arguments>]
   ```
 
   Refer to the Usage > TinyBang toploop section for more information on available
