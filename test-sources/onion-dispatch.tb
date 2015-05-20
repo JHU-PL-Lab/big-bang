@@ -1,0 +1,24 @@
+# EXPECT-TYPECHECK
+f = p0 \ { p0 = `A p1
+         ; p1 = ()
+         } ->
+         { r0 = ()
+         ; r1 = `Z r0
+         };
+g = p2 \ { p2 = `B p3
+         ; p3 = ()
+         } ->
+         { r2 = ()
+         ; r3 = `Y r2
+         };
+h = f & g;
+x0 = ();
+x1 = `B x0;
+x2 = h x1;
+check = p4 \ { p4 = `Y p5
+             ; p5 = ()
+             } ->
+             { r4 = ()
+             };
+ans = check x2
+
