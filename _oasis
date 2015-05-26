@@ -86,6 +86,30 @@ Library "little-bang-ast"
     tiny-bang-ast,
     tiny-bang-utils
 
+Library "little-bang-parser"
+  Path: src/little-bang-parser
+  Modules:
+    Little_bang_generated_lexer,
+    Little_bang_generated_parser,
+    Little_bang_parser
+  BuildDepends:
+    batteries,
+    little-bang-ast,
+    tiny-bang-utils
+  BuildTools+:
+    ocamllex,
+    menhir
+
+Library "little-bang-a-translator"
+  Path: src/little-bang-a-translator
+  Modules:
+    Little_bang_a_translator
+  BuildDepends:
+    batteries,
+    little-bang-ast,
+    tiny-bang-ast,
+    tiny-bang-utils
+
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
   MainIs: tiny_bang_toploop.ml
@@ -100,6 +124,7 @@ Executable "test-tiny-bang"
   Path: test/
   MainIs: test_tiny_bang.ml
   BuildDepends:
+    little-bang-a-translator,
     tiny-bang-interpreter,
     tiny-bang-parser,
     tiny-bang-typechecker,
