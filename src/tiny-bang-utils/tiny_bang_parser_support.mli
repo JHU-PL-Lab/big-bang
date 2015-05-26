@@ -6,8 +6,8 @@ directly.
 
 open Batteries;;
 
-open Tiny_bang_ast;;
-open Tiny_bang_parser_types;;
+open Tiny_bang_ast_uid;;
+open Tiny_bang_source_origin;;
 
 val reset_ast_position_hash : unit -> unit
 
