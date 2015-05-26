@@ -17,7 +17,8 @@ struct
   type t = ident
   let equal = (=)
   let hash = Hashtbl.hash
-end;;
+end
+;;
 
 module Ident_hashtbl = Hashtbl.Make(Ident_hash);;
 
