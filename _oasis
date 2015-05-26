@@ -77,6 +77,15 @@ Library "tiny-bang-typechecker"
     tiny-bang-ast,
     tiny-bang-utils
 
+Library "little-bang-ast"
+  Path: src/little-bang-ast
+  Modules:
+    Little_bang_ast
+  BuildDepends:
+    batteries,
+    tiny-bang-ast,
+    tiny-bang-utils
+
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
   MainIs: tiny_bang_toploop.ml
