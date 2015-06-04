@@ -1,5 +1,5 @@
-open Tiny_bang_ast;;
-open Tiny_bang_parser_types;;
+open Tiny_bang_ast_uid;;
+open Tiny_bang_source_origin;;
 
 let ast_position_hash : file_region Ast_uid_hashtbl.t ref
 = ref (Ast_uid_hashtbl.create(10))

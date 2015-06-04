@@ -35,7 +35,17 @@ the procedures.
 
 ### Managed container (recommended)
 
-1. Install [Docker and Docker Compose][docker-compose-installation].
+1. Install [Docker and Docker Compose][docker-compose-installation]. If you're
+   on GNU/Linux, you can choose to install them directly on your machine. If
+   you're on Windows or OS X (or GNU/Linux), you might prefer to use a virtual
+   machine with those tools already configured. Here are the steps to do that:
+
+   1. Install [VirtualBox][virtualbox].
+   2. Install [Vagrant][vagrant].
+   3. Install [Docker Compose plugin for Vagrant][vagrant-docker-compose].
+   4. Run `vagrant up` to start the virtual machine.
+   5. Run `vagrant ssh` to login to the virtual machine and proceed with the
+      next steps.
 
 2. Run:
 
@@ -237,3 +247,6 @@ created with the new dependency.
 [ocaml-coding-style]: http://caml.inria.fr/resources/doc/guides/guidelines.en.html
 [big-bang]: https://big-bang-lang.com
 [ocaml]: http://ocaml.org/
+[virtualbox]: https://www.virtualbox.org/
+[vagrant]: https://www.vagrantup.com/
+[vagrant-docker-compose]: https://github.com/leighmcculloch/vagrant-docker-compose

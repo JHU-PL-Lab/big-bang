@@ -2,7 +2,7 @@
 open Tiny_bang_ast;;
 open Tiny_bang_ast_uid;;
 open Tiny_bang_parser_support;;
-open Tiny_bang_parser_types;;
+open Tiny_bang_source_origin;;
 open Lexing;;
 
 let next_uid startpos endpos =
