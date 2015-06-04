@@ -1,0 +1,37 @@
+# EXPECT-TYPECHECK
+x1 = p1self \
+     { p1self = ()
+     } ->
+     { x2 = p2 \
+	    { p2 = ();
+            } ->
+            { # Determine if the counter is at zero
+              x3 = 0;
+              x4 = == p2 x3;
+              # If it is, just return zero
+              x5 = p4 \
+		   { p3 = ();
+                     p4 = `True p3;
+                   } ->
+                   { x6 = 0;
+                   };
+              # If it isn't, recurse after decrementing by one
+              x7 = p6 \
+		   { p5 = ();
+                     p6 = `False p5;
+                   } ->
+                   { x8 = 1;
+                     x9 = - p2 x8;
+                     x10 = p1self p1self;
+                     x11 = x10 x9;
+                   };
+              # Invoke the conjunction of conditions
+              x12 = x5 & x7;
+              x13 = x12 x4
+            };
+     };
+# Initial self-passing
+x14 = x1 x1;
+# Count down five times
+x15 = 5;
+x16 = x14 x15;

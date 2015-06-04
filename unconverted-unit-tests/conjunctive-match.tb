@@ -1,0 +1,20 @@
+# EXPECT-TYPECHECK
+
+# Build the scape
+x1 = p5 \
+     { p1 = ();
+       p2 = `A p1;
+       p3 = ();
+       p4 = `B p3;
+       p5 = p2 * p4
+     } ->
+     { x2 = + p1 p3
+     };
+# Build the arguments
+x3 = 5;
+x4 = `A x3;
+x5 = 3;
+x6 = `B x5;
+x7 = x4 & x6;
+# Do the call
+x8 = x1 x7;

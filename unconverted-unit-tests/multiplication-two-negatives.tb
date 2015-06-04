@@ -1,0 +1,79 @@
+# EXPECT-TYPECHECK
+
+Y = pbody \
+    { pbody = ()
+    } ->
+    { xwrapper = pthis \
+		 { pthis = ();
+                 } ->
+                 { xwrapperL2 = parg \
+				{ parg = ();
+                                } ->
+                                { tt = pthis pthis;
+                                  btt = pbody tt;
+                                  btta = btt parg
+                                };
+                 };
+      Yr = xwrapper xwrapper;
+    };
+
+multiply = n1 \
+	   { n1 = ();
+           } ->
+           { multiplyN1S = pself \
+			   { pself = ();
+                           } ->
+                           { multiplyN1R = n2 \
+					   { n2 = ();
+                                           } ->
+                                           { x1 = 0;
+                                             x2 = == x1 n2;
+                                             # If the counter is zero, then return zero; otherwise, add in another n1.
+                                             x3 = p2 \
+						  { p1 = ();
+                                                    p2 = `True p1;
+                                                  } ->
+                                                  { x4 = 0;
+                                                  };
+                                             x5 = p4 \
+						  { p3 = ();
+                                                    p4 = `False p3;
+                                                  } ->
+                                                  { x6 = 1;
+                                                    # If n2 is negative, increment it and subtract n1.  Otherwise, decrement it and add n1.
+                                                    x7 = 0;
+                                                    x8 = <= n2 x7; # Because n2 == 0 has already been ruled out.
+                                                    x9 = p6 \
+							 { p5 = ();
+                                                           p6 = `True p5;
+                                                         } ->
+                                                         { x10 = + n2 x6;
+                                                           x11 = pself x10;
+                                                           x12 = - x11 n1;
+                                                         };
+                                                    x13 = p8 \
+							  { p7 = ();
+                                                            p8 = `False p7;
+                                                          } ->
+                                                          { x14 = - n2 x6;
+                                                            x15 = pself x14;
+                                                            x16 = + x15 n1;
+                                                          };
+                                                    x17 = x9 & x13;
+                                                    x18 = x17 x8;
+                                                  };
+                                             x19 = x3 & x5;
+                                             x20 = x19 x2;
+                                           };
+                           };
+             multiplyN1 = Y multiplyN1S;
+           };
+
+x21 = 0;
+x22 = 3;
+x23 = - x21 x22;
+x24 = 10;
+x25 = - x21 x24;
+x26 = multiply x23;
+x27 = x26 x25;
+
