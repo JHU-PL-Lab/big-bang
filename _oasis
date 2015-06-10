@@ -120,6 +120,18 @@ Executable "tiny-bang-toploop"
     tiny-bang-typechecker,
     batteries
 
+Executable "little-bang-toploop"
+  Path: src/little-bang-toploop
+  MainIs: little_bang_toploop.ml
+  BuildDepends:
+    little-bang-ast,
+    little-bang-a-translator,
+    little-bang-parser,
+    tiny-bang-ast,
+    tiny-bang-interpreter,
+    tiny-bang-typechecker,
+    batteries
+
 Executable "test-tiny-bang"
   Path: test/
   MainIs: test_tiny_bang.ml
