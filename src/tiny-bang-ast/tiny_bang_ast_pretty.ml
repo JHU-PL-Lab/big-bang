@@ -2,7 +2,11 @@ open Batteries;;
 
 open Tiny_bang_ast;;
 
-let pretty_ident (Ident s) = s;;
+let pretty_ident ident =
+  match ident with
+  | Ident s -> s
+  | Fresh_ident id -> "__" ^ string_of_int id
+;;
 
 let pretty_label (Label i) = "`" ^ pretty_ident i;;
 

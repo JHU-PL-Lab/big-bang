@@ -10,7 +10,7 @@ open Tiny_bang_utils;;
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
 (** A data type for identifiers in TinyBang. *)
-type ident = Ident of string;;
+type ident = Ident of string | Fresh_ident of int;;
 
 module Ident_hash =
 struct
@@ -30,6 +30,14 @@ end
 ;;
 
 module Ident_set = Set.Make(Ident_order);;
+
+let fresh_ident_counter = ref 0;;
+
+let new_fresh_ident () =
+  let current_fresh_ident = !fresh_ident_counter in
+  fresh_ident_counter := current_fresh_ident + 1;
+  Fresh_ident current_fresh_ident
+;;
 
 (** The label type.  The identifier stored in this label does not contain the
     leading backtick. *)

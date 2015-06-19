@@ -1,0 +1,22 @@
+# EXPECT-TYPECHECK
+
+# Build a scape to update the deep cell
+x1 = p6 \
+     { p1 = ();
+       p2 = ref p1;
+       p3 = ();
+       p4 = p2 * p3;
+       p5 = `B p4;
+       p6 = `A p5;
+     } ->
+     { y1 = 4;
+       y2 = <- p3 y1;
+     };
+# Build a `A `B ref 4
+x2 = 0;
+x3 = ref x2;
+x4 = `B x3;
+x5 = `A x4;
+# Do the call
+x6 = x1 x5;
+x7 = x5; # Return x5
