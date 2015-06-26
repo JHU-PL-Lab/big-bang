@@ -5,12 +5,13 @@ open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
 open Tiny_bang_typechecker;;
 
-let toploop_operate e =
+let toploop_operate no_typecheck e =
   print_string "\n";
   begin
     try
       check_wellformed_expr e;
-      (if typecheck e
+      (if no_typecheck then () else
+        if typecheck e
         then
           let v,env = eval e in
           print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
@@ -39,5 +40,5 @@ let () =
   flush stdout;
   Tiny_bang_parser.parse_tiny_bang_expressions IO.stdin
     |> LazyList.map fst
-    |> LazyList.iter toploop_operate
+    |> LazyList.iter (toploop_operate false)
 ;;
