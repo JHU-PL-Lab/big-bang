@@ -18,6 +18,7 @@ Library "tiny-bang-utils"
   Modules:
     Tiny_bang_ast_uid,
     Tiny_bang_logger,
+    Tiny_bang_logging_options,
     Tiny_bang_parser_support,
     Tiny_bang_source_origin,
     Tiny_bang_string_utils,

@@ -3,14 +3,16 @@ open Batteries;;
 open Tiny_bang_ast_pretty;;
 open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
+open Tiny_bang_logger;;
+open Tiny_bang_logging_options;;
 open Tiny_bang_typechecker;;
 
-let toploop_operate no_typecheck e =
+let toploop_operate typecheck_flag e =
   print_string "\n";
   begin
     try
       check_wellformed_expr e;
-      (if no_typecheck then () else
+      (if (not typecheck_flag) then () else
         if typecheck e
         then
           let v,env = eval e in
@@ -31,7 +33,20 @@ let toploop_operate no_typecheck e =
   flush stdout
 ;;
 
+let command_line_parsing () = 
+   let parser = BatOptParse.OptParser.make ~version:"version 0.3" () in
+   BatOptParse.OptParser.add parser ~long_name:"log" logging_option;
+   BatOptParse.OptParser.add parser ~long_name:"typecheck" type_check_option;
+   let spare_args = BatOptParse.OptParser.parse_argv parser in
+   match spare_args with
+   | [] -> ()
+   | _ -> failwith "BAD!" (* TODO: better error message *)
+;;
+
 let () =
+  (*a parser*)
+  command_line_parsing ();
+
   print_string "TinyBang 0.3 Toploop\n";
   print_string "--------------------\n";
   print_string "\n";
@@ -40,5 +55,5 @@ let () =
   flush stdout;
   Tiny_bang_parser.parse_tiny_bang_expressions IO.stdin
     |> LazyList.map fst
-    |> LazyList.iter (toploop_operate false)
+    |> LazyList.iter (toploop_operate !type_check_global)
 ;;

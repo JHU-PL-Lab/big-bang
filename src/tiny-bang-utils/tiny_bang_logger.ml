@@ -46,7 +46,15 @@
  * [1]: http://12factor.net/logs
  *)
 
-open Batteries
+open Batteries;;
+
+module String_map = BatMap.Make(BatString);;
+
+type level = [`warn|`trace|`debug|`info|`error|`fatal|`always];;
+
+type logging_config = Logging_config of level * level String_map.t;;
+
+exception Option_error of string * string;;
 
 let match_string_with_level level_string = 
   match level_string with
@@ -60,27 +68,36 @@ let match_string_with_level level_string =
      | _ -> failwith ("Invalid log level `" ^ level_string ^ "'.")
 ;;
 
+let match_string_with_bool boolean_string = 
+  match boolean_string with
+    | "true" -> true
+    | "false" -> false
+    | _ -> failwith ("Invalid boolean for typecheck'" ^ boolean_string ^ " '.")
+
+
+let extract_map log_config = match log_config with
+    |Logging_config(default,map) -> map;;
+
+let extract_default log_config = match log_config with
+    |Logging_config(default,map) -> default;;
+
+let logging_config_global = ref @@ Logging_config(`warn, String_map.empty);;
+
+let type_check_global = ref true;;
+
 let default_level = ref `warn ;;
 
-let parse_command_line_parameters result = 
-  let parser = BatOptParse.OptParser.make ~version:"version 2.0" () in
-  let option_log = BatOptParse.StdOpt.str_option ~default:"warn" () in
-  BatOptParse.OptParser.add parser ~help:"logging level" ~long_name:"log" option_log;
-  BatOptParse.OptParser.parse_argv parser;
-  let parsed_string = BatOptParse.Opt.get option_log in
-  if BatString.exists parsed_string "=" then
-    let (module_name, level_string) = BatString.split parsed_string "=" in
-                                  BatMap.add module_name level_string result
-  else
-    let () = default_level := match_string_with_level parsed_string in
-    result
+let level_map = ref String_map.empty;;
+
+let update_levels () = 
+  default_level := (extract_default (!logging_config_global));
+  level_map := (extract_map (!logging_config_global))
 ;;
 
-let level_map = ref (parse_command_line_parameters(BatMap.empty));;
-
 let level_for prefix =
-  if BatMap.mem prefix !level_map
-    then match_string_with_level (BatMap.find prefix !level_map)
+  update_levels (); 
+  if String_map.mem prefix !level_map
+    then  (String_map.find prefix !level_map)
   else
     !default_level
 ;;
