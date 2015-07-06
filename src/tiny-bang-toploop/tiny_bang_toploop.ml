@@ -12,13 +12,18 @@ let toploop_operate typecheck_flag e =
   begin
     try
       check_wellformed_expr e;
-      (if (not typecheck_flag) then () else
-        if typecheck e
-        then
-          let v,env = eval e in
-          print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
-        else
-          print_string "Type error.\n");
+      let do_eval =
+        (if (not typecheck_flag) then true else
+          if typecheck e
+          then true
+          else (print_string "Type error.\n"; false)
+        )
+      in
+      if do_eval 
+      then
+        let v,env = eval e in
+        print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
+      else ()
     with
       | Illformedness_found(ills) ->
           print_string "Provided expression is ill-formed:\n";

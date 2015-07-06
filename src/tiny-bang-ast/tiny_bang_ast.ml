@@ -87,10 +87,15 @@ module Var_map = Map.Make(Var_order);;
 type pattern_filter =
   | Empty_filter of ast_uid
   | Label_filter of ast_uid * label * var
-  | Conjunction_filter of ast_uid * var * var;;
+  | Conjunction_filter of ast_uid * var * var
+  (*| Int_filter of ast_uid * var    *)
+;;
 
 (** Sets of pattern filter rules that comprise a pattern. *)
 type pattern_filter_rules = pattern_filter Var_map.t;;
+
+(** The builtin in Tinybang. **)
+type builtin_op = Op_plus;;
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
@@ -106,10 +111,13 @@ and	redex =
   | Value_redex of ast_uid * value
   | Var_redex of ast_uid * var
   | Appl_redex of ast_uid * var * var
+  | Builtin_redex of ast_uid * builtin_op * var list 
 
 (** TinyBang's value type. *)
 and	value =
   | Empty_onion_value of ast_uid
   | Label_value of ast_uid * label * var
   | Onion_value of ast_uid * var * var
-  | Function_value of ast_uid * pattern * expr;;
+  | Function_value of ast_uid * pattern * expr
+  | Int_value of ast_uid * int
+  ;;

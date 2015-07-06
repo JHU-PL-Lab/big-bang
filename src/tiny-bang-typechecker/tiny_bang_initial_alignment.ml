@@ -68,10 +68,12 @@ and initial_align_redex r =
     | Var_redex(_,x) -> Intermediate_lower_bound(initial_align_var x)
     | Appl_redex(_,x1,x2) ->
         Application_lower_bound(initial_align_var x1,initial_align_var x2)
+    (*| builtin_redex(_,op,list_x) ->  *)
 
 and initial_align_value v =
   match v with
     | Empty_onion_value(_) -> Empty_onion_type
+    
     | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
     | Onion_value(_,x1,x2) ->
         Onion_type(initial_align_var x1,initial_align_var x2)

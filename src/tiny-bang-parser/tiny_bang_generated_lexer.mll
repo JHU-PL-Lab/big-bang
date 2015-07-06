@@ -7,6 +7,7 @@ let digit = ['0'-'9']
 let alpha = ['a'-'z'] | ['A'-'Z']
 let whitespace = [' ' '\t' '\n']
 let comment = '#' [^'\n']* '\n'
+let integer = '-'? ['0'-'9']+
 
 let ident_start = alpha
 let ident_cont = alpha | digit
@@ -27,3 +28,5 @@ rule token = parse
   | ident_start ident_cont* as s     { IDENTIFIER s }
   | "`" (ident_cont* as s)           { LABEL s }
   | ";;"                             { DOUBLE_SEMICOLON }
+  | integer as s                     { INT (int_of_string (s)) }
+  | "+"                              { PLUS }

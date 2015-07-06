@@ -125,6 +125,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
                   begin
                     match v with
                       | Empty_onion_value(_) -> Var_set.empty
+                      | Int_value(_,_) -> Var_set.empty
                       | Label_value(_,_,x') -> Var_set.singleton x'
                       | Onion_value(_,x1,x2) -> Var_set.of_list [x1;x2]
                       | Function_value(_,p,e) ->
@@ -134,6 +135,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
                   end
               | Var_redex(_,x') -> Var_set.singleton x'
               | Appl_redex(_,x1,x2) -> Var_set.of_list [x1;x2]
+              | Builtin_redex(_,_,_) -> Var_set.empty
           in
           Var_set.remove x @@ Var_set.union free_h free_t
   in

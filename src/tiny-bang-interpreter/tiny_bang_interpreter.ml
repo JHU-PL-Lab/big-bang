@@ -132,10 +132,12 @@ and var_replace_redex fn r =
   | Value_redex(_, v) -> Value_redex(next_uid(), var_replace_value fn v)
   | Var_redex(_, x) -> Var_redex(next_uid(), fn x)
   | Appl_redex(_, x1, x2) -> Appl_redex(next_uid(), fn x1, fn x2)
+  | Builtin_redex(_,o,x) -> Builtin_redex(next_uid(), o, List.map fn x)
 
 and var_replace_value fn v =
   match v with
   | Empty_onion_value(_) -> v
+  | Int_value(_, x) -> v
   | Label_value(_, l, x) -> Label_value(next_uid(), l, fn x)
   | Onion_value(_, x1, x2) -> Onion_value(next_uid(), fn x1, fn x2)
   | Function_value(_, p, e) ->
@@ -167,6 +169,39 @@ let var_freshen freshening_stack cls =
   List.map (var_replace_clause repl_fn) cls
 ;;
 
+
+let rec var_lookup_int env var = 
+  let v = lookup env var in
+  match v with
+  | Empty_onion_value(_) -> None
+  | Label_value(_, _, _) -> None
+  | Onion_value(_, x1, x2) -> 
+        if(None = var_lookup_int env x1 )
+          then var_lookup_int env x2
+        else 
+          var_lookup_int env x1
+  | Function_value(_, _, _) -> None
+  | Int_value(_, i) -> Some i
+;;
+
+let some_to_int var = 
+  match var with
+  | Some i -> i
+  | None -> raise @@ Evaluation_failure "Evaluation needed a int type variable to perform"
+;;
+
+let builtin_op env op list_var =
+  match op with
+  | Op_plus -> if List.length list_var = 2 then
+                  let i = 
+                  List.map (var_lookup_int env) list_var
+                  |> List.map some_to_int 
+                  |> List.reduce (+)
+                  in
+                  Int_value (next_uid(), i)
+                else raise @@ Evaluation_failure "For addition 2 arguments are required"
+;;
+
 let rec evaluate env lastvar cls =
   logger `debug (
       pretty_env env ^ "\n" ^
@@ -194,6 +229,7 @@ let rec evaluate env lastvar cls =
           Environment.add env x v;
           evaluate env (Some x) t
       | Appl_redex(_, x', x'') ->
+          begin
           match application_match env x' x'' with
             | None -> raise (Evaluation_failure
                 ("failed to apply " ^ pretty_var x' ^ " to " ^ pretty_var x''))
@@ -206,6 +242,11 @@ let rec evaluate env lastvar cls =
                   Clause(next_uid(), x,
                     Var_redex(next_uid(), last_var)) in
                 evaluate env (Some x) (freshened_inline @ (ans_clause :: t))
+          end
+      | Builtin_redex(_, op, list_x) ->
+          let v = builtin_op env op list_x in
+          Environment.add env x v;
+          evaluate env (Some x) t
 ;;
 
 let eval (Expr(_, cls)) =

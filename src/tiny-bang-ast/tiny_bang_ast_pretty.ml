@@ -1,6 +1,7 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
+open Tiny_bang_utils;;
 
 let pretty_ident ident =
   match ident with
@@ -22,6 +23,17 @@ let pretty_var (Var(_, i, mfs)) =
   match mfs with
   | None -> pretty_ident i
   | Some fs -> pretty_ident i ^ pretty_freshening_stack fs
+;;
+
+let rec pretty_var_list varlist accumulator = 
+  match varlist with
+  | [] -> accumulator
+  | hd::tl -> pretty_var_list tl (accumulator ^ " " ^ pretty_var hd)
+;;
+
+let pretty_builtin_op op =
+  match op with
+  | Op_plus -> "+"
 ;;
 
 let pretty_pat_filter pf =
@@ -61,10 +73,14 @@ and pretty_redex r =
   | Value_redex(_, v) -> pretty_value v
   | Var_redex(_, x) -> pretty_var x
   | Appl_redex(_, x1, x2) -> pretty_var x1 ^ " " ^ pretty_var x2
+  | Builtin_redex(_, o, lv) -> (pretty_builtin_op o) ^ (pretty_var_list lv "")
+
+  (* (List.reduce (" " ^) (List.map pretty_var lv)) *)
 
 and pretty_value v =
   match v with
   | Empty_onion_value(_) -> "()"
+  | Int_value(_,x) -> string_of_int x
   | Label_value(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
   | Onion_value(_, x1, x2) -> pretty_var x1 ^ " & " ^ pretty_var x2
   | Function_value(_, p, e) -> pretty_pattern p ^ " -> " ^ pretty_expr e

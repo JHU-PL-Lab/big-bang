@@ -23,6 +23,7 @@ let next_uid startpos endpos =
   
 %token <string> IDENTIFIER
 %token <string> LABEL
+%token <int> INT
 %token OPEN_BRACE
 %token CLOSE_BRACE
 %token BACKSLASH
@@ -34,6 +35,8 @@ let next_uid startpos endpos =
 %token ASTERISK
 %token DOUBLE_SEMICOLON
 %token EOF
+%token PLUS
+
 
 %start <Tiny_bang_ast.expr> prog
 %start <Tiny_bang_ast.expr option> delim_expr
@@ -68,15 +71,20 @@ variable:
   | identifier
       { Var((next_uid $startpos $endpos),$1,None) }
   ;
-  
+
 label:
   | LABEL
       { Label (Ident $1) }
   ;
-  
+
 identifier:
   | IDENTIFIER
       { Ident $1 }
+  ;
+
+builtin:
+  | PLUS
+      { Op_plus }
   ;
 
 redex:
@@ -86,11 +94,15 @@ redex:
       { Var_redex((next_uid $startpos $endpos),$1) }
   | variable variable
       { Appl_redex((next_uid $startpos $endpos),$1,$2) }
+  | builtin list(variable)
+      { Builtin_redex((next_uid $startpos $endpos),$1,$2)}
   ;
 
 value:
   | EMPTY_ONION
       { Empty_onion_value(next_uid $startpos $endpos) }
+  | INT
+      { Int_value((next_uid $startpos $endpos),$1)}
   | label variable
       { Label_value((next_uid $startpos $endpos),$1,$2) }
   | variable AMPERSAND variable
@@ -127,6 +139,8 @@ filter_rule:
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
+  (*| INT
+      { Int_filter((next_uid $startpos $endpos),$1)} *)
   | label variable
       { Label_filter((next_uid $startpos $endpos),$1,$2) }
   | variable ASTERISK variable
