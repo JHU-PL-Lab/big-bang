@@ -11,7 +11,7 @@ let toploop_operate typecheck_flag e =
   print_string "\n";
   begin
     try
-      check_wellformed_expr e;
+      check_wellformed_expr e; 
       let do_eval =
         (if (not typecheck_flag) then true else
           if typecheck e

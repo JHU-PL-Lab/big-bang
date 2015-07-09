@@ -78,6 +78,8 @@ let rec compatibility env first_x_arg pat : value Var_map.t option =
               Some Var_map.empty
           | Label_value(_, l, x), Label_filter(_, l', x') ->
               if l = l' then compat x x' else None
+          | Int_value(_, _) as i, Int_filter(_, x) ->
+              Some (Var_map.singleton x i)
           | _, _ ->
               None
         in
@@ -139,6 +141,7 @@ and var_replace_value fn v =
   | Empty_onion_value(_) -> v
   | Int_value(_, x) -> v
   | Label_value(_, l, x) -> Label_value(next_uid(), l, fn x)
+  | Ref_value(_, x) -> Ref_value(next_uid(), fn x)
   | Onion_value(_, x1, x2) -> Onion_value(next_uid(), fn x1, fn x2)
   | Function_value(_, p, e) ->
       Function_value(next_uid(), p, var_replace_expr fn e)
@@ -182,6 +185,7 @@ let rec var_lookup_int env var =
           var_lookup_int env x1
   | Function_value(_, _, _) -> None
   | Int_value(_, i) -> Some i
+  | Ref_value(_, _) -> None
 ;;
 
 let some_to_int var = 
@@ -190,6 +194,24 @@ let some_to_int var =
   | None -> raise @@ Evaluation_failure "Evaluation needed a int type variable to perform"
 ;;
 
+let get_body_of_ref env ref_var = 
+  let ref_value = lookup env ref_var in 
+  match ref_value with
+  | Ref_value(_, x1) -> x1
+  | _ -> raise @@ Evaluation_failure "Evaluation needed a ref type variable to perform"
+;;
+
+(* updates the new value for the reference in the environment *)
+let update_env_ref env list_var =
+  match list_var with
+  | [ref_var; x'] -> 
+      let var_to_update = get_body_of_ref env ref_var in
+      let modified_value = lookup env x' in 
+      Environment.replace env var_to_update modified_value
+  | _ -> raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
+;;
+
+(*metatheoretic functions for the builtin operators *)
 let builtin_op env op list_var =
   match op with
   | Op_plus -> if List.length list_var = 2 then
@@ -199,7 +221,13 @@ let builtin_op env op list_var =
                   |> List.reduce (+)
                   in
                   Int_value (next_uid(), i)
-                else raise @@ Evaluation_failure "For addition 2 arguments are required"
+                else 
+                  raise @@ Evaluation_failure "For addition 2 arguments are required"
+  | Op_ref -> if List.length list_var = 2 then
+                 let () = update_env_ref env list_var in 
+                 Empty_onion_value (next_uid())
+              else 
+                  raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
 ;;
 
 let rec evaluate env lastvar cls =

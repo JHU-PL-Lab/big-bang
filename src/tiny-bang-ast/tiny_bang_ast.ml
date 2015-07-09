@@ -88,14 +88,17 @@ type pattern_filter =
   | Empty_filter of ast_uid
   | Label_filter of ast_uid * label * var
   | Conjunction_filter of ast_uid * var * var
-  (*| Int_filter of ast_uid * var    *)
+  | Int_filter of ast_uid * var   
 ;;
 
 (** Sets of pattern filter rules that comprise a pattern. *)
 type pattern_filter_rules = pattern_filter Var_map.t;;
 
 (** The builtin in Tinybang. **)
-type builtin_op = Op_plus;;
+type builtin_op = 
+  | Op_plus   (* + *)
+  | Op_ref    (* := *)
+;;
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
@@ -120,4 +123,5 @@ and	value =
   | Onion_value of ast_uid * var * var
   | Function_value of ast_uid * pattern * expr
   | Int_value of ast_uid * int
+  | Ref_value of ast_uid * var
   ;;

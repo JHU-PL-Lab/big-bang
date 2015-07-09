@@ -34,6 +34,7 @@ let rec pretty_var_list varlist accumulator =
 let pretty_builtin_op op =
   match op with
   | Op_plus -> "+"
+  | Op_ref -> ":="
 ;;
 
 let pretty_pat_filter pf =
@@ -41,6 +42,7 @@ let pretty_pat_filter pf =
   | Empty_filter(_) -> "()"
   | Label_filter(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
   | Conjunction_filter(_, x1, x2) -> pretty_var x1 ^ " * " ^ pretty_var x2
+  | Int_filter(_, x1) -> pretty_var x1 ^ ": int "
 ;;
 
 let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =
@@ -84,5 +86,6 @@ and pretty_value v =
   | Label_value(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
   | Onion_value(_, x1, x2) -> pretty_var x1 ^ " & " ^ pretty_var x2
   | Function_value(_, p, e) -> pretty_pattern p ^ " -> " ^ pretty_expr e
+  | Ref_value(_,x) -> "ref " ^ pretty_var x
 ;;
 

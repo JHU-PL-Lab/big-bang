@@ -79,6 +79,7 @@ let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
         | Empty_filter(_) -> []
         | Label_filter(_,_,x') -> [x']
         | Conjunction_filter(_,x',x'') -> [x';x'']
+        | Int_filter(_,_) -> []
     in
     merge_illformedness @@
       List.map
@@ -99,6 +100,7 @@ let vars_bound_by_pattern (Pattern(_,x_initial,pfm)) : Var_set.t =
         | Empty_filter(_) -> Var_set.empty
         | Label_filter(_,_,x') -> walk x'
         | Conjunction_filter(_,x',x'') -> Var_set.union (walk x') (walk x'')
+        | Int_filter(_,x') -> Var_set.singleton x' 
   in
   walk x_initial
 ;;
@@ -126,6 +128,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
                     match v with
                       | Empty_onion_value(_) -> Var_set.empty
                       | Int_value(_,_) -> Var_set.empty
+                      | Ref_value(_,x') -> Var_set.singleton x'
                       | Label_value(_,_,x') -> Var_set.singleton x'
                       | Onion_value(_,x1,x2) -> Var_set.of_list [x1;x2]
                       | Function_value(_,p,e) ->
@@ -135,7 +138,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
                   end
               | Var_redex(_,x') -> Var_set.singleton x'
               | Appl_redex(_,x1,x2) -> Var_set.of_list [x1;x2]
-              | Builtin_redex(_,_,_) -> Var_set.empty
+              | Builtin_redex(_,_,v_list) -> Var_set.of_list v_list
           in
           Var_set.remove x @@ Var_set.union free_h free_t
   in

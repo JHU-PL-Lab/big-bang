@@ -36,6 +36,9 @@ let next_uid startpos endpos =
 %token DOUBLE_SEMICOLON
 %token EOF
 %token PLUS
+%token INT_FILTER
+%token REFERENCE_ASSIGN
+%token REFERENCE
 
 
 %start <Tiny_bang_ast.expr> prog
@@ -85,6 +88,8 @@ identifier:
 builtin:
   | PLUS
       { Op_plus }
+  | REFERENCE_ASSIGN
+      { Op_ref }
   ;
 
 redex:
@@ -109,6 +114,8 @@ value:
       { Onion_value((next_uid $startpos $endpos),$1,$3) }
   | pattern ARROW OPEN_BRACE expr CLOSE_BRACE
       { Function_value((next_uid $startpos $endpos),$1,$4) }
+  | REFERENCE variable
+      { Ref_value((next_uid $startpos $endpos),$2)}
 
 pattern:
   | variable BACKSLASH OPEN_BRACE filter_rule_set CLOSE_BRACE
@@ -139,8 +146,8 @@ filter_rule:
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
-  (*| INT
-      { Int_filter((next_uid $startpos $endpos),$1)} *)
+  | variable INT_FILTER
+      { Int_filter((next_uid $startpos $endpos),$1)}
   | label variable
       { Label_filter((next_uid $startpos $endpos),$1,$2) }
   | variable ASTERISK variable
