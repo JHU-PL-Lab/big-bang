@@ -1,0 +1,8 @@
+# EXPECT-TYPEFAIL
+
+f = p0 \ { p0 = p1:int } -> { r = p1 };
+n = 0;
+z = f n;
+g = p2 \ { p2 = `A p3; p3 = () } -> { r0 = p3 };
+y = g z;
+
