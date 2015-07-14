@@ -88,7 +88,8 @@ type pattern_filter =
   | Empty_filter of ast_uid
   | Label_filter of ast_uid * label * var
   | Conjunction_filter of ast_uid * var * var
-  | Int_filter of ast_uid * var   
+  | Int_filter of ast_uid * var
+  | Ref_filter of ast_uid * var  
 ;;
 
 (** Sets of pattern filter rules that comprise a pattern. *)

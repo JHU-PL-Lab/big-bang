@@ -80,6 +80,9 @@ let rec compatibility env first_x_arg pat : value Var_map.t option =
               if l = l' then compat x x' else None
           | Int_value(_, _) as i, Int_filter(_, x) ->
               Some (Var_map.singleton x i)
+          | Ref_value(_,x), Ref_filter(_, x') ->
+              let x_value = lookup env x in
+              Some(Var_map.singleton x' x_value)
           | _, _ ->
               None
         in
@@ -216,11 +219,10 @@ let builtin_op env op list_var =
   match op with
   | Op_plus -> if List.length list_var = 2 then
                   let i = 
-                  List.map (var_lookup_int env) list_var
-                  |> List.map some_to_int 
-                  |> List.reduce (+)
-                  in
-                  Int_value (next_uid(), i)
+                  List.map (var_lookup_int env) list_var in
+                  match i with
+                  | [Some(x);Some(y)] -> Int_value(next_uid(), x+y)
+                  | _ -> raise @@ Evaluation_failure "Int type required for addition"
                 else 
                   raise @@ Evaluation_failure "For addition 2 arguments are required"
   | Op_ref -> if List.length list_var = 2 then

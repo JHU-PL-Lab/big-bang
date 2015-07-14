@@ -24,6 +24,8 @@ let initial_align_pattern_filter pf =
     | Label_filter(_,l,x) -> Label_filter_type(l,initial_align_var x)
     | Conjunction_filter(_,x1,x2) ->
         Conjunction_filter_type(initial_align_var x1, initial_align_var x2)
+    | Int_filter(_,x1) -> Int_filter_type(initial_align_var x1)
+    | Ref_filter(_,x1) -> Ref_filter_type(initial_align_var x1)
 ;;
 
 let initial_align_pattern_filter_map pfm =
@@ -58,6 +60,11 @@ and initial_align_clause cl =
   let a = initial_align_var x in
   (a, Lower_bound_constraint(initial_align_redex r, a))
 
+and initial_align_builtin_op op =
+  match op with
+    | Op_plus -> Op_plus_type
+    | Op_ref -> Op_ref_type
+
 and initial_align_redex r =
   match r with
     | Value_redex(_,v) ->
@@ -68,12 +75,14 @@ and initial_align_redex r =
     | Var_redex(_,x) -> Intermediate_lower_bound(initial_align_var x)
     | Appl_redex(_,x1,x2) ->
         Application_lower_bound(initial_align_var x1,initial_align_var x2)
-    (*| builtin_redex(_,op,list_x) ->  *)
+    | Builtin_redex(_,op,list_x) -> 
+        Builtin_lower_bound(initial_align_builtin_op op,List.map initial_align_var list_x)
 
 and initial_align_value v =
   match v with
     | Empty_onion_value(_) -> Empty_onion_type
-    
+    | Int_value(_,_) -> Int_type
+    | Ref_value(_,x) -> Ref_type(initial_align_var x)
     | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
     | Onion_value(_,x1,x2) ->
         Onion_type(initial_align_var x1,initial_align_var x2)

@@ -12,6 +12,11 @@ type tvar =
   | Tvar of ident * contour option
 ;;
 
+type tbuiltin_op = 
+  | Op_plus_type
+  | Op_ref_type
+;;
+
 module Tvar_order =
 struct
   type t = tvar
@@ -26,6 +31,8 @@ type pattern_filter_type =
   | Empty_filter_type
   | Label_filter_type of label * tvar
   | Conjunction_filter_type of tvar * tvar
+  | Int_filter_type of tvar
+  | Ref_filter_type of tvar
 ;;
   
 type pattern_type =
@@ -106,6 +113,7 @@ sig
     | Type_lower_bound of filtered_type
     | Intermediate_lower_bound of tvar
     | Application_lower_bound of tvar * tvar
+    | Builtin_lower_bound of tbuiltin_op * tvar list
   (** A variant representing filtered types. *)
   and filtered_type =
     | Filtered_type of tbtype * Pattern_type_set.t * Pattern_type_set.t
@@ -114,7 +122,9 @@ sig
     | Empty_onion_type
     | Label_type of label * tvar
     | Onion_type of tvar * tvar
-    | Function_type of pattern_type * tvar * tbconstraint_database  
+    | Function_type of pattern_type * tvar * tbconstraint_database
+    | Ref_type of tvar
+    | Int_type 
 end;;
 
 (* ************************************************************************** *)
@@ -190,8 +200,10 @@ struct
   let replace_vars_of_type f t =
     match t with
       | T.Empty_onion_type -> t
+      | T.Int_type -> t
       | T.Label_type(l,a) -> T.Label_type(l, f a)
       | T.Onion_type(a1,a2) -> T.Onion_type(f a1, f a2)
+      | T.Ref_type(a1) -> T.Ref_type(f a1)
       | T.Function_type(pt,a,cs) ->
           (* Pattern types are never subject to variable replacement. *)
           T.Function_type(pt, f a, Db.replace_variables f cs)
@@ -210,6 +222,8 @@ struct
           T.Intermediate_lower_bound(f a)
       | T.Application_lower_bound(a1, a2) ->
           T.Application_lower_bound(f a1, f a2)
+      | T.Builtin_lower_bound(op, a_list) ->
+          T.Builtin_lower_bound(op, List.map f a_list)
   ;;
 
   let replace_vars_of_constraint f c =

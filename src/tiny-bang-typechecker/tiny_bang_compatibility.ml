@@ -826,6 +826,22 @@ and compatibility_by_type_with_only_constr_pats
   match typ with
     | Empty_onion_type ->
         immediate_solve (fun x -> false) tasks
+    | Int_type ->
+        immediate_solve 
+          (fun filt-> let Pattern_type(p,map_tvar) = filt in
+                        let type_pat = Tvar_map.find p map_tvar in
+                          match type_pat with
+                            |Int_filter_type(_) -> true
+                            | _ -> false)
+          tasks
+    | Ref_type(x) ->
+          immediate_solve 
+          (fun filt-> let Pattern_type(p,map_tvar) = filt in
+                        let type_pat = Tvar_map.find p map_tvar in
+                          match type_pat with
+                            |Ref_filter_type(_) -> true
+                            | _ -> false)
+          tasks
     | Label_type(l,a) ->
         recursive_single_constructor_solve a
           (fun filt -> match filt with

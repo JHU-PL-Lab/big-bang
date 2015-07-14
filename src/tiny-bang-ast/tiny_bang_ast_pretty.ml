@@ -43,6 +43,7 @@ let pretty_pat_filter pf =
   | Label_filter(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
   | Conjunction_filter(_, x1, x2) -> pretty_var x1 ^ " * " ^ pretty_var x2
   | Int_filter(_, x1) -> pretty_var x1 ^ ": int "
+  | Ref_filter(_, x1) -> "ref " ^ pretty_var x1 
 ;;
 
 let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =

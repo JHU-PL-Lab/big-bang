@@ -80,6 +80,7 @@ let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
         | Label_filter(_,_,x') -> [x']
         | Conjunction_filter(_,x',x'') -> [x';x'']
         | Int_filter(_,_) -> []
+        | Ref_filter(_,x') -> []
     in
     merge_illformedness @@
       List.map
@@ -101,6 +102,7 @@ let vars_bound_by_pattern (Pattern(_,x_initial,pfm)) : Var_set.t =
         | Label_filter(_,_,x') -> walk x'
         | Conjunction_filter(_,x',x'') -> Var_set.union (walk x') (walk x'')
         | Int_filter(_,x') -> Var_set.singleton x' 
+        | Ref_filter(_,x') -> Var_set.singleton x'
   in
   walk x_initial
 ;;

@@ -152,6 +152,8 @@ filter:
       { Label_filter((next_uid $startpos $endpos),$1,$2) }
   | variable ASTERISK variable
       { Conjunction_filter((next_uid $startpos $endpos),$1,$3) }
+  | REFERENCE variable
+      { Ref_filter((next_uid $startpos $endpos),$2)}
 
 separated_nonempty_trailing_list(separator, rule):
   | nonempty_list(terminated(rule, separator))
