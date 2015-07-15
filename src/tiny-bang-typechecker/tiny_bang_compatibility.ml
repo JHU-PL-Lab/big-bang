@@ -204,6 +204,27 @@ let answers_to_str answers =
     |> concat_sep_delim "[" "]" ","
 ;;
 
+
+let rec cb_option_list_to_bool_list cb_list = 
+  match cb_list with
+  | [] -> []
+  | hd::tl -> begin
+                match hd with
+                | Some _ -> true::(cb_option_list_to_bool_list tl)
+                | None -> false::(cb_option_list_to_bool_list tl)
+              end
+;;
+
+let rec cb_option_list_to_cb cb_op_list = 
+  match cb_op_list with
+  | [] -> []
+  | hd::tl -> begin
+                match hd with
+                | Some x -> x @ (cb_option_list_to_cb tl)
+                | None -> cb_option_list_to_cb tl
+              end
+;;
+
 let pretty_result (Compatibility_result (bindings,answers)) =
   let answers_str = answers_to_str answers in
   let bindings_str = pretty_binding_set bindings in
@@ -604,7 +625,7 @@ and compatibility_by_type_with_only_constr_pats
   (** Solves each task immediately.  Given the list of tasks and a handler for
       a single pattern type, this function will produce a list of answers. *)
   let rec immediate_solve
-        (f : pattern_type -> bool)
+        (f : pattern_type -> compatibility_bindings option) 
         (tasks : compatibility_task list)
         : Compatibility_result_set.t =
     let answers =
@@ -615,8 +636,10 @@ and compatibility_by_type_with_only_constr_pats
               (fun task -> f @@ task.ct_pat)
         |> List.of_enum
     in
+    let cb = cb_option_list_to_cb answers in
+    let bool_list = cb_option_list_to_bool_list answers in
     Compatibility_result_set.singleton
-      (Compatibility_result([], answers))
+      (Compatibility_result(cb, bool_list))
 
   (** Solves each task for a single-argument type constructor.  This function
       takes a filter type handler which yields an inner variable on which to
@@ -825,22 +848,27 @@ and compatibility_by_type_with_only_constr_pats
   in
   match typ with
     | Empty_onion_type ->
-        immediate_solve (fun x -> false) tasks
+        immediate_solve (fun x -> None) tasks
     | Int_type ->
         immediate_solve 
           (fun filt-> let Pattern_type(p,map_tvar) = filt in
                         let type_pat = Tvar_map.find p map_tvar in
                           match type_pat with
-                            |Int_filter_type(_) -> true
-                            | _ -> false)
+                            |Int_filter_type(p') -> 
+                              Some [((Filtered_type (Int_type, Pattern_type_set.empty, Pattern_type_set.empty)),p')]
+                            | _ -> None)
           tasks
     | Ref_type(x) ->
           immediate_solve 
           (fun filt-> let Pattern_type(p,map_tvar) = filt in
                         let type_pat = Tvar_map.find p map_tvar in
                           match type_pat with
-                            |Ref_filter_type(_) -> true
-                            | _ -> false)
+                            |Ref_filter_type(x') ->
+                              let lower_bound_filtered_type_list = 
+                                  List.of_enum @@ Constraint_database.type_lower_bounds_of x cs
+                              in
+                              Some (List.map (fun ft -> (ft,x')) lower_bound_filtered_type_list)
+                            | _ -> None)
           tasks
     | Label_type(l,a) ->
         recursive_single_constructor_solve a
@@ -851,7 +879,7 @@ and compatibility_by_type_with_only_constr_pats
           tasks
           Do_bind
     | Function_type(_,_,_) ->
-        immediate_solve (fun x -> false) tasks
+        immediate_solve (fun x -> None) tasks
     | Onion_type(a1,a2) ->
         (* This is the hard case and the whole reason that compatibility is
            structured in this module the way that it is.  The formal definition
