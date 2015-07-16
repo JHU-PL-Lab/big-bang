@@ -29,6 +29,7 @@ class Point
   fun constructor(x, y) =
     self.x = x
     self.y = y
+  end
 end
 
 class Color
@@ -41,6 +42,7 @@ class Color
     self.red   = red
     self.blue  = blue
     self.green = green
+  end
 end
 
 class ColoredPoint
