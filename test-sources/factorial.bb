@@ -1,7 +1,7 @@
 # Recursive
 
 let factorial(number) =
-  if number = 0 then
+  return if number = 0 then
     1
   else
     number * factorial(number - 1)
@@ -10,10 +10,10 @@ let factorial(number) =
 # Iterative
 
 let factorial(number) =
-  ref factorial = 1
-  ref counter = 1
-  repeat number times
-    factorial = restult * counter
-    counter = counter + 1
+  ref result = 1
+  ref counter = number
+  repeat while counter > 0
+    result = restult * counter
+    counter = counter - 1
   end
-  factorial
+  return result

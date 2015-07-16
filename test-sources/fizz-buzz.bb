@@ -1,8 +1,8 @@
 let isDivisible(dividend, divisor) =
-  remainder of divident / divisor = 0
+  return remainder of divident / divisor = 0
 
 let fizzBuzz(number) =
-  if isDivisible(number, 15) then
+  return if isDivisible(number, 15) then
     "FizzBuzz"
   else if isDivisible(number, 3) then
     "Fizz"

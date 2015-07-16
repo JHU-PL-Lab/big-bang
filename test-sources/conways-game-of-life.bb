@@ -1,16 +1,19 @@
 let deadCell = false
 let liveCell = true
 
-let makeCoordinate(column, row) =
+fun makeCoordinate(column, row) =
   [column, row]
+end
 
-let getColumn(coordinate) =
+fun getColumn(coordinate) =
   coordinate(0)
+end
 
-let getRow(coordinate) =
+fun getRow(coordinate) =
   coordinate(1)
+end
 
-let makeGrid(width, height) =
+fun makeGrid(width, height) =
   ref grid = []
   repeat height times
     ref row = []
@@ -20,8 +23,9 @@ let makeGrid(width, height) =
     grid = grid + row
   end
   grid
+end
 
-let traverseGrid(grid, function) =
+fun traverseGrid(grid, function) =
   ref coordinate = makeCoordinate(0, 0)
   repeat gridHeight(grid) times
     repeat gridWidth(grid) times
@@ -30,29 +34,36 @@ let traverseGrid(grid, function) =
     end
     coordinate = makeCoordinate(getColumn(coordinate), getRow(coordinate) + 1)
   end
+end
 
-let cloneGrid(grid) =
+fun cloneGrid(grid) =
   makeGrid(gridWidth(grid), gridHeight(grid))
+end
 
-let gridWidth(grid) =
+fun gridWidth(grid) =
   size(grid(0))
+end
 
-let gridHeight(grid) =
+fun gridHeight(grid) =
   size(grid)
+end
 
-let selectGrid(grid, coordinate) =
+fun selectGrid(grid, coordinate) =
   grid(getColumn(coordinate))(getRow(coordinate))
+end
 
-let updateGrid(grid, coordinate, newValue) =
+fun updateGrid(grid, coordinate, newValue) =
   grid(getColumn(coordinate))(getRow(coordinate)) = newValue
+end
 
-let isInGrid(grid, coordinate) =
+fun inGrid?(grid, coordinate) =
   getColumn(coordinate) >= 0 and
   getRow(coordinate)    >= 0 and
   getColumn(coordinate) < gridHeight(grid) and
   getRow(coordinate)    < gridWidth(grid)
+end
 
-let neighbors(grid, coordinate) =
+fun neighbors(grid, coordinate) =
   let neighborsDifferences = [
     [-1, -1], [0, -1], [1, -1],
     [-1,  0],          [1,  0],
@@ -64,13 +75,14 @@ let neighbors(grid, coordinate) =
       getColumn(coordinate) + neighborsDifference(0),
       getRow(coordinate) + neighborsDifference(1)
     )
-    if isInGrid(grid, neighbor) then
+    if inGrid?(grid, neighbor) then
       neighbors = neighbors + neighbor
     end
   end
   neighbors
+end
 
-let step(grid) =
+fun step(grid) =
   ref newGrid = cloneGrid(grid)
   traverseGrid(
     grid,
@@ -82,12 +94,13 @@ let step(grid) =
       )
       if liveNeighbors < 2 then
         updateGrid(newGrid, coordinate, deadCell)
-      else if liveNeighbors < 3
+      else if liveNeighbors < 3 then
         updateGrid(newGrid, coordinate, cell)
-      else if liveNeighbors < 4
+      else if liveNeighbors < 4 then
         updateGrid(newGrid, coordinate, liveCell)
       else
         updateGrid(newGrid, coordinate, deadCell)
       end
   )
   newGrid
+end

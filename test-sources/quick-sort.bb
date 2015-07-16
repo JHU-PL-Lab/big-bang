@@ -1,5 +1,5 @@
-let quickSort(elements) =
-  let partition(elements, pivot) =
+fun quickSort(elements) =
+  fun partition(elements, pivot) =
     ref lessThenPivot = []
     ref greaterThanPivor = []
     repeat for each element in elements
@@ -9,7 +9,8 @@ let quickSort(elements) =
         greaterThenPivot = greaterThenPivot + [element]
       end
     end
-  in
+  end
+
   if elements = [] then
     elements
   else
@@ -18,5 +19,6 @@ let quickSort(elements) =
     let partitions = partition(rest, pivot)
     partitions(0) + [pivot] + partitions(1)
   end
+end
 
 quickSort([5,3,6,1])
