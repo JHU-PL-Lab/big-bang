@@ -17,7 +17,10 @@ let color = object
 end
 
 # Object that composes both raw objects.
-let coloredPoint = object(point, color)
+let coloredPoint = object
+  include
+    point
+    color
 end
 
 # Same thing with classes.
