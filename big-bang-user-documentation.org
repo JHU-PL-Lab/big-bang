@@ -1,0 +1,141 @@
+#+TITLE: Big Bang User Documentation
+#+AUTHOR: Johns Hopkins University Programming Languages Laboratory
+
+* Phylosophy
+** Target user
+*** Seasoned scripter (someone familiar with Python)
+** Rethinking of the Haskell implementation, neither a new thing nor a translation
+* Features
+** Literals
+*** Primitive data
+**** Booleans
+***** ~true~
+***** ~false~
+**** Numbers
+***** ~int~
+**** Characters
+***** ~'a'~
+**** Texts
+***** ~"Hi"~
+*** Structured data
+**** Onions
+***** ~3 & 'a'~
+**** Records
+***** ~{ a = 2, b = 3 }~
+**** Lists
+***** ~[]~
+***** ~[2, 3, 'a']~
+**** Labels
+***** ~`Name "Leandro"~
+** Operations
+*** Primitive data types
+**** Booleans
+***** ~and~
+***** ~or~
+***** ~xor~
+***** ~not~
+**** Numbers
+***** ~+~
+***** ~-~
+***** ~/~
+***** ~*~
+**** Texts
+***** Indexing
+****** ~"abc"(1) = 'b'~
+*** Structured data types
+**** Records
+***** Selection
+****** ~{ a = 2, b = 3 }.a~
+***** Concatenation (onioning)
+****** ~record1 + record2~
+**** Lists
+***** Indexing
+****** ~[2, 3, 'a'](2)~
+*** General
+**** Comparison
+***** ~=?~
+***** ~not=?~
+** Assignments
+*** Identifiers
+**** Only one namespace for variables and functions (Lisp-1)
+**** ~inGrid?()~
+**** ~changeGrid!()~
+**** ~x'''''~
+*** Immutable
+**** ~let banana = "banana"~
+*** Mutable
+**** First definition
+***** ~ref coconut = "banana"~
+**** Update
+***** ~coconut = "banana2"~
+**** Dereferencing is automatic (i.e. doesn't require ~!~)
+***** ~functionCall(coconut)~
+*** Shadowing
+**** Not allowed (except with function parameters)
+** Flow control constructs
+*** Conditionals
+#+BEGIN_SRC big-bang
+if <condition>
+  <expression>
+else if <condition>
+  <expression>
+else
+  <expression>
+end
+#+END_SRC
+*** Pattern matches
+#+BEGIN_SRC big-bang
+match <expression>
+as <pattern> in <expression>
+as <pattern> in <expression>
+end
+#+END_SRC
+*** Loops
+#+BEGIN_SRC big-bang
+repeat while <condition>
+  <expression>
+end
+#+END_SRC
+** Functions
+*** Definition
+**** Named
+***** ~fun identity(x) = x end~
+**** Anonymous
+***** ~fun (x) = x end~
+**** No difference between non-recursive and recursive functions
+*** Application
+**** ~identity(3)~
+** Object orientation
+*** Objects
+#+BEGIN_SRC big-bang
+object
+  include
+    SomeOtherObject
+  public
+    x = 0
+    y = 0
+
+    # `self` is optional
+    fun magnitude() = sqrt(self.x * self.x + y * y) end
+end
+#+END_SRC
+** Standard library
+*** Characters
+**** ~ord('a')~
+**** ~chr(64)~
+*** I/O
+**** Read one char
+**** Print one char
+** Documentation
+*** Comments
+**** ~#~
+** Code style
+*** Indentation is 2 spaces
+*** Trailing commas
+**** Structured data literals
+*** Identifiers
+**** CamelCase
+*** ~;~, ~then~ and ~do~ work as new line separators
+** Anti-features (i.e. features we are not going to have soon)
+*** Exceptions
+*** Regex
