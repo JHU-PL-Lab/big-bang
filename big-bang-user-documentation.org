@@ -337,4 +337,6 @@ method-expression =
 comparison-expression =
   | expression "=?" expression
   | expression "not=?" expression
+
+pattern = ...
 #+END_SRC
