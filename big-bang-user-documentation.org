@@ -120,7 +120,7 @@ functionCall(coconut)
 #+BEGIN_SRC big-bang
 if <condition>
   <expression>
-else if <condition>
+elseif <condition>
   <expression>
 else
   <expression>
@@ -215,6 +215,9 @@ fun () = end # => Anonymous function that returns `Void ().
 *** Regex
 * Grammar
 #+BEGIN_SRC ebnf
+program =
+  | expression eof
+
 literal =
   | primitive-literal
   | composite-literal
@@ -245,11 +248,11 @@ text-literal = ...
 
 empty-onion-literal = "()"
 
-record-literal = "{" list-of(field = record-field, separator = ",") "}"
+record-literal = "{" list-of(element = record-field, separator = ",") "}"
 
 record-field = identifier "=" expression
 
-list-literal = "[" list-of(field = list-field, separator = ",") "]"
+list-literal = "[" list-of(element = list-field, separator = ",") "]"
 
 list-field =
   | expression
@@ -258,26 +261,38 @@ label-literal = label-identifier expression
 
 label-identifier = "`" identifier-continuation+
 
-onion-literal = ...
-
 expression =
+  | unary-prefix-operator-expression
+  | binary-operator-expression
   | assignment-expression
-  | immutable-definition-expression
-  | mutable-definition-expression
+  | definition-expression
   | conditional-expression
   | repeat-expression
   | sequence-expression
   | function-expression
   | object-expression
   | application-expression
-  | comparison-expression
   | return-expression
+
+definition-expression =
+  | immutable-definition-expression
+  | mutable-definition-expression
+
+unary-prefix-operator-expression =
+  | unary-prefix-operator expression
+
+unary-prefix-operator = ["not"]
+
+binary-operator-expression =
+  | expression binary-operator expression
+
+binary-operator = ["&" "+" "-" "/" "*" "and" "or" "xor" "=?" "not=?"]
 
 sequence-expression = expression divider expression
 
 list-of(
-  field,
-  separator,
+  element,
+  separator = divider,
   possibly-empty? = true,
   possibly-trailing-separator? = true
 ) = ...
@@ -302,7 +317,7 @@ conditional-expression =
   | match-expression
 
 if-expression =
-  "if" expression divider expression? (("else" "if" expression divider expression?)* "else" expression?)? "end"
+  "if" expression divider expression? (("elseif" expression divider expression?)* "else" expression?)? "end"
 
 new-line = ["\n" "\r" "\r\n"]
 
@@ -329,39 +344,43 @@ named-function-expression = "fun" identifier formal-parameters "=" expression? "
 
 anonymous-function-expression = "fun" formal-parameters "=" expression? "end"
 
-formal-parameters = "(" list-of(field = formal-parameter, separator = ",") ")"
+formal-parameters = "(" list-of(element = formal-parameter, separator = ",") ")"
 
 formal-parameter =
   | identifier
 
 application-expression =
-  | identifier actual-parameters
+  | expression actual-parameters
 
 return-expression = "return" expression
 
-actual-parameters = "(" list-of(field = actual-parameter, separator = ",") ")"
+actual-parameters = "(" list-of(element = actual-parameter, separator = ",") ")"
 
 actual-parameter =
   | expression
 
-object-expression = "object" object-section* "end"
+object-expression = "object" list-of(element = object-section) "end"
 
-object-section = object-section-header object-section-body
+object-section =
+  | object-include-section
+  | object-member-section
 
-object-section-header = ["public" "include"]
+object-include-section = "include" object-include-section-body
 
-object-section-body = object-member+
+object-include-section-body = list-of(element = expression)
+
+object-member-section = object-member-section-header object-member-section-body
+
+object-member-section-header = ["public" "private"]
+
+object-member-section-body = list-of(element = object-member)
 
 object-member =
-  | assignment-expression
+  | definition-expression
   | method-expression
 
 method-expression =
   | "def" identifier formal-parameters "=" expression? "end"
-
-comparison-expression =
-  | expression "=?" expression
-  | expression "not=?" expression
 
 pattern =
   | literal
