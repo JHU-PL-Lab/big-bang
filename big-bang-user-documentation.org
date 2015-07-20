@@ -21,6 +21,7 @@ false
 #+BEGIN_SRC big-bang
 32
 -10
+1_000_000
 #+END_SRC
 **** Characters
 #+BEGIN_SRC big-bang
@@ -30,11 +31,16 @@ false
 #+BEGIN_SRC big-bang
 "Hello, Big Bang."
 #+END_SRC
+**** Empty onion
+#+BEGIN_SRC big-bang
+()
+#+END_SRC
 *** Structured data
 **** Onions
 #+BEGIN_SRC big-bang
 3 & 'a'
 #+END_SRC
+***** In case of a name key collision, left side has wins
 **** Records
 #+BEGIN_SRC big-bang
 { a = 2, b = 3 }
@@ -70,10 +76,6 @@ false
 #+BEGIN_SRC big-bang
 { a = 2, b = 3 }.a # => 2
 #+END_SRC
-***** Concatenation (onioning)
-#+BEGIN_SRC big-bang
-{ a = 2, b = 3 } + { c = 2, d = 3 } # => { a = 2, b = 3, c = 2, d = 3 }
-#+END_SRC
 **** Lists
 ***** Indexing
 #+BEGIN_SRC big-bang
@@ -83,14 +85,16 @@ false
 **** Comparison
 ***** ~=?~
 ***** ~not=?~
-** Assignments
-*** Identifiers
+** Identifiers
 #+BEGIN_SRC big-bang
 inGrid?()
 changeGrid!()
 x'''''
+x's
 #+END_SRC
-**** Only one namespace for variables and functions (Lisp-1)
+*** ~​'​~, ~?~ and ~!~ may appear anywhere in the identifier (except for the first character)
+*** Only one namespace for variables and functions (Lisp-1)
+** Assignments
 *** Immutable
 #+BEGIN_SRC big-bang
 let banana = "banana"
@@ -112,6 +116,7 @@ functionCall(coconut)
 **** Not allowed (except with function parameters)
 ** Flow control constructs
 *** Conditionals
+**** ~if~
 #+BEGIN_SRC big-bang
 if <condition>
   <expression>
@@ -121,7 +126,7 @@ else
   <expression>
 end
 #+END_SRC
-*** Pattern matches
+**** Pattern matches
 #+BEGIN_SRC big-bang
 match <expression>
 as <pattern> in <expression>
@@ -149,6 +154,7 @@ fun (<parameter-list>) =
 end
 #+END_SRC
 **** No difference between non-recursive and recursive functions
+**** ~return~ is allowed (parsed), but isn't handled yet (an error is raised)
 *** Application
 #+BEGIN_SRC big-bang
 identity(3)
@@ -164,7 +170,7 @@ object
     y = 0
 
     # `self` is optional
-    fun magnitude() = sqrt(self.x * self.x + y * y) end
+    def magnitude() = sqrt(self.x * self.x + y * y) end
 end
 #+END_SRC
 ** Standard library
@@ -181,10 +187,30 @@ end
 *** Indentation is 2 spaces
 *** Trailing commas
 **** Structured data literals
+**** Function call parameters
 *** Identifiers
 **** CamelCase
 *** ~;~, ~then~ and ~do~ work as new line separators
-** Anti-features (i.e. features we are not going to have soon)
+*** Empty blocks are allowed on the following expressions (~`Void ()~ is returned)
+#+BEGIN_SRC big-bang
+fun () = end # => Anonymous function that returns `Void ().
+#+END_SRC
+**** Flow control constructs
+***** Conditionals
+****** ~if~
+****** Pattern matches
+***** Loops
+**** Function definitions
+**** Objects
+**** Method definitions
+* Roadmap
+** Short-term
+*** Literals
+**** Sets
+**** Maps
+*** Functions
+**** Properly encode ~return~
+** Long-term
 *** Exceptions
 *** Regex
 * Grammar
@@ -210,7 +236,7 @@ boolean-literal =
  | "false"
 
 int-literal =
-  | "-"? ["1"-"9"] ["0"-"9"]*
+  | "-"? ["1"-"9"] ["0"-"9" "_"]*
   | "-"? "0"
 
 character-literal = ...
@@ -230,7 +256,7 @@ list-field =
 
 label-literal = label-identifier expression
 
-label-identifier = "`" identifier-continued+
+label-identifier = "`" identifier-continuation+
 
 onion-literal = ...
 
@@ -245,6 +271,7 @@ expression =
   | object-expression
   | application-expression
   | comparison-expression
+  | return-expression
 
 sequence-expression = expression divider expression
 
@@ -255,16 +282,12 @@ list-of(
   possibly-trailing-separator? = true
 ) = ...
 
-identifier = identifier-start identifier-continued* identifier-end?
+identifier = identifier-start identifier-continuation*
 
 identifier-start = ["A"-"Z" "a"-"z" "_"]
 
-identifier-continued =
-  | ["A"-"Z" "a"-"z" "_" "0"-"9"]
-
-identifier-end =
-  | ["?" "!"]
-  | "'"+
+identifier-continuation =
+  | ["A"-"Z" "a"-"z" "_" "0"-"9" "?" "!" "'"]
 
 comment = "#" .*? $
 
@@ -279,7 +302,7 @@ conditional-expression =
   | match-expression
 
 if-expression =
-  "if" expression divider expression ("else" expression ("else" "if" expression)*)? "end"
+  "if" expression divider expression? (("else" "if" expression divider expression?)* "else" expression?)? "end"
 
 new-line = ["\n" "\r" "\r\n"]
 
@@ -288,7 +311,7 @@ divider =
   | new-line
 
 match-expression =
-  "match" expression ("as" pattern "in" expression)+ "end"
+  "match" expression ("as" pattern "in" expression?)+ "end"
 
 repeat-expression =
   "repeat" (
@@ -296,15 +319,15 @@ repeat-expression =
   )
 
 while-expression =
-  "while" expression divider expression "end"
+  "while" expression divider expression? "end"
 
 function-expression =
   | named-function-expression
   | anonymous-function-expression
 
-named-function-expression = "fun" identifier formal-parameters "=" expression "end"
+named-function-expression = "fun" identifier formal-parameters "=" expression? "end"
 
-anonymous-function-expression = "fun" formal-parameters "=" expression "end"
+anonymous-function-expression = "fun" formal-parameters "=" expression? "end"
 
 formal-parameters = "(" list-of(field = formal-parameter, separator = ",") ")"
 
@@ -313,6 +336,8 @@ formal-parameter =
 
 application-expression =
   | identifier actual-parameters
+
+return-expression = "return" expression
 
 actual-parameters = "(" list-of(field = actual-parameter, separator = ",") ")"
 
@@ -332,11 +357,14 @@ object-member =
   | method-expression
 
 method-expression =
-  | "def" identifier formal-parameters "=" expression "end"
+  | "def" identifier formal-parameters "=" expression? "end"
 
 comparison-expression =
   | expression "=?" expression
   | expression "not=?" expression
 
-pattern = ...
+pattern =
+  | literal
+  | tiny-bang-patterns
+  | "_"
 #+END_SRC
