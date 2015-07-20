@@ -139,3 +139,154 @@ end
 ** Anti-features (i.e. features we are not going to have soon)
 *** Exceptions
 *** Regex
+* Grammar
+#+BEGIN_SRC ebnf
+literal =
+  | primitive-literal
+  | composite-literal
+
+primitive-literal =
+  | boolean-literal
+  | int-literal
+  | character-literal
+  | text-literal
+  | empty-onion-literal
+
+composite-literal =
+  | record-literal
+  | list-literal
+  | label-literal
+
+boolean-literal =
+ | "true"
+ | "false"
+
+int-literal =
+  | "-"? ["1"-"9"] ["0"-"9"]*
+  | "-"? "0"
+
+character-literal = ...
+
+text-literal = ...
+
+empty-onion-literal = "()"
+
+record-literal = "{" list-of(field = record-field, separator = ",") "}"
+
+record-field = identifier "=" expression
+
+list-literal = "[" list-of(field = list-field, separator = ",") "]"
+
+list-field =
+  | expression
+
+label-literal = label-identifier expression
+
+label-identifier = "`" identifier-continued+
+
+onion-literal = ...
+
+expression =
+  | assignment-expression
+  | immutable-definition-expression
+  | mutable-definition-expression
+  | conditional-expression
+  | repeat-expression
+  | sequence-expression
+  | function-expression
+  | object-expression
+  | application-expression
+  | comparison-expression
+
+sequence-expression = expression divider expression
+
+list-of(
+  field,
+  separator,
+  possibly-empty? = true,
+  possibly-trailing-separator? = true
+) = ...
+
+identifier = identifier-start identifier-continued* identifier-end?
+
+identifier-start = ["A"-"Z" "a"-"z" "_"]
+
+identifier-continued =
+  | ["A"-"Z" "a"-"z" "_" "0"-"9"]
+
+identifier-end =
+  | ["?" "!"]
+  | "'"+
+
+comment = "#" .*? $
+
+immutable-definition-expression = "let" assignment-expression
+
+mutable-definition-expression = "ref" assignment-expression
+
+assignment-expression = identifier "=" expression
+
+conditional-expression =
+  | if-expression
+  | match-expression
+
+if-expression =
+  "if" expression divider expression ("else" expression ("else" "if" expression)*)? "end"
+
+new-line = ["\n" "\r" "\r\n"]
+
+divider =
+  | ["then" "do" ";"]
+  | new-line
+
+match-expression =
+  "match" expression ("as" pattern "in" expression)+ "end"
+
+repeat-expression =
+  "repeat" (
+    | while-expression
+  )
+
+while-expression =
+  "while" expression divider expression "end"
+
+function-expression =
+  | named-function-expression
+  | anonymous-function-expression
+
+named-function-expression = "fun" identifier formal-parameters "=" expression "end"
+
+anonymous-function-expression = "fun" formal-parameters "=" expression "end"
+
+formal-parameters = "(" list-of(field = formal-parameter, separator = ",") ")"
+
+formal-parameter =
+  | identifier
+
+application-expression =
+  | identifier actual-parameters
+
+actual-parameters = "(" list-of(field = actual-parameter, separator = ",") ")"
+
+actual-parameter =
+  | expression
+
+object-expression = "object" object-section* "end"
+
+object-section = object-section-header object-section-body
+
+object-section-header = ["public" "include"]
+
+object-section-body = object-member+
+
+object-member =
+  | assignment-expression
+  | method-expression
+
+method-expression =
+  | "def" identifier formal-parameters "=" expression "end"
+
+comparison-expression =
+  | expression "=?" expression
+  | expression "not=?" expression
+#+END_SRC
