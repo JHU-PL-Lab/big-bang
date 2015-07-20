@@ -3,30 +3,50 @@
 
 * Phylosophy
 ** Target user
-*** Seasoned scripter (someone familiar with Python)
-** Rethinking of the Haskell implementation, neither a new thing nor a translation
+   Seasoned scripter (someone familiar with Python).
 * Features
 ** Literals
 *** Primitive data
 **** Booleans
-***** ~true~
-***** ~false~
+***** True
+#+BEGIN_SRC big-bang
+true
+#+END_SRC
+***** False
+#+BEGIN_SRC big-bang
+false
+#+END_SRC
 **** Numbers
-***** ~int~
+***** Integers (~int~)
+#+BEGIN_SRC big-bang
+32
+-10
+#+END_SRC
 **** Characters
-***** ~'a'~
+#+BEGIN_SRC big-bang
+'a'
+#+END_SRC
 **** Texts
-***** ~"Hi"~
+#+BEGIN_SRC big-bang
+"Hello, Big Bang."
+#+END_SRC
 *** Structured data
 **** Onions
-***** ~3 & 'a'~
+#+BEGIN_SRC big-bang
+3 & 'a'
+#+END_SRC
 **** Records
-***** ~{ a = 2, b = 3 }~
+#+BEGIN_SRC big-bang
+{ a = 2, b = 3 }
+#+END_SRC
 **** Lists
-***** ~[]~
-***** ~[2, 3, 'a']~
+#+BEGIN_SRC big-bang
+[2, "Lists are heterogeneous!", 'a']
+#+END_SRC
 **** Labels
-***** ~`Name "Leandro"~
+#+BEGIN_SRC big-bang
+`LanguageName "Big Bang"
+#+END_SRC
 ** Operations
 *** Primitive data types
 **** Booleans
@@ -41,35 +61,53 @@
 ***** ~*~
 **** Texts
 ***** Indexing
-****** ~"abc"(1) = 'b'~
+#+BEGIN_SRC big-bang
+"abc"(1) # => 'b'
+#+END_SRC
 *** Structured data types
 **** Records
 ***** Selection
-****** ~{ a = 2, b = 3 }.a~
+#+BEGIN_SRC big-bang
+{ a = 2, b = 3 }.a # => 2
+#+END_SRC
 ***** Concatenation (onioning)
-****** ~record1 + record2~
+#+BEGIN_SRC big-bang
+{ a = 2, b = 3 } + { c = 2, d = 3 } # => { a = 2, b = 3, c = 2, d = 3 }
+#+END_SRC
 **** Lists
 ***** Indexing
-****** ~[2, 3, 'a'](2)~
+#+BEGIN_SRC big-bang
+[2, 3, 'a'](2) # => 'a'
+#+END_SRC
 *** General
 **** Comparison
 ***** ~=?~
 ***** ~not=?~
 ** Assignments
 *** Identifiers
+#+BEGIN_SRC big-bang
+inGrid?()
+changeGrid!()
+x'''''
+#+END_SRC
 **** Only one namespace for variables and functions (Lisp-1)
-**** ~inGrid?()~
-**** ~changeGrid!()~
-**** ~x'''''~
 *** Immutable
-**** ~let banana = "banana"~
+#+BEGIN_SRC big-bang
+let banana = "banana"
+#+END_SRC
 *** Mutable
 **** First definition
-***** ~ref coconut = "banana"~
+#+BEGIN_SRC big-bang
+ref coconut = "banana"
+#+END_SRC
 **** Update
-***** ~coconut = "banana2"~
+#+BEGIN_SRC big-bang
+coconut = "banana2"
+#+END_SRC
 **** Dereferencing is automatic (i.e. doesn't require ~!~)
-***** ~functionCall(coconut)~
+#+BEGIN_SRC big-bang
+functionCall(coconut)
+#+END_SRC
 *** Shadowing
 **** Not allowed (except with function parameters)
 ** Flow control constructs
@@ -99,12 +137,22 @@ end
 ** Functions
 *** Definition
 **** Named
-***** ~fun identity(x) = x end~
+#+BEGIN_SRC big-bang
+fun <name>(<parameter-list>) =
+  <expression>
+end
+#+END_SRC
 **** Anonymous
-***** ~fun (x) = x end~
+#+BEGIN_SRC big-bang
+fun (<parameter-list>) =
+  <expression>
+end
+#+END_SRC
 **** No difference between non-recursive and recursive functions
 *** Application
-**** ~identity(3)~
+#+BEGIN_SRC big-bang
+identity(3)
+#+END_SRC
 ** Object orientation
 *** Objects
 #+BEGIN_SRC big-bang
