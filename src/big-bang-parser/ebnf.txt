@@ -53,6 +53,7 @@ expression =
   | function-expression
   | object-expression
   | application-expression
+  | comparison-expression
 
 sequence-expression = expression divider expression
 
@@ -141,3 +142,7 @@ object-member =
 
 method-expression =
   | "def" identifier formal-parameters "=" expression "end"
+
+comparison-expression =
+  | expression "=?" expression
+  | expression "not=?" expression
