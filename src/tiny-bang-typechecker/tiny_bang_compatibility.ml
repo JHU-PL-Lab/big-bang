@@ -59,15 +59,6 @@ let check_expectation expectation answer =
     | Must_report -> true
 ;;
 
-module Compatibility_task_hash =
-struct
-  type t = compatibility_task
-  let hash = Hashtbl.hash
-  let equal = (=)
-end;;
-
-module Compatibility_task_hashtbl = Hashtbl.Make(Compatibility_task_hash);;
-
 module Compatibility_task_ord =
 struct
   type t = compatibility_task
@@ -117,18 +108,18 @@ type internal_digest_result =
   | Internal_digest_result of compatibility_bindings * bool list * bool list
 ;;
 
-module Internal_digest_result_ord =
-struct
-  type t = internal_digest_result
-  let compare = compare
-end;;
-
-module Internal_digest_result_set = Set.Make(Internal_digest_result_ord);;
-
 (**
   A structure representing generic compatibility queries.  Each such query is
-  either an [Immediate_answer] or it is a [Recursive_compatibility_query] which
-  TODO: document
+  either an [Immediate_answer] or it is a [Recursive_compatibility_query].  When
+  exploring the proof trees which apply to a certain compatibility judgment, we
+  perform the shallow work on each task and reduce it to a query which expresses
+  the amount of non-shallow work necessary to obtain an answer.  If no deep work
+  is necessary (e.g. matching against [int]), then an [Immediate_answer] will
+  be produced.  If deep work is necessary (e.g. the [int] part of [`A int]),
+  then a [Recursive_compatibility_query] is generated to handle the [int] work.
+  Since deep work may involve non-deterministic operations, the recursive query
+  carries both a task and a function to generate output for the result of that
+  task.
 *)
 type 'a compatibility_query =
   | Recursive_compatibility_query of
@@ -212,13 +203,6 @@ let pretty_result (Compatibility_result (bindings,answers)) =
   answers_str ^ "@" ^ bindings_str
 ;;
 
-let pretty_result_set results =
-  results
-    |> Compatibility_result_set.enum
-    |> Enum.map pretty_result
-    |> concat_sep_delim "{" "}" ", "
-;;
-
 let pretty_nondeterministic_result result_m =
   result_m
     |> Nondeterminism_monad.enum
@@ -232,13 +216,6 @@ let pretty_internal_result (Internal_digest_result(
   let ctr_answers_str = answers_to_str ctr_answers in
   let bindings_str = pretty_binding_set bindings in
   answers_str ^ "," ^ ctr_answers_str ^ "@" ^ bindings_str
-;;
-
-let pretty_internal_result_set results =
-  results
-    |> Internal_digest_result_set.enum
-    |> Enum.map pretty_internal_result
-    |> concat_sep_delim "{" "}" ", "
 ;;
 
 let pretty_nondeterministic_internal_result result_m =
