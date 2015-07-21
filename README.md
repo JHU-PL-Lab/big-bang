@@ -188,7 +188,7 @@ to add the [`lwt` package][lwt]:
 3. Install the dependency in the container:
 
    ```console
-   $ docker-compose run bigbang 'opam update && opam install lwt'
+   $ docker-compose run bigbang 'cd /home/opam/opam-repository && git pull && opam update -u -y && opam install lwt'
    ```
 
 4. Fetch the `NAME` of the container that contains the dependency:
@@ -198,7 +198,8 @@ to add the [`lwt` package][lwt]:
    ```
 
    The `NAME` has the form `bigbang_bigbang_run_<number>`. You should choose the
-   one that ran the `COMMAND` `bash -ic 'opam install lwt'`. In my case, it was
+   one that ran the `COMMAND` `cd /home/opam/opam-repository && git pull && opam
+   update -u -y && bash -ic 'opam install lwt'`. In my case, it was
    `bigbang_bigbang_run_8`.
 
 5. Commit the changes:
