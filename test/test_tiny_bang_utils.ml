@@ -52,8 +52,8 @@ let nondeterminism_tests =
       fun _ ->
         let m =
           let open Nondeterminism_monad in
-          let%bind x = list_choose [1;2;3] in
-          let%bind y = list_choose [3;4;5] in
+          let%bind x = pick_enum @@ List.enum [1;2;3] in
+          let%bind y = pick_enum @@ List.enum [3;4;5] in
           return @@ x + y
         in
         assert_equal (List.of_enum @@ Nondeterminism_monad.enum m) @@

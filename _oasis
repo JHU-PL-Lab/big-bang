@@ -24,7 +24,8 @@ Library "tiny-bang-utils"
     Tiny_bang_string_utils,
     Tiny_bang_utils
   BuildDepends:
-    batteries
+    batteries,
+    monadlib
 
 Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
