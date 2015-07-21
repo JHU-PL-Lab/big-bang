@@ -6,7 +6,7 @@
    Seasoned scripter (someone familiar with Python).
 * Features
 ** Literals
-*** Primitive data
+*** Primitive
 **** Booleans
 ***** True
 #+BEGIN_SRC big-bang
@@ -35,12 +35,7 @@ false
 #+BEGIN_SRC big-bang
 ()
 #+END_SRC
-*** Structured data
-**** Onions
-#+BEGIN_SRC big-bang
-3 & 'a'
-#+END_SRC
-***** In case of a name key collision, left side has wins
+*** Structured
 **** Records
 #+BEGIN_SRC big-bang
 { a = 2, b = 3 }
@@ -54,7 +49,7 @@ false
 `LanguageName "Big Bang"
 #+END_SRC
 ** Operations
-*** Primitive data types
+*** Primitive
 **** Booleans
 ***** ~and~
 ***** ~or~
@@ -63,14 +58,19 @@ false
 **** Numbers
 ***** ~+~
 ***** ~-~
-***** ~/~
 ***** ~*~
+***** ~/~
 **** Texts
 ***** Indexing
 #+BEGIN_SRC big-bang
 "abc"(1) # => 'b'
 #+END_SRC
-*** Structured data types
+*** Structured
+**** Onioning
+#+BEGIN_SRC big-bang
+3 & 'a'
+#+END_SRC
+***** In case of a name key collision, left side has wins
 **** Records
 ***** Selection
 #+BEGIN_SRC big-bang
@@ -115,6 +115,8 @@ functionCall(coconut)
 *** Shadowing
 **** Not allowed (except with function parameters)
 ** Flow control constructs
+*** Sequencing
+**** Expressions may be sequenced when separated by the divisor (new line, ~;~, ~then~ or ~do~)
 *** Conditionals
 **** ~if~
 #+BEGIN_SRC big-bang
@@ -133,7 +135,8 @@ as <pattern> in <expression>
 as <pattern> in <expression>
 end
 #+END_SRC
-*** Loops
+*** Repetitions
+**** While
 #+BEGIN_SRC big-bang
 repeat while <condition>
   <expression>
@@ -172,6 +175,10 @@ object
     # `self` is optional
     def magnitude() = sqrt(self.x * self.x + y * y) end
 end
+#+END_SRC
+*** Method call
+#+BEGIN_SRC big-bang
+foo.bar()
 #+END_SRC
 ** Standard library
 *** Characters
@@ -218,18 +225,38 @@ fun () = end # => Anonymous function that returns `Void ().
 program =
   | expression eof
 
-literal =
+expression =
+  | literal-expression
+  | binary-operator-expression
+  | unary-prefix-operator-expression
+  | application-or-indexing-expression
+  | selection-expression
+  | assignment-expression
+  | flow-control-expression
+  | function-expression
+  | return-expression
+  | object-expression
+  | method-call-expression
+
+pattern =
+  | literal-expression
+  | tiny-bang-patterns
+  | catch-all-pattern
+
+catch-all-pattern = "_"
+
+literal-expression =
   | primitive-literal
-  | composite-literal
+  | structured-literal
 
 primitive-literal =
   | boolean-literal
-  | int-literal
+  | number-literal
   | character-literal
   | text-literal
   | empty-onion-literal
 
-composite-literal =
+structured-literal =
   | record-literal
   | list-literal
   | label-literal
@@ -238,9 +265,14 @@ boolean-literal =
  | "true"
  | "false"
 
-int-literal =
-  | "-"? ["1"-"9"] ["0"-"9" "_"]*
-  | "-"? "0"
+number-literal =
+  | integer-literal
+
+integer-literal =
+  "-"? (
+    | ["1"-"9"] ["0"-"9" "_"]*
+    | "0"
+  )
 
 character-literal = ...
 
@@ -261,74 +293,93 @@ label-literal = label-identifier expression
 
 label-identifier = "`" identifier-continuation+
 
-expression =
-  | unary-prefix-operator-expression
-  | binary-operator-expression
-  | assignment-expression
-  | definition-expression
-  | conditional-expression
-  | repeat-expression
-  | sequence-expression
-  | function-expression
-  | object-expression
-  | application-expression
-  | return-expression
+binary-operator-expression =
+  | expression binary-operator expression
 
-definition-expression =
-  | immutable-definition-expression
-  | mutable-definition-expression
+binary-operator =
+  | primitive-binary-operator
+  | structured-binary-operator
+  | general-binary-operator
+
+primitive-binary-operator =
+  | boolean-binary-operator
+  | number-binary-operator
+
+structured-binary-operator =
+  | onioning-operator
+
+general-binary-operator =
+  | comparison-operator
+
+boolean-binary-operator = ["and" "or" "xor"]
+
+number-binary-operator = ["+" "-" "*" "/"]
+
+onioning-operator = "&"
+
+comparison-operator = ["=?" "not=?"]
 
 unary-prefix-operator-expression =
   | unary-prefix-operator expression
 
-unary-prefix-operator = ["not"]
+unary-prefix-operator =
+  | primitive-unary-prefix-operator
 
-binary-operator-expression =
-  | expression binary-operator expression
+primitive-unary-prefix-operator =
+  | boolean-unary-prefix-operator
 
-binary-operator = ["&" "+" "-" "/" "*" "and" "or" "xor" "=?" "not=?"]
+boolean-unary-prefix-operator = ["not"]
 
-sequence-expression = expression divider expression
+# This production conflates the syntax for function application and indexing in
+# texts and lists. They are spelled the same.
+application-or-indexing-expression =
+  | expression actual-parameters-or-indexes
 
-list-of(
-  element,
-  separator = divider,
-  possibly-empty? = true,
-  possibly-trailing-separator? = true
-) = ...
+actual-parameters-or-indexes =
+  "(" list-of(element = actual-parameter-or-index, separator = ",") ")"
+
+actual-parameter-or-index =
+  | expression
+
+# Selection works on records and objects (for fields, not methods).
+selection-expression = expression "." identifier
 
 identifier = identifier-start identifier-continuation*
 
 identifier-start = ["A"-"Z" "a"-"z" "_"]
 
-identifier-continuation =
-  | ["A"-"Z" "a"-"z" "_" "0"-"9" "?" "!" "'"]
+identifier-continuation = ["A"-"Z" "a"-"z" "_" "0"-"9" "?" "!" "'"]
 
-comment = "#" .*? $
+assignment-expression =
+  | immutable-assignment-expression
+  | mutable-assignment-expression
+  | mutable-update-assignment-expression
 
-immutable-definition-expression = "let" assignment-expression
+immutable-assignment-expression = "let" identifier "=" expression
 
-mutable-definition-expression = "ref" assignment-expression
+mutable-assignment-expression = "ref" identifier "=" expression
 
-assignment-expression = identifier "=" expression
+mutable-update-assignment-expression = identifier "=" expression
+
+flow-control-expression =
+  | sequencing-expression
+  | conditional-expression
+  | repetition-expression
+
+sequencing-expression = expression divider expression
 
 conditional-expression =
   | if-expression
-  | match-expression
+  | pattern-match-expression
 
 if-expression =
-  "if" expression divider expression? (("elseif" expression divider expression?)* "else" expression?)? "end"
+  "if" expression divider expression?
+  (("elseif" expression divider expression?)* "else" expression?)? "end"
 
-new-line = ["\n" "\r" "\r\n"]
-
-divider =
-  | ["then" "do" ";"]
-  | new-line
-
-match-expression =
+pattern-match-expression =
   "match" expression ("as" pattern "in" expression?)+ "end"
 
-repeat-expression =
+repetition-expression =
   "repeat" (
     | while-expression
   )
@@ -340,7 +391,8 @@ function-expression =
   | named-function-expression
   | anonymous-function-expression
 
-named-function-expression = "fun" identifier formal-parameters "=" expression? "end"
+named-function-expression =
+  "fun" identifier formal-parameters "=" expression? "end"
 
 anonymous-function-expression = "fun" formal-parameters "=" expression? "end"
 
@@ -349,15 +401,7 @@ formal-parameters = "(" list-of(element = formal-parameter, separator = ",") ")"
 formal-parameter =
   | identifier
 
-application-expression =
-  | expression actual-parameters
-
 return-expression = "return" expression
-
-actual-parameters = "(" list-of(element = actual-parameter, separator = ",") ")"
-
-actual-parameter =
-  | expression
 
 object-expression = "object" list-of(element = object-section) "end"
 
@@ -369,21 +413,37 @@ object-include-section = "include" object-include-section-body
 
 object-include-section-body = list-of(element = expression)
 
-object-member-section = object-member-section-header object-member-section-body
+object-member-section = object-member-section-header divider object-member-section-body
 
 object-member-section-header = ["public" "private"]
 
 object-member-section-body = list-of(element = object-member)
 
 object-member =
-  | definition-expression
-  | method-expression
+  | object-field-definition
+  | method-definition
 
-method-expression =
+object-field-definition =
+  | immutable-assignment-expression
+  | mutable-assignment-expression
+
+method-definition =
   | "def" identifier formal-parameters "=" expression? "end"
 
-pattern =
-  | literal
-  | tiny-bang-patterns
-  | "_"
+method-call-expression = expression "." identifier actual-parameters-or-indexes
+
+comment = "#" .*? $
+
+new-line = ["\n" "\r" "\r\n"]
+
+divider =
+  | ["then" "do" ";"]
+  | new-line
+
+list-of(
+  element,
+  separator = divider,
+  possibly-empty? = true,
+  possibly-trailing-separator? = true
+) = ...
 #+END_SRC
