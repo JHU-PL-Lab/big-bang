@@ -100,8 +100,9 @@ manual setup consists of reproducing them by hand:
 2. Use `opam install` to install the dependencies. Refer to the `Dockerfile` to
    get a list of required packages.
 
-3. Refer to `docker-compose.yml` at the `command` entry to learn all the
-   necessary steps to setup and configure the build environment.
+3. Run `./ensure-oasis` to configure OASIS to build the project.
+
+4. Run `make` to build or `make tests` to run unit tests.
 
 The development environment is now setup and should be ready to build and run
 the project. Here are some useful things you might want to do next:

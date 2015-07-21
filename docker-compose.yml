@@ -5,17 +5,9 @@ bigbang:
   working_dir: /home/opam/big-bang/
   entrypoint: ["bash", "-ic"]
   command: ["
-             # Use the OASIS metadata to generate a configuration script.
+             # Make sure that OASIS is properly configured
 
-             oasis setup -setup-update dynamic &&
-
-             # Configure the build environment.
-
-             ./configure &&
-
-             # Enable tests.
-
-             ocaml setup.ml -configure --enable-tests &&
+             ./ensure-oasis &&
 
              # Build the project and run the tests for the first time.
 
