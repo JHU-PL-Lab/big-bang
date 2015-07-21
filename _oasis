@@ -2,7 +2,7 @@ Name: TinyBang
 Version: 0.3
 Synopsis: The TinyBang core language project.
 Authors: JHU PL Lab <pl.cs@jhu.edu>
-License: BSD-4-clause
+License: Apache
 
 Description: A small core language upon which a typed scripting language may be built.
 Homepage: http://www.big-bang-lang.org/
