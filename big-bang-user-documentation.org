@@ -1,7 +1,7 @@
 #+TITLE: Big Bang User Documentation
 #+AUTHOR: Johns Hopkins University Programming Languages Laboratory
 
-* Phylosophy
+* Philosophy
 ** Target user
    Seasoned scripter (someone familiar with Python).
 * Features
