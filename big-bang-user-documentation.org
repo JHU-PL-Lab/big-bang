@@ -229,17 +229,21 @@ program =
   | expression eof
 
 expression =
-  | literal-expression
+  | primary-expression
   | binary-operator-expression
   | unary-prefix-operator-expression
-  | application-or-indexing-expression
   | selection-expression
   | assignment-expression
   | flow-control-expression
   | function-expression
   | return-expression
   | object-expression
+
+primary-expression =
+  | literal-expression
+  | application-or-indexing-expression
   | method-call-expression
+  | "(" expression ")"
 
 pattern =
   | literal-expression
@@ -336,7 +340,7 @@ boolean-unary-prefix-operator = ["not"]
 # This production conflates the syntax for function application and indexing in
 # texts and lists. They are spelled the same.
 application-or-indexing-expression =
-  | expression actual-parameters-or-indexes
+  | primary-expression actual-parameters-or-indexes
 
 actual-parameters-or-indexes =
   "(" list-of(element = actual-parameter-or-index, separator = ",") ")"
