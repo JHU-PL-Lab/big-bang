@@ -7,7 +7,7 @@ bigbang:
   command: ["
              # Make sure that OASIS is properly configured
 
-             ./ensure-oasis &&
+             ./ensure-oasis-configuration &&
 
              # Build the project and run the tests for the first time.
 
