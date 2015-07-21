@@ -32,7 +32,7 @@ let application_match
       (fun_var_init : tvar)
       (arg_var : tvar)
       (cs : Constraint_database.t)
-      : Application_matching_result_set.t =
+      : application_matching_result Enum.t =
   let rec app_match
             (fun_var : tvar)
             (pats_used : Pattern_type_set.t)
@@ -117,5 +117,4 @@ let application_match
   app_match fun_var_init Pattern_type_set.empty
     |> Internal_result_set.enum
     |> Enum.map (fun (Internal_result(_,result)) -> result)
-    |> Application_matching_result_set.of_enum
 ;;
