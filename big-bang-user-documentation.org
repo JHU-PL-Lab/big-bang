@@ -9,45 +9,45 @@
 *** Primitive
 **** Booleans
 ***** True
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 true
-#+END_SRC
+#+END_EXAMPLE
 ***** False
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 false
-#+END_SRC
+#+END_EXAMPLE
 **** Numbers
 ***** Integers (~int~)
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 32
 -10
 1_000_000
-#+END_SRC
+#+END_EXAMPLE
 **** Characters
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 'a'
-#+END_SRC
+#+END_EXAMPLE
 **** Texts
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 "Hello, Big Bang."
-#+END_SRC
+#+END_EXAMPLE
 **** Empty onion
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 ()
-#+END_SRC
+#+END_EXAMPLE
 *** Structured
 **** Records
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 { a = 2, b = 3 }
-#+END_SRC
+#+END_EXAMPLE
 **** Lists
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 [2, "Lists are heterogeneous!", 'a']
-#+END_SRC
+#+END_EXAMPLE
 **** Labels
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 `LanguageName "Big Bang"
-#+END_SRC
+#+END_EXAMPLE
 ** Operations
 *** Primitive
 **** Booleans
@@ -62,56 +62,56 @@ false
 ***** ~/~
 **** Texts
 ***** Indexing
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 "abc"(1) # => 'b'
-#+END_SRC
+#+END_EXAMPLE
 *** Structured
 **** Onioning
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 3 & 'a'
-#+END_SRC
+#+END_EXAMPLE
 ***** In case of a name key collision, left side has wins
 **** Records
 ***** Selection
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 { a = 2, b = 3 }.a # => 2
-#+END_SRC
+#+END_EXAMPLE
 **** Lists
 ***** Indexing
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 [2, 3, 'a'](2) # => 'a'
-#+END_SRC
+#+END_EXAMPLE
 *** General
 **** Comparison
 ***** ~=?~
 ***** ~not=?~
 ** Identifiers
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 inGrid?()
 changeGrid!()
 x'''''
 x's
-#+END_SRC
+#+END_EXAMPLE
 *** ~​'​~, ~?~ and ~!~ may appear anywhere in the identifier (except for the first character)
 *** Only one namespace for variables and functions (Lisp-1)
 ** Assignments
 *** Immutable
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 let banana = "banana"
-#+END_SRC
+#+END_EXAMPLE
 *** Mutable
 **** First definition
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 ref coconut = "banana"
-#+END_SRC
+#+END_EXAMPLE
 **** Update
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 coconut = "banana2"
-#+END_SRC
+#+END_EXAMPLE
 **** Dereferencing is automatic (i.e. doesn't require ~!~)
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 functionCall(coconut)
-#+END_SRC
+#+END_EXAMPLE
 *** Shadowing
 **** Not allowed (except with function parameters)
 ** Flow control constructs
@@ -119,7 +119,7 @@ functionCall(coconut)
 **** Expressions may be sequenced when separated by the divisor (new line, ~;~, ~then~ or ~do~)
 *** Conditionals
 **** ~if~
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 if <condition>
   <expression>
 elseif <condition>
@@ -127,44 +127,44 @@ elseif <condition>
 else
   <expression>
 end
-#+END_SRC
+#+END_EXAMPLE
 **** Pattern matches
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 match <expression>
 as <pattern> in <expression>
 as <pattern> in <expression>
 end
-#+END_SRC
+#+END_EXAMPLE
 *** Repetitions
 **** While
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 repeat while <condition>
   <expression>
 end
-#+END_SRC
+#+END_EXAMPLE
 ** Functions
 *** Definition
 **** Named
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 fun <name>(<parameter-list>) =
   <expression>
 end
-#+END_SRC
+#+END_EXAMPLE
 **** Anonymous
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 fun (<parameter-list>) =
   <expression>
 end
-#+END_SRC
+#+END_EXAMPLE
 **** No difference between non-recursive and recursive functions
 **** ~return~ is allowed (parsed), but isn't handled yet (an error is raised)
 *** Application
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 identity(3)
-#+END_SRC
+#+END_EXAMPLE
 ** Object orientation
 *** Objects
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 object
   include
     SomeOtherObject
@@ -175,11 +175,11 @@ object
     # `self` is optional
     def magnitude() = sqrt(self.x * self.x + y * y) end
 end
-#+END_SRC
+#+END_EXAMPLE
 *** Method call
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 foo.bar()
-#+END_SRC
+#+END_EXAMPLE
 ** Standard library
 *** Characters
 **** ~ord('a')~
@@ -199,9 +199,9 @@ foo.bar()
 **** CamelCase
 *** ~;~, ~then~ and ~do~ work as new line separators
 *** Empty blocks are allowed on the following expressions (~`Void ()~ is returned)
-#+BEGIN_SRC big-bang
+#+BEGIN_EXAMPLE
 fun () = end # => Anonymous function that returns `Void ().
-#+END_SRC
+#+END_EXAMPLE
 **** Flow control constructs
 ***** Conditionals
 ****** ~if~
@@ -221,7 +221,7 @@ fun () = end # => Anonymous function that returns `Void ().
 *** Exceptions
 *** Regex
 * Grammar
-#+BEGIN_SRC ebnf
+#+BEGIN_EXAMPLE
 program =
   | expression eof
 
@@ -446,4 +446,4 @@ list-of(
   possibly-empty? = true,
   possibly-trailing-separator? = true
 ) = ...
-#+END_SRC
+#+END_EXAMPLE
