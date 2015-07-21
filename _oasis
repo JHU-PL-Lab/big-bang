@@ -18,12 +18,14 @@ Library "tiny-bang-utils"
   Modules:
     Tiny_bang_ast_uid,
     Tiny_bang_logger,
+    Tiny_bang_nondeterminism,
     Tiny_bang_parser_support,
     Tiny_bang_source_origin,
     Tiny_bang_string_utils,
     Tiny_bang_utils
   BuildDepends:
-    batteries
+    batteries,
+    monadlib
 
 Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
@@ -74,6 +76,7 @@ Library "tiny-bang-typechecker"
     Tiny_bang_types_pretty
   BuildDepends:
     batteries,
+    ocaml-monadic,
     tiny-bang-ast,
     tiny-bang-utils
 
@@ -141,8 +144,9 @@ Executable "test-tiny-bang"
     tiny-bang-parser,
     tiny-bang-typechecker,
     tiny-bang-utils,
-    oUnit,
-    batteries
+    batteries,
+    ocaml-monadic,
+    oUnit
 
 Test test_tiny_bang
   Command: $test_tiny_bang
