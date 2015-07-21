@@ -197,7 +197,10 @@ foo.bar()
 **** Function call parameters
 *** Identifiers
 **** CamelCase
-*** ~;~, ~then~ and ~do~ work as new line separators
+*** Divider
+**** ~then~ or new lines separates the condition and the body of ~if~ expressions
+**** ~do~ or new lines separates the condition and the body of ~repeat~ expressions
+**** ~;~ or new lines separates object members and sequenced operations
 *** Empty blocks are allowed on the following expressions (~`Void ()~ is returned)
 #+BEGIN_EXAMPLE
 fun () = end # => Anonymous function that returns `Void ().
@@ -374,7 +377,7 @@ conditional-expression =
 
 if-expression =
   "if" expression if-divider expression?
-  (("elseif" expression divider expression?)* "else" expression?)? "end"
+  (("elseif" expression if-divider expression?)* "else" expression?)? "end"
 
 pattern-match-expression =
   "match" expression ("as" pattern "in" expression?)+ "end"
