@@ -189,7 +189,7 @@ to add the [`lwt` package][lwt]:
 3. Install the dependency in the container:
 
    ```console
-   $ docker-compose run bigbang 'opam install lwt'
+   $ docker-compose run bigbang 'opam update && opam install lwt'
    ```
 
 4. Fetch the `NAME` of the container that contains the dependency:
