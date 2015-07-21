@@ -373,7 +373,7 @@ conditional-expression =
   | pattern-match-expression
 
 if-expression =
-  "if" expression divider expression?
+  "if" expression if-divider expression?
   (("elseif" expression divider expression?)* "else" expression?)? "end"
 
 pattern-match-expression =
@@ -385,7 +385,7 @@ repetition-expression =
   )
 
 while-expression =
-  "while" expression divider expression? "end"
+  "while" expression repetition-divider expression? "end"
 
 function-expression =
   | named-function-expression
@@ -437,8 +437,16 @@ comment = "#" .*? $
 new-line = ["\n" "\r" "\r\n"]
 
 divider =
-  | ["then" "do" ";"]
+  | ";"
   | new-line
+
+if-divider =
+  | new-line
+  | "then"
+
+repetition-divider =
+  | new-line
+  | "do"
 
 list-of(
   element,
