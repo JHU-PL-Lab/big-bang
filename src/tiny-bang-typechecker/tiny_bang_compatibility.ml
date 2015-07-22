@@ -203,27 +203,6 @@ let answers_to_str answers =
     |> concat_sep_delim "[" "]" ","
 ;;
 
-
-let rec cb_option_list_to_bool_list cb_list = 
-  match cb_list with
-  | [] -> []
-  | hd::tl -> begin
-                match hd with
-                | Some _ -> true::(cb_option_list_to_bool_list tl)
-                | None -> false::(cb_option_list_to_bool_list tl)
-              end
-;;
-
-let rec cb_option_list_to_cb cb_op_list = 
-  match cb_op_list with
-  | [] -> []
-  | hd::tl -> begin
-                match hd with
-                | Some x -> x @ (cb_option_list_to_cb tl)
-                | None -> cb_option_list_to_cb tl
-              end
-;;
-
 let pretty_result (Compatibility_result (bindings,answers)) =
   let answers_str = answers_to_str answers in
   let bindings_str = pretty_binding_set bindings in
@@ -627,7 +606,7 @@ and compatibility_by_type_with_only_constr_pats
         (f : pattern_type -> compatibility_bindings option) 
         (tasks : compatibility_task list)
         : Compatibility_result_set.t =
-    let answers =
+    let bindings_per_task =
       enforce_list_size tasks @@
       tasks
         |> List.enum
@@ -635,10 +614,15 @@ and compatibility_by_type_with_only_constr_pats
               (fun task -> f @@ task.ct_pat)
         |> List.of_enum
     in
-    let cb = cb_option_list_to_cb answers in
-    let bool_list = cb_option_list_to_bool_list answers in
+    let bindings =
+      List.fold_left
+        (fun x my -> Option.map_default (fun y -> x @ y) x my)
+        []
+        bindings_per_task
+    in
+    let answers = List.map Option.is_some bindings_per_task in
     Compatibility_result_set.singleton
-      (Compatibility_result(cb, bool_list))
+      (Compatibility_result(bindings, answers))
 
   (* Solves each task for a single-argument type constructor.  This function
      takes a filter type handler which yields an inner variable on which to
