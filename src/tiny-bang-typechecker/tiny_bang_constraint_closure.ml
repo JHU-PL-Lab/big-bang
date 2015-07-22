@@ -3,7 +3,6 @@ open Batteries;;
 open Tiny_bang_application_matching;;
 open Tiny_bang_application_matching_types;;
 open Tiny_bang_contours;;
-open Tiny_bang_contours_types;;
 open Tiny_bang_types;;
 open Tiny_bang_types_pretty;;
 open Tiny_bang_utils;;

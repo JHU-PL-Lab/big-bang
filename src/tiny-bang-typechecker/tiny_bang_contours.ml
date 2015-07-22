@@ -4,7 +4,6 @@ open Tiny_bang_ast;;
 open Tiny_bang_ast_pretty;;
 open Tiny_bang_contours_types;;
 open Tiny_bang_string_utils;;
-open Tiny_bang_utils;;
 
 let initial_contour = Contour([]);;
 
@@ -173,7 +172,7 @@ let rec subsumes_by_parts contour_parts_1 contour_parts_2 =
               if Ident_set.mem i2 is1
                 then subsumes_by_parts contour_parts_1 contour_parts_2'
                 else subsumes_by_parts contour_parts_1' contour_parts_2
-          | Single_part(i1),Multi_part(is2) ->
+          | Single_part(_),Multi_part(_) ->
               (* In this case, contour 2 has more options than contour 1.  Even
                  if they have some string in common, contour 2 necessarily has
                  some string which is not in contour 1. *)

@@ -8,9 +8,7 @@ open Printf;;
 
 open Tiny_bang_ast;;
 open Tiny_bang_ast_pretty;;
-open Tiny_bang_ast_uid;;
 open Tiny_bang_string_utils;;
-open Tiny_bang_utils;;
 
 type illformedness =
   | Filter_cycle of var list
@@ -68,7 +66,7 @@ let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
     if Var_set.mem x vars_seen_set
       then
         (* Identify the cycle by looking into the list for the variable. *)
-        let (idx,_) = List.findi (fun i el -> var_equal el x) vars_seen_list in
+        let (idx,_) = List.findi (fun _ el -> var_equal el x) vars_seen_list in
         let cycle = List.rev @@ (x :: List.take (idx+1) vars_seen_list) in
         raise (Illformedness_found([Filter_cycle(cycle)]))
       else ();
@@ -80,7 +78,7 @@ let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
         | Label_filter(_,_,x') -> [x']
         | Conjunction_filter(_,x',x'') -> [x';x'']
         | Int_filter(_,_) -> []
-        | Ref_filter(_,x') -> []
+        | Ref_filter(_,_) -> []
     in
     merge_illformedness @@
       List.map
@@ -168,16 +166,16 @@ let check_wellformed_expr e_initial : unit =
         |> Enum.concat
         |> List.of_enum)
   in
-  let rec check_closed e =
+  let check_closed e =
     let free = vars_free_in_expr e in
     if Var_set.cardinal free > 0
       then raise (Illformedness_found(
         free |> Var_set.enum |> Enum.map (fun x -> Open_expression_variable(x))
              |> List.of_enum))
   in
-  let rec check_unique_bindings (Expr(_,cls_initial)) =
+  let check_unique_bindings (Expr(_,cls_initial)) =
     let merge_count_maps m1 m2 =
-      let merge_fn k n1o n2o =
+      let merge_fn _ n1o n2o =
         match (n1o,n2o) with
           | (Some n1, None) -> Some n1
           | (None, Some n2) -> Some n2

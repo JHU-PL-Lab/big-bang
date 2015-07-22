@@ -4,8 +4,6 @@ are then manipulated by the parser facade. It is not to be used
 directly.
 *)
 
-open Batteries;;
-
 open Tiny_bang_ast_uid;;
 open Tiny_bang_source_origin;;
 

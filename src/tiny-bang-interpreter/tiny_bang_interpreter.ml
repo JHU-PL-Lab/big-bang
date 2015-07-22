@@ -42,7 +42,7 @@ let bound_vars_of_expr (Expr(_, cls)) =
   @return A mapping from variables to values describing the bindings of this
           compatibility or None if compatibility does not hold.
  *)
-let rec compatibility env first_x_arg pat : value Var_map.t option =
+let compatibility env first_x_arg pat : value Var_map.t option =
   let (Pattern(_, first_x_pat, pfcs)) = pat in
   let rec compat x_arg x_pat : value Var_map.t option =
     (* TODO: deal with the Not_found here more gracefully? *)
@@ -142,7 +142,7 @@ and var_replace_redex fn r =
 and var_replace_value fn v =
   match v with
   | Empty_onion_value(_) -> v
-  | Int_value(_, x) -> v
+  | Int_value(_, _) -> v
   | Label_value(_, l, x) -> Label_value(next_uid(), l, fn x)
   | Ref_value(_, x) -> Ref_value(next_uid(), fn x)
   | Onion_value(_, x1, x2) -> Onion_value(next_uid(), fn x1, fn x2)
@@ -166,7 +166,7 @@ let var_freshen freshening_stack cls =
     |> List.map (fun (Clause(_, x, _)) -> x)
     |> Var_set.of_list 
   in
-  let repl_fn (Var(_, i, fso) as x) =
+  let repl_fn (Var(_, i, _) as x) =
     if Var_set.mem x bound_variables
       then Var(next_uid(), i, Some freshening_stack)
       else x

@@ -1,7 +1,5 @@
-open Batteries;;
-
 let append_to_clause_list tiny_bang_ast_expr new_clauses =
-  let Tiny_bang_ast.Expr (tiny_bang_ast_expr_uid, tiny_bang_ast_expr_clauses) = tiny_bang_ast_expr in
+  let Tiny_bang_ast.Expr (_, tiny_bang_ast_expr_clauses) = tiny_bang_ast_expr in
   Tiny_bang_ast.Expr (Tiny_bang_ast_uid.next_uid (), (BatList.append tiny_bang_ast_expr_clauses new_clauses))
 ;;
 
@@ -14,7 +12,7 @@ let merge left_pattern_filter_rules right_pattern_filter_rules =
 
 let rec a_translate_expr little_bang_ast_expr binding_ident =
   match little_bang_ast_expr with
-  | Little_bang_ast.Value_expr (little_bang_ast_expr_uid, little_bang_ast_value) ->
+  | Little_bang_ast.Value_expr (_, little_bang_ast_value) ->
     Tiny_bang_ast.Expr (
       (Tiny_bang_ast_uid.next_uid ()), [
         Tiny_bang_ast.Clause (
@@ -59,7 +57,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
       ((Tiny_bang_ast.new_fresh_ident ()), (Tiny_bang_ast.new_fresh_ident ()))
     in
     let (
-      (Tiny_bang_ast.Expr (_, little_bang_ast_expr_left_subexpression_clauses)) as little_bang_ast_expr_left_subexpression_converted,
+      (Tiny_bang_ast.Expr (_, _)) as little_bang_ast_expr_left_subexpression_converted,
       (Tiny_bang_ast.Expr (_, little_bang_ast_expr_right_subexpression_clauses))
     )
       =
@@ -102,7 +100,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
       ((Tiny_bang_ast.new_fresh_ident ()), (Tiny_bang_ast.new_fresh_ident ()))
     in
     let (
-      (Tiny_bang_ast.Expr (_, little_bang_ast_expr_function_subexpression_clauses)) as little_bang_ast_expr_function_subexpression_converted,
+      (Tiny_bang_ast.Expr (_, _)) as little_bang_ast_expr_function_subexpression_converted,
       (Tiny_bang_ast.Expr (_, little_bang_ast_expr_parameter_subexpression_clauses))
     )
       =
@@ -143,7 +141,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
       little_bang_ast_expr_body
     ) ->
     let (
-      (Tiny_bang_ast.Expr (_, little_bang_ast_expr_assignment_clauses)) as little_bang_ast_expr_assignment_converted,
+      (Tiny_bang_ast.Expr (_, _)) as little_bang_ast_expr_assignment_converted,
       (Tiny_bang_ast.Expr (_, little_bang_ast_expr_body_clauses))
     )
       =

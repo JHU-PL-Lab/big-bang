@@ -6,7 +6,6 @@ open Batteries;;
 open Tiny_bang_application_matching_types;;
 open Tiny_bang_compatibility;;
 open Tiny_bang_types;;
-open Tiny_bang_utils;;
 
 (**
   The type of an internal application matching result.  If the match fails,

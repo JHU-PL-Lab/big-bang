@@ -2,7 +2,6 @@ open Batteries;;
 
 open Tiny_bang_ast;;
 open Tiny_bang_ast_pretty;;
-open Tiny_bang_contours_types;;
 open Tiny_bang_types;;
 
 exception Align_error of string;;
@@ -48,7 +47,7 @@ let rec initial_align_expr (Expr(_,cls)) =
     cls
     |> List.map initial_align_clause
     |> List.fold_left
-        (fun (ao,cs) -> fun (a,c) -> (Some a, Constraint_database.add c cs))
+        (fun (_,cs) -> fun (a,c) -> (Some a, Constraint_database.add c cs))
         (None, Constraint_database.empty)
   in
   match a_option with

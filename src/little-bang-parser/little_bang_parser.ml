@@ -4,9 +4,6 @@
 
 open Batteries;;
 
-open Little_bang_ast;;
-open Little_bang_generated_lexer;;
-open Little_bang_generated_parser;;
 open Tiny_bang_parser_support;;
 
 let parse_little_bang_expressions (input : IO.input) =

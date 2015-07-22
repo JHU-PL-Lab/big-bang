@@ -1,8 +1,5 @@
-open Batteries;;
-
 open Tiny_bang_ast;;
 open Tiny_bang_contours_types;;
-open Tiny_bang_utils;;
 
 (** The initial contour. *)
 val initial_contour : contour

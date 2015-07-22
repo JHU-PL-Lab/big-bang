@@ -2,7 +2,6 @@ open Batteries;;
 
 open Tiny_bang_ast;;
 open Tiny_bang_contours_types;;
-open Tiny_bang_utils;;
 
 (* ************************************************************************** *)
 (* BASIC DATA TYPES *)
@@ -62,36 +61,52 @@ module type Constraint_database_sig =
 sig
   (** The type of the constraint database. *)
   type t
+  
   (** The type of sets of constraints. *)
   type tbconstraint_set
+  
   (** The type of the constraint that the database stores. *)
   type tbconstraint
+  
   (** The type of lower bounds in the constraints in this database. *)
   type lower_bound
+  
   (** The type of filtered types in this database. *)
   type filtered_type
+  
   (** The type representing TinyBang types in this database. *)
   type tbtype
+  
   (** Creates a constraint database from a set of constraints. *)
   val of_set : tbconstraint_set -> t
+  
   (** Creates a constraint database from an enumeration of constraints. *)
   val of_enum : tbconstraint Enum.t -> t
+  
   (** Extracts all of the constraints from a constraint database. *)
   val to_set : t -> tbconstraint_set
+  
   (** The empty constraint database. *)
   val empty : t
+  
   (** Determines the size of a constraint database. *)
   val size : t -> int
+  
   (** Enumerates over all constraints in a database. *)
   val enum : t -> tbconstraint Enum.t
+  
   (** Adds a constraint to this database. *)
   val add : tbconstraint -> t -> t
+  
   (** Unions two constraint sets. *)
   val union : t -> t -> t
+  
   (** Retrieves all type lower bounds of the provided type variable. *)
   val type_lower_bounds_of : tvar -> t -> filtered_type Enum.t
+  
   (** Determines all of the type variables bound by a constraint database. *)
-  val bound_variables_of : t -> Tvar_set.t
+  val bound_variables_of : t -> Tvar_set.t  
+  
   (** Replaces type variables appearing in this constraint database. *)
   val replace_variables : (tvar -> tvar) -> t -> t
 end;;
@@ -104,19 +119,23 @@ sig
   (** The type of constraint databases for this incarnation of TinyBang
       types. *)
   type tbconstraint_database
+  
   (** The type of constraints in TinyBang. *)
   type tbconstraint =
     | Lower_bound_constraint of lower_bound * tvar
     | Inconsistency_constraint (* TODO: payload describing why! *)
+  
   (** The lower bounds appearing on constraints. *)
   and lower_bound =
     | Type_lower_bound of filtered_type
     | Intermediate_lower_bound of tvar
     | Application_lower_bound of tvar * tvar
     | Builtin_lower_bound of tbuiltin_op * tvar list
+  
   (** A variant representing filtered types. *)
   and filtered_type =
     | Filtered_type of tbtype * Pattern_type_set.t * Pattern_type_set.t
+  
   (** A variant representing shallow TinyBang types. *)
   and tbtype =
     | Empty_onion_type

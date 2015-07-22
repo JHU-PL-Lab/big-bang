@@ -3,7 +3,6 @@ open Batteries;;
 open Tiny_bang_ast_pretty;;
 open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
-open Tiny_bang_logger;;
 open Tiny_bang_toploop_options;;
 open Tiny_bang_typechecker;;
 

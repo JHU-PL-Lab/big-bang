@@ -1,5 +1,4 @@
 {
-  open Tiny_bang_parser_support;;
   open Tiny_bang_generated_parser;;
 }
 

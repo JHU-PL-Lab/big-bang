@@ -15,9 +15,7 @@ open OUnit2;;
 
 open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
-open Tiny_bang_parser;;
 open Tiny_bang_typechecker;;
-open Tiny_bang_utils;;
 
 exception File_test_creation_failure of string;;
 

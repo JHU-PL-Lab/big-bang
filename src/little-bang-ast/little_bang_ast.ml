@@ -2,10 +2,8 @@
    Contains data type definitions for the LittleBang AST.
 *)
 
-open Batteries;;
 open Tiny_bang_ast;;
 open Tiny_bang_ast_uid;;
-open Tiny_bang_utils;;
 
 type pattern =
   | Var_pattern of ast_uid * var

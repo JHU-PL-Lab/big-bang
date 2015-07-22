@@ -19,7 +19,8 @@ let logging_option:unit BatOptParse.Opt.t =
                     |[arg] ->
                         (let (module_name_option,module_level) = 
                         if BatString.exists arg "=" then
-                            let (module_name,module_level) = String.split arg "="
+                            let (module_name,module_level) =
+                              String.split ~by:arg "="
                             in (Some module_name,module_level) 
                         else
                              (None,arg)
@@ -35,7 +36,7 @@ let logging_option:unit BatOptParse.Opt.t =
                 )
             )
         ;
-        option_set_value = (fun data -> ())
+        option_set_value = (fun _ -> ())
         ;
         option_get = (fun () -> Some())
         ;

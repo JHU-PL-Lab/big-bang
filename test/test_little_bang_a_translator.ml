@@ -1,4 +1,3 @@
-open Batteries;;
 open OUnit2;;
 
 let test_expression_empty_onion _ =

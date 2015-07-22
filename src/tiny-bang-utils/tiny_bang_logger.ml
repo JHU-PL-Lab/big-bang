@@ -4,8 +4,6 @@ module String_map = BatMap.Make(BatString);;
 
 type level = [`trace|`debug|`info|`warn|`error|`fatal|`always];;
 
-exception Option_error of string * string;;
-
 let level_of_string level_string =
   match level_string with
      | "trace" -> Some `trace
@@ -17,8 +15,6 @@ let level_of_string level_string =
      | "always" -> Some `always
      | _ -> None
 ;;
-
-let type_check_global = ref true;;
 
 let default_level = ref `warn ;;
 

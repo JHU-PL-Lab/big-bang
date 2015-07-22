@@ -1,5 +1,3 @@
-open Batteries;;
-
 open Tiny_bang_compatibility_types;;
 open Tiny_bang_types;;
 

@@ -1,7 +1,6 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
-open Tiny_bang_utils;;
 
 let pretty_ident ident =
   match ident with

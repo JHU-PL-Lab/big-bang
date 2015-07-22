@@ -15,7 +15,6 @@
 open Batteries;;
 open Printf;;
 
-open Tiny_bang_ast;;
 open Tiny_bang_compatibility_types;;
 open Tiny_bang_string_utils;;
 open Tiny_bang_types;;
@@ -255,7 +254,7 @@ let pretty_internal_result_set results =
 
 let pretty_query pretty_result query =
   match query with
-    | Recursive_compatibility_query(t,h) -> "QRec: " ^ pretty_task t
+    | Recursive_compatibility_query(t,_) -> "QRec: " ^ pretty_task t
     | Immediate_answer(a) -> "QImm: " ^ pretty_result a
 ;;
 
@@ -405,10 +404,10 @@ and compatibility_by_type
   results
     |> Internal_digest_result_set.enum
     |> Enum.map
-          (fun (Internal_digest_result(bindings,answers,answers_empty)) ->
+          (fun (Internal_digest_result(bindings,answers,_)) ->
             (* The last answers list should be empty; otherwise, something is
                wrong with the code. *)
-            (* TODO: assert answers_empty is empty. *)
+            (* TODO: assert that the last parameter above is empty. *)
             (* Now we consider binding if it is appropriate to do so. *)
             let new_bindings = match bind_state with
               | Dont_bind ->
@@ -622,8 +621,8 @@ and compatibility_by_type_with_only_constr_pats
   @@ fun () ->
   (* At this point, the only tasks that exist have constructor patterns.  We
      begin by defining some utilities which are useful in this process. *)
-  (** Solves each task immediately.  Given the list of tasks and a handler for
-      a single pattern type, this function will produce a list of answers. *)
+  (* Solves each task immediately.  Given the list of tasks and a handler for
+     a single pattern type, this function will produce a list of answers. *)
   let rec immediate_solve
         (f : pattern_type -> compatibility_bindings option) 
         (tasks : compatibility_task list)
@@ -641,11 +640,11 @@ and compatibility_by_type_with_only_constr_pats
     Compatibility_result_set.singleton
       (Compatibility_result(cb, bool_list))
 
-  (** Solves each task for a single-argument type constructor.  This function
-      takes a filter type handler which yields an inner variable on which to
-      recurse.  It performs this recursion where appropriate.  When the
-      recursive match is successful, the larger match is successful; if it is
-      not or if the handler returns [None], the larger match fails. *)
+  (* Solves each task for a single-argument type constructor.  This function
+     takes a filter type handler which yields an inner variable on which to
+     recurse.  It performs this recursion where appropriate.  When the
+     recursive match is successful, the larger match is successful; if it is
+     not or if the handler returns [None], the larger match fails. *)
   and recursive_single_constructor_solve
         (tv : tvar)
         (handler : pattern_filter_type -> tvar option)
@@ -693,7 +692,7 @@ and compatibility_by_type_with_only_constr_pats
             Compatibility_result(bnd,enforce_list_size tasks ans))
       |> Compatibility_result_set.of_enum
 
-  (**
+  (*
     Solves a recursive compatibility question.  Given a sequence of data (e.g.
     patterns) and a query generation function which yields recursive queries,
     this function executes a single recursive compatibility check and then
@@ -848,7 +847,7 @@ and compatibility_by_type_with_only_constr_pats
   in
   match typ with
     | Empty_onion_type ->
-        immediate_solve (fun x -> None) tasks
+        immediate_solve (fun _ -> None) tasks
     | Int_type ->
         immediate_solve 
           (fun filt-> let Pattern_type(p,map_tvar) = filt in
@@ -879,7 +878,7 @@ and compatibility_by_type_with_only_constr_pats
           tasks
           Do_bind
     | Function_type(_,_,_) ->
-        immediate_solve (fun x -> None) tasks
+        immediate_solve (fun _ -> None) tasks
     | Onion_type(a1,a2) ->
         (* This is the hard case and the whole reason that compatibility is
            structured in this module the way that it is.  The formal definition

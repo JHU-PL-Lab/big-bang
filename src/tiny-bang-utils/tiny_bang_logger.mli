@@ -46,11 +46,7 @@
  * [1]: http://12factor.net/logs
  *)
 
-open Batteries;;
-
 type level = [`trace|`debug|`info|`warn|`error|`fatal|`always];;
-
-exception Option_error of string * string;;
 
 val level_of_string : string -> level option
 

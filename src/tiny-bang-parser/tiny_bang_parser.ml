@@ -4,10 +4,7 @@
 
 open Batteries;;
 
-open Tiny_bang_ast;;
 open Tiny_bang_parser_support;;
-open Tiny_bang_generated_lexer;;
-open Tiny_bang_generated_parser;;
 
 let parse_tiny_bang_expressions (input : IO.input) =
   let buf = Lexing.from_input input in
