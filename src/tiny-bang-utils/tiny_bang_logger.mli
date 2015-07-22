@@ -52,6 +52,12 @@ type level = [`trace|`debug|`info|`warn|`error|`fatal|`always];;
 
 exception Option_error of string * string;;
 
+val level_of_string : string -> level option
+
+val set_default_logging_level : level -> unit
+
+val set_logging_level_for : string -> level -> unit
+
 val make_logger : string -> level -> string -> unit
 
 val bracket_log :

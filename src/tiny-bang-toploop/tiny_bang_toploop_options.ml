@@ -2,11 +2,19 @@ open Batteries;;
 open BatOptParse.Opt;;
 open Tiny_bang_logger;;
 
-let logging_option:logging_config  BatOptParse.Opt.t =
+(** This logging option sets the global logging state of the application.  It
+    "produces" a unit but, as each argument is parsed, has the side effect of
+    configuring the logger. *)
+let logging_option:unit BatOptParse.Opt.t =
     {
         (* Called whenever e.g. "--log debug" appears in the argument list *)
         option_set =
             (fun _ args ->
+              let match_string_with_level level_str =
+                match level_of_string level_str with
+                | Some level -> level
+                | None -> failwith ("Invalid log level \"" ^ level_str ^ "\".")
+              in
                 (match args with
                     |[arg] ->
                         (let (module_name_option,module_level) = 
@@ -16,20 +24,20 @@ let logging_option:logging_config  BatOptParse.Opt.t =
                         else
                              (None,arg)
                         in
-                        let Logging_config(default_level, level_map) = !logging_config_global in
+                        let level' = match_string_with_level module_level in
                         match module_name_option with
                             |Some(module_name) ->
-                                logging_config_global := Logging_config(default_level, String_map.add module_name (match_string_with_level module_level) level_map)
+                              set_logging_level_for module_name level'
                             |None ->
-                                logging_config_global := Logging_config((match_string_with_level module_level), level_map)
+                              set_default_logging_level level'
                         )
                     | _ -> raise @@ Option_error ("--log","Invalid argument")
                 )
             )
         ;
-        option_set_value = (fun data -> logging_config_global := data)
+        option_set_value = (fun data -> ())
         ;
-        option_get = (fun () -> Some(!logging_config_global))
+        option_get = (fun () -> Some())
         ;
         option_metavars = ["LOG_INSTR"]
         ;

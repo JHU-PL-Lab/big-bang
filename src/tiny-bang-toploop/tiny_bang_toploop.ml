@@ -7,13 +7,17 @@ open Tiny_bang_logger;;
 open Tiny_bang_toploop_options;;
 open Tiny_bang_typechecker;;
 
-let toploop_operate typecheck_flag e =
+type toploop_options = {
+  toploop_typechecker_disabled : bool
+};;
+
+let toploop_operate toploop_options e =
   print_string "\n";
   begin
     try
       check_wellformed_expr e; 
       let do_eval =
-        (if (not typecheck_flag) then true else
+        (if (not @@ toploop_options.toploop_typechecker_disabled) then true else
          if typecheck e
          then true
          else (print_string "Type error.\n"; false)
@@ -49,13 +53,17 @@ let command_line_parsing () =
     disable_typechecking_option;
   let spare_args = BatOptParse.OptParser.parse_argv parser in
   match spare_args with
-  | [] -> ()
+  | [] ->
+    { toploop_typechecker_disabled =
+        Option.default false @@
+          disable_typechecking_option.BatOptParse.Opt.option_get()
+    }
   | _ -> failwith "BAD!" (* TODO: better error message *)
 ;;
 
 let () =
-  (*a parser*)
-  command_line_parsing ();
+  (* parse command-line arguments *)
+  let toploop_options = command_line_parsing () in
 
   print_string "TinyBang 0.3 Toploop\n";
   print_string "--------------------\n";
@@ -65,5 +73,5 @@ let () =
   flush stdout;
   Tiny_bang_parser.parse_tiny_bang_expressions IO.stdin
   |> LazyList.map fst
-  |> LazyList.iter (toploop_operate !type_check_global)
+  |> LazyList.iter (toploop_operate toploop_options)
 ;;
