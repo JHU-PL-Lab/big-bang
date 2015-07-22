@@ -16,12 +16,6 @@ let pretty_tvar (Tvar(i,cntr_option)) =
 (* Patterns never have instantiated variables, so this makes sense. *)
 let pretty_pattern_tvar (Tvar(i,_)) = pretty_ident i;;
 
-let pretty_tbuiltin_op (op) = 
-  match op with
-  | Op_plus_type -> "+"
-  | Op_ref_type -> ":="
-;;
-
 let pretty_pattern_filter_type pf =
   match pf with
     | Empty_filter_type -> "()"
@@ -81,7 +75,7 @@ and pretty_lower_bound lb =
     | Application_lower_bound(a1,a2) -> pretty_tvar a1 ^ " " ^ pretty_tvar a2
     | Builtin_lower_bound(op, a_list) ->
         let pretty_tvar_list = List.map pretty_tvar a_list in
-        pretty_tbuiltin_op op ^
+        pretty_builtin_op op ^
         List.reduce (fun x y -> " " ^ x ^ " " ^ y) pretty_tvar_list
 
 and pretty_filtered_type (Filtered_type(t,pos,neg)) =

@@ -11,11 +11,6 @@ type tvar =
   | Tvar of ident * contour option
 ;;
 
-type tbuiltin_op = 
-  | Op_plus_type
-  | Op_ref_type
-;;
-
 module Tvar_order =
 struct
   type t = tvar
@@ -130,7 +125,7 @@ sig
     | Type_lower_bound of filtered_type
     | Intermediate_lower_bound of tvar
     | Application_lower_bound of tvar * tvar
-    | Builtin_lower_bound of tbuiltin_op * tvar list
+    | Builtin_lower_bound of builtin_op * tvar list
   
   (** A variant representing filtered types. *)
   and filtered_type =

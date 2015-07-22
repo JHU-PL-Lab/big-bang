@@ -59,10 +59,7 @@ and initial_align_clause cl =
   let a = initial_align_var x in
   (a, Lower_bound_constraint(initial_align_redex r, a))
 
-and initial_align_builtin_op op =
-  match op with
-    | Op_plus -> Op_plus_type
-    | Op_ref -> Op_ref_type
+and initial_align_builtin_op op = op
 
 and initial_align_redex r =
   match r with
