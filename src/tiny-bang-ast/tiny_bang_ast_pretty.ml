@@ -25,12 +25,6 @@ let pretty_var (Var(_, i, mfs)) =
   | Some fs -> pretty_ident i ^ pretty_freshening_stack fs
 ;;
 
-let rec pretty_var_list varlist accumulator = 
-  match varlist with
-  | [] -> accumulator
-  | hd::tl -> pretty_var_list tl (accumulator ^ " " ^ pretty_var hd)
-;;
-
 let pretty_builtin_op op =
   match op with
   | Op_plus -> "+"
