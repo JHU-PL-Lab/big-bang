@@ -80,8 +80,6 @@ and pretty_redex r =
     pretty_builtin_op o ^ " " ^
     concat_sep " " (Enum.map pretty_var @@ List.enum lv)
 
-  (* (List.reduce (" " ^) (List.map pretty_var lv)) *)
-
 and pretty_value v =
   match v with
   | Empty_onion_value(_) -> "()"
