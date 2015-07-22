@@ -36,9 +36,10 @@ let next_uid startpos endpos =
 %token DOUBLE_SEMICOLON
 %token EOF
 %token PLUS
-%token INT_FILTER
 %token REFERENCE_ASSIGN
-%token REFERENCE
+%token KEYWORD_INT
+%token KEYWORD_REF
+%token COLON
 
 
 %start <Tiny_bang_ast.expr> prog
@@ -114,7 +115,7 @@ value:
       { Onion_value((next_uid $startpos $endpos),$1,$3) }
   | pattern ARROW OPEN_BRACE expr CLOSE_BRACE
       { Function_value((next_uid $startpos $endpos),$1,$4) }
-  | REFERENCE variable
+  | KEYWORD_REF variable
       { Ref_value((next_uid $startpos $endpos),$2)}
 
 pattern:
@@ -146,13 +147,13 @@ filter_rule:
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
-  | variable INT_FILTER
+  | variable COLON KEYWORD_INT
       { Int_filter((next_uid $startpos $endpos),$1)}
   | label variable
       { Label_filter((next_uid $startpos $endpos),$1,$2) }
   | variable ASTERISK variable
       { Conjunction_filter((next_uid $startpos $endpos),$1,$3) }
-  | REFERENCE variable
+  | KEYWORD_REF variable
       { Ref_filter((next_uid $startpos $endpos),$2)}
 
 separated_nonempty_trailing_list(separator, rule):

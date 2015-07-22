@@ -20,13 +20,14 @@ rule token = parse
   | "}"                              { CLOSE_BRACE }
   | "\\"                             { BACKSLASH }
   | ";"                              { SEMICOLON }
-  | ":int"                           { INT_FILTER }
+  | ":"                              { COLON }
   | "="                              { EQUALS }
   | "&"                              { AMPERSAND }
   | "->"                             { ARROW }
   | "()"                             { EMPTY_ONION }
   | "*"                              { ASTERISK }
-  | "ref"                            { REFERENCE }
+  | "int"                            { KEYWORD_INT }
+  | "ref"                            { KEYWORD_REF }
   | ident_start ident_cont* as s     { IDENTIFIER s }
   | "`" (ident_cont* as s)           { LABEL s }
   | ";;"                             { DOUBLE_SEMICOLON }
