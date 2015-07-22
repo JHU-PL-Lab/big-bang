@@ -2,7 +2,7 @@ open Batteries;;
 
 module String_map = BatMap.Make(BatString);;
 
-type level = [`warn|`trace|`debug|`info|`error|`fatal|`always];;
+type level = [`trace|`debug|`info|`warn|`error|`fatal|`always];;
 
 type logging_config = Logging_config of level * level String_map.t;;
 
