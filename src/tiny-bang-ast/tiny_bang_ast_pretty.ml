@@ -1,6 +1,7 @@
 open Batteries;;
 
 open Tiny_bang_ast;;
+open Tiny_bang_string_utils;;
 
 let pretty_ident ident =
   match ident with
@@ -75,7 +76,9 @@ and pretty_redex r =
   | Value_redex(_, v) -> pretty_value v
   | Var_redex(_, x) -> pretty_var x
   | Appl_redex(_, x1, x2) -> pretty_var x1 ^ " " ^ pretty_var x2
-  | Builtin_redex(_, o, lv) -> (pretty_builtin_op o) ^ (pretty_var_list lv "")
+  | Builtin_redex(_, o, lv) ->
+    pretty_builtin_op o ^ " " ^
+    concat_sep " " (Enum.map pretty_var @@ List.enum lv)
 
   (* (List.reduce (" " ^) (List.map pretty_var lv)) *)
 

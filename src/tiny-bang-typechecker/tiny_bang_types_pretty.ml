@@ -80,8 +80,9 @@ and pretty_lower_bound lb =
     | Intermediate_lower_bound(a) -> pretty_tvar a
     | Application_lower_bound(a1,a2) -> pretty_tvar a1 ^ " " ^ pretty_tvar a2
     | Builtin_lower_bound(op, a_list) ->
-        let pretty_var_list = List.map pretty_tvar a_list in
-        pretty_tbuiltin_op(op) ^ List.reduce (fun x->(fun y->(x ^ " " ^ y ^ " "))) pretty_var_list
+        let pretty_tvar_list = List.map pretty_tvar a_list in
+        pretty_tbuiltin_op op ^
+        List.reduce (fun x y -> " " ^ x ^ " " ^ y) pretty_tvar_list
 
 and pretty_filtered_type (Filtered_type(t,pos,neg)) =
   pretty_type t ^
