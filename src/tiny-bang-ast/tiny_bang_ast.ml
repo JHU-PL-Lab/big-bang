@@ -97,8 +97,8 @@ type pattern_filter_rules = pattern_filter Var_map.t;;
 
 (** The builtin in Tinybang. **)
 type builtin_op = 
-  | Op_plus   (* + *)
-  | Op_ref    (* := *)
+  | Op_int_plus   (** int+ *)
+  | Op_ref    (** := *)
 ;;
 
 (** The type of a TinyBang pattern. *)

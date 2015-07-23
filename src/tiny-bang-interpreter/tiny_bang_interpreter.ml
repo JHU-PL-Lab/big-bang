@@ -208,7 +208,7 @@ let project_ref_var v =
 (*metatheoretic functions for the builtin operators *)
 let builtin_op env op list_var =
   match op with
-  | Op_plus ->
+  | Op_int_plus ->
     begin
       match list_var with
       | [x1;x2] ->

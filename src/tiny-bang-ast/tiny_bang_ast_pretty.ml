@@ -27,7 +27,7 @@ let pretty_var (Var(_, i, mfs)) =
 
 let pretty_builtin_op op =
   match op with
-  | Op_plus -> "+"
+  | Op_int_plus -> "int+"
   | Op_ref -> ":="
 ;;
 

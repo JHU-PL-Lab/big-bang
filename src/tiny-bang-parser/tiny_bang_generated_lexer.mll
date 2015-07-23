@@ -13,6 +13,7 @@ let ident_cont = alpha | digit
 
 rule token = parse
   | eof                              { EOF }
+  | "int+"                           { INT_PLUS }
   | comment                          { token lexbuf }
   | whitespace                       { token lexbuf }
   | "{"                              { OPEN_BRACE }
@@ -31,5 +32,4 @@ rule token = parse
   | "`" (ident_cont* as s)           { LABEL s }
   | ";;"                             { DOUBLE_SEMICOLON }
   | integer as s                     { INT (int_of_string (s)) }
-  | "+"                              { PLUS }
-  | ":="                             { REFERENCE_ASSIGN } 
+  | ":="                             { REFERENCE_ASSIGN }
