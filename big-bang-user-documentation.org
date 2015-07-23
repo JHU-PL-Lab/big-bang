@@ -1,0 +1,464 @@
+#+TITLE: Big Bang User Documentation
+#+AUTHOR: Johns Hopkins University Programming Languages Laboratory
+
+* Philosophy
+** Target user
+   Seasoned scripter (someone familiar with Python).
+* Features
+** Literals
+*** Primitive
+**** Booleans
+***** True
+#+BEGIN_EXAMPLE
+true
+#+END_EXAMPLE
+***** False
+#+BEGIN_EXAMPLE
+false
+#+END_EXAMPLE
+**** Numbers
+***** Integers (~int~)
+#+BEGIN_EXAMPLE
+32
+-10
+1_000_000
+#+END_EXAMPLE
+**** Characters
+#+BEGIN_EXAMPLE
+'a'
+#+END_EXAMPLE
+**** Texts
+#+BEGIN_EXAMPLE
+"Hello, Big Bang."
+#+END_EXAMPLE
+**** Empty onion
+#+BEGIN_EXAMPLE
+()
+#+END_EXAMPLE
+*** Structured
+**** Records
+#+BEGIN_EXAMPLE
+{ a = 2, b = 3 }
+#+END_EXAMPLE
+**** Lists
+#+BEGIN_EXAMPLE
+[2, "Lists are heterogeneous!", 'a']
+#+END_EXAMPLE
+**** Labels
+#+BEGIN_EXAMPLE
+`LanguageName "Big Bang"
+#+END_EXAMPLE
+** Operations
+*** Primitive
+**** Booleans
+***** ~and~
+***** ~or~
+***** ~xor~
+***** ~not~
+**** Numbers
+***** ~+~
+***** ~-~
+***** ~*~
+***** ~/~
+**** Texts
+***** Indexing
+#+BEGIN_EXAMPLE
+"abc"(1) # => 'b'
+#+END_EXAMPLE
+*** Structured
+**** Onioning
+#+BEGIN_EXAMPLE
+3 & 'a'
+#+END_EXAMPLE
+***** In case of a name key collision, left side has wins
+**** Records
+***** Selection
+#+BEGIN_EXAMPLE
+{ a = 2, b = 3 }.a # => 2
+#+END_EXAMPLE
+**** Lists
+***** Indexing
+#+BEGIN_EXAMPLE
+[2, 3, 'a'](2) # => 'a'
+#+END_EXAMPLE
+*** General
+**** Comparison
+***** ~=?~
+***** ~not=?~
+** Identifiers
+#+BEGIN_EXAMPLE
+inGrid?()
+changeGrid!()
+x'''''
+x's
+#+END_EXAMPLE
+*** ~​'​~, ~?~ and ~!~ may appear anywhere in the identifier (except for the first character)
+*** Only one namespace for variables and functions (Lisp-1)
+** Assignments
+*** Immutable
+#+BEGIN_EXAMPLE
+let banana = "banana"
+#+END_EXAMPLE
+*** Mutable
+**** First definition
+#+BEGIN_EXAMPLE
+ref coconut = "banana"
+#+END_EXAMPLE
+**** Update
+#+BEGIN_EXAMPLE
+coconut = "banana2"
+#+END_EXAMPLE
+**** Dereferencing is automatic (i.e. doesn't require ~!~)
+#+BEGIN_EXAMPLE
+functionCall(coconut)
+#+END_EXAMPLE
+*** Shadowing
+**** Not allowed (except with function parameters)
+** Flow control constructs
+*** Sequencing
+**** Expressions may be sequenced when separated by the divisor (new line, ~;~, ~then~ or ~do~)
+*** Conditionals
+**** ~if~
+#+BEGIN_EXAMPLE
+if <condition>
+  <expression>
+elseif <condition>
+  <expression>
+else
+  <expression>
+end
+#+END_EXAMPLE
+**** Pattern matches
+#+BEGIN_EXAMPLE
+match <expression>
+as <pattern> in <expression>
+as <pattern> in <expression>
+end
+#+END_EXAMPLE
+*** Repetitions
+**** While
+#+BEGIN_EXAMPLE
+repeat while <condition>
+  <expression>
+end
+#+END_EXAMPLE
+** Functions
+*** Definition
+**** Named
+#+BEGIN_EXAMPLE
+fun <name>(<parameter-list>) =
+  <expression>
+end
+#+END_EXAMPLE
+**** Anonymous
+#+BEGIN_EXAMPLE
+fun (<parameter-list>) =
+  <expression>
+end
+#+END_EXAMPLE
+**** No difference between non-recursive and recursive functions
+**** ~return~ is allowed (parsed), but isn't handled yet (an error is raised)
+*** Application
+#+BEGIN_EXAMPLE
+identity(3)
+#+END_EXAMPLE
+** Object orientation
+*** Objects
+#+BEGIN_EXAMPLE
+object
+  include
+    SomeOtherObject
+  public
+    x = 0
+    y = 0
+
+    # `self` is optional
+    def magnitude() = sqrt(self.x * self.x + y * y) end
+end
+#+END_EXAMPLE
+*** Method call
+#+BEGIN_EXAMPLE
+foo.bar()
+#+END_EXAMPLE
+** Standard library
+*** Characters
+**** ~ord('a')~
+**** ~chr(64)~
+*** I/O
+**** Read one char
+**** Print one char
+** Documentation
+*** Comments
+**** ~#~
+** Code style
+*** Indentation is 2 spaces
+*** Trailing commas
+**** Structured data literals
+**** Function call parameters
+*** Identifiers
+**** CamelCase
+*** Divider
+**** ~then~ or new lines separates the condition and the body of ~if~ expressions
+**** ~do~ or new lines separates the condition and the body of ~repeat~ expressions
+**** ~;~ or new lines separates object members and sequenced operations
+*** Empty blocks are allowed on the following expressions (~`Void ()~ is returned)
+#+BEGIN_EXAMPLE
+fun () = end # => Anonymous function that returns `Void ().
+#+END_EXAMPLE
+**** Flow control constructs
+***** Conditionals
+****** ~if~
+****** Pattern matches
+***** Loops
+**** Function definitions
+**** Objects
+**** Method definitions
+* Roadmap
+** Short-term
+*** Literals
+**** Sets
+**** Maps
+*** Functions
+**** Properly encode ~return~
+** Long-term
+*** Exceptions
+*** Regex
+* Grammar
+#+BEGIN_EXAMPLE
+program =
+  | expression eof
+
+expression =
+  | primary-expression
+  | binary-operator-expression
+  | unary-prefix-operator-expression
+  | selection-expression
+  | assignment-expression
+  | flow-control-expression
+  | function-expression
+  | return-expression
+  | object-expression
+
+primary-expression =
+  | literal-expression
+  | application-or-indexing-expression
+  | method-call-expression
+  | "(" expression ")"
+
+pattern =
+  | literal-expression
+  | tiny-bang-patterns
+  | catch-all-pattern
+
+catch-all-pattern = "_"
+
+literal-expression =
+  | primitive-literal
+  | structured-literal
+
+primitive-literal =
+  | boolean-literal
+  | number-literal
+  | character-literal
+  | text-literal
+  | empty-onion-literal
+
+structured-literal =
+  | record-literal
+  | list-literal
+  | label-literal
+
+boolean-literal =
+ | "true"
+ | "false"
+
+number-literal =
+  | integer-literal
+
+integer-literal =
+  "-"? (
+    | ["1"-"9"] ["0"-"9" "_"]*
+    | "0"
+  )
+
+character-literal = ...
+
+text-literal = ...
+
+empty-onion-literal = "()"
+
+record-literal = "{" list-of(element = record-field, separator = ",") "}"
+
+record-field = identifier "=" expression
+
+list-literal = "[" list-of(element = list-field, separator = ",") "]"
+
+list-field =
+  | expression
+
+label-literal = label-identifier expression
+
+label-identifier = "`" identifier-continuation+
+
+binary-operator-expression =
+  | expression binary-operator expression
+
+binary-operator =
+  | primitive-binary-operator
+  | structured-binary-operator
+  | general-binary-operator
+
+primitive-binary-operator =
+  | boolean-binary-operator
+  | number-binary-operator
+
+structured-binary-operator =
+  | onioning-operator
+
+general-binary-operator =
+  | comparison-operator
+
+boolean-binary-operator = ["and" "or" "xor"]
+
+number-binary-operator = ["+" "-" "*" "/"]
+
+onioning-operator = "&"
+
+comparison-operator = ["=?" "not=?"]
+
+unary-prefix-operator-expression =
+  | unary-prefix-operator expression
+
+unary-prefix-operator =
+  | primitive-unary-prefix-operator
+
+primitive-unary-prefix-operator =
+  | boolean-unary-prefix-operator
+
+boolean-unary-prefix-operator = ["not"]
+
+# This production conflates the syntax for function application and indexing in
+# texts and lists. They are spelled the same.
+application-or-indexing-expression =
+  | primary-expression actual-parameters-or-indexes
+
+actual-parameters-or-indexes =
+  "(" list-of(element = actual-parameter-or-index, separator = ",") ")"
+
+actual-parameter-or-index =
+  | expression
+
+# Selection works on records and objects (for fields, not methods).
+selection-expression = expression "." identifier
+
+identifier = identifier-start identifier-continuation*
+
+identifier-start = ["A"-"Z" "a"-"z" "_"]
+
+identifier-continuation = ["A"-"Z" "a"-"z" "_" "0"-"9" "?" "!" "'"]
+
+assignment-expression =
+  | immutable-assignment-expression
+  | mutable-assignment-expression
+  | mutable-update-assignment-expression
+
+immutable-assignment-expression = "let" identifier "=" expression
+
+mutable-assignment-expression = "ref" identifier "=" expression
+
+mutable-update-assignment-expression = identifier "=" expression
+
+flow-control-expression =
+  | sequencing-expression
+  | conditional-expression
+  | repetition-expression
+
+sequencing-expression = expression divider expression
+
+conditional-expression =
+  | if-expression
+  | pattern-match-expression
+
+if-expression =
+  "if" expression if-divider expression?
+  (("elseif" expression if-divider expression?)* "else" expression?)? "end"
+
+pattern-match-expression =
+  "match" expression ("as" pattern "in" expression?)+ "end"
+
+repetition-expression =
+  "repeat" (
+    | while-expression
+  )
+
+while-expression =
+  "while" expression repetition-divider expression? "end"
+
+function-expression =
+  | named-function-expression
+  | anonymous-function-expression
+
+named-function-expression =
+  "fun" identifier formal-parameters "=" expression? "end"
+
+anonymous-function-expression = "fun" formal-parameters "=" expression? "end"
+
+formal-parameters = "(" list-of(element = formal-parameter, separator = ",") ")"
+
+formal-parameter =
+  | identifier
+
+return-expression = "return" expression
+
+object-expression = "object" list-of(element = object-section) "end"
+
+object-section =
+  | object-include-section
+  | object-member-section
+
+object-include-section = "include" object-include-section-body
+
+object-include-section-body = list-of(element = expression)
+
+object-member-section = object-member-section-header divider object-member-section-body
+
+object-member-section-header = ["public" "private"]
+
+object-member-section-body = list-of(element = object-member)
+
+object-member =
+  | object-field-definition
+  | method-definition
+
+object-field-definition =
+  | immutable-assignment-expression
+  | mutable-assignment-expression
+
+method-definition =
+  | "def" identifier formal-parameters "=" expression? "end"
+
+method-call-expression = expression "." identifier actual-parameters-or-indexes
+
+comment = "#" .*? $
+
+new-line = ["\n" "\r" "\r\n"]
+
+divider =
+  | ";"
+  | new-line
+
+if-divider =
+  | new-line
+  | "then"
+
+repetition-divider =
+  | new-line
+  | "do"
+
+list-of(
+  element,
+  separator = divider,
+  possibly-empty? = true,
+  possibly-trailing-separator? = true
+) = ...
+#+END_EXAMPLE

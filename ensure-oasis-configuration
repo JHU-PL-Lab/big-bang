@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+# Use the OASIS metadata to generate a configuration script.
+oasis setup -setup-update dynamic
+
+# Configure the build environment.
+./configure
+
+# Enable tests.
+ocaml setup.ml -configure --enable-tests

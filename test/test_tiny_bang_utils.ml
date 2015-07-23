@@ -1,5 +1,8 @@
 open OUnit2
 
+open Batteries;;
+
+open Tiny_bang_nondeterminism;;
 open Tiny_bang_string_utils;;
 
 let natural_compare_seq_returns_0_for_empty_list _ =
@@ -40,6 +43,24 @@ let cartesian_product_tests =
       , []
       )
     ]
+;;
+    
+let nondeterminism_tests =
+  [
+    "nondeterminism_test" >::
+    begin
+      fun _ ->
+        let m =
+          let open Nondeterminism_monad in
+          let%bind x = pick_enum @@ List.enum [1;2;3] in
+          let%bind y = pick_enum @@ List.enum [3;4;5] in
+          return @@ x + y
+        in
+        assert_equal (List.of_enum @@ Nondeterminism_monad.enum m) @@
+          [4;5;6;5;6;7;6;7;8]
+    end
+  ]
+;;
 
 let tests = "Tiny_bang_utils" >::: [
       "natural_compare_seq returns 0 for empty list" >:: natural_compare_seq_returns_0_for_empty_list;
