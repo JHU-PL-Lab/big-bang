@@ -1,0 +1,7 @@
+# EXPECT-TYPECHECK
+
+x = 4;
+r = ref x;
+z = 0;
+j0 = := r z;
+
