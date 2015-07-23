@@ -14,9 +14,9 @@ let pretty_label (Label i) = "`" ^ pretty_ident i;;
 let pretty_freshening_stack (Freshening_stack ids) =
   List.fold_left
     (fun acc -> fun i ->
-          (* Since freshening stacks are stored in reverse, we reverse the string    *)
-          (* here.                                                                   *)
-              acc ^ "__" ^ pretty_ident i) "" ids
+       (* Since freshening stacks are stored in reverse, we reverse the string    *)
+       (* here.                                                                   *)
+       acc ^ "__" ^ pretty_ident i) "" ids
 ;;
 
 let pretty_var (Var(_, i, mfs)) =
@@ -46,8 +46,8 @@ let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =
     |> Var_map.enum
     |> Enum.map (fun (x,pf) -> pretty_var x ^ " = " ^ pretty_pat_filter pf)
     |> Enum.fold
-        (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)
-        ""
+      (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)
+      ""
   in
   "{ " ^ inner ^ " }"
 ;;

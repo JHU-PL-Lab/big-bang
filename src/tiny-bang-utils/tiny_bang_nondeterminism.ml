@@ -1,5 +1,5 @@
 (**
-  This module contains a non-determinism monad.
+   This module contains a non-determinism monad.
 *)
 
 module Enum = Batteries.Enum;;
@@ -9,7 +9,7 @@ module type Nondeterminism_monad_sig = sig
   include Monad.LazyPlus with type 'a m := 'a m
   val pick_enum : 'a Enum.t -> 'a m
   val enum : 'a m -> 'a Enum.t
-  
+
   val stop_unless : bool -> unit m
 end;;
 

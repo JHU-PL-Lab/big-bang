@@ -55,7 +55,7 @@ let command_line_parsing () =
   | [] ->
     { toploop_typechecker_disabled =
         Option.default false @@
-          disable_typechecking_option.BatOptParse.Opt.option_get()
+        disable_typechecking_option.BatOptParse.Opt.option_get()
     }
   | _ -> failwith "BAD!" (* TODO: better error message *)
 ;;

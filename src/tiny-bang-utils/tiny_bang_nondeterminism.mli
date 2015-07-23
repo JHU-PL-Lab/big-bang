@@ -1,5 +1,5 @@
 (**
-  This module contains a non-determinism monad.
+   This module contains a non-determinism monad.
 *)
 
 open Batteries;;

@@ -18,9 +18,9 @@ let logger = Tiny_bang_logger.make_logger "Tiny_bang_constraint_closure";;
 (* Functions which embody the closure rules in the specification. *)
 
 (**
-  Performs transitivity closure steps on a given constraint set.
-  @param cs The constraint set over which to perform the closure.
-  @return The constraints learned from this process (which do not include the
+   Performs transitivity closure steps on a given constraint set.
+   @param cs The constraint set over which to perform the closure.
+   @return The constraints learned from this process (which do not include the
           original constraints).
 *)
 let close_by_transitivity (cs : Constraint_database.t) : tbconstraint Enum.t =
@@ -30,10 +30,10 @@ let close_by_transitivity (cs : Constraint_database.t) : tbconstraint Enum.t =
     let%bind c = pick_enum @@ Constraint_database.enum cs in
     let%bind (a1,a2) =
       match c with
-        | Lower_bound_constraint(Intermediate_lower_bound(a1),a2) ->
-          return (a1,a2)
-        | _ ->
-          zero ()
+      | Lower_bound_constraint(Intermediate_lower_bound(a1),a2) ->
+        return (a1,a2)
+      | _ ->
+        zero ()
     in
     (* Pick a suitable lower bound. *)
     let%bind rt = pick_enum @@ Constraint_database.type_lower_bounds_of a1 cs in
@@ -44,13 +44,13 @@ let close_by_transitivity (cs : Constraint_database.t) : tbconstraint Enum.t =
 ;;
 
 (**
-  Performs application closure on a given constraint set.
-  @param cs The constraint set on which to perform closure.
-  @return The constraints learned from this process (which do not include the
+   Performs application closure on a given constraint set.
+   @param cs The constraint set on which to perform closure.
+   @return The constraints learned from this process (which do not include the
           original constraints).
 *)
 let close_by_application (cs : Constraint_database.t)
-    : tbconstraint Enum.t =
+  : tbconstraint Enum.t =
   let constriants_enums_m =
     let open Nondeterminism_monad in
     (* Find an application. *)
@@ -77,9 +77,9 @@ let close_by_application (cs : Constraint_database.t)
           match cntr_option with
           | Some cntr -> cntr
           | None -> raise @@
-              Invariant_failure(
-                "Attempt to polyinstantiate type variable " ^ pretty_tvar a1' ^
-                " without contour!")
+            Invariant_failure(
+              "Attempt to polyinstantiate type variable " ^ pretty_tvar a1' ^
+              " without contour!")
         end
       in
       let cntr' = extend cntr i in
@@ -98,9 +98,9 @@ let close_by_application (cs : Constraint_database.t)
       return @@ Enum.concat @@ List.enum
         [ Constraint_database.enum cs2'
         ; cs2''
-            |> List.enum
-            |> Enum.map
-                (fun (rt,a) -> Lower_bound_constraint(Type_lower_bound(rt),a))
+          |> List.enum
+          |> Enum.map
+            (fun (rt,a) -> Lower_bound_constraint(Type_lower_bound(rt),a))
         ; Enum.singleton
             (Lower_bound_constraint(Intermediate_lower_bound(a2'),a2))
         ]
@@ -115,8 +115,8 @@ let close_by_application (cs : Constraint_database.t)
 (* The mechanism by which a complete closure occurs. *)
 
 (**
-  Performs a complete deductive closure on the provided set of type system
-  constraints.
+   Performs a complete deductive closure on the provided set of type system
+   constraints.
 *)
 let rec perform_closure cs =
   let closure_functions =
@@ -125,11 +125,11 @@ let rec perform_closure cs =
     ] in
   let cs' =
     Constraint_database.union cs @@ Constraint_database.of_enum @@
-      (closure_functions
-        |> List.enum
-        |> Enum.map (fun fn -> fn cs)
-        |> Enum.concat)
+    (closure_functions
+     |> List.enum
+     |> Enum.map (fun fn -> fn cs)
+     |> Enum.concat)
   in
   if Constraint_database.size cs <> Constraint_database.size cs'
-    then perform_closure cs' else cs'
+  then perform_closure cs' else cs'
 ;;

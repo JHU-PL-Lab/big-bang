@@ -13,18 +13,18 @@ let toploop_operate e =
     try
       check_wellformed_expr e;
       (if typecheck e
-        then
-          let v,env = eval e in
-          print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
-        else
-          print_string "Type error.\n");
+       then
+         let v,env = eval e in
+         print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
+       else
+         print_string "Type error.\n");
     with
-      | Illformedness_found(ills) ->
-          print_string "Provided expression is ill-formed:\n";
-          List.iter
-            (fun ill ->
-              print_string @@ "   " ^ pretty_illformedness ill ^ "\n")
-            ills
+    | Illformedness_found(ills) ->
+      print_string "Provided expression is ill-formed:\n";
+      List.iter
+        (fun ill ->
+           print_string @@ "   " ^ pretty_illformedness ill ^ "\n")
+        ills
   end;
   print_string "\n";
   print_string "Please enter an expression to evaluate followed by \";;\".\n";
@@ -40,6 +40,6 @@ let () =
   print_string "\n";
   flush stdout;
   Little_bang_parser.parse_little_bang_expressions IO.stdin
-    |> LazyList.map fst
-    |> LazyList.iter toploop_operate
+  |> LazyList.map fst
+  |> LazyList.iter toploop_operate
 ;;

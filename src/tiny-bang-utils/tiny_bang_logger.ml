@@ -6,14 +6,14 @@ type level = [`trace|`debug|`info|`warn|`error|`fatal|`always];;
 
 let level_of_string level_string =
   match level_string with
-     | "trace" -> Some `trace
-     | "debug" -> Some `debug
-     | "info" -> Some `info
-     | "warn" -> Some `warn
-     | "error" -> Some `error
-     | "fatal" -> Some `fatal
-     | "always" -> Some `always
-     | _ -> None
+  | "trace" -> Some `trace
+  | "debug" -> Some `debug
+  | "info" -> Some `info
+  | "warn" -> Some `warn
+  | "error" -> Some `error
+  | "fatal" -> Some `fatal
+  | "always" -> Some `always
+  | _ -> None
 ;;
 
 let default_level = ref `warn ;;
@@ -28,7 +28,7 @@ let set_logging_level_for module_name level =
 
 let level_for prefix =
   if String_map.mem prefix !level_map
-    then (String_map.find prefix !level_map)
+  then (String_map.find prefix !level_map)
   else
     !default_level
 ;;

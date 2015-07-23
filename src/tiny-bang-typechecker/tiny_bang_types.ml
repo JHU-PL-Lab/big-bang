@@ -6,7 +6,7 @@ open Tiny_bang_contours_types;;
 (* ************************************************************************** *)
 (* BASIC DATA TYPES *)
 (* The simple, largely non-recursive data types. *) 
-  
+
 type tvar =
   | Tvar of ident * contour option
 ;;
@@ -28,7 +28,7 @@ type pattern_filter_type =
   | Int_filter_type of tvar
   | Ref_filter_type of tvar
 ;;
-  
+
 type pattern_type =
   | Pattern_type of tvar * pattern_filter_type Tvar_map.t
 ;;
@@ -56,52 +56,52 @@ module type Constraint_database_sig =
 sig
   (** The type of the constraint database. *)
   type t
-  
+
   (** The type of sets of constraints. *)
   type tbconstraint_set
-  
+
   (** The type of the constraint that the database stores. *)
   type tbconstraint
-  
+
   (** The type of lower bounds in the constraints in this database. *)
   type lower_bound
-  
+
   (** The type of filtered types in this database. *)
   type filtered_type
-  
+
   (** The type representing TinyBang types in this database. *)
   type tbtype
-  
+
   (** Creates a constraint database from a set of constraints. *)
   val of_set : tbconstraint_set -> t
-  
+
   (** Creates a constraint database from an enumeration of constraints. *)
   val of_enum : tbconstraint Enum.t -> t
-  
+
   (** Extracts all of the constraints from a constraint database. *)
   val to_set : t -> tbconstraint_set
-  
+
   (** The empty constraint database. *)
   val empty : t
-  
+
   (** Determines the size of a constraint database. *)
   val size : t -> int
-  
+
   (** Enumerates over all constraints in a database. *)
   val enum : t -> tbconstraint Enum.t
-  
+
   (** Adds a constraint to this database. *)
   val add : tbconstraint -> t -> t
-  
+
   (** Unions two constraint sets. *)
   val union : t -> t -> t
-  
+
   (** Retrieves all type lower bounds of the provided type variable. *)
   val type_lower_bounds_of : tvar -> t -> filtered_type Enum.t
-  
+
   (** Determines all of the type variables bound by a constraint database. *)
   val bound_variables_of : t -> Tvar_set.t  
-  
+
   (** Replaces type variables appearing in this constraint database. *)
   val replace_variables : (tvar -> tvar) -> t -> t
 end;;
@@ -114,23 +114,23 @@ sig
   (** The type of constraint databases for this incarnation of TinyBang
       types. *)
   type tbconstraint_database
-  
+
   (** The type of constraints in TinyBang. *)
   type tbconstraint =
     | Lower_bound_constraint of lower_bound * tvar
     | Inconsistency_constraint (* TODO: payload describing why! *)
-  
+
   (** The lower bounds appearing on constraints. *)
   and lower_bound =
     | Type_lower_bound of filtered_type
     | Intermediate_lower_bound of tvar
     | Application_lower_bound of tvar * tvar
     | Builtin_lower_bound of builtin_op * tvar list
-  
+
   (** A variant representing filtered types. *)
   and filtered_type =
     | Filtered_type of tbtype * Pattern_type_set.t * Pattern_type_set.t
-  
+
   (** A variant representing shallow TinyBang types. *)
   and tbtype =
     | Empty_onion_type
@@ -148,8 +148,8 @@ end;;
    of the constraint database. *)
 
 (**
-  The signature of a module which provides generic functionality for an abstract
-  type module.
+   The signature of a module which provides generic functionality for an abstract
+   type module.
 *)
 module type Type_functions_sig =
 sig
@@ -157,70 +157,70 @@ sig
   type filtered_type
   type lower_bound
   type tbconstraint
-  
+
   (**
-    Replaces the type variables appearing in a type.
-    @param f The type variable replacement function.
-    @param t The type in which to replace.
-    @return The resulting type.
+     Replaces the type variables appearing in a type.
+     @param f The type variable replacement function.
+     @param t The type in which to replace.
+     @return The resulting type.
   *)
   val replace_vars_of_type : (tvar -> tvar) -> tbtype -> tbtype
 
   (**
-    Replaces the type variables appearing in a filtered type.
-    @param f The type variable replacement function.
-    @param ft The filtered type in which to replace.
-    @return The resulting filtered type.
+     Replaces the type variables appearing in a filtered type.
+     @param f The type variable replacement function.
+     @param ft The filtered type in which to replace.
+     @return The resulting filtered type.
   *)
   val replace_vars_of_filtered_type :
-        (tvar -> tvar) -> filtered_type -> filtered_type
+    (tvar -> tvar) -> filtered_type -> filtered_type
 
   (**
-    Replaces type variables appearing in constraint lower bounds.
-    @param f The type variable replacement function.
-    @param lb The lower bound in which to perform replacemen
-    @return The resulting lower bound.    
+     Replaces type variables appearing in constraint lower bounds.
+     @param f The type variable replacement function.
+     @param lb The lower bound in which to perform replacemen
+     @return The resulting lower bound.    
   *)
   val replace_vars_of_lower_bound :
-        (tvar -> tvar) -> lower_bound -> lower_bound
+    (tvar -> tvar) -> lower_bound -> lower_bound
 
   (**
-    Replaces type variables appearing within a constrain
-    @param f The type variable replacement function.
-    @param c The constraint in which to perform replacemen
-    @return The resulting constrain
+     Replaces type variables appearing within a constrain
+     @param f The type variable replacement function.
+     @param c The constraint in which to perform replacemen
+     @return The resulting constrain
   *)
   val replace_vars_of_constraint :
-        (tvar -> tvar) -> tbconstraint -> tbconstraint
+    (tvar -> tvar) -> tbconstraint -> tbconstraint
 end;;
 
 (** A functor which produces abstract functionality for an abstract type module
     and a constraint database module. *)
 module Type_functions_functor
-          (T : Types_basis)
-          (Db : Constraint_database_sig
-                  with type t = T.tbconstraint_database)
-          : Type_functions_sig with type tbconstraint = T.tbconstraint
-                                and type lower_bound = T.lower_bound
-                                and type filtered_type = T.filtered_type
-                                and type tbtype = T.tbtype
-  =
+    (T : Types_basis)
+    (Db : Constraint_database_sig
+     with type t = T.tbconstraint_database)
+  : Type_functions_sig with type tbconstraint = T.tbconstraint
+                        and type lower_bound = T.lower_bound
+                        and type filtered_type = T.filtered_type
+                        and type tbtype = T.tbtype
+=
 struct
   type tbconstraint = T.tbconstraint
   type lower_bound = T.lower_bound
   type filtered_type = T.filtered_type
   type tbtype = T.tbtype
-  
+
   let replace_vars_of_type f t =
     match t with
-      | T.Empty_onion_type -> t
-      | T.Int_type -> t
-      | T.Label_type(l,a) -> T.Label_type(l, f a)
-      | T.Onion_type(a1,a2) -> T.Onion_type(f a1, f a2)
-      | T.Ref_type(a1) -> T.Ref_type(f a1)
-      | T.Function_type(pt,a,cs) ->
-          (* Pattern types are never subject to variable replacement. *)
-          T.Function_type(pt, f a, Db.replace_variables f cs)
+    | T.Empty_onion_type -> t
+    | T.Int_type -> t
+    | T.Label_type(l,a) -> T.Label_type(l, f a)
+    | T.Onion_type(a1,a2) -> T.Onion_type(f a1, f a2)
+    | T.Ref_type(a1) -> T.Ref_type(f a1)
+    | T.Function_type(pt,a,cs) ->
+      (* Pattern types are never subject to variable replacement. *)
+      T.Function_type(pt, f a, Db.replace_variables f cs)
   ;;
 
   let replace_vars_of_filtered_type f (T.Filtered_type(t,pp,pn)) =
@@ -230,22 +230,22 @@ struct
 
   let replace_vars_of_lower_bound f lb =
     match lb with
-      | T.Type_lower_bound(ft) ->
-          T.Type_lower_bound(replace_vars_of_filtered_type f ft)
-      | T.Intermediate_lower_bound(a) ->
-          T.Intermediate_lower_bound(f a)
-      | T.Application_lower_bound(a1, a2) ->
-          T.Application_lower_bound(f a1, f a2)
-      | T.Builtin_lower_bound(op, a_list) ->
-          T.Builtin_lower_bound(op, List.map f a_list)
+    | T.Type_lower_bound(ft) ->
+      T.Type_lower_bound(replace_vars_of_filtered_type f ft)
+    | T.Intermediate_lower_bound(a) ->
+      T.Intermediate_lower_bound(f a)
+    | T.Application_lower_bound(a1, a2) ->
+      T.Application_lower_bound(f a1, f a2)
+    | T.Builtin_lower_bound(op, a_list) ->
+      T.Builtin_lower_bound(op, List.map f a_list)
   ;;
 
   let replace_vars_of_constraint f c =
     match c with
-      | T.Lower_bound_constraint(lb,a) ->
-          T.Lower_bound_constraint(replace_vars_of_lower_bound f lb, f a)
-      | T.Inconsistency_constraint ->
-          c
+    | T.Lower_bound_constraint(lb,a) ->
+      T.Lower_bound_constraint(replace_vars_of_lower_bound f lb, f a)
+    | T.Inconsistency_constraint ->
+      c
   ;;
 end;;
 
@@ -268,16 +268,16 @@ and Constraint_set : (Set.S with type elt = Types.tbconstraint)
   = Set.Make(Constraint_ord)
 
 and Types : Types_basis
-              with type tbconstraint_database = Constraint_database.t
+  with type tbconstraint_database = Constraint_database.t
   = Types
 
 and Constraint_database :
-      Constraint_database_sig
-        with type tbconstraint = Types.tbconstraint
-         and type tbtype = Types.tbtype
-         and type filtered_type = Types.filtered_type
-         and type lower_bound = Types.lower_bound
-  =
+  Constraint_database_sig
+  with type tbconstraint = Types.tbconstraint
+   and type tbtype = Types.tbtype
+   and type filtered_type = Types.filtered_type
+   and type lower_bound = Types.lower_bound
+=
 struct
   include Types
   type tbconstraint_set = Constraint_set.t
@@ -305,45 +305,45 @@ struct
 
   let type_lower_bounds_of a (Constraint_database_impl cs) =
     cs
-      |> Constraint_set.enum
-      |> Enum.filter_map
-          (fun c -> match c with
-            | Lower_bound_constraint(lb,a') ->
-                begin
-                  match lb with
-                    | Type_lower_bound(rt) ->
-                        if a = a' then Some rt else None
-                    | _ ->
-                        None
-                end
-            | Inconsistency_constraint -> None
-          )
+    |> Constraint_set.enum
+    |> Enum.filter_map
+      (fun c -> match c with
+         | Lower_bound_constraint(lb,a') ->
+           begin
+             match lb with
+             | Type_lower_bound(rt) ->
+               if a = a' then Some rt else None
+             | _ ->
+               None
+           end
+         | Inconsistency_constraint -> None
+      )
   ;;
 
   let bound_variables_of (Constraint_database_impl cs) =
     cs
-      |> Constraint_set.enum
-      |> Enum.filter_map
-          (fun c -> match c with
-            | Lower_bound_constraint(_,a) -> Some a
-            | Inconsistency_constraint -> None)
-      |> Tvar_set.of_enum
+    |> Constraint_set.enum
+    |> Enum.filter_map
+      (fun c -> match c with
+         | Lower_bound_constraint(_,a) -> Some a
+         | Inconsistency_constraint -> None)
+    |> Tvar_set.of_enum
   ;;
 
   let replace_variables f (Constraint_database_impl cs) =
     let cs' =
       cs
-        |> Constraint_set.map (Type_functions.replace_vars_of_constraint f)
+      |> Constraint_set.map (Type_functions.replace_vars_of_constraint f)
     in
     Constraint_database_impl cs'
   ;;
 end
 
 and Type_functions : Type_functions_sig
-                       with type tbconstraint = Types.tbconstraint
-                        and type lower_bound = Types.lower_bound
-                        and type filtered_type = Types.filtered_type
-                        and type tbtype = Types.tbtype
+  with type tbconstraint = Types.tbconstraint
+   and type lower_bound = Types.lower_bound
+   and type filtered_type = Types.filtered_type
+   and type tbtype = Types.tbtype
   = Type_functions_functor(Types)(Constraint_database)
 ;;
 

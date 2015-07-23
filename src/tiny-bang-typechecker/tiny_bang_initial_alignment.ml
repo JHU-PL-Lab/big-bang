@@ -11,29 +11,29 @@ let initial_align_var (x : var) : tvar =
   (* If fso is not None, then we're freshening something that shouldn't be
      freshened. *)
   if Option.is_some fso
-    then raise (Align_error
-      ("Cannot align freshened variable " ^ pretty_var x));
+  then raise (Align_error
+                ("Cannot align freshened variable " ^ pretty_var x));
   (* Otherwise, create a type variable with no contour. *)
   Tvar(i,None)
 ;;
 
 let initial_align_pattern_filter pf =
   match pf with
-    | Empty_filter(_) -> Empty_filter_type
-    | Label_filter(_,l,x) -> Label_filter_type(l,initial_align_var x)
-    | Conjunction_filter(_,x1,x2) ->
-        Conjunction_filter_type(initial_align_var x1, initial_align_var x2)
-    | Int_filter(_,x1) -> Int_filter_type(initial_align_var x1)
-    | Ref_filter(_,x1) -> Ref_filter_type(initial_align_var x1)
+  | Empty_filter(_) -> Empty_filter_type
+  | Label_filter(_,l,x) -> Label_filter_type(l,initial_align_var x)
+  | Conjunction_filter(_,x1,x2) ->
+    Conjunction_filter_type(initial_align_var x1, initial_align_var x2)
+  | Int_filter(_,x1) -> Int_filter_type(initial_align_var x1)
+  | Ref_filter(_,x1) -> Ref_filter_type(initial_align_var x1)
 ;;
 
 let initial_align_pattern_filter_map pfm =
   Var_map.fold
     (fun x -> fun pf -> fun m ->
-      Tvar_map.add
-        (initial_align_var x)
-        (initial_align_pattern_filter pf)
-        m)
+       Tvar_map.add
+         (initial_align_var x)
+         (initial_align_pattern_filter pf)
+         m)
     pfm
     Tvar_map.empty
 ;;
@@ -47,12 +47,12 @@ let rec initial_align_expr (Expr(_,cls)) =
     cls
     |> List.map initial_align_clause
     |> List.fold_left
-        (fun (_,cs) -> fun (a,c) -> (Some a, Constraint_database.add c cs))
-        (None, Constraint_database.empty)
+      (fun (_,cs) -> fun (a,c) -> (Some a, Constraint_database.add c cs))
+      (None, Constraint_database.empty)
   in
   match a_option with
-    | None -> raise (Align_error "Cannot align empty expression")
-    | Some a -> (a,cs)
+  | None -> raise (Align_error "Cannot align empty expression")
+  | Some a -> (a,cs)
 
 and initial_align_clause cl =
   let (Clause(_,x,r)) = cl in
@@ -63,26 +63,26 @@ and initial_align_builtin_op op = op
 
 and initial_align_redex r =
   match r with
-    | Value_redex(_,v) ->
-        Type_lower_bound(Filtered_type(
-          initial_align_value v,
-          Pattern_type_set.empty,
-          Pattern_type_set.empty))
-    | Var_redex(_,x) -> Intermediate_lower_bound(initial_align_var x)
-    | Appl_redex(_,x1,x2) ->
-        Application_lower_bound(initial_align_var x1,initial_align_var x2)
-    | Builtin_redex(_,op,list_x) -> 
-        Builtin_lower_bound(initial_align_builtin_op op,List.map initial_align_var list_x)
+  | Value_redex(_,v) ->
+    Type_lower_bound(Filtered_type(
+        initial_align_value v,
+        Pattern_type_set.empty,
+        Pattern_type_set.empty))
+  | Var_redex(_,x) -> Intermediate_lower_bound(initial_align_var x)
+  | Appl_redex(_,x1,x2) ->
+    Application_lower_bound(initial_align_var x1,initial_align_var x2)
+  | Builtin_redex(_,op,list_x) -> 
+    Builtin_lower_bound(initial_align_builtin_op op,List.map initial_align_var list_x)
 
 and initial_align_value v =
   match v with
-    | Empty_onion_value(_) -> Empty_onion_type
-    | Int_value(_,_) -> Int_type
-    | Ref_value(_,x) -> Ref_type(initial_align_var x)
-    | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
-    | Onion_value(_,x1,x2) ->
-        Onion_type(initial_align_var x1,initial_align_var x2)
-    | Function_value(_,p,e) ->
-        let (a,cs) = initial_align_expr e in
-        Function_type(initial_align_pattern p, a, cs)
+  | Empty_onion_value(_) -> Empty_onion_type
+  | Int_value(_,_) -> Int_type
+  | Ref_value(_,x) -> Ref_type(initial_align_var x)
+  | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
+  | Onion_value(_,x1,x2) ->
+    Onion_type(initial_align_var x1,initial_align_var x2)
+  | Function_value(_,p,e) ->
+    let (a,cs) = initial_align_expr e in
+    Function_type(initial_align_pattern p, a, cs)
 ;;

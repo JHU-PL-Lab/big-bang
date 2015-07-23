@@ -14,10 +14,10 @@ let pretty_env (env : value Environment.t) =
     |> Environment.enum
     |> Enum.map (fun (x,v) -> pretty_var x ^ " = " ^ pretty_value v)
     |> Enum.fold
-        (fun acc -> fun s -> if acc = "" then s else acc ^ ", " ^ s) ""
+      (fun acc -> fun s -> if acc = "" then s else acc ^ ", " ^ s) ""
   in
   "{ " ^ inner ^ " }"
-  ;;
+;;
 
 let lookup env x =
   (* TODO: Handle Not_found in a more graceful manner? Custom exception? *)
@@ -35,18 +35,18 @@ let bound_vars_of_expr (Expr(_, cls)) =
 ;;
 
 (**
-  Evaluates value compatibility for the provided arguments.  Only one argument
-  and one pattern are provided; this is because, in practice, it is simpler and
-  easier to check patterns one at a time.  Although the formal specification
-  dictates that these patterns be checked simultaneously, Lemma 4.13 of
-  Building a Typed Scripting Language justifies why the two approaches are the
-  same on the value level.
-  @param env The environment in which to perform the computation.
-  @param first_x_arg The argument variable.
-  @param pat The pattern to check for compatibility with the argument.
-  @return A mapping from variables to values describing the bindings of this
+   Evaluates value compatibility for the provided arguments.  Only one argument
+   and one pattern are provided; this is because, in practice, it is simpler and
+   easier to check patterns one at a time.  Although the formal specification
+   dictates that these patterns be checked simultaneously, Lemma 4.13 of
+   Building a Typed Scripting Language justifies why the two approaches are the
+   same on the value level.
+   @param env The environment in which to perform the computation.
+   @param first_x_arg The argument variable.
+   @param pat The pattern to check for compatibility with the argument.
+   @return A mapping from variables to values describing the bindings of this
           compatibility or None if compatibility does not hold.
- *)
+*)
 let compatibility env first_x_arg pat : value Var_map.t option =
   let (Pattern(_, first_x_pat, pfcs)) = pat in
   let rec compat x_arg x_pat : value Var_map.t option =
@@ -55,47 +55,47 @@ let compatibility env first_x_arg pat : value Var_map.t option =
     match pf with
     (* Starting with conjunction, since we need to address that first. *)
     | Conjunction_filter(_, x_pat_1, x_pat_2) ->
-        begin
-          match (compat x_arg x_pat_1, compat x_arg x_pat_2) with
-          | (Some cl1, Some cl2) ->
-              let m = Var_map.fold
-                  (fun k -> fun v -> fun m ->
-                                Var_map.add k v m)
-                  cl1 cl2 in
-              Some m
-          | _ ->
-              None
-        end
+      begin
+        match (compat x_arg x_pat_1, compat x_arg x_pat_2) with
+        | (Some cl1, Some cl2) ->
+          let m = Var_map.fold
+              (fun k -> fun v -> fun m ->
+                 Var_map.add k v m)
+              cl1 cl2 in
+          Some m
+        | _ ->
+          None
+      end
     | _ ->
-    (* Otherwise, we need to check each value and make sure it matches the *)
-        (* pattern. The ordering of the match below is important.              *)
-        let v = lookup env x_arg in
-        let lower_map =
-          match v, pf with
-          | Onion_value(_, x_arg_1, x_arg_2), _ ->
+      (* Otherwise, we need to check each value and make sure it matches the *)
+      (* pattern. The ordering of the match below is important.              *)
+      let v = lookup env x_arg in
+      let lower_map =
+        match v, pf with
+        | Onion_value(_, x_arg_1, x_arg_2), _ ->
           (* Split onion values without looking at the pattern, expecting  *)
-                    (* one of the two sides to match. (This is sane because the      *)
-                    (* pattern isn't a conjunction.                                  *)
-              Option.map_default Option.some
-                (compat x_arg_1 x_pat) (compat x_arg_2 x_pat)
-          | _, Empty_filter(_) ->
+          (* one of the two sides to match. (This is sane because the      *)
+          (* pattern isn't a conjunction.                                  *)
+          Option.map_default Option.some
+            (compat x_arg_1 x_pat) (compat x_arg_2 x_pat)
+        | _, Empty_filter(_) ->
           (* Everything matches an empty filter. *)
-              Some Var_map.empty
-          | Label_value(_, l, x), Label_filter(_, l', x') ->
-              if l = l' then compat x x' else None
-          | Int_value(_, _) as i, Int_filter(_, x) ->
-              Some (Var_map.singleton x i)
-          | Ref_value(_,x), Ref_filter(_, x') ->
-              let x_value = lookup env x in
-              Some(Var_map.singleton x' x_value)
-          | _, _ ->
-              None
-        in
-        (* Adds the binding for this point in the pattern. If this is      *)
-                (* premature (because, for instance, the next level up is an       *)
-                (* onion), the fact that this occurs postfix will erase this       *)
-                (* binding for the appropriate one.                                *)
-        Option.map (Var_map.add x_pat v) lower_map
+          Some Var_map.empty
+        | Label_value(_, l, x), Label_filter(_, l', x') ->
+          if l = l' then compat x x' else None
+        | Int_value(_, _) as i, Int_filter(_, x) ->
+          Some (Var_map.singleton x i)
+        | Ref_value(_,x), Ref_filter(_, x') ->
+          let x_value = lookup env x in
+          Some(Var_map.singleton x' x_value)
+        | _, _ ->
+          None
+      in
+      (* Adds the binding for this point in the pattern. If this is      *)
+      (* premature (because, for instance, the next level up is an       *)
+      (* onion), the fact that this occurs postfix will erase this       *)
+      (* binding for the appropriate one.                                *)
+      Option.map (Var_map.add x_pat v) lower_map
   in
   compat first_x_arg first_x_pat
 ;;
@@ -105,30 +105,30 @@ let rec application_match env x_fn x_arg : clause list option =
   logger `debug ("Lookup: " ^ pretty_var x_fn ^ "\n");
   match lookup env x_fn with
   | Onion_value(_, x_left, x_right) ->
-      Option.map_default Option.some
-        (application_match env x_left x_arg)
-        (application_match env x_right x_arg)
+    Option.map_default Option.some
+      (application_match env x_left x_arg)
+      (application_match env x_right x_arg)
   | Function_value(_, pat, Expr(_, cls)) ->
-      begin
-        let answer = compatibility env x_arg pat in
-        match answer with
-        | None -> None
-        | Some bindings ->
+    begin
+      let answer = compatibility env x_arg pat in
+      match answer with
+      | None -> None
+      | Some bindings ->
         (* Turn the bindings into generated clauses. *)
-            let binding_clauses =
-              bindings
-              |> Var_map.enum
-              |> Enum.map
-                (fun (x, v) ->
-                      let ruid = next_uid() in
-                      let cuid = next_uid() in
-                      Clause(cuid, x, Value_redex(ruid, v)))
-              |> List.of_enum
-            in
-            Some (binding_clauses @ cls)
-      end
+        let binding_clauses =
+          bindings
+          |> Var_map.enum
+          |> Enum.map
+            (fun (x, v) ->
+               let ruid = next_uid() in
+               let cuid = next_uid() in
+               Clause(cuid, x, Value_redex(ruid, v)))
+          |> List.of_enum
+        in
+        Some (binding_clauses @ cls)
+    end
   | _ ->
-      None
+    None
 ;;
 
 let rec var_replace_expr fn (Expr(_, cls)) =
@@ -152,8 +152,8 @@ and var_replace_value fn v =
   | Ref_value(_, x) -> Ref_value(next_uid(), fn x)
   | Onion_value(_, x1, x2) -> Onion_value(next_uid(), fn x1, fn x2)
   | Function_value(_, p, e) ->
-      Function_value(next_uid(), p, var_replace_expr fn e)
-      
+    Function_value(next_uid(), p, var_replace_expr fn e)
+
 exception Evaluation_failure of string;;
 
 let freshening_stack_from_var x =
@@ -162,7 +162,7 @@ let freshening_stack_from_var x =
      present. *)
   let Freshening_stack idents = Option.get appl_fso in
   Freshening_stack (appl_i :: idents)
-  ;;
+;;
 
 let var_freshen freshening_stack cls =
   (* Build the variable freshening function. *)
@@ -173,8 +173,8 @@ let var_freshen freshening_stack cls =
   in
   let repl_fn (Var(_, i, _) as x) =
     if Var_set.mem x bound_variables
-      then Var(next_uid(), i, Some freshening_stack)
-      else x
+    then Var(next_uid(), i, Some freshening_stack)
+    else x
   in
   (* Now freshen the results of application matching. *)
   List.map (var_replace_clause repl_fn) cls
@@ -246,49 +246,49 @@ let builtin_op env op list_var =
 
 let rec evaluate env lastvar cls =
   logger `debug (
-      pretty_env env ^ "\n" ^
-      (Option.default "?" (Option.map pretty_var lastvar)) ^ "\n" ^
-      (cls
-       |> List.map pretty_clause
-       |> List.fold_left (fun acc -> fun s -> acc ^ s ^ "; ") "") ^ "\n\n");
+    pretty_env env ^ "\n" ^
+    (Option.default "?" (Option.map pretty_var lastvar)) ^ "\n" ^
+    (cls
+     |> List.map pretty_clause
+     |> List.fold_left (fun acc -> fun s -> acc ^ s ^ "; ") "") ^ "\n\n");
   flush stdout;
   match cls with
   | [] ->
-      begin
-        match lastvar with
-        | Some(x) -> (x, env)
-        | None ->
+    begin
+      match lastvar with
+      | Some(x) -> (x, env)
+      | None ->
         (* TODO: different exception? *)
-            raise (Failure "evaluation of empty expression!")
-      end
+        raise (Failure "evaluation of empty expression!")
+    end
   | (Clause(_, x, r)):: t ->
-      match r with
-      | Value_redex(_, v) ->
-          Environment.add env x v;
-          evaluate env (Some x) t
-      | Var_redex(_, x') ->
-          let v = lookup env x' in
-          Environment.add env x v;
-          evaluate env (Some x) t
-      | Appl_redex(_, x', x'') ->
-          begin
-          match application_match env x' x'' with
-            | None -> raise (Evaluation_failure
-                ("failed to apply " ^ pretty_var x' ^ " to " ^ pretty_var x''))
-            | Some to_inline ->
-                let freshening_stack = freshening_stack_from_var x in
-                let freshened_inline = var_freshen freshening_stack to_inline in
-                (* And insert it into our evaluation. *)
-                let Clause(_, last_var, _) = List.last freshened_inline in
-                let ans_clause =
-                  Clause(next_uid(), x,
-                    Var_redex(next_uid(), last_var)) in
-                evaluate env (Some x) (freshened_inline @ (ans_clause :: t))
-          end
-      | Builtin_redex(_, op, list_x) ->
-          let v = builtin_op env op list_x in
-          Environment.add env x v;
-          evaluate env (Some x) t
+    match r with
+    | Value_redex(_, v) ->
+      Environment.add env x v;
+      evaluate env (Some x) t
+    | Var_redex(_, x') ->
+      let v = lookup env x' in
+      Environment.add env x v;
+      evaluate env (Some x) t
+    | Appl_redex(_, x', x'') ->
+      begin
+        match application_match env x' x'' with
+        | None -> raise (Evaluation_failure
+                           ("failed to apply " ^ pretty_var x' ^ " to " ^ pretty_var x''))
+        | Some to_inline ->
+          let freshening_stack = freshening_stack_from_var x in
+          let freshened_inline = var_freshen freshening_stack to_inline in
+          (* And insert it into our evaluation. *)
+          let Clause(_, last_var, _) = List.last freshened_inline in
+          let ans_clause =
+            Clause(next_uid(), x,
+                   Var_redex(next_uid(), last_var)) in
+          evaluate env (Some x) (freshened_inline @ (ans_clause :: t))
+      end
+    | Builtin_redex(_, op, list_x) ->
+      let v = builtin_op env op list_x in
+      Environment.add env x v;
+      evaluate env (Some x) t
 ;;
 
 let eval (Expr(_, cls)) =

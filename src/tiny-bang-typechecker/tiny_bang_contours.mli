@@ -18,7 +18,7 @@ val derive_least_well_formed : contour -> contour
 (** Determines if the first contour subsumes the second.  Both contours must be
     well-formed. *)
 val subsumes : contour -> contour -> bool
- 
+
 (** Determines if the two contours overlap; that is, returns true when any call
     string exists which is accepted by both contours.  Both contours must be
     well-formed. *)

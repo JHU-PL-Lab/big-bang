@@ -9,10 +9,10 @@ open Tiny_bang_nondeterminism
 open Tiny_bang_types;;
 
 (**
-  The type of an internal application matching result.  If the match fails,
-  the second component is [None]; otherwise, it is [Some] triple between the
-  return variable of the function, the body of the function, and the bindings
-  which match the argument to the function's pattern.
+   The type of an internal application matching result.  If the match fails,
+   the second component is [None]; otherwise, it is [Some] triple between the
+   return variable of the function, the body of the function, and the bindings
+   which match the argument to the function's pattern.
 *)
 type internal_result =
   | Internal_result of Pattern_type_set.t * application_matching_result
@@ -21,14 +21,14 @@ type internal_result =
 (* TODO: detect and reject non-contractive function types *)
 
 let application_match
-      (fun_var_init : tvar)
-      (arg_var : tvar)
-      (cs : Constraint_database.t)
-      : application_matching_result Enum.t =
+    (fun_var_init : tvar)
+    (arg_var : tvar)
+    (cs : Constraint_database.t)
+  : application_matching_result Enum.t =
   let rec app_match
-            (fun_var : tvar)
-            (pats_used : Pattern_type_set.t)
-            : internal_result Nondeterminism_monad.m =
+      (fun_var : tvar)
+      (pats_used : Pattern_type_set.t)
+    : internal_result Nondeterminism_monad.m =
     let open Nondeterminism_monad in
     (* Pick a lower bound for the function variable. *)
     let%bind (Filtered_type(t,_,_) as rt) =
@@ -42,7 +42,7 @@ let application_match
       (* Determine a way in which the patter is compatible with the argument. *)
       let%bind compat_result =
         pick_enum @@ List.enum @@
-          find_compatibility_cases arg_var cs pat pats_used
+        find_compatibility_cases arg_var cs pat pats_used
       in
       let pats_used' = Pattern_type_set.add pat pats_used in
       (* Adapt the result into a conclusion. *)

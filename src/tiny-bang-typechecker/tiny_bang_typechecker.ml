@@ -1,5 +1,5 @@
 (**
-  This module represents the entry point for the TinyBang typechecking process.
+   This module represents the entry point for the TinyBang typechecking process.
 *)
 
 open Batteries;;
@@ -21,9 +21,9 @@ let logger = Tiny_bang_logger.make_logger "Tiny_bang_typechecker";;
 (* TYPECHECKING *)
 
 (**
-  Performs typechecking of the provided expression.
-  @param e The expression to typecheck.
-  @return [true] if the expression typechecks; [false] if it does not.
+   Performs typechecking of the provided expression.
+   @param e The expression to typecheck.
+   @return [true] if the expression typechecks; [false] if it does not.
 *)
 (* TODO: provide some information to explain the type errors and allow
          constraints to escape. *)
@@ -32,8 +32,8 @@ let typecheck e =
   let (_,cs) = initial_align_expr e in
   logger `trace
     (sprintf
-      "Initial alignment of %s yields constraints %s"
-      (pretty_expr e) (pretty_constraints cs)
+       "Initial alignment of %s yields constraints %s"
+       (pretty_expr e) (pretty_constraints cs)
     )
   ;
   (* Step 2: Initial alignment as implemented here does not give the initial
@@ -46,26 +46,26 @@ let typecheck e =
   let cs' = Constraint_database.replace_variables repl_fn cs in
   logger `trace
     (sprintf
-      "Initial contour instantiation yields constraints %s"
-      (pretty_constraints cs')
+       "Initial contour instantiation yields constraints %s"
+       (pretty_constraints cs')
     )
   ;
   (* Step 3: Perform constraint closure. *)
   let cs'' = perform_closure cs' in
   logger `trace
     (sprintf
-      "Constraint closure yields constraints %s"
-      (pretty_constraints cs'')
+       "Constraint closure yields constraints %s"
+       (pretty_constraints cs'')
     )
   ;
   (* Step 4: Look for inconsistencies. *)
   let inconsistencies = cs''
-    |> Constraint_database.enum
-    |> Enum.exists
-          (fun c ->
-            match c with
-              | Inconsistency_constraint -> true
-              | _ -> false)
+                        |> Constraint_database.enum
+                        |> Enum.exists
+                          (fun c ->
+                             match c with
+                             | Inconsistency_constraint -> true
+                             | _ -> false)
   in
   not inconsistencies
-  ;;
+;;

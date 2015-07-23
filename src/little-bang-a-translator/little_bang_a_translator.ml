@@ -250,16 +250,16 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
     let (
       (
         Tiny_bang_ast.Pattern (
-        _,
-        little_bang_ast_left_labeled_var,
-        little_bang_ast_left_pattern_filter_rules
+          _,
+          little_bang_ast_left_labeled_var,
+          little_bang_ast_left_pattern_filter_rules
         )
       ),
       (
         Tiny_bang_ast.Pattern (
-        _,
-        little_bang_ast_right_labeled_var,
-        little_bang_ast_right_pattern_filter_rules
+          _,
+          little_bang_ast_right_labeled_var,
+          little_bang_ast_right_pattern_filter_rules
         )
       )
     )
