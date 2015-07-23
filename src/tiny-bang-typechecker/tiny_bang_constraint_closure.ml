@@ -2,6 +2,8 @@ open Batteries;;
 
 open Tiny_bang_application_matching;;
 open Tiny_bang_application_matching_types;;
+open Tiny_bang_ast;;
+open Tiny_bang_compatibility;;
 open Tiny_bang_contours;;
 open Tiny_bang_nondeterminism;;
 open Tiny_bang_types;;
@@ -12,6 +14,16 @@ open Tiny_bang_utils;;
 (* LOGGER *)
 
 let logger = Tiny_bang_logger.make_logger "Tiny_bang_constraint_closure";;
+
+(* ************************************************************************** *)
+(* UTILITY FUNCTIONS *)
+let select_sensible_lower_bounds a cs =
+  let open Nondeterminism_monad in
+  let%bind rt = pick_enum @@ Constraint_database.type_lower_bounds_of a cs in
+  if sensible rt cs
+  then return rt
+  else zero ()
+;;
 
 (* ************************************************************************** *)
 (* CLOSURE RULES *)
@@ -51,7 +63,7 @@ let close_by_transitivity (cs : Constraint_database.t) : tbconstraint Enum.t =
 *)
 let close_by_application (cs : Constraint_database.t)
   : tbconstraint Enum.t =
-  let constriants_enums_m =
+  let constriants_enum_m =
     let open Nondeterminism_monad in
     (* Find an application. *)
     let%bind c = pick_enum @@ Constraint_database.enum cs in
@@ -105,9 +117,74 @@ let close_by_application (cs : Constraint_database.t)
             (Lower_bound_constraint(Intermediate_lower_bound(a2'),a2))
         ]
   in
-  constriants_enums_m
+  constriants_enum_m
   |> Nondeterminism_monad.enum
   |> Enum.concat
+;;
+
+(**
+   An abstract definition of a built-in closure.
+   @param cs The constraint set on which to perform closure.
+   @param op The operator to use in closure.
+   @param f A function which, when given the concrete types for a built-in
+            operation of this form, yields an enumeration of constraints.
+   @return The constraints learned from this process (which do not include the
+          original constraints).
+*)
+let close_primitive_builtin
+      (cs : Constraint_database.t)
+      (op : builtin_op)
+      (f : tvar -> filtered_type list -> tbconstraint Enum.t)
+  : tbconstraint Enum.t =
+  (* TODO: this function could take a map from op to f; then, it would be able
+           to close all primitives in one pass. *)
+  let constraints_enum_m =
+    let open Nondeterminism_monad in
+    let%bind c = pick_enum @@ Constraint_database.enum cs in
+    let%bind (operands,upper_bound) =
+      match c with
+      | Lower_bound_constraint(
+          Builtin_lower_bound(op',operands),upper_bound) when op = op' ->
+        return @@ (operands,upper_bound)
+      | _ ->
+        zero ()
+    in
+    let%bind operand_filtered_types =
+      sequence @@ List.map (fun a -> select_sensible_lower_bounds a cs) operands
+    in
+    return @@ f upper_bound operand_filtered_types
+  in
+  constraints_enum_m
+  |> Nondeterminism_monad.enum
+  |> Enum.concat
+;;
+
+(**
+   Performs integer addition closure.
+   @param cs The constraint set on which to perform closure.
+   @return The constraints learned from this process (which do not include the
+          original constraints).  
+*)
+let close_by_int_addition (cs : Constraint_database.t) : tbconstraint Enum.t =
+  close_primitive_builtin cs Op_int_plus @@
+  fun upper_bound operands ->
+    match operands with
+    | [Filtered_type(t1,_,_);Filtered_type(t2,_,_)] ->
+      begin
+        match t1,t2 with
+        | Int_type,Int_type ->
+          Enum.singleton @@
+            Lower_bound_constraint(
+              Type_lower_bound(Filtered_type(
+                Int_type,Pattern_type_set.empty,Pattern_type_set.empty)),
+              upper_bound)
+        | _ ->
+          (* Operands must be ints. *)
+          Enum.singleton @@ Inconsistency_constraint    
+      end
+    | _ ->
+      (* There must be two operands. *)
+      Enum.singleton @@ Inconsistency_constraint
 ;;
 
 (* ************************************************************************** *)
@@ -122,6 +199,7 @@ let rec perform_closure cs =
   let closure_functions =
     [ close_by_transitivity
     ; close_by_application
+    ; close_by_int_addition
     ] in
   let cs' =
     Constraint_database.union cs @@ Constraint_database.of_enum @@
