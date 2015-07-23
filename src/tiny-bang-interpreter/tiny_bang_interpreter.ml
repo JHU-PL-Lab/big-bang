@@ -22,6 +22,11 @@ let pretty_env (env : value Environment.t) =
 let lookup env x =
   (* TODO: Handle Not_found in a more graceful manner? Custom exception? *)
   Environment.find env x
+;;
+
+let update env x v =
+  Environment.replace env x v
+;;
 
 let bound_vars_of_expr (Expr(_, cls)) =
   cls
@@ -63,14 +68,14 @@ let compatibility env first_x_arg pat : value Var_map.t option =
         end
     | _ ->
     (* Otherwise, we need to check each value and make sure it matches the *)
-		(* pattern. The ordering of the match below is important.              *)
+        (* pattern. The ordering of the match below is important.              *)
         let v = lookup env x_arg in
         let lower_map =
           match v, pf with
           | Onion_value(_, x_arg_1, x_arg_2), _ ->
           (* Split onion values without looking at the pattern, expecting  *)
-					(* one of the two sides to match. (This is sane because the      *)
-					(* pattern isn't a conjunction.                                  *)
+                    (* one of the two sides to match. (This is sane because the      *)
+                    (* pattern isn't a conjunction.                                  *)
               Option.map_default Option.some
                 (compat x_arg_1 x_pat) (compat x_arg_2 x_pat)
           | _, Empty_filter(_) ->
@@ -87,9 +92,9 @@ let compatibility env first_x_arg pat : value Var_map.t option =
               None
         in
         (* Adds the binding for this point in the pattern. If this is      *)
-				(* premature (because, for instance, the next level up is an       *)
-				(* onion), the fact that this occurs postfix will erase this       *)
-				(* binding for the appropriate one.                                *)
+                (* premature (because, for instance, the next level up is an       *)
+                (* onion), the fact that this occurs postfix will erase this       *)
+                (* binding for the appropriate one.                                *)
         Option.map (Var_map.add x_pat v) lower_map
   in
   compat first_x_arg first_x_pat
@@ -175,61 +180,68 @@ let var_freshen freshening_stack cls =
   List.map (var_replace_clause repl_fn) cls
 ;;
 
-
-let rec var_lookup_int env var = 
+let rec var_project projector env var =
   let v = lookup env var in
   match v with
   | Empty_onion_value(_) -> None
-  | Label_value(_, _, _) -> None
-  | Onion_value(_, x1, x2) -> 
-        if(None = var_lookup_int env x1 )
-          then var_lookup_int env x2
-        else 
-          var_lookup_int env x1
-  | Function_value(_, _, _) -> None
-  | Int_value(_, i) -> Some i
-  | Ref_value(_, _) -> None
+  | Onion_value(_, x1, x2) ->
+    begin
+      match var_project projector env x1 with
+      | Some(v') -> Some(v')
+      | None -> var_project projector env x2
+    end
+  | _ -> projector v
 ;;
 
-let some_to_int var = 
-  match var with
-  | Some i -> i
-  | None -> raise @@ Evaluation_failure "Evaluation needed a int type variable to perform"
+let project_int v =
+  match v with
+  | Int_value(_,n) -> Some n
+  | _ -> None
 ;;
 
-let get_body_of_ref env ref_var = 
-  let ref_value = lookup env ref_var in 
-  match ref_value with
-  | Ref_value(_, x1) -> x1
-  | _ -> raise @@ Evaluation_failure "Evaluation needed a ref type variable to perform"
-;;
-
-(* updates the new value for the reference in the environment *)
-let update_env_ref env list_var =
-  match list_var with
-  | [ref_var; x'] -> 
-      let var_to_update = get_body_of_ref env ref_var in
-      let modified_value = lookup env x' in 
-      Environment.replace env var_to_update modified_value
-  | _ -> raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
+let project_ref_var v =
+  match v with
+  | Ref_value(_,x) -> Some x
+  | _ -> None
 ;;
 
 (*metatheoretic functions for the builtin operators *)
 let builtin_op env op list_var =
   match op with
-  | Op_plus -> if List.length list_var = 2 then
-                  let i = 
-                  List.map (var_lookup_int env) list_var in
-                  match i with
-                  | [Some(x);Some(y)] -> Int_value(next_uid(), x+y)
-                  | _ -> raise @@ Evaluation_failure "Int type required for addition"
-                else 
-                  raise @@ Evaluation_failure "For addition 2 arguments are required"
-  | Op_ref -> if List.length list_var = 2 then
-                 let () = update_env_ref env list_var in 
-                 Empty_onion_value (next_uid())
-              else 
-                  raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
+  | Op_plus ->
+    begin
+      match list_var with
+      | [x1;x2] ->
+        let result =
+          let open Option in
+          let%bind v1 = var_project project_int env x1 in
+          let%bind v2 = var_project project_int env x2 in
+          Some(v1 + v2)
+        in
+        begin
+          match result with
+          | Some(n) -> Int_value(next_uid(), n)
+          | None -> raise @@ Evaluation_failure("Addition defined only on ints.")
+        end
+      | _ ->
+        raise @@ Evaluation_failure "Addition requires exactly two arguments."
+    end
+  | Op_ref ->
+    begin
+      match list_var with
+      | [x1;x2] ->
+        begin
+          match var_project project_ref_var env x1 with
+          | None -> raise @@
+            Evaluation_failure "First reference assignment operand must be a ref"
+          | Some x_refbody ->
+            let v = lookup env x2 in
+            update env x_refbody v;
+            Empty_onion_value (next_uid())
+        end
+      | _ ->
+        raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
+    end
 ;;
 
 let rec evaluate env lastvar cls =

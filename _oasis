@@ -57,6 +57,7 @@ Library "tiny-bang-interpreter"
     Tiny_bang_interpreter
   BuildDepends:
     batteries,
+    ocaml-monadic,
     tiny-bang-ast,
     tiny-bang-utils
 
