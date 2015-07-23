@@ -14,19 +14,15 @@ let toploop_operate toploop_options e =
   print_string "\n";
   begin
     try
-      check_wellformed_expr e; 
-      let do_eval =
-        (if (not @@ toploop_options.toploop_typechecker_disabled) then true else
-         if typecheck e
-         then true
-         else (print_string "Type error.\n"; false)
-        )
-      in
-      if do_eval 
-      then
-        let v,env = eval e in
-        print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
-      else ()
+      (* Check well-formedness. *)
+      check_wellformed_expr e;
+      (* Typecheck (if appropriate). *)
+      if not @@ toploop_options.toploop_typechecker_disabled
+      then assert_typesafe e
+      else ();
+      (* Evaluate. *)
+      let v,env = eval e in
+      print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
     with
     | Illformedness_found(ills) ->
       print_string "Provided expression is ill-formed:\n";
@@ -34,6 +30,8 @@ let toploop_operate toploop_options e =
         (fun ill ->
            print_string @@ "   " ^ pretty_illformedness ill ^ "\n")
         ills
+    | Typecheck_error ->
+      print_string "Typechecking error discovered.\n"
   end;
   print_string "\n";
   print_string "Please enter an expression to evaluate followed by \";;\".\n";

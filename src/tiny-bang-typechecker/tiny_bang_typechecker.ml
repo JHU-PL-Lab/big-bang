@@ -20,14 +20,13 @@ let logger = Tiny_bang_logger.make_logger "Tiny_bang_typechecker";;
 (* ************************************************************************** *)
 (* TYPECHECKING *)
 
+exception Typecheck_error;;
+
 (**
-   Performs typechecking of the provided expression.
-   @param e The expression to typecheck.
-   @return [true] if the expression typechecks; [false] if it does not.
+   Determines the set of constraints which may be inferred and closed from an
+   expression.
 *)
-(* TODO: provide some information to explain the type errors and allow
-         constraints to escape. *)
-let typecheck e =
+let type_analyze e =
   (* Step 1: Initially align the expression. *)
   let (_,cs) = initial_align_expr e in
   logger `trace
@@ -56,10 +55,40 @@ let typecheck e =
     (sprintf
        "Constraint closure yields constraints %s"
        (pretty_constraints cs'')
-    )
-  ;
-  (* Step 4: Look for inconsistencies. *)
-  let inconsistencies = cs''
+    );
+  cs''
+;;
+
+(**
+   Performs typechecking of the provided expression.
+   @param e The expression to typecheck.
+   @raise Typecheck_error If the expression does not typecheck.
+*)
+let assert_typesafe e =
+  (* Get the constraints... *)
+  let cs = type_analyze e in
+  (* And then look for inconsistencies. *)
+  let inconsistencies = cs
+                        |> Constraint_database.enum
+                        |> Enum.exists
+                          (fun c ->
+                             match c with
+                             | Inconsistency_constraint -> true
+                             | _ -> false)
+  in
+  if inconsistencies then raise Typecheck_error else ()
+;;
+
+(**
+   Performs typechecking of the provided expression.
+   @param e The expression to typecheck.
+   @return [true] if the expression typechecks; [false] if it does not.
+*)
+let typecheck e =
+  (* Get the constraints... *)
+  let cs = type_analyze e in
+  (* And then look for inconsistencies. *)
+  let inconsistencies = cs
                         |> Constraint_database.enum
                         |> Enum.exists
                           (fun c ->
