@@ -1,0 +1,8 @@
+# EXPECT-TYPEFAIL
+
+x = 4;
+y = 4;
+b = int= x y;
+fT = p0 \ { p0 = `True p1; p1 = () } -> { rT = () };
+z = fT b;
+

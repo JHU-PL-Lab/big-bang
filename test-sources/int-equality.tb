@@ -1,0 +1,10 @@
+# EXPECT-TYPECHECK
+
+x = 4;
+y = 4;
+b = int= x y;
+fT = p0 \ { p0 = `True p1; p1 = () } -> { rT = () };
+fF = p2 \ { p2 = `False p3; p3 = () } -> { rF = () };
+f = fT & fF;
+z = f b;
+

@@ -36,6 +36,7 @@ let next_uid startpos endpos =
 %token DOUBLE_SEMICOLON
 %token EOF
 %token INT_PLUS
+%token INT_EQUAL
 %token REFERENCE_ASSIGN
 %token KEYWORD_INT
 %token KEYWORD_REF
@@ -94,6 +95,8 @@ identifier:
 builtin:
   | INT_PLUS
       { Op_int_plus }
+  | INT_EQUAL
+      { Op_int_equal }
   | REFERENCE_ASSIGN
       { Op_ref }
   ;

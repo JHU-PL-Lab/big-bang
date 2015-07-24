@@ -9,10 +9,21 @@ open Tiny_bang_utils;;
 (** A module for hashtables keyed by UIDs. *)
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
+(** The builtin in Tinybang. **)
+type builtin_op = 
+  | Op_int_plus   (** int+ *)
+  | Op_int_equal  (** int= *)
+  | Op_ref        (** := *)
+;;
+
 (** {6 Identifiers} *)
 
 (** A data type for identifiers in TinyBang. *)
-type ident = Ident of string | Fresh_ident of int;;
+type ident =
+  | Ident of string
+  | Fresh_ident of int
+  | Builtin_ident of builtin_op * int
+;;
 
 module Ident_hash =
 struct
@@ -53,6 +64,8 @@ type label = Label of ident;;
     the variable in question has not been instantiated (and remains within the
     body of a function). *)
 type freshening_stack = Freshening_stack of ident list;;
+
+let empty_freshening_stack = Freshening_stack [];;
 
 (** Variables in the TinyBang AST. *)
 type var = Var of ast_uid * ident * freshening_stack option;;
@@ -123,12 +136,6 @@ type pattern_filter =
 
 (** Sets of pattern filter rules that comprise a pattern. *)
 type pattern_filter_rules = pattern_filter Pvar_map.t;;
-
-(** The builtin in Tinybang. **)
-type builtin_op = 
-  | Op_int_plus   (** int+ *)
-  | Op_ref    (** := *)
-;;
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * pvar * pattern_filter_rules;;

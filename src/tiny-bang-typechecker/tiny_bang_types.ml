@@ -211,6 +211,14 @@ sig
   *)
   val replace_vars_of_constraint :
     (tvar -> tvar) -> tbconstraint -> tbconstraint
+  
+  (**
+     Produces a filtered type from a type; the filtered type is essentially
+     unfiltered in that its filter sets are empty.
+     @param t The raw type.
+     @return The equivalent filtered type.
+  *)
+  val unfiltered_type : tbtype -> filtered_type
 end;;
 
 (** A functor which produces abstract functionality for an abstract type module
@@ -265,6 +273,10 @@ struct
       T.Lower_bound_constraint(replace_vars_of_lower_bound f lb, f a)
     | T.Inconsistency_constraint ->
       c
+  ;;
+
+  let unfiltered_type t =
+    T.Filtered_type(t,Pattern_type_set.empty,Pattern_type_set.empty)
   ;;
 end;;
 
@@ -373,3 +385,4 @@ and Type_functions : Type_functions_sig
    their module namespaces unnecessarily.
 *)
 include Types;;
+let unfiltered_type = Type_functions.unfiltered_type;;

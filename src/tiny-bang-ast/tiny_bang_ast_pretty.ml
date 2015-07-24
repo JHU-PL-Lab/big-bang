@@ -3,10 +3,18 @@ open Batteries;;
 open Tiny_bang_ast;;
 open Tiny_bang_string_utils;;
 
+let pretty_builtin_op op =
+  match op with
+  | Op_int_plus -> "int+"
+  | Op_int_equal -> "int="
+  | Op_ref -> ":="
+;;
+
 let pretty_ident ident =
   match ident with
   | Ident s -> s
   | Fresh_ident id -> "__" ^ string_of_int id
+  | Builtin_ident(op,n) -> "__" ^ pretty_builtin_op op ^ "_" ^ string_of_int n
 ;;
 
 let pretty_label (Label i) = "`" ^ pretty_ident i;;
@@ -25,12 +33,6 @@ let pretty_var (Var(_, i, mfs)) =
   match mfs with
   | None -> pretty_ident i
   | Some fs -> pretty_ident i ^ pretty_freshening_stack fs
-;;
-
-let pretty_builtin_op op =
-  match op with
-  | Op_int_plus -> "int+"
-  | Op_ref -> ":="
 ;;
 
 let pretty_pat_filter pf =

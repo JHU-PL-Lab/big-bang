@@ -175,9 +175,50 @@ let close_by_int_addition (cs : Constraint_database.t) : tbconstraint Enum.t =
         | Int_type,Int_type ->
           Enum.singleton @@
             Lower_bound_constraint(
-              Type_lower_bound(Filtered_type(
-                Int_type,Pattern_type_set.empty,Pattern_type_set.empty)),
+              Type_lower_bound(unfiltered_type Int_type),
               upper_bound)
+        | _ ->
+          (* Operands must be ints. *)
+          Enum.singleton @@ Inconsistency_constraint    
+      end
+    | _ ->
+      (* There must be two operands. *)
+      Enum.singleton @@ Inconsistency_constraint
+;;
+
+(**
+   Performs integer equality closure.
+   @param cs The constraint set on which to perform closure.
+   @return The constraints learned from this process (which do not include the
+          original constraints).  
+*)
+let close_by_int_equality (cs : Constraint_database.t) : tbconstraint Enum.t =
+  close_primitive_builtin cs Op_int_equal @@
+  fun upper_bound operands ->
+    match operands with
+    | [Filtered_type(t1,_,_);Filtered_type(t2,_,_)] ->
+      begin
+        match t1,t2 with
+        | Int_type,Int_type ->
+          let empty_onion_tvar =
+            Tvar(Builtin_ident(Op_int_equal,0),Some initial_contour)
+          in
+          let empty_onion_constraint = Enum.singleton @@
+            Lower_bound_constraint(
+              Type_lower_bound(unfiltered_type Empty_onion_type),
+              empty_onion_tvar)
+          in
+          let label_constraints =
+            ["True";"False"]
+            |> List.enum
+            |> Enum.map
+              (fun name ->
+                Lower_bound_constraint(
+                  Type_lower_bound(unfiltered_type @@
+                    Label_type(Label(Ident name), empty_onion_tvar)),
+                upper_bound))
+          in
+          Enum.append empty_onion_constraint label_constraints
         | _ ->
           (* Operands must be ints. *)
           Enum.singleton @@ Inconsistency_constraint    
@@ -200,6 +241,7 @@ let rec perform_closure cs =
     [ close_by_transitivity
     ; close_by_application
     ; close_by_int_addition
+    ; close_by_int_equality
     ] in
   let cs' =
     Constraint_database.union cs @@ Constraint_database.of_enum @@

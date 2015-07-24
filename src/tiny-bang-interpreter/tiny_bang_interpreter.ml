@@ -220,7 +220,32 @@ let builtin_op env op list_var =
         in
         begin
           match result with
-          | Some(n) -> Int_value(next_uid(), n)
+          | Some(n) -> ([],Int_value(next_uid(), n))
+          | None -> raise @@ Evaluation_failure("Addition defined only on ints.")
+        end
+      | _ ->
+        raise @@ Evaluation_failure "Addition requires exactly two arguments."
+    end
+  | Op_int_equal ->
+    begin
+      match list_var with
+      | [x1;x2] ->
+        let result =
+          let open Option.Monad in
+          let%bind v1 = var_project project_int env x1 in
+          let%bind v2 = var_project project_int env x2 in
+          let empty_onion_var =
+            Var(next_uid(),
+              Builtin_ident(Op_int_equal,0),
+              Some empty_freshening_stack)
+          in
+          let lname = Ident(if v1 = v2 then "True" else "False") in
+          let v = Label_value(next_uid(),Label lname,empty_onion_var) in
+          return ([(empty_onion_var, Empty_onion_value(next_uid()))],v)
+        in
+        begin
+          match result with
+          | Some x -> x
           | None -> raise @@ Evaluation_failure("Addition defined only on ints.")
         end
       | _ ->
@@ -237,7 +262,7 @@ let builtin_op env op list_var =
           | Some x_refbody ->
             let v = lookup env x2 in
             update env x_refbody v;
-            Empty_onion_value (next_uid())
+            ([], Empty_onion_value (next_uid()))
         end
       | _ ->
         raise @@ Evaluation_failure "For reference assignment 2 arguments are required"
@@ -286,8 +311,9 @@ let rec evaluate env lastvar cls =
           evaluate env (Some x) (freshened_inline @ (ans_clause :: t))
       end
     | Builtin_redex(_, op, list_x) ->
-      let v = builtin_op env op list_x in
-      Environment.add env x v;
+      let (updates,v) = builtin_op env op list_x in
+      List.iter (fun (x',v') -> update env x' v') updates;
+      update env x v;
       evaluate env (Some x) t
 ;;
 
