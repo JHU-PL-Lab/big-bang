@@ -4,8 +4,8 @@ let append_to_clause_list tiny_bang_ast_expr new_clauses =
 ;;
 
 let merge left_pattern_filter_rules right_pattern_filter_rules =
-  Tiny_bang_ast.Var_map.fold
-    Tiny_bang_ast.Var_map.add
+  Tiny_bang_ast.Pvar_map.fold
+    Tiny_bang_ast.Pvar_map.add
     left_pattern_filter_rules
     right_pattern_filter_rules
 ;;
@@ -191,22 +191,20 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
   | Little_bang_ast.Empty_pattern (_) ->
     Tiny_bang_ast.Pattern (
       (Tiny_bang_ast_uid.next_uid ()),
-      Tiny_bang_ast.Var (
+      Tiny_bang_ast.Pvar (
         (Tiny_bang_ast_uid.next_uid ()),
-        binding_ident,
-        None
+        binding_ident
       ),
       (
-        Tiny_bang_ast.Var_map.add
+        Tiny_bang_ast.Pvar_map.add
           (
-            Tiny_bang_ast.Var (
+            Tiny_bang_ast.Pvar (
               (Tiny_bang_ast_uid.next_uid ()),
-              binding_ident,
-              None
+              binding_ident
             )
           )
           (Tiny_bang_ast.Empty_filter (Tiny_bang_ast_uid.next_uid ()))
-          Tiny_bang_ast.Var_map.empty
+          Tiny_bang_ast.Pvar_map.empty
       )
     )
   | Little_bang_ast.Label_pattern (_, little_bang_ast_label, little_bang_ast_subpattern) ->
@@ -221,18 +219,16 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
     in
     Tiny_bang_ast.Pattern (
       (Tiny_bang_ast_uid.next_uid ()),
-      Tiny_bang_ast.Var (
+      Tiny_bang_ast.Pvar (
         (Tiny_bang_ast_uid.next_uid ()),
-        binding_ident,
-        None
+        binding_ident
       ),
       (
-        Tiny_bang_ast.Var_map.add
+        Tiny_bang_ast.Pvar_map.add
           (
-            Tiny_bang_ast.Var (
+            Tiny_bang_ast.Pvar (
               (Tiny_bang_ast_uid.next_uid ()),
-              binding_ident,
-              None
+              binding_ident
             )
           )
           (Tiny_bang_ast.Label_filter (
@@ -271,18 +267,16 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
     in
     Tiny_bang_ast.Pattern (
       (Tiny_bang_ast_uid.next_uid ()),
-      Tiny_bang_ast.Var (
+      Tiny_bang_ast.Pvar (
         (Tiny_bang_ast_uid.next_uid ()),
-        binding_ident,
-        None
+        binding_ident
       ),
       (
-        Tiny_bang_ast.Var_map.add
+        Tiny_bang_ast.Pvar_map.add
           (
-            Tiny_bang_ast.Var (
+            Tiny_bang_ast.Pvar (
               (Tiny_bang_ast_uid.next_uid ()),
-              binding_ident,
-              None
+              binding_ident
             )
           )
           (Tiny_bang_ast.Conjunction_filter (
@@ -298,59 +292,53 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
     let spurious_ident = (Tiny_bang_ast.new_fresh_ident ()) in
     Tiny_bang_ast.Pattern (
       (Tiny_bang_ast_uid.next_uid ()),
-      Tiny_bang_ast.Var (
+      Tiny_bang_ast.Pvar (
         (Tiny_bang_ast_uid.next_uid ()),
-        binding_ident,
-        None
+        binding_ident
       ),
       (
-        Tiny_bang_ast.Var_map.add
+        Tiny_bang_ast.Pvar_map.add
           (
-            Tiny_bang_ast.Var (
+            Tiny_bang_ast.Pvar (
               (Tiny_bang_ast_uid.next_uid ()),
-              binding_ident,
-              None
+              binding_ident
             )
           )
           (Tiny_bang_ast.Conjunction_filter (
               (Tiny_bang_ast_uid.next_uid ()),
               (
-                Tiny_bang_ast.Var (
+                Tiny_bang_ast.Pvar (
                   (Tiny_bang_ast_uid.next_uid ()),
-                  spurious_ident,
-                  None
+                  spurious_ident
                 )
               ),
               (
-                Tiny_bang_ast.Var (
+                Tiny_bang_ast.Pvar (
                   (Tiny_bang_ast_uid.next_uid ()),
-                  little_bang_ast_var_ident,
-                  None
+                  little_bang_ast_var_ident
                 )
               )
             )
           )
           (
-            Tiny_bang_ast.Var_map.add
+            Tiny_bang_ast.Pvar_map.add
               (
-                Tiny_bang_ast.Var (
+                Tiny_bang_ast.Pvar (
                   (Tiny_bang_ast_uid.next_uid ()),
-                  spurious_ident,
-                  None
+                  spurious_ident
                 )
               )
               (Tiny_bang_ast.Empty_filter (Tiny_bang_ast_uid.next_uid ()))
               (
-                Tiny_bang_ast.Var_map.add
+                Tiny_bang_ast.Pvar_map.add
                   (
-                    Tiny_bang_ast.Var (
+                    Tiny_bang_ast.Pvar (
                       (Tiny_bang_ast_uid.next_uid ()),
-                      little_bang_ast_var_ident,
-                      None
+                      little_bang_ast_var_ident
                     )
                   )
                   (Tiny_bang_ast.Empty_filter (Tiny_bang_ast_uid.next_uid ()))
-                  Tiny_bang_ast.Var_map.empty
+                  Tiny_bang_ast.Pvar_map.empty
               )
           )
       )

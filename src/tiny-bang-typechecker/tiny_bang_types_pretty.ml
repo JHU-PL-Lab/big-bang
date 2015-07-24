@@ -13,27 +13,25 @@ let pretty_tvar (Tvar(i,cntr_option)) =
   | None -> "*"
 ;;
 
-(* Patterns never have instantiated variables, so this makes sense. *)
-let pretty_pattern_tvar (Tvar(i,_)) = pretty_ident i;;
+let pretty_tpvar (Tpvar(i)) = pretty_ident i;;
 
 let pretty_pattern_filter_type pf =
   match pf with
   | Empty_filter_type -> "()"
-  | Label_filter_type(l,a) -> pretty_label l ^ " " ^ pretty_pattern_tvar a
-  | Conjunction_filter_type(a1,a2) ->
-    pretty_pattern_tvar a1 ^ " * " ^ pretty_pattern_tvar a2
-  | Int_filter_type(a1) -> pretty_pattern_tvar a1 ^ " :int "
-  | Ref_filter_type(a1) -> "ref " ^ pretty_pattern_tvar a1
+  | Label_filter_type(l,a) -> pretty_label l ^ " " ^ pretty_tpvar a
+  | Conjunction_filter_type(a1,a2) -> pretty_tpvar a1 ^ " * " ^ pretty_tpvar a2
+  | Int_filter_type(a1) -> pretty_tpvar a1 ^ ":int"
+  | Ref_filter_type(a1) -> "ref " ^ pretty_tpvar a1
 ;;
 
 let pretty_pattern_type (Pattern_type(a,pfm)) =
-  pretty_pattern_tvar a ^ " \\ " ^
+  pretty_tpvar a ^ " \\ " ^
   (concat_sep_delim "{" "}" "; "
      (pfm
-      |> Tvar_map.enum
+      |> Tpvar_map.enum
       |> Enum.map
         (fun (a,pf) ->
-           pretty_pattern_tvar a ^ " = " ^ pretty_pattern_filter_type pf
+           pretty_tpvar a ^ " = " ^ pretty_pattern_filter_type pf
         )
      )
   )

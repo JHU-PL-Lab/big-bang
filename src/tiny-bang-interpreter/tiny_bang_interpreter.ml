@@ -51,7 +51,7 @@ let compatibility env first_x_arg pat : value Var_map.t option =
   let (Pattern(_, first_x_pat, pfcs)) = pat in
   let rec compat x_arg x_pat : value Var_map.t option =
     (* TODO: deal with the Not_found here more gracefully? *)
-    let pf = Var_map.find x_pat pfcs in
+    let pf = Pvar_map.find x_pat pfcs in
     match pf with
     (* Starting with conjunction, since we need to address that first. *)
     | Conjunction_filter(_, x_pat_1, x_pat_2) ->
@@ -84,10 +84,10 @@ let compatibility env first_x_arg pat : value Var_map.t option =
         | Label_value(_, l, x), Label_filter(_, l', x') ->
           if l = l' then compat x x' else None
         | Int_value(_, _) as i, Int_filter(_, x) ->
-          Some (Var_map.singleton x i)
+          Some (Var_map.singleton (var_of_pvar x) i)
         | Ref_value(_,x), Ref_filter(_, x') ->
           let x_value = lookup env x in
-          Some(Var_map.singleton x' x_value)
+          Some (Var_map.singleton (var_of_pvar x') x_value)
         | _, _ ->
           None
       in
@@ -95,7 +95,7 @@ let compatibility env first_x_arg pat : value Var_map.t option =
       (* premature (because, for instance, the next level up is an       *)
       (* onion), the fact that this occurs postfix will erase this       *)
       (* binding for the appropriate one.                                *)
-      Option.map (Var_map.add x_pat v) lower_map
+      Option.map (Var_map.add (var_of_pvar x_pat) v) lower_map
   in
   compat first_x_arg first_x_pat
 ;;

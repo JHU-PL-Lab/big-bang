@@ -414,21 +414,20 @@ let test_pattern_empty_onion _ =
   in
   match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
   | Tiny_bang_ast.Pattern (
-      _, (Tiny_bang_ast.Var (_, binding_ident_output, None)), tiny_bang_pattern_filter_rules
+      _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
     ) ->
     assert_equal binding_ident binding_ident_output;
     (
-      match Tiny_bang_ast.Var_map.bindings tiny_bang_pattern_filter_rules with
-      | [(Tiny_bang_ast.Var (_, binding_ident_output, None) as binding_var, _)] ->
+      match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
+      | [(Tiny_bang_ast.Pvar (_, binding_ident_output) as binding_var, _)] ->
         assert_equal binding_ident binding_ident_output;
         (
-          match Tiny_bang_ast.Var_map.find binding_var tiny_bang_pattern_filter_rules with
+          match Tiny_bang_ast.Pvar_map.find binding_var tiny_bang_pattern_filter_rules with
           | Tiny_bang_ast.Empty_filter _ -> ()
           | _ -> assert_failure "expected A-translation of pattern to have the right structure"
         )
       | _ -> assert_failure "expected A-translation of pattern to have the right structure"
     )
-  | _ -> assert_failure "expected A-translation of pattern to have the right structure"
 ;;
 
 let test_pattern_label _ =
@@ -443,20 +442,20 @@ let test_pattern_label _ =
   in
   match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
   | Tiny_bang_ast.Pattern (
-      _, (Tiny_bang_ast.Var (_, binding_ident_output, None)), tiny_bang_pattern_filter_rules
+      _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
     ) ->
     assert_equal binding_ident binding_ident_output;
     (
-      match Tiny_bang_ast.Var_map.bindings tiny_bang_pattern_filter_rules with
+      match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
       | [
-        (Tiny_bang_ast.Var (_, binding_ident_output, None) as binding_var, _);
-        (Tiny_bang_ast.Var (_, _, None) as label_var, _)
+        (Tiny_bang_ast.Pvar (_, binding_ident_output) as binding_var, _);
+        (Tiny_bang_ast.Pvar (_, _) as label_var, _)
       ] ->
         assert_equal binding_ident binding_ident_output;
         (
           match (
-            (Tiny_bang_ast.Var_map.find binding_var tiny_bang_pattern_filter_rules),
-            (Tiny_bang_ast.Var_map.find label_var tiny_bang_pattern_filter_rules)
+            (Tiny_bang_ast.Pvar_map.find binding_var tiny_bang_pattern_filter_rules),
+            (Tiny_bang_ast.Pvar_map.find label_var tiny_bang_pattern_filter_rules)
           ) with
           | (
             (Tiny_bang_ast.Label_filter (_, (Tiny_bang_ast.Label label_ident_output), _)),
@@ -466,7 +465,6 @@ let test_pattern_label _ =
         )
       | _ -> assert_failure "expected A-translation of pattern to have the right structure"
     )
-  | _ -> assert_failure "expected A-translation of pattern to have the right structure"
 ;;
 
 let test_pattern_conjunction _ =
@@ -480,22 +478,22 @@ let test_pattern_conjunction _ =
   in
   match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
   | Tiny_bang_ast.Pattern (
-      _, (Tiny_bang_ast.Var (_, binding_ident_output, None)), tiny_bang_pattern_filter_rules
+      _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
     ) ->
     assert_equal binding_ident binding_ident_output;
     (
-      match Tiny_bang_ast.Var_map.bindings tiny_bang_pattern_filter_rules with
+      match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
       | [
-        (Tiny_bang_ast.Var (_, binding_ident_output, None) as binding_var, _);
-        (Tiny_bang_ast.Var (_, _, None) as conjunction_left_var, _);
-        (Tiny_bang_ast.Var (_, _, None) as conjunction_right_var, _)
+        (Tiny_bang_ast.Pvar (_, binding_ident_output) as binding_var, _);
+        (Tiny_bang_ast.Pvar (_, _) as conjunction_left_var, _);
+        (Tiny_bang_ast.Pvar (_, _) as conjunction_right_var, _)
       ] ->
         assert_equal binding_ident binding_ident_output;
         (
           match (
-            (Tiny_bang_ast.Var_map.find binding_var tiny_bang_pattern_filter_rules),
-            (Tiny_bang_ast.Var_map.find conjunction_left_var tiny_bang_pattern_filter_rules),
-            (Tiny_bang_ast.Var_map.find conjunction_right_var tiny_bang_pattern_filter_rules)
+            (Tiny_bang_ast.Pvar_map.find binding_var tiny_bang_pattern_filter_rules),
+            (Tiny_bang_ast.Pvar_map.find conjunction_left_var tiny_bang_pattern_filter_rules),
+            (Tiny_bang_ast.Pvar_map.find conjunction_right_var tiny_bang_pattern_filter_rules)
           ) with
           | (
             (Tiny_bang_ast.Conjunction_filter (_, _, _)),
@@ -506,7 +504,6 @@ let test_pattern_conjunction _ =
         )
       | _ -> assert_failure "expected A-translation of pattern to have the right structure"
     )
-  | _ -> assert_failure "expected A-translation of pattern to have the right structure"
 ;;
 
 let test_pattern_var _ =
@@ -526,28 +523,28 @@ let test_pattern_var _ =
   in
   match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
   | Tiny_bang_ast.Pattern (
-      _, (Tiny_bang_ast.Var (_, binding_ident_output, None)), tiny_bang_pattern_filter_rules
+      _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
     ) ->
     assert_equal binding_ident binding_ident_output;
     (
-      match Tiny_bang_ast.Var_map.bindings tiny_bang_pattern_filter_rules with
+      match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
       | [
-        (Tiny_bang_ast.Var (_, var_right_ident, None) as var_right_var, _);
-        (Tiny_bang_ast.Var (_, binding_ident_output, None) as binding_var, _);
-        (Tiny_bang_ast.Var (_, var_left_ident, None) as var_left_var, _)
+        (Tiny_bang_ast.Pvar (_, var_right_ident) as var_right_var, _);
+        (Tiny_bang_ast.Pvar (_, binding_ident_output) as binding_var, _);
+        (Tiny_bang_ast.Pvar (_, var_left_ident) as var_left_var, _)
       ] ->
         assert_equal binding_ident binding_ident_output;
         (
           match (
-            (Tiny_bang_ast.Var_map.find binding_var tiny_bang_pattern_filter_rules),
-            (Tiny_bang_ast.Var_map.find var_left_var tiny_bang_pattern_filter_rules),
-            (Tiny_bang_ast.Var_map.find var_right_var tiny_bang_pattern_filter_rules)
+            (Tiny_bang_ast.Pvar_map.find binding_var tiny_bang_pattern_filter_rules),
+            (Tiny_bang_ast.Pvar_map.find var_left_var tiny_bang_pattern_filter_rules),
+            (Tiny_bang_ast.Pvar_map.find var_right_var tiny_bang_pattern_filter_rules)
           ) with
           | (
             (Tiny_bang_ast.Conjunction_filter (
                 _,
-                Tiny_bang_ast.Var (_, var_left_ident_output, None),
-                Tiny_bang_ast.Var (_, var_right_ident_output, None)
+                Tiny_bang_ast.Pvar (_, var_left_ident_output),
+                Tiny_bang_ast.Pvar (_, var_right_ident_output)
               )
             ),
             (Tiny_bang_ast.Empty_filter _),
@@ -559,7 +556,6 @@ let test_pattern_var _ =
         )
       | _ -> assert_failure "expected A-translation of pattern to have the right structure"
     )
-  | _ -> assert_failure "expected A-translation of pattern to have the right structure"
 ;;
 
 let tests = "Test_little_bang_a_translator" >:::

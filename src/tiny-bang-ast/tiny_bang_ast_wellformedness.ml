@@ -11,8 +11,8 @@ open Tiny_bang_ast_pretty;;
 open Tiny_bang_string_utils;;
 
 type illformedness =
-  | Filter_cycle of var list
-  | Open_filter_variable of var
+  | Filter_cycle of pvar list
+  | Open_filter_variable of pvar
   | Duplicate_variable_binding of var
   | Open_expression_variable of var
 ;;
@@ -23,9 +23,9 @@ let pretty_illformedness ill =
   match ill with
   | Filter_cycle(xs) ->
     sprintf "Pattern variable cycle detected: %s"
-      (pretty_list pretty_var xs)
+      (pretty_list pretty_pvar xs)
   | Open_filter_variable(x) ->
-    sprintf "Free variable detected in pattern: %s" (pretty_var x)
+    sprintf "Free variable detected in pattern: %s" (pretty_pvar x)
   | Duplicate_variable_binding(x) ->
     sprintf "Variable %s bound twice" (pretty_var x)
   | Open_expression_variable(x) ->
@@ -58,22 +58,22 @@ let merge_illformedness xs =
 let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
   let rec walk_pattern x vars_seen_list vars_seen_set : unit =
     (* Make sure the variable exists. *)
-    if not @@ Var_map.mem x pfm
+    if not @@ Pvar_map.mem x pfm
     then
       raise (Illformedness_found([Open_filter_variable(x)]))
     else ();
     (* Check for cycles. *)
-    if Var_set.mem x vars_seen_set
+    if Pvar_set.mem x vars_seen_set
     then
       (* Identify the cycle by looking into the list for the variable. *)
-      let (idx,_) = List.findi (fun _ el -> var_equal el x) vars_seen_list in
+      let (idx,_) = List.findi (fun _ el -> pvar_equal el x) vars_seen_list in
       let cycle = List.rev @@ (x :: List.take (idx+1) vars_seen_list) in
       raise (Illformedness_found([Filter_cycle(cycle)]))
     else ();
     (* Identify each of the variables in the pattern filter and explore those
        as well. *)
     let rec_vars =
-      match Var_map.find x pfm with
+      match Pvar_map.find x pfm with
       | Empty_filter(_) -> []
       | Label_filter(_,_,x') -> [x']
       | Conjunction_filter(_,x',x'') -> [x';x'']
@@ -83,24 +83,24 @@ let check_wellformed_pattern (Pattern(_,x_initial,pfm)) : unit =
     merge_illformedness @@
     List.map
       (fun x' -> function () ->
-         walk_pattern x' (x::vars_seen_list) (Var_set.add x vars_seen_set))
+         walk_pattern x' (x::vars_seen_list) (Pvar_set.add x vars_seen_set))
       rec_vars
   in
-  walk_pattern x_initial [] Var_set.empty
+  walk_pattern x_initial [] Pvar_set.empty
 ;;
 
 (**
    Determines the variables bound by a pattern.  The pattern must be well-formed.
 *)
-let vars_bound_by_pattern (Pattern(_,x_initial,pfm)) : Var_set.t =
+let vars_bound_by_pattern (Pattern(_,x_initial,pfm)) : Pvar_set.t =
   let rec walk x =
-    Var_set.add x @@
-    match Var_map.find x pfm with
-    | Empty_filter(_) -> Var_set.empty
+    Pvar_set.add x @@
+    match Pvar_map.find x pfm with
+    | Empty_filter(_) -> Pvar_set.empty
     | Label_filter(_,_,x') -> walk x'
-    | Conjunction_filter(_,x',x'') -> Var_set.union (walk x') (walk x'')
-    | Int_filter(_,x') -> Var_set.singleton x' 
-    | Ref_filter(_,x') -> Var_set.singleton x'
+    | Conjunction_filter(_,x',x'') -> Pvar_set.union (walk x') (walk x'')
+    | Int_filter(_,x') -> Pvar_set.singleton x' 
+    | Ref_filter(_,x') -> Pvar_set.singleton x'
   in
   walk x_initial
 ;;
@@ -132,9 +132,11 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
             | Label_value(_,_,x') -> Var_set.singleton x'
             | Onion_value(_,x1,x2) -> Var_set.of_list [x1;x2]
             | Function_value(_,p,e) ->
-              Var_set.diff
-                (vars_free_in_expr e)
-                (vars_bound_by_pattern p)
+              Var_set.diff (vars_free_in_expr e)
+                (vars_bound_by_pattern p
+                  |> Pvar_set.enum
+                  |> Enum.map var_of_pvar
+                  |> Var_set.of_enum) 
           end
         | Var_redex(_,x') -> Var_set.singleton x'
         | Appl_redex(_,x1,x2) -> Var_set.of_list [x1;x2]
@@ -194,8 +196,8 @@ let check_wellformed_expr e_initial : unit =
              | Value_redex(_,Function_value(_,p,(Expr(_,cls')))) ->
                let pat_vars = vars_bound_by_pattern p in
                let pat_map =
-                 pat_vars |> Var_set.enum
-                 |> Enum.map (fun x -> (x,1))
+                 pat_vars |> Pvar_set.enum
+                 |> Enum.map (fun x -> (var_of_pvar x,1))
                  |> Var_map.of_enum
                in
                let body_map = count_clause_bindings cls' in

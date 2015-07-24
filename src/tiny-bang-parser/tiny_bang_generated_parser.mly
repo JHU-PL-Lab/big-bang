@@ -76,6 +76,11 @@ variable:
       { Var((next_uid $startpos $endpos),$1,None) }
   ;
 
+pattern_variable:
+  | identifier
+      { Pvar((next_uid $startpos $endpos),$1) }
+  ;
+
 label:
   | LABEL
       { Label (Ident $1) }
@@ -119,7 +124,7 @@ value:
       { Ref_value((next_uid $startpos $endpos),$2)}
 
 pattern:
-  | variable BACKSLASH OPEN_BRACE filter_rule_set CLOSE_BRACE
+  | pattern_variable BACKSLASH OPEN_BRACE filter_rule_set CLOSE_BRACE
       { Pattern((next_uid $startpos $endpos),$1,$4) }
 
 filter_rule_set:
@@ -130,30 +135,30 @@ filter_rule_set:
         ignore
           (List.fold_left
             (fun s -> fun (x,_) ->
-              if Var_set.mem x s
+              if Pvar_set.mem x s
                 then raise (Tiny_bang_utils.Not_yet_implemented
                               "Duplicate filter rule variable")
-                else Var_set.add x s
+                else Pvar_set.add x s
             )
-            Var_set.empty
+            Pvar_set.empty
             rules);
-        Var_map.of_enum (BatList.enum $1)
+        Pvar_map.of_enum (BatList.enum $1)
       }
 
 filter_rule:
-  | variable EQUALS filter
+  | pattern_variable EQUALS filter
       { ($1,$3) }
 
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
-  | variable COLON KEYWORD_INT
+  | pattern_variable COLON KEYWORD_INT
       { Int_filter((next_uid $startpos $endpos),$1)}
-  | label variable
+  | label pattern_variable
       { Label_filter((next_uid $startpos $endpos),$1,$2) }
-  | variable ASTERISK variable
+  | pattern_variable ASTERISK pattern_variable
       { Conjunction_filter((next_uid $startpos $endpos),$1,$3) }
-  | KEYWORD_REF variable
+  | KEYWORD_REF pattern_variable
       { Ref_filter((next_uid $startpos $endpos),$2)}
 
 separated_nonempty_trailing_list(separator, rule):

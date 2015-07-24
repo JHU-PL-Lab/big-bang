@@ -17,29 +17,34 @@ let initial_align_var (x : var) : tvar =
   Tvar(i,None)
 ;;
 
+let initial_align_pvar (x : pvar) : tpvar =
+  let (Pvar(_,i)) = x in
+  Tpvar(i)
+;;
+
 let initial_align_pattern_filter pf =
   match pf with
   | Empty_filter(_) -> Empty_filter_type
-  | Label_filter(_,l,x) -> Label_filter_type(l,initial_align_var x)
+  | Label_filter(_,l,x) -> Label_filter_type(l,initial_align_pvar x)
   | Conjunction_filter(_,x1,x2) ->
-    Conjunction_filter_type(initial_align_var x1, initial_align_var x2)
-  | Int_filter(_,x1) -> Int_filter_type(initial_align_var x1)
-  | Ref_filter(_,x1) -> Ref_filter_type(initial_align_var x1)
+    Conjunction_filter_type(initial_align_pvar x1, initial_align_pvar x2)
+  | Int_filter(_,x1) -> Int_filter_type(initial_align_pvar x1)
+  | Ref_filter(_,x1) -> Ref_filter_type(initial_align_pvar x1)
 ;;
 
 let initial_align_pattern_filter_map pfm =
-  Var_map.fold
+  Pvar_map.fold
     (fun x -> fun pf -> fun m ->
-       Tvar_map.add
-         (initial_align_var x)
+       Tpvar_map.add
+         (initial_align_pvar x)
          (initial_align_pattern_filter pf)
          m)
     pfm
-    Tvar_map.empty
+    Tpvar_map.empty
 ;;
 
 let initial_align_pattern (Pattern(_,x,m)) =
-  Pattern_type(initial_align_var x, initial_align_pattern_filter_map m)
+  Pattern_type(initial_align_pvar x, initial_align_pattern_filter_map m)
 ;;
 
 let rec initial_align_expr (Expr(_,cls)) =

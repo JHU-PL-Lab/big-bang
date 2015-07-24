@@ -21,16 +21,32 @@ module Tvar_set = Set.Make(Tvar_order);;
 
 module Tvar_map = Map.Make(Tvar_order);;
 
+type tpvar =
+  | Tpvar of ident
+;;
+
+let tvar_of_tpvar (Tpvar(i)) = Tvar(i,None);;
+
+module Tpvar_order =
+struct
+  type t = tpvar
+  let compare = compare 
+end;;
+
+module Tpvar_set = Set.Make(Tpvar_order);;
+
+module Tpvar_map = Map.Make(Tpvar_order);;
+
 type pattern_filter_type =
   | Empty_filter_type
-  | Label_filter_type of label * tvar
-  | Conjunction_filter_type of tvar * tvar
-  | Int_filter_type of tvar
-  | Ref_filter_type of tvar
+  | Label_filter_type of label * tpvar
+  | Conjunction_filter_type of tpvar * tpvar
+  | Int_filter_type of tpvar
+  | Ref_filter_type of tpvar
 ;;
 
 type pattern_type =
-  | Pattern_type of tvar * pattern_filter_type Tvar_map.t
+  | Pattern_type of tpvar * pattern_filter_type Tpvar_map.t
 ;;
 
 module Pattern_type_order =

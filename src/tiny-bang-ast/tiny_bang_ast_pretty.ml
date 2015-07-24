@@ -19,6 +19,8 @@ let pretty_freshening_stack (Freshening_stack ids) =
        acc ^ "__" ^ pretty_ident i) "" ids
 ;;
 
+let pretty_pvar (Pvar(_,i)) = pretty_ident i;;
+
 let pretty_var (Var(_, i, mfs)) =
   match mfs with
   | None -> pretty_ident i
@@ -34,26 +36,24 @@ let pretty_builtin_op op =
 let pretty_pat_filter pf =
   match pf with
   | Empty_filter(_) -> "()"
-  | Label_filter(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
-  | Conjunction_filter(_, x1, x2) -> pretty_var x1 ^ " * " ^ pretty_var x2
-  | Int_filter(_, x1) -> pretty_var x1 ^ ": int "
-  | Ref_filter(_, x1) -> "ref " ^ pretty_var x1 
+  | Label_filter(_, l, x) -> pretty_label l ^ " " ^ pretty_pvar x
+  | Conjunction_filter(_, x1, x2) -> pretty_pvar x1 ^ " * " ^ pretty_pvar x2
+  | Int_filter(_, x1) -> pretty_pvar x1 ^ ": int "
+  | Ref_filter(_, x1) -> "ref " ^ pretty_pvar x1 
 ;;
 
 let pretty_pat_filter_rules (pfrs : pattern_filter_rules) =
   let inner = 
     pfrs
-    |> Var_map.enum
-    |> Enum.map (fun (x,pf) -> pretty_var x ^ " = " ^ pretty_pat_filter pf)
-    |> Enum.fold
-      (fun acc -> fun s -> if acc = "" then s else acc ^ "; " ^ s)
-      ""
+    |> Pvar_map.enum
+    |> Enum.map (fun (x,pf) -> pretty_pvar x ^ " = " ^ pretty_pat_filter pf)
+    |> concat_sep "; "
   in
   "{ " ^ inner ^ " }"
 ;;
 
 let pretty_pattern (Pattern(_, x, pfrs)) =
-  pretty_var x ^ " \ " ^ pretty_pat_filter_rules pfrs
+  pretty_pvar x ^ " \ " ^ pretty_pat_filter_rules pfrs
 ;;
 
 let rec pretty_expr (Expr(_, cls)) =

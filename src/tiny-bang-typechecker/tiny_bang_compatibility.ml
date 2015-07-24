@@ -400,7 +400,10 @@ and compatibility_by_type
         tasks
         answers
   in
-  return @@ Compatibility_result(bindings @ new_bindings, answers)
+  let new_bindings' =
+    List.map (fun (ft,a) -> (ft, tvar_of_tpvar a)) new_bindings
+  in
+  return @@ Compatibility_result(new_bindings' @ bindings, answers)
 
 (**
    Breaks down non-compatibility patterns until all of them are in constructor
@@ -452,7 +455,7 @@ and compatibility_by_type_maybe_with_non_constr_pats
   | task::tasks' ->
     let Pattern_type(a,pfm) = task.ct_pat in
     (* TODO: handle the following potential Not_found more gracefully *)
-    match Tvar_map.find a pfm with
+    match Tpvar_map.find a pfm with
     | Empty_filter_type ->
       (* EMPTY PATTERN RULE *)
       (* This rule always matches.  Make sure that's okay. *)
@@ -584,7 +587,7 @@ and compatibility_by_type_with_only_constr_pats
      not or if the handler returns [None], the larger match fails. *)
   and recursive_single_constructor_solve
       (tv : tvar)
-      (handler : pattern_filter_type -> tvar option)
+      (handler : pattern_filter_type -> tpvar option)
       (tasks : compatibility_task list)
       (bind_state : bind_state)
     : compatibility_result Nondeterminism_monad.m =
@@ -599,7 +602,7 @@ and compatibility_by_type_with_only_constr_pats
     let query_generator (task : compatibility_task)
       : bool compatibility_query option =
       let Pattern_type(a'',pfm) = task.ct_pat in
-      let filt = Tvar_map.find a'' pfm in
+      let filt = Tpvar_map.find a'' pfm in
       match handler filt with
       | Some a' ->
         let task' = { ct_pat = Pattern_type(a',pfm)
@@ -768,14 +771,14 @@ and compatibility_by_type_with_only_constr_pats
     immediate_solve 
       (fun filt->
          let Pattern_type(p,map_tvar) = filt in
-         let type_pat = Tvar_map.find p map_tvar in
+         let type_pat = Tpvar_map.find p map_tvar in
          match type_pat with
          | Int_filter_type(p') ->
            (* Bind an unfiltered int to the pattern variable. *)
            let just_an_int = Filtered_type (
                Int_type, Pattern_type_set.empty, Pattern_type_set.empty)
            in
-           Some [(just_an_int,p')]
+           Some [(just_an_int,tvar_of_tpvar p')]
          | _ -> None
       )
       tasks
@@ -783,7 +786,7 @@ and compatibility_by_type_with_only_constr_pats
     immediate_solve 
       (fun filt->
          let Pattern_type(p,map_tvar) = filt in
-         let type_pat = Tvar_map.find p map_tvar in
+         let type_pat = Tpvar_map.find p map_tvar in
          match type_pat with
          | Ref_filter_type(x') ->
            (* Bind *every* lower bound of the ref contents to the pattern
@@ -791,7 +794,8 @@ and compatibility_by_type_with_only_constr_pats
            let lower_bound_filtered_type_list = 
              List.of_enum @@ Constraint_database.type_lower_bounds_of x cs
            in
-           Some (List.map (fun ft -> (ft,x')) lower_bound_filtered_type_list)
+           Some (List.map (fun ft -> (ft,tvar_of_tpvar x'))
+                  lower_bound_filtered_type_list)
          | _ -> None
       )
       tasks

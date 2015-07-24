@@ -89,17 +89,40 @@ module Var_map = Map.Make(Var_order);;
 
 (** {6 Patterns} *)
 
+(** Pattern variables, which are distinct because they are not instantiated. *)
+type pvar = Pvar of ast_uid * ident;;
+
+let pvar_compare (Pvar(_,i1)) (Pvar(_,i2)) = compare i1 i2;;
+
+let pvar_equal x1 x2 = pvar_compare x1 x2 = 0;;
+
+module Pvar_order =
+struct
+  type t = pvar
+  let compare = pvar_compare
+end;;
+
+module Pvar_set = Set.Make(Pvar_order);;
+
+module Pvar_map = Map.Make(Pvar_order);;
+
+(** An injector from pattern variable to expression variable.  The resulting
+    variable has no freshening stack. *)
+let var_of_pvar (Pvar(uid,i)) = Var(uid,i,None);;
+
 (** Individual pattern filters. *)
 type pattern_filter =
   | Empty_filter of ast_uid
-  | Label_filter of ast_uid * label * var
-  | Conjunction_filter of ast_uid * var * var
-  | Int_filter of ast_uid * var
-  | Ref_filter of ast_uid * var  
+  | Label_filter of ast_uid * label * pvar
+  | Conjunction_filter of ast_uid * pvar * pvar
+  | Int_filter of ast_uid * pvar
+  | Ref_filter of ast_uid * pvar  
 ;;
+(* Note that the variables on Int_filter and Ref_filter are of a different sort;
+   they have different binding rules. *)
 
 (** Sets of pattern filter rules that comprise a pattern. *)
-type pattern_filter_rules = pattern_filter Var_map.t;;
+type pattern_filter_rules = pattern_filter Pvar_map.t;;
 
 (** The builtin in Tinybang. **)
 type builtin_op = 
@@ -108,7 +131,7 @@ type builtin_op =
 ;;
 
 (** The type of a TinyBang pattern. *)
-type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
+type pattern = Pattern of ast_uid * pvar * pattern_filter_rules;;
 
 (** {6 Expressions} *)
 
