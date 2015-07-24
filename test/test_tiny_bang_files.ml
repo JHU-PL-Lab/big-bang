@@ -26,8 +26,8 @@ type test_expectation =
 
 let parse_expectation str =
   match str with
-    | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_only)
-    | "EXPECT-TYPECHECK-ONLY" -> Some(Expect_typecheck_and_run)
+    | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_and_run)
+    | "EXPECT-TYPECHECK-ONLY" -> Some(Expect_typecheck_only)
     | "EXPECT-TYPEFAIL" -> Some(Expect_typefail)
     | _ -> None
 ;;
