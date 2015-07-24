@@ -119,12 +119,12 @@ variable:
 
 label:
   | LABEL
-      { Label (Ident $1) }
+      { Label (Tiny_bang_ast.Ident $1) }
   ;
 
 identifier:
   | IDENTIFIER
-      { Ident $1 }
+      { Little_bang_ast.Ident $1 }
   ;
 
 

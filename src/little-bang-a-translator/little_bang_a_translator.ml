@@ -10,6 +10,16 @@ let merge left_pattern_filter_rules right_pattern_filter_rules =
     right_pattern_filter_rules
 ;;
 
+let a_translate_ident i =
+  match i with
+  | Little_bang_ast.Ident s -> Tiny_bang_ast.Ident s
+  | Little_bang_ast.Fresh_ident n ->
+    (* This step makes sense because the fresh idents from the LittleBang AST
+       module should be in sync with the ident counter from the TinyBang AST 
+       module. *)
+    Tiny_bang_ast.Fresh_ident n
+;;
+
 let rec a_translate_expr little_bang_ast_expr binding_ident =
   match little_bang_ast_expr with
   | Little_bang_ast.Value_expr (_, little_bang_ast_value) ->
@@ -140,17 +150,17 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
       little_bang_ast_expr_assignment,
       little_bang_ast_expr_body
     ) ->
-    let (
-      (Tiny_bang_ast.Expr (_, _)) as little_bang_ast_expr_assignment_converted,
-      (Tiny_bang_ast.Expr (_, little_bang_ast_expr_body_clauses))
-    )
-      =
-      (
-        (a_translate_expr little_bang_ast_expr_assignment little_bang_ast_expr_assigned_ident),
-        (a_translate_expr little_bang_ast_expr_body binding_ident)
-      )
+    let little_bang_ast_expr_assignment_converted =
+      a_translate_expr
+        little_bang_ast_expr_assignment
+        (a_translate_ident little_bang_ast_expr_assigned_ident)
     in
-    append_to_clause_list little_bang_ast_expr_assignment_converted little_bang_ast_expr_body_clauses
+    let Tiny_bang_ast.Expr (_, little_bang_ast_expr_body_clauses) =
+      a_translate_expr little_bang_ast_expr_body binding_ident
+    in
+    append_to_clause_list
+      little_bang_ast_expr_assignment_converted
+      little_bang_ast_expr_body_clauses
   | Little_bang_ast.Var_expr (
       _, Little_bang_ast.Var (_, little_bang_ast_expr_var_ident)
     ) ->
@@ -167,7 +177,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
             (Tiny_bang_ast_uid.next_uid ()),
             Tiny_bang_ast.Var (
               (Tiny_bang_ast_uid.next_uid ()),
-              little_bang_ast_expr_var_ident,
+              a_translate_ident little_bang_ast_expr_var_ident,
               None
             )
           )
@@ -315,7 +325,7 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
               (
                 Tiny_bang_ast.Pvar (
                   (Tiny_bang_ast_uid.next_uid ()),
-                  little_bang_ast_var_ident
+                  a_translate_ident little_bang_ast_var_ident
                 )
               )
             )
@@ -334,7 +344,7 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
                   (
                     Tiny_bang_ast.Pvar (
                       (Tiny_bang_ast_uid.next_uid ()),
-                      little_bang_ast_var_ident
+                      a_translate_ident little_bang_ast_var_ident
                     )
                   )
                   (Tiny_bang_ast.Empty_filter (Tiny_bang_ast_uid.next_uid ()))

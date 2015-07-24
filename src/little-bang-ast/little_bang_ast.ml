@@ -2,8 +2,23 @@
    Contains data type definitions for the LittleBang AST.
 *)
 
-open Tiny_bang_ast;;
 open Tiny_bang_ast_uid;;
+open Tiny_bang_utils;;
+
+type label = Tiny_bang_ast.label;;
+
+type ident =
+  | Ident of string
+  | Fresh_ident of int
+;;
+
+let new_fresh_ident () =
+  match Tiny_bang_ast.new_fresh_ident () with
+  | Tiny_bang_ast.Fresh_ident n -> Fresh_ident n
+  | Tiny_bang_ast.Ident _ ->
+    raise @@ Invariant_failure
+      "Tiny_bang_ast.new_fresh_ident returned Ident (not Fresh_ident)"
+;;
 
 type var = Var of ast_uid * ident;;
 

@@ -305,7 +305,7 @@ let test_expression_appl _ =
 
 let test_expression_let _ =
   let binding_ident = Tiny_bang_ast.new_fresh_ident () in
-  let assigned_ident = Tiny_bang_ast.new_fresh_ident () in
+  let assigned_ident = Little_bang_ast.new_fresh_ident () in
   let little_bang_expression =
     Little_bang_ast.Let_expr (
       Tiny_bang_ast_uid.next_uid (),
@@ -349,7 +349,8 @@ let test_expression_let _ =
           )
         ]
       ) ->
-      assert_equal assigned_ident assigned_ident_output;
+      assert_equal (Little_bang_a_translator.a_translate_ident assigned_ident)
+        assigned_ident_output;
       assert_equal binding_ident binding_ident_output;
       true
     | _ -> false
@@ -363,7 +364,7 @@ let test_expression_let _ =
 
 let test_expression_var _ =
   let binding_ident = Tiny_bang_ast.new_fresh_ident () in
-  let var_ident = Tiny_bang_ast.new_fresh_ident () in
+  let var_ident = Little_bang_ast.new_fresh_ident () in
   let little_bang_expression =
     Little_bang_ast.Var_expr (
       Tiny_bang_ast_uid.next_uid (),
@@ -393,7 +394,8 @@ let test_expression_var _ =
           )
         ]
       ) ->
-      assert_equal var_ident var_ident_output;
+      assert_equal (Little_bang_a_translator.a_translate_ident var_ident)
+        var_ident_output;
       assert_equal binding_ident binding_ident_output;
       true
     | _ -> false
@@ -505,7 +507,7 @@ let test_pattern_conjunction _ =
 ;;
 
 let test_pattern_var _ =
-  let var_ident = Tiny_bang_ast.new_fresh_ident () in
+  let var_ident = Little_bang_ast.new_fresh_ident () in
   let binding_ident = Tiny_bang_ast.new_fresh_ident () in
   let little_bang_pattern =
     Little_bang_ast.Var_pattern (
