@@ -9,6 +9,8 @@ open Tiny_bang_utils;;
 (** A module for hashtables keyed by UIDs. *)
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
+(** {6 Identifiers} *)
+
 (** A data type for identifiers in TinyBang. *)
 type ident = Ident of string | Fresh_ident of int;;
 
@@ -42,6 +44,8 @@ let new_fresh_ident () =
 (** The label type.  The identifier stored in this label does not contain the
     leading backtick. *)
 type label = Label of ident;;
+
+(** {6 Variables} *)
 
 (** A freshening stack of identifiers for variables produced at runtime.  This
     tracks the invocation stack of these variables.  The first element in the
@@ -83,6 +87,8 @@ module Var_set = Set.Make(Var_order);;
 
 module Var_map = Map.Make(Var_order);;
 
+(** {6 Patterns} *)
+
 (** Individual pattern filters. *)
 type pattern_filter =
   | Empty_filter of ast_uid
@@ -103,6 +109,8 @@ type builtin_op =
 
 (** The type of a TinyBang pattern. *)
 type pattern = Pattern of ast_uid * var * pattern_filter_rules;;
+
+(** {6 Expressions} *)
 
 (** The type of a TinyBang expression. *)
 type expr = Expr of ast_uid * clause list

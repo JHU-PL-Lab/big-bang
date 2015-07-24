@@ -4,8 +4,8 @@ open Tiny_bang_ast;;
 open Tiny_bang_contours_types;;
 
 (* ************************************************************************** *)
-(* BASIC DATA TYPES *)
-(* The simple, largely non-recursive data types. *) 
+(** {6 Basic data types} *)
+(** The simple, largely non-recursive data types. *) 
 
 type tvar =
   | Tvar of ident * contour option
@@ -42,8 +42,9 @@ end;;
 module Pattern_type_set = Set.Make(Pattern_type_order);;
 
 (* ************************************************************************** *)
-(* TYPE INTERFACE *)
-(* This section contains the module type interfaces used to define the
+(** {6 Type interface} *)
+(**
+   This section contains the module type interfaces used to define the
    types representing the TinyBang type system.  We wish to use a sophisticated
    constraint database (rather than linear searches); OCaml's module system
    makes this difficult in conjunction with recursive modules.  We address this
@@ -142,10 +143,12 @@ sig
 end;;
 
 (* ************************************************************************** *)
-(* PARTIAL TYPE IMPLEMENTATION *)
-(* This section defines an abstract implementation of functions which operate
+(** {6 Partial type implementation} *)
+(**
+   This section defines an abstract implementation of functions which operate
    on types.  It is as complete as possible without knowing the concrete type
-   of the constraint database. *)
+   of the constraint database.
+*)
 
 (**
    The signature of a module which provides generic functionality for an abstract
@@ -250,8 +253,9 @@ struct
 end;;
 
 (* ************************************************************************** *)
-(* TYPE IMPLEMENTATION *)
-(* The implementation of TinyBang types currently used by the system.  This
+(** {6 Full type implementation} *)
+(**
+   The implementation of TinyBang types currently used by the system.  This
    implementation need not be unique; in theory, the below approach could be
    used to create e.g. a different constraint database implementation.  Indeed,
    one might refactor the system to allow the selection of an implementation at
