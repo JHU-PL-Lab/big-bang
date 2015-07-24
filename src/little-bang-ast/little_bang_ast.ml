@@ -5,6 +5,8 @@
 open Tiny_bang_ast;;
 open Tiny_bang_ast_uid;;
 
+type var = Var of ast_uid * ident;;
+
 type pattern =
   | Var_pattern of ast_uid * var
   | Empty_pattern of ast_uid

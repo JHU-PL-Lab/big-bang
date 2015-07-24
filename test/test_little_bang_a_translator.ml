@@ -309,10 +309,9 @@ let test_expression_let _ =
   let little_bang_expression =
     Little_bang_ast.Let_expr (
       Tiny_bang_ast_uid.next_uid (),
-      Tiny_bang_ast.Var (
+      Little_bang_ast.Var (
         (Tiny_bang_ast_uid.next_uid ()),
-        assigned_ident,
-        None
+        assigned_ident
       ),
       Little_bang_ast.Value_expr (
         Tiny_bang_ast_uid.next_uid (),
@@ -368,10 +367,9 @@ let test_expression_var _ =
   let little_bang_expression =
     Little_bang_ast.Var_expr (
       Tiny_bang_ast_uid.next_uid (),
-      Tiny_bang_ast.Var (
+      Little_bang_ast.Var (
         (Tiny_bang_ast_uid.next_uid ()),
-        var_ident,
-        None
+        var_ident
       )
     )
   in
@@ -513,10 +511,9 @@ let test_pattern_var _ =
     Little_bang_ast.Var_pattern (
       (Tiny_bang_ast_uid.next_uid ()),
       (
-        Tiny_bang_ast.Var (
+        Little_bang_ast.Var (
           (Tiny_bang_ast_uid.next_uid ()),
-          var_ident,
-          None
+          var_ident
         )
       )
     )

@@ -136,7 +136,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
        ]
     )
   | Little_bang_ast.Let_expr (
-      _, Tiny_bang_ast.Var (_, little_bang_ast_expr_assigned_ident, _),
+      _, Little_bang_ast.Var (_, little_bang_ast_expr_assigned_ident),
       little_bang_ast_expr_assignment,
       little_bang_ast_expr_body
     ) ->
@@ -152,7 +152,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
     in
     append_to_clause_list little_bang_ast_expr_assignment_converted little_bang_ast_expr_body_clauses
   | Little_bang_ast.Var_expr (
-      _, Tiny_bang_ast.Var (_, little_bang_ast_expr_var_ident, _)
+      _, Little_bang_ast.Var (_, little_bang_ast_expr_var_ident)
     ) ->
     Tiny_bang_ast.Expr (
       (Tiny_bang_ast_uid.next_uid ()), [
@@ -288,7 +288,7 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
           (merge little_bang_ast_left_pattern_filter_rules little_bang_ast_right_pattern_filter_rules)
       )
     )
-  | Little_bang_ast.Var_pattern (_, Tiny_bang_ast.Var (_, little_bang_ast_var_ident, _)) ->
+  | Little_bang_ast.Var_pattern (_, Little_bang_ast.Var (_, little_bang_ast_var_ident)) ->
     let spurious_ident = (Tiny_bang_ast.new_fresh_ident ()) in
     Tiny_bang_ast.Pattern (
       (Tiny_bang_ast_uid.next_uid ()),

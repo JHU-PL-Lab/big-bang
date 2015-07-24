@@ -114,7 +114,7 @@ literal:
 
 variable:
   | identifier
-      { Var((next_uid $startpos $endpos),$1,None) }
+      { Little_bang_ast.Var((next_uid $startpos $endpos),$1) }
   ;
 
 label:
