@@ -1,0 +1,19 @@
+# Reference: https://github.com/ocaml/oasis2opam/blob/f1ee33f94f146e7fee618d30512dbfb9b3c68cc9/.travis.yml
+
+language: c
+sudo: false
+addons:
+  apt:
+    sources:
+    - avsm
+    packages:
+    - ocaml
+    - ocaml-native-compilers
+    - opam
+
+script: bash -ex .travis-ci.sh
+env:
+  - OPAM_SWITCH=4.02.2
+cache:
+  directories:
+  - $HOME/.opam
