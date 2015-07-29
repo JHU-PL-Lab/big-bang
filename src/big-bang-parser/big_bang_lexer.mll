@@ -66,32 +66,32 @@ rule read = parse
 
   (* Keywords. *)
 
-  | "true"    { TRUE }
-  | "false"   { FALSE }
-  | "and"     { AND }
-  | "or"      { OR }
-  | "xor"     { XOR }
-  | "not"     { NOT }
-  | "fun"     { FUN }
-  | "def"     { DEF }
-  | "let"     { LET }
-  | "ref"     { REF }
-  | "if"      { IF }
-  | "then"    { THEN }
-  | "elseif"  { ELSE_IF }
-  | "else"    { ELSE }
-  | "end"     { END }
-  | "match"   { MATCH }
-  | "as"      { AS }
-  | "in"      { IN }
-  | "repeat"  { REPEAT }
-  | "while"   { WHILE }
-  | "do"      { DO }
-  | "return"  { RETURN }
-  | "object"  { OBJECT }
-  | "include" { INCLUDE }
-  | "public"  { PUBLIC }
-  | "private" { PRIVATE }
+  | "true"                 { TRUE }
+  | "false"                { FALSE }
+  | "and"                  { AND }
+  | "or"                   { OR }
+  | "xor"                  { XOR }
+  | "not"                  { NOT }
+  | "fun"                  { FUN }
+  | "def"                  { DEF }
+  | "let"                  { LET }
+  | "ref"                  { REF }
+  | "if"                   { IF }
+  | "then"                 { THEN }
+  | "else" whitespace "if" { ELSE_IF }
+  | "else"                 { ELSE }
+  | "end"                  { END }
+  | "match"                { MATCH }
+  | "as"                   { AS }
+  | "in"                   { IN }
+  | "repeat"               { REPEAT }
+  | "while"                { WHILE }
+  | "do"                   { DO }
+  | "return"               { RETURN }
+  | "object"               { OBJECT }
+  | "include"              { INCLUDE }
+  | "public"               { PUBLIC }
+  | "private"              { PRIVATE }
 
   (* Literals. *)
 
