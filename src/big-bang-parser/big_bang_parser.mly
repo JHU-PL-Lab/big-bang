@@ -1,17 +1,14 @@
 %{
-(* open Big_bang_ast;; *)
-(* open Little_bang_ast;; *)
-(* open Tiny_bang_ast;; *)
-(* open Tiny_bang_ast_uid;; *)
-(* open Tiny_bang_parser_support;; *)
-(* open Tiny_bang_source_origin;; *)
-(* open Lexing;; *)
+open Big_bang_ast;;
+open Tiny_bang_ast_uid;;
+open Tiny_bang_parser_support;;
+open Tiny_bang_source_origin;;
+open Lexing;;
 
 
 (* FIXME: Refactor the repetition between this, Little_bang_generated_parser and
           Tiny_bang_generated_parser.
 *)
-(*
 let next_uid startpos endpos =
   let uid : ast_uid = next_uid () in
   let start = { file_pos_lineno = startpos.pos_lnum
@@ -27,7 +24,6 @@ let next_uid startpos endpos =
   Ast_uid_hashtbl.add (get_ast_position_hash()) uid region;
   uid
 ;;
-*)
 %}
 
 (**********)
@@ -125,10 +121,8 @@ let next_uid startpos endpos =
 (* Grammar start symbols *)
 (*************************)
 
-(* %start <Big_bang_ast.program> source_file_program *)
-(* %start <Big_bang_ast.program option> toploop_program *)
-%start <unit> source_file_program
-%start <unit> toploop_program
+%start <Big_bang_ast.program>        source_file_program
+%start <Big_bang_ast.program option> toploop_program
 
 %%
 
@@ -159,20 +153,43 @@ let next_uid startpos endpos =
 
 %public
 source_file_program:
-  | __ option(block_of(top_level_block_expression)) EOF
-    { () }
+  | __;
+    expressions_option = option(block_of(top_level_block_expression));
+    EOF
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      Program (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 %public
 toploop_program:
-  | __ option(block_of(top_level_block_expression)) toploop_program_terminator
-    { () }
+  | __;
+    expressions_option = option(block_of(top_level_block_expression));
+    toploop_program_terminator
+    {
+      match expressions_option with
+      | Some expressions ->
+        Some (
+          Program (
+            next_uid $startpos $endpos,
+            Block (next_uid $startpos $endpos, expressions)
+          )
+        )
+      | None -> None
+    }
   ;
 
 %inline
 toploop_program_terminator:
   | DOUBLE_SEMICOLON
-    { () }
   | EOF
     { () }
   ;
@@ -193,52 +210,51 @@ toploop_program_terminator:
 (* Top level expressions are those that appear out of functions or methods. *)
 %public
 top_level_block_expression:
-  | literal(top_level_block_expression)
-    { () }
-  | operation(top_level_block_expression)
-    { () }
-  | selection(top_level_block_expression)
-    { () }
-  | application_or_indexing(top_level_block_expression)
-    { () }
-  | method_call(top_level_block_expression)
-    { () }
-  | identifier
-    { () }
-  | assignment(top_level_block_expression)
-    { () }
-  | flow_control(top_level_block_expression)
-    { () }
-  | function_abstraction
-    { () }
-  | LEFT_PARENTHESIS __ block_of(top_level_block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(top_level_block_expression)
+  | expression = operation(top_level_block_expression)
+  | expression = selection(top_level_block_expression)
+  | expression = application_or_indexing(top_level_block_expression)
+  | expression = method_call(top_level_block_expression)
+  | expression = identifier_expression
+  | expression = assignment_expression(top_level_block_expression)
+  | expression = flow_control(top_level_block_expression)
+  | expression = function_abstraction
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(top_level_block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 %public
 function_or_method_body_block_expression:
-  | literal(function_or_method_body_block_expression)
-    { () }
-  | operation(function_or_method_body_block_expression)
-    { () }
-  | selection(function_or_method_body_block_expression)
-    { () }
-  | application_or_indexing(function_or_method_body_block_expression)
-    { () }
-  | method_call(function_or_method_body_block_expression)
-    { () }
-  | identifier
-    { () }
-  | assignment(function_or_method_body_block_expression)
-    { () }
-  | flow_control(function_or_method_body_block_expression)
-    { () }
-  | function_abstraction
-    { () }
-  | return(function_or_method_body_block_expression)
-    { () }
-  | LEFT_PARENTHESIS __ block_of(function_or_method_body_block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(function_or_method_body_block_expression)
+  | expression = operation(function_or_method_body_block_expression)
+  | expression = selection(function_or_method_body_block_expression)
+  | expression = application_or_indexing(function_or_method_body_block_expression)
+  | expression = method_call(function_or_method_body_block_expression)
+  | expression = identifier_expression
+  | expression = assignment_expression(function_or_method_body_block_expression)
+  | expression = flow_control(function_or_method_body_block_expression)
+  | expression = function_abstraction
+  | expression = return(function_or_method_body_block_expression)
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(function_or_method_body_block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* `value_block_expression' was designed for the `include' section of objects
@@ -247,22 +263,24 @@ function_or_method_body_block_expression:
    IMPORTANT: It should be kept in sync with `value_inline_expression'! *)
 %public
 value_block_expression:
-  | literal(value_block_expression)
-    { () }
-  | operation(value_block_expression)
-    { () }
-  | selection(value_block_expression)
-    { () }
-  | application_or_indexing(value_block_expression)
-    { () }
-  | method_call(value_block_expression)
-    { () }
-  | identifier
-    { () }
-  | flow_control(value_block_expression)
-    { () }
-  | LEFT_PARENTHESIS __ block_of(value_block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(value_block_expression)
+  | expression = operation(value_block_expression)
+  | expression = selection(value_block_expression)
+  | expression = application_or_indexing(value_block_expression)
+  | expression = method_call(value_block_expression)
+  | expression = identifier_expression
+  | expression = flow_control(value_block_expression)
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(value_block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* `value_inline_expression' can be used where a value is expected. For example, on
@@ -271,72 +289,79 @@ value_block_expression:
    IMPORTANT: It should be kept in sync with `value_block_expression'! *)
 %public
 value_inline_expression(block_expression):
-  | literal(block_expression)
-    { () }
-  | operation(block_expression)
-    { () }
-  | selection(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | method_call(block_expression)
-    { () }
-  | identifier
-    { () }
-  | flow_control(block_expression)
-    { () }
-  | LEFT_PARENTHESIS __ block_of(block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(block_expression)
+  | expression = operation(block_expression)
+  | expression = selection(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = method_call(block_expression)
+  | expression = identifier_expression
+  | expression = flow_control(block_expression)
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* Conditional expressions are those which may appear in the condition part of
    e.g. an if or while expression. *)
 %public
 condition_inline_expression(block_expression):
-  | literal(block_expression)
-    { () }
-  | operation(block_expression)
-    { () }
-  | selection(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | method_call(block_expression)
-    { () }
-  | identifier
-    { () }
-  | LEFT_PARENTHESIS __ block_of(block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(block_expression)
+  | expression = operation(block_expression)
+  | expression = selection(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = method_call(block_expression)
+  | expression = identifier_expression
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* Selectable expressions are those that can show up in selections (to the left
    of the `.'). *)
 %public
 selectable_inline_expression(block_expression):
-  | delimited_literal(block_expression)
-    { () }
-  | selection(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | method_call(block_expression)
-    { () }
-  | identifier
-    { () }
-  | LEFT_PARENTHESIS __ block_of(block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = delimited_literal(block_expression)
+  | expression = selection(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = method_call(block_expression)
+  | expression = identifier_expression
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* Assignable expressions are those that can show up in mutable update
    assignments (to the left of the `='). *)
 %public
 assignable_inline_expression(block_expression):
-  | selection(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | identifier
-    { () }
+  | expression = selection(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = identifier_expression
+    { expression }
   ;
 
 (* Applicable or indexable expressions are those that can show up in function
@@ -358,186 +383,269 @@ assignable_inline_expression(block_expression):
 *)
 %public
 applicable_or_indexable_inline_expression(block_expression):
-  | delimited_literal(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | method_call(block_expression)
-    { () }
-  | identifier
-    { () }
-  | flow_control(block_expression)
-    { () }
-  | LEFT_PARENTHESIS __ block_of(block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = delimited_literal(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = method_call(block_expression)
+  | expression = identifier_expression
+  | expression = flow_control(block_expression)
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (* Labelable expressions are those that can be labeled (after the label itself). *)
 %public
 labelable_inline_expression(block_expression):
-  | literal(block_expression)
-    { () }
-  | unary_prefix_operation(block_expression)
-    { () }
-  | selection(block_expression)
-    { () }
-  | application_or_indexing(block_expression)
-    { () }
-  | method_call(block_expression)
-    { () }
-  | identifier
-    { () }
-  | flow_control(block_expression)
-    { () }
-  | LEFT_PARENTHESIS __ block_of(block_expression) RIGHT_PARENTHESIS
-    { () }
+  | expression = literal(block_expression)
+  | expression = unary_prefix_operation_expression(block_expression)
+  | expression = selection(block_expression)
+  | expression = application_or_indexing(block_expression)
+  | expression = method_call(block_expression)
+  | expression = identifier_expression
+  | expression = flow_control(block_expression)
+    { expression }
+  | LEFT_PARENTHESIS;
+    __;
+    expressions = block_of(block_expression);
+    RIGHT_PARENTHESIS
+    {
+      Expression_block (
+        next_uid $startpos $endpos,
+        Block (next_uid $startpos $endpos, expressions)
+      )
+    }
   ;
 
 (******************************************************************************)
 
-(* Pattern rules are named after their expression correlates with the `_pattern'
-  suffix. *)
+(* Pattern rules are named after their expression correlates with the `pattern_'
+  prefix. *)
 
 %public
 pattern:
-  | literal_pattern
-    { () }
-  | operation_pattern
-    { () }
-  | identifier_pattern
-    { () }
-  | LEFT_PARENTHESIS __ pattern __ RIGHT_PARENTHESIS
-    { () }
+  | pattern = pattern_literal
+  | pattern = pattern_operation
+  | pattern = pattern_pattern_identifier
+  | LEFT_PARENTHESIS;
+    __;
+    pattern = pattern;
+    __;
+    RIGHT_PARENTHESIS
+    { pattern }
   ;
 
 (* Labelable patterns are those that can be labeled (after the label itself). *)
 %public
-labelable_pattern:
-  | literal_pattern
-    { () }
-  | identifier_pattern
-    { () }
-  | LEFT_PARENTHESIS __ pattern __ RIGHT_PARENTHESIS
-    { () }
+pattern_labelable:
+  | pattern = pattern_literal
+  | pattern = pattern_pattern_identifier
+  | LEFT_PARENTHESIS;
+    __;
+    pattern = pattern;
+    __;
+    RIGHT_PARENTHESIS
+    { pattern }
+  ;
+
+%public
+pattern_literal:
+  | pattern = pattern_primitive_literal
+  | pattern = pattern_structured_literal
+    {
+      Pattern_pattern_literal (
+        next_uid $startpos $endpos,
+        pattern
+      )
+    }
   ;
 
 %inline
-literal_pattern:
-  | primitive_literal_pattern
-    { () }
-  | structured_literal_pattern
-    { () }
+pattern_primitive_literal:
+  | literal = primitive_literal
+    {
+      Pattern_literal_primitive_literal (
+        next_uid $startpos $endpos,
+        literal
+      )
+    }
   ;
 
 %inline
-primitive_literal_pattern:
-  | primitive_literal
-    { () }
+pattern_structured_literal:
+  | pattern = pattern_delimited_structured_literal
+  | pattern = pattern_open_ended_structured_literal
+    { pattern }
   ;
 
 %inline
-structured_literal_pattern:
-  | delimited_structured_literal_pattern
-    { () }
-  | open_ended_structured_literal_pattern
-    { () }
+pattern_delimited_structured_literal:
+  | pattern = pattern_record
+  | pattern = pattern_list
+    { pattern }
   ;
 
 %inline
-delimited_structured_literal_pattern:
-  | record_pattern
-    { () }
-  | list_pattern
-    { () }
+pattern_open_ended_structured_literal:
+  | pattern = pattern_prefix_structured_literal
+    { pattern }
   ;
 
 %inline
-open_ended_structured_literal_pattern:
-  | prefix_structured_literal_pattern
-    { () }
+pattern_prefix_structured_literal:
+  | pattern = pattern_labeled_data
+    { pattern }
   ;
 
 %inline
-prefix_structured_literal_pattern:
-  | labeled_data_pattern
-    { () }
-  ;
-
-%inline
-record_pattern:
-  | LEFT_CURLY_BRACKET __
-      option(list_of(record_field_pattern, list_divider))
+pattern_record:
+  | LEFT_CURLY_BRACKET;
+    __;
+    pattern_record_fields_option = option(list_of(pattern_record_field, list_divider));
     RIGHT_CURLY_BRACKET
-    { () }
+    {
+      let pattern_record_fields =
+        match pattern_record_fields_option with
+        | Some pattern_record_fields ->
+          Identifier_map.of_enum @@ Batteries.List.enum pattern_record_fields
+        | None -> Identifier_map.empty
+      in
+      Pattern_literal_pattern_record (
+        next_uid $startpos $endpos,
+        pattern_record_fields
+      )
+    }
   ;
 
 %inline
-record_field_pattern:
-  | identifier __ EQUALS __ pattern
-    { () }
+pattern_record_field:
+  | key = identifier;
+    __;
+    EQUALS;
+    __;
+    value = pattern
+    { (key, value) }
   ;
 
 %inline
-list_pattern:
-  | LEFT_SQUARE_BRACKET __
-      option(list_of(list_field_pattern, list_divider))
-      option(terminated(list_field_remainder_pattern, __))
+pattern_list:
+  | LEFT_SQUARE_BRACKET;
+    __;
+    patterns_option = option(list_of(pattern_list_field, list_divider));
+    rest = option(terminated(pattern_list_field_remainder, __));
     RIGHT_SQUARE_BRACKET
-    { () }
+    {
+      let patterns =
+        match patterns_option with
+        | Some patterns -> patterns
+        | None -> []
+      in
+      Pattern_literal_pattern_list (
+        next_uid $startpos $endpos,
+        patterns,
+        rest
+      )
+    }
   ;
 
 %inline
-list_field_pattern:
-  | pattern
-    { () }
+pattern_list_field:
+  | pattern = pattern
+    { pattern }
   ;
 
 %inline
-list_field_remainder_pattern:
-  | ASTERISK (* NO NEWLINE *) identifier_pattern
-    { () }
+pattern_list_field_remainder:
+  | ASTERISK;
+    (* NO NEWLINE *);
+    pattern_identifier = pattern_identifier
+    { pattern_identifier }
   ;
 
 %inline
-labeled_data_pattern:
-  | label __ labelable_pattern
-    { () }
+pattern_labeled_data:
+  | label = label;
+    __;
+    pattern = pattern_labelable
+    {
+      Pattern_literal_pattern_labeled_data (
+        next_uid $startpos $endpos,
+        label,
+        pattern
+      )
+    }
+  ;
+
+%public
+pattern_operation:
+  | pattern_operation = pattern_binary_operation
+    {
+      Pattern_pattern_operation (
+        next_uid $startpos $endpos,
+        pattern_operation
+      )
+    }
   ;
 
 %inline
-operation_pattern:
-  | binary_operation_pattern
-    { () }
+pattern_binary_operation:
+  | left_operand = pattern;
+    (* NO NEWLINE *);
+    pattern_operation_constructor = pattern_binary_operator;
+    __;
+    right_operand = pattern
+    {
+      pattern_operation_constructor left_operand right_operand
+    }
   ;
 
 %inline
-binary_operation_pattern:
-  | pattern (* NO NEWLINE *) binary_operator_pattern __ pattern
-    { () }
+pattern_binary_operator:
+  | pattern_operator = pattern_conjunction_operator
+    { pattern_operator }
   ;
 
 %inline
-binary_operator_pattern:
-  | conjunction_operator_pattern
-    { () }
-  ;
-
-%inline
-conjunction_operator_pattern:
+pattern_conjunction_operator:
   | AND
-    { () }
+    {
+      fun left_operand right_operand ->
+        Pattern_operation_conjunction (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
+  ;
+
+%public
+pattern_pattern_identifier:
+  | pattern_identifier = pattern_identifier
+    {
+      Pattern_pattern_identifier (
+        next_uid $startpos $endpos,
+        pattern_identifier
+      )
+    }
   ;
 
 %inline
-identifier_pattern:
-  | identifier
-    { () }
-  | catch_all_identifier_pattern
-    { () }
+pattern_identifier:
+  | identifier = identifier
+    { Pattern_identifier identifier }
+  | pattern_catch_all_identifier
+    { Pattern_identifier_catch_all }
   ;
 
 %inline
-catch_all_identifier_pattern:
+pattern_catch_all_identifier:
   | UNDERSCORE
     { () }
   ;
@@ -546,10 +654,14 @@ catch_all_identifier_pattern:
 
 %public
 literal(block_expression):
-  | primitive_literal
-    { () }
-  | structured_literal(block_expression)
-    { () }
+  | literal = primitive_literal
+  | literal = structured_literal(block_expression)
+    {
+      Expression_literal (
+        next_uid $startpos $endpos,
+        literal
+      )
+    }
   ;
 
 (* `delimited_literal' are literals that are not open ended (e.g. numbers and
@@ -577,108 +689,120 @@ literal(block_expression):
 *)
 %public
 delimited_literal(block_expression):
-  | primitive_literal
-    { () }
-  | delimited_structured_literal(block_expression)
-    { () }
+  | delimited_literal = primitive_literal
+  | delimited_literal = delimited_structured_literal(block_expression)
+    {
+      Expression_literal (
+        next_uid $startpos $endpos,
+        delimited_literal
+      )
+    }
   ;
 
 %inline
 primitive_literal:
-  | boolean
-    { () }
-  | number
-    { () }
-  | character
-    { () }
-  | text
-    { () }
-  | empty_onion
-    { () }
+  | primitive_literal = boolean
+  | primitive_literal = number
+  | primitive_literal = character
+  | primitive_literal = text
+  | primitive_literal = empty_onion
+    { primitive_literal }
   ;
 
 %inline
 structured_literal(block_expression):
-  | delimited_structured_literal(block_expression)
-    { () }
-  | open_ended_structured_literal(block_expression)
-    { () }
+  | structured_literal = delimited_structured_literal(block_expression)
+  | structured_literal = open_ended_structured_literal(block_expression)
+    { structured_literal }
   ;
 
 %inline
 delimited_structured_literal(block_expression):
-  | record(block_expression)
-    { () }
-  | list_(block_expression)
-    { () }
-  | anonymous_function
-    { () }
-  | object_
-    { () }
+  | delimited_structured_literal = record(block_expression)
+  | delimited_structured_literal = list_(block_expression)
+  | delimited_structured_literal = anonymous_function
+  | delimited_structured_literal = object_
+    { delimited_structured_literal }
   ;
 
 %inline
 open_ended_structured_literal(block_expression):
-  | prefix_structured_literal(block_expression)
-    { () }
+  | open_ended_structured_literal = prefix_structured_literal(block_expression)
+    { open_ended_structured_literal }
   ;
 
 %inline
 prefix_structured_literal(block_expression):
-  | labeled_data(block_expression)
-    { () }
+  | prefix_structured_literal = labeled_data(block_expression)
+    { prefix_structured_literal }
   ;
 
 %inline
 boolean:
   | TRUE
-    { () }
+    { Boolean (next_uid $startpos $endpos, true) }
   | FALSE
-    { () }
+    { Boolean (next_uid $startpos $endpos, false) }
  ;
 
 %inline
 number:
-  | integer
-    { () }
+  | number = integer
+    { number }
   ;
 
 %inline
 integer:
-  | INTEGER
-    { () }
+  | integer = INTEGER
+    { Number (next_uid $startpos $endpos, integer) }
   ;
 
 %inline
 character:
-  | CHARACTER
-    { () }
+  | character = CHARACTER
+    { Character (next_uid $startpos $endpos, character) }
   ;
 
 %inline
 text:
-  | TEXT
-    { () }
+  | text = TEXT
+    { Text (next_uid $startpos $endpos, text) }
   ;
 
 %inline
 empty_onion:
   | EMPTY_ONION
-    { () }
+    { Empty_onion (next_uid $startpos $endpos) }
   ;
 
 %inline
 record(block_expression):
-  | LEFT_CURLY_BRACKET __
-      option(list_of(record_field(block_expression), list_divider))
+  | LEFT_CURLY_BRACKET;
+    __;
+    record_fields_option = option(list_of(record_field(block_expression), list_divider));
     RIGHT_CURLY_BRACKET
-    { () }
+    {
+      let record_fields =
+        match record_fields_option with
+        | Some record_fields ->
+            Identifier_map.of_enum @@ Batteries.List.enum record_fields
+        | None -> Identifier_map.empty
+      in
+      Record (
+        next_uid $startpos $endpos,
+        record_fields
+      )
+    }
   ;
 
 %inline
 record_field(block_expression):
-  | identifier __ EQUALS __ value_inline_expression(block_expression)
-    { () }
+  | key = identifier;
+    __;
+    EQUALS;
+    __;
+    value = value_inline_expression(block_expression)
+    { (key, value) }
   ;
 
 (* It's very important that this rule is called `list_' instead of just
@@ -686,235 +810,432 @@ record_field(block_expression):
 to shadow it. *)
 %inline
 list_(block_expression):
-  | LEFT_SQUARE_BRACKET __
-      option(list_of(list_field(block_expression), list_divider))
+  | LEFT_SQUARE_BRACKET;
+    __;
+    expressions_option = option(list_of(list_field(block_expression), list_divider));
     RIGHT_SQUARE_BRACKET
-    { () }
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      List (
+        next_uid $startpos $endpos,
+        expressions
+      )
+    }
   ;
 
 %inline
 list_field(block_expression):
-  | value_inline_expression(block_expression)
-    { () }
+  | expression = value_inline_expression(block_expression)
+    { expression }
   ;
 
 %inline
 labeled_data(block_expression):
-  | label __ labelable_inline_expression(block_expression)
-    { () }
+  | label = label;
+    __;
+    expression = labelable_inline_expression(block_expression)
+    {
+      Labeled_data (
+        next_uid $startpos $endpos,
+        label,
+        expression
+      )
+    }
   ;
 
 %inline
 label:
-  | LABEL
-    { () }
+  | label = LABEL
+    { Identifier label }
   ;
 
 (******************************************************************************)
 
 %inline
 anonymous_function:
-  | FUN __ formal_parameters __ EQUALS __
-      option(block_of(function_or_method_body_block_expression))
+  | FUN;
+    __;
+    formal_parameters = formal_parameters;
+    __;
+    EQUALS;
+    __;
+    expressions_option = option(block_of(function_or_method_body_block_expression));
     END
-    { () }
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      Anonymous_function (
+        next_uid $startpos $endpos,
+        formal_parameters,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 %inline
 formal_parameters:
-  | LEFT_PARENTHESIS __
-      option(list_of(formal_parameter, list_divider))
+  | LEFT_PARENTHESIS;
+    __;
+    formal_parameters_option = option(list_of(formal_parameter, list_divider));
     RIGHT_PARENTHESIS
-    { () }
+    {
+      match formal_parameters_option with
+      | Some formal_parameters -> formal_parameters
+      | None -> []
+    }
   ;
 
 %inline
 formal_parameter:
-  | identifier
-    { () }
+  | identifier = identifier
+    { identifier }
   ;
 
 (******************************************************************************)
 
 %inline
 object_:
-  | OBJECT __
-      list(object_section)
+  | OBJECT;
+    __;
+    object_sections = list(object_section);
     END
-    { () }
+    {
+      Object (
+        next_uid $startpos $endpos,
+        object_sections
+      )
+    }
   ;
 
 %inline
 object_section:
-  | object_include_section
-    { () }
-  | object_member_section
-    { () }
+  | object_section = object_include_section
+  | object_section = object_member_section
+    { object_section }
   ;
 
 %inline
 object_include_section:
-  | INCLUDE __ object_include_section_body
-    { () }
+  | INCLUDE;
+    __;
+    object_include_section_body = object_include_section_body
+    {
+      Object_include_section (
+        next_uid $startpos $endpos,
+        Block (
+          next_uid $startpos $endpos,
+          object_include_section_body
+        )
+      )
+    }
   ;
 
 %inline
 object_include_section_body:
-  | option(block_of(value_block_expression))
-    { () }
+  | expressions_option = option(block_of(value_block_expression))
+    {
+      match expressions_option with
+      | Some expressions -> expressions
+      | None -> []
+    }
   ;
 
 %inline
 object_member_section:
-  | object_member_section_header __ object_member_section_body
-    { () }
+  | object_member_section_constructor = object_member_section_header;
+    __;
+    object_member_section_body = object_member_section_body
+    { object_member_section_constructor object_member_section_body }
   ;
 
 %inline
 object_member_section_header:
   | PUBLIC
-    { () }
+    {
+      fun object_member_section_body ->
+        Object_public_section (
+          next_uid $startpos $endpos,
+          object_member_section_body
+        )
+    }
   | PRIVATE
-    { () }
+    {
+      fun object_member_section_body ->
+        Object_private_section (
+          next_uid $startpos $endpos,
+          object_member_section_body
+        )
+    }
   ;
 
 %inline
 object_member_section_body:
-  | option(block_of(object_member))
-    { () }
+  | object_members_option = option(block_of(object_member))
+    {
+      match object_members_option with
+      | Some object_members -> object_members
+      | None -> []
+    }
   ;
 
 %inline
 object_member:
-  | object_field_definition
-    { () }
-  | method_definition
-    { () }
+  | object_member = object_field_definition
+  | object_member = method_definition
+    { object_member }
   ;
 
 %inline
 object_field_definition:
-  | immutable_assignment(value_block_expression)
-    { () }
-  | mutable_assignment(value_block_expression)
-    { () }
+  | assignment = immutable_assignment(value_block_expression)
+  | assignment = mutable_assignment(value_block_expression)
+    {
+      Object_member_field_definition (
+        next_uid $startpos $endpos,
+        assignment
+      )
+    }
   ;
 
 %inline
 method_definition:
-  | DEF __ identifier (* NO NEWLINE *) formal_parameters __ EQUALS __
-      option(block_of(function_or_method_body_block_expression))
+  | DEF;
+    __;
+    name = identifier;
+    (* NO NEWLINE *);
+    formal_parameters = formal_parameters;
+    __;
+    EQUALS;
+    __;
+    expressions_option = option(block_of(function_or_method_body_block_expression));
     END
-    { () }
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      Object_member_method_definition (
+        next_uid $startpos $endpos,
+        name,
+        formal_parameters,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 (******************************************************************************)
 
 %public
 operation(block_expression):
-  | binary_operation(block_expression)
-    { () }
-  | unary_prefix_operation(block_expression)
-    { () }
+  | operation = binary_operation(block_expression)
+  | operation = unary_prefix_operation(block_expression)
+    {
+      Expression_operation (
+        next_uid $startpos $endpos,
+        operation
+      )
+    }
+  ;
+
+%public
+unary_prefix_operation_expression(block_expression):
+  | operation = unary_prefix_operation(block_expression)
+    {
+      Expression_operation (
+        next_uid $startpos $endpos,
+        operation
+      )
+    }
   ;
 
 %inline
 binary_operation(block_expression):
-  | value_inline_expression(block_expression) (* NO NEWLINE *)
-    binary_operator __
-    value_inline_expression(block_expression)
-    { () }
+  | left_operand = value_inline_expression(block_expression);
+    (* NO NEWLINE *);
+    operation_constructor = binary_operator;
+    __;
+    right_operand = value_inline_expression(block_expression)
+    { operation_constructor left_operand right_operand }
   ;
 
 %inline
 binary_operator:
-  | primitive_binary_operator
-    { () }
-  | structured_binary_operator
-    { () }
-  | general_binary_operator
-    { () }
+  | binary_operator = primitive_binary_operator
+  | binary_operator = structured_binary_operator
+  | binary_operator = general_binary_operator
+    { binary_operator }
   ;
 
 %inline
 primitive_binary_operator:
-  | boolean_binary_operator
-    { () }
-  | number_binary_operator
-    { () }
+  | primitive_binary_operator = boolean_binary_operator
+  | primitive_binary_operator = number_binary_operator
+    { primitive_binary_operator }
   ;
 
 %inline
 structured_binary_operator:
-  | onioning_operator
-    { () }
+  | structured_binary_operator = onioning_operator
+    { structured_binary_operator }
   ;
 
 %inline
 general_binary_operator:
-  | comparison_operator
-    { () }
+  | general_binary_operator = comparison_operator
+    { general_binary_operator }
   ;
 
 %inline
 boolean_binary_operator:
   | AND
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_and (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | OR
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_or (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | XOR
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_xor (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   ;
 
 %inline
 number_binary_operator:
   | PLUS
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_plus (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | MINUS
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_minus (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | ASTERISK
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_multiplication (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | SLASH
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_division (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   ;
 
 %inline
 onioning_operator:
   | AMPERSAND
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_onioning (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   ;
 
 %inline
 comparison_operator:
   | OPERATOR_EQUALITY
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_equality (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   | OPERATOR_INEQUALITY
-    { () }
+    {
+      fun left_operand right_operand ->
+        Operation_inequality (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
   ;
 
 (* %inline *)
 unary_prefix_operation(block_expression):
-  | unary_prefix_operator __ value_inline_expression(block_expression)
-    { () }
+  | operation_constructor = unary_prefix_operator;
+    __;
+    operand = value_inline_expression(block_expression)
+    { operation_constructor operand }
     %prec UNARY_PREFIX_OPERATION_PRECEDENCE
   ;
 
 %inline
 unary_prefix_operator:
-  | primitive_unary_prefix_operator
-    { () }
+  | unary_prefix_operator = primitive_unary_prefix_operator
+    { unary_prefix_operator }
   ;
 
 %inline
 primitive_unary_prefix_operator:
-  | boolean_unary_prefix_operator
-    { () }
+  | primitive_unary_prefix_operator = boolean_unary_prefix_operator
+    { primitive_unary_prefix_operator }
   ;
 
 %inline
 boolean_unary_prefix_operator:
   | NOT
-    { () }
+    {
+      fun operand ->
+        Operation_not (
+          next_uid $startpos $endpos,
+          operand
+        )
+    }
   ;
 
 (******************************************************************************)
@@ -922,8 +1243,17 @@ boolean_unary_prefix_operator:
 (* Selection works on records and objects (for fields, not methods). *)
 %public
 selection(block_expression):
-  | selectable_inline_expression(block_expression) DOT __ identifier
-    { () }
+  | expression = selectable_inline_expression(block_expression);
+    DOT;
+    __;
+    identifier = identifier
+    {
+      Expression_selection (
+        next_uid $startpos $endpos,
+        expression,
+        identifier
+      )
+    }
   ;
 
 (******************************************************************************)
@@ -932,164 +1262,369 @@ selection(block_expression):
    (an operation) in texts and lists. They are spelled the same. *)
 %public
 application_or_indexing(block_expression):
-  | applicable_or_indexable_inline_expression(block_expression)
-    actual_parameters_or_indexes(block_expression)
-    { () }
+  | expression = applicable_or_indexable_inline_expression(block_expression);
+    actual_parameters_or_indexes = actual_parameters_or_indexes(block_expression)
+    {
+      Expression_application_or_indexing (
+        next_uid $startpos $endpos,
+        expression,
+        actual_parameters_or_indexes
+      )
+    }
   ;
 
 %public
 method_call(block_expression):
-  | selectable_inline_expression(block_expression) DOT __
-    identifier (* NO NEWLINE *) actual_parameters_or_indexes(block_expression)
-    { () }
+  | expression = selectable_inline_expression(block_expression);
+    DOT;
+    __;
+    identifier = identifier;
+    (* NO NEWLINE *);
+    actual_parameters_or_indexes = actual_parameters_or_indexes(block_expression)
+    {
+      Expression_method_call (
+        next_uid $startpos $endpos,
+        expression,
+        identifier,
+        actual_parameters_or_indexes
+      )
+    }
   ;
 
 %inline
 actual_parameters_or_indexes(block_expression):
-  | LEFT_PARENTHESIS __
-      option(list_of(actual_parameter_or_index(block_expression), list_divider))
+  | LEFT_PARENTHESIS;
+    __;
+    actual_parameters_or_indexes_option = option(list_of(actual_parameter_or_index(block_expression), list_divider));
     RIGHT_PARENTHESIS
-    { () }
+    {
+      match actual_parameters_or_indexes_option with
+      | Some actual_parameters_or_indexes -> actual_parameters_or_indexes
+      | None -> []
+    }
   ;
 
 %inline
 actual_parameter_or_index(block_expression):
-  | value_inline_expression(block_expression)
-    { () }
+  | expression = value_inline_expression(block_expression)
+    { expression }
   ;
 
 (******************************************************************************)
 
 %public
+identifier_expression:
+  | identifier = identifier
+    {
+      Expression_identifier (
+        next_uid $startpos $endpos,
+        identifier
+      )
+    }
+  ;
+
+%inline
 identifier:
-  | IDENTIFIER
-    { () }
+  | identifier = IDENTIFIER
+    { Identifier identifier }
   ;
 
 (******************************************************************************)
 
 %public
+assignment_expression(block_expression):
+  | assignment = assignment(block_expression)
+    {
+      Expression_assignment (
+        next_uid $startpos $endpos,
+        assignment
+      )
+    }
+
+%inline
 assignment(block_expression):
-  | immutable_assignment(block_expression)
-    { () }
-  | mutable_assignment(block_expression)
-    { () }
-  | mutable_update_assignment(block_expression)
-    { () }
+  | assignment = immutable_assignment(block_expression)
+  | assignment = mutable_assignment(block_expression)
+  | assignment = mutable_update_assignment(block_expression)
+    { assignment }
   ;
 
 %inline
 immutable_assignment(block_expression):
-  | LET __ unqualified_assignment(block_expression)
-    { () }
+  | LET;
+    __;
+    unqualified_assignment = unqualified_assignment(block_expression)
+    {
+      let (identifier, expression) = unqualified_assignment in
+      Assignment_immutable (
+        next_uid $startpos $endpos,
+        identifier,
+        expression
+      )
+    }
   ;
 
 %inline
 mutable_assignment(block_expression):
-  | REF __ unqualified_assignment(block_expression)
-    { () }
-  ;
-
-%inline
-mutable_update_assignment(block_expression):
-  | assignable_inline_expression(block_expression) (* NO NEWLINE *) EQUALS __
-    value_inline_expression(block_expression)
-    { () }
+  | REF;
+    __;
+    unqualified_assignment = unqualified_assignment(block_expression)
+    {
+      let (identifier, expression) = unqualified_assignment in
+      Assignment_mutable (
+        next_uid $startpos $endpos,
+        identifier,
+        expression
+      )
+    }
   ;
 
 %inline
 unqualified_assignment(block_expression):
-  | identifier (* NO NEWLINE *) EQUALS __
-    value_inline_expression(block_expression)
-    { () }
+  | identifier = identifier;
+    (* NO NEWLINE *);
+    EQUALS;
+    __;
+    expression = value_inline_expression(block_expression)
+    { (identifier, expression) }
+  ;
+
+%inline
+mutable_update_assignment(block_expression):
+  | left_expression = assignable_inline_expression(block_expression);
+    (* NO NEWLINE *);
+    EQUALS;
+    __;
+    right_expression = value_inline_expression(block_expression)
+    {
+      Assignment_mutable_update (
+        next_uid $startpos $endpos,
+        left_expression,
+        right_expression
+      )
+    }
   ;
 
 (******************************************************************************)
 
 %public
 flow_control(block_expression):
-  | conditional(block_expression)
-    { () }
-  | repetition(block_expression)
-    { () }
+  | flow_control = conditional(block_expression)
+  | flow_control = repetition(block_expression)
+    {
+      Expression_flow_control (
+        next_uid $startpos $endpos,
+        flow_control
+      )
+    }
   ;
 
 %inline
 conditional(block_expression):
-  | if_(block_expression)
-    { () }
-  | pattern_match(block_expression)
-    { () }
+  | conditional = if_(block_expression)
+  | conditional = pattern_match(block_expression)
+    { conditional }
   ;
 
 %inline
 if_(block_expression):
-  | IF __ condition_inline_expression(block_expression) then_
-      option(block_of(block_expression))
-    list(else_if(block_expression))
-    option(else_(block_expression))
+  | IF;
+    __;
+    condition = condition_inline_expression(block_expression);
+    then_;
+    then_expressions_option = option(block_of(block_expression));
+    else_ifs = list(else_if(block_expression));
+    else_expressions_option = option(else_(block_expression));
     END
-    { () }
+    {
+      let then_expressions =
+        match then_expressions_option with
+        | Some then_expressions -> then_expressions
+        | None -> []
+      in
+      let else_expressions =
+        match else_expressions_option with
+        | Some else_expressions -> else_expressions
+        | None ->
+          Block (
+            next_uid $startpos $endpos,
+            []
+          )
+      in
+      Flow_control_if (
+        next_uid $startpos $endpos,
+        condition,
+        Block (
+          next_uid $startpos $endpos,
+          then_expressions
+        ),
+        else_ifs,
+        else_expressions
+      )
+    }
   ;
 
 %inline
 else_if(block_expression):
-  | ELSE_IF __ condition_inline_expression(block_expression) then_
-      option(block_of(block_expression))
-    { () }
+  | ELSE_IF;
+    __;
+    condition = condition_inline_expression(block_expression);
+    then_;
+    expressions_option = option(block_of(block_expression))
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      (
+        condition,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 %inline
 else_(block_expression):
-  | ELSE __
-      option(block_of(block_expression))
-    { () }
+  | ELSE;
+    __;
+    expressions_option = option(block_of(block_expression))
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+    }
   ;
 
 %inline
 pattern_match(block_expression):
-  | MATCH __ condition_inline_expression(block_expression) __
-    list(pattern_match_case(block_expression))
+  | MATCH;
+    __;
+    subject = condition_inline_expression(block_expression);
+    __;
+    branches = list(pattern_match_case(block_expression))
     END
-    { () }
+    {
+      Flow_control_match (
+        next_uid $startpos $endpos,
+        subject,
+        branches
+      )
+    }
   ;
 
 %inline
 pattern_match_case(block_expression):
-  | AS __ pattern __ IN __ option(block_of(block_expression))
-    { () }
+  | AS;
+    __;
+    pattern = pattern;
+    __;
+    IN;
+    __;
+    expressions_option = option(block_of(block_expression))
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      (
+        pattern,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 %inline
 repetition(block_expression):
-  | REPEAT __ while_(block_expression)
-    { () }
+  | REPEAT;
+    __;
+    repetition = while_(block_expression)
+    { repetition }
   ;
 
 %inline
 while_(block_expression):
-  | WHILE __ condition_inline_expression(block_expression) do_
-      option(block_of(block_expression))
+  | WHILE;
+    __;
+    condition = condition_inline_expression(block_expression);
+    do_;
+    expressions_option = option(block_of(block_expression));
     END
-    { () }
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      Flow_control_while (
+        next_uid $startpos $endpos,
+        condition,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 (******************************************************************************)
 
 %public
 function_abstraction:
-  | FUN __ identifier (* NO NEWLINE *) formal_parameters __ EQUALS __
-      option(block_of(function_or_method_body_block_expression))
+  | FUN;
+    __;
+    identifier = identifier;
+    (* NO NEWLINE *);
+    formal_parameters = formal_parameters;
+    __;
+    EQUALS;
+    __;
+    expressions_option = option(block_of(function_or_method_body_block_expression));
     END
-    { () }
+    {
+      let expressions =
+        match expressions_option with
+        | Some expressions -> expressions
+        | None -> []
+      in
+      Expression_function_abstraction (
+        next_uid $startpos $endpos,
+        identifier,
+        formal_parameters,
+        Block (
+          next_uid $startpos $endpos,
+          expressions
+        )
+      )
+    }
   ;
 
 (******************************************************************************)
 
 %public
 return(block_expression):
-  | RETURN __ value_inline_expression(block_expression)
-    { () }
+  | RETURN;
+    __;
+    expression = value_inline_expression(block_expression)
+    {
+      Expression_return (
+        next_uid $startpos $endpos,
+        expression
+      )
+    }
   ;
 
 (******************************************************************************)
@@ -1104,7 +1639,6 @@ __:
 %public
 block_divider:
   | NEWLINE
-    { () }
   | SEMICOLON __
     { () }
   ;
@@ -1123,7 +1657,6 @@ list_divider:
 %public
 then_:
   | NEWLINE
-    { () }
   | THEN __
     { () }
   ;
@@ -1133,7 +1666,6 @@ then_:
 %public
 do_:
   | NEWLINE
-    { () }
   | DO __
     { () }
   ;
@@ -1142,8 +1674,8 @@ do_:
 
 %public
 block_of(expression):
-  | list_of(expression, block_divider)
-    { () }
+  | expressions = list_of(expression, block_divider)
+    { expressions }
   ;
 
 (* Non-empty empty list of separated elements with optional trailing separator.
@@ -1157,10 +1689,9 @@ block_of(expression):
 *)
 %public
 list_of(element, separator):
-  | nonempty_list(terminated(element, separator))
-      { () }
-  | separated_nonempty_list(separator, element)
-      { () }
+  | elements = nonempty_list(terminated(element, separator))
+  | elements = separated_nonempty_list(separator, element)
+      { elements }
   ;
 
 (*********)

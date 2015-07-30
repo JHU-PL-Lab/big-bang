@@ -113,6 +113,7 @@ Library "little-bang-a-translator"
     little-bang-ast,
     tiny-bang-ast,
     tiny-bang-utils
+
 Library "big-bang-parser"
   Path: src/big-bang-parser
   Modules:
@@ -120,12 +121,21 @@ Library "big-bang-parser"
     Big_bang_parser
   BuildDepends:
     batteries,
-    little-bang-ast,
+    big-bang-ast,
     tiny-bang-ast,
     tiny-bang-utils
   BuildTools+:
     ocamllex,
     menhir
+
+Library "big-bang-ast"
+  Path: src/big-bang-ast
+  Modules:
+    Big_bang_ast
+  BuildDepends:
+    batteries,
+    tiny-bang-ast,
+    tiny-bang-utils
 
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
