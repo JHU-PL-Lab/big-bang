@@ -89,7 +89,6 @@ let next_uid startpos endpos =
 
 (* Literals. *)
 
-%token          EMPTY_ONION
 %token <int>    INTEGER
 %token <char>   CHARACTER
 %token <string> TEXT
@@ -771,7 +770,7 @@ text:
 
 %inline
 empty_onion:
-  | EMPTY_ONION
+  | LEFT_PARENTHESIS RIGHT_PARENTHESIS
     { Empty_onion (next_uid $startpos $endpos) }
   ;
 
@@ -1708,7 +1707,7 @@ list_of(element, separator):
    3. Run the line captured in step 1 while adding the mentioned flags
       right after the `--explain' and `--infer' flags.
 
-   For example: menhir --ocamlc '/Users/leafac/.opam/system/bin/ocamlfind ocamlc -w @A-4-44 -g -annot -bin-annot -I src/tiny-bang-utils -I src/tiny-bang-ast -I src/little-bang-ast -package batteries -package monadlib -I src/big-bang-parser -I src/little-bang-ast -I src/tiny-bang-ast -I src/tiny-bang-utils' --explain --infer --interpret --interpret-show-cst src/big-bang-parser/big_bang_generated_parser.mly
+   For example: menhir --ocamlc '/Users/leafac/.opam/system/bin/ocamlfind ocamlc -w @A-4-44 -g -annot -bin-annot -I src/tiny-bang-utils -I src/tiny-bang-ast -I src/little-bang-ast -I src/big-bang-ast -package batteries -package monadlib -I src/big-bang-parser -I src/big-bang-ast -I src/tiny-bang-ast -I src/tiny-bang-utils' --explain --infer --interpret --interpret-show-cst src/big-bang-parser/big_bang_parser.mly
 
    This makes Menhir run in interpreter mode, instead of generating
    the parser. It lets you interact with the parser and inspect the
@@ -2118,58 +2117,4 @@ ACCEPT
   ]
   EOF
 ]
-*)
-
-%%
-
-(**************)
-(* Public API *)
-(**************)
-
-(**
-  A front-end for the BigBang parser library.
-*)
-
-(* open Batteries;; *)
-
-(* open Big_bang_ast;; *)
-(* open Big_bang_generated_lexer;; *)
-(* open Big_bang_generated_parser;; *)
-(* open Tiny_bang_parser_support;; *)
-
-(* let parse_big_bang_expressions (input : IO.input) = *)
-(*   let buf = Lexing.from_input input in *)
-(*   let read_expr () = *)
-(*     begin *)
-(*       reset_ast_position_hash(); *)
-(*       let result = *)
-(*         Big_bang_generated_parser.delim_expr *)
-(*           Big_bang_generated_lexer.token *)
-(*           buf *)
-(*       in *)
-(*       let position_hash = Tiny_bang_parser_support.get_ast_position_hash () in *)
-(*       match result with *)
-(*         | Some(e) -> Some(e,position_hash) *)
-(*         | None -> None *)
-(*     end *)
-(*   in *)
-(*   LazyList.from_while read_expr;; *)
-
-(* let parse_big_bang_program (input : IO.input) = *)
-(*   let buf = Lexing.from_input input in *)
-(*   reset_ast_position_hash(); *)
-(*   let e = Big_bang_generated_parser.prog *)
-(*             Big_bang_generated_lexer.token *)
-(*             buf *)
-(*   in *)
-(*   let position_hash = Tiny_bang_parser_support.get_ast_position_hash() in *)
-(*   (e,position_hash) *)
-(* ;; *)
-
-(*
-let parse_big_bang_source_file_program (input : IO.input) : unit =
-  input
-  |> Lexing.from_input
-  |> Big_bang_generated_parser.source_file_program Big_bang_generated_lexer.read
-;;
 *)

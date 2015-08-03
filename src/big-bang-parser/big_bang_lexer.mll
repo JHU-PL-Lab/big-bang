@@ -95,7 +95,6 @@ rule read = parse
 
   (* Literals. *)
 
-  | "()"                                          { EMPTY_ONION }
   | integer                                       { INTEGER (int_of_string (Lexing.lexeme lexbuf)) }
   | '\'' (_ as character_value) '\''              { CHARACTER character_value }
   | '"' ([^'"']*? as text_value) '"'              { TEXT (text_value) }

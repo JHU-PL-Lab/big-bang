@@ -131,9 +131,24 @@ Library "big-bang-parser"
 Library "big-bang-ast"
   Path: src/big-bang-ast
   Modules:
-    Big_bang_ast
+    Big_bang_ast,
+    Big_bang_ast_utils
   BuildDepends:
     batteries,
+    little-bang-ast,
+    tiny-bang-ast,
+    tiny-bang-utils
+
+Library "big-bang-translator"
+  Path: src/big-bang-translator
+  Modules:
+    Big_bang_translator,
+    Big_bang_translator_constants,
+    Big_bang_translator_helpers
+  BuildDepends:
+    batteries,
+    big-bang-ast,
+    little-bang-ast,
     tiny-bang-ast,
     tiny-bang-utils
 
@@ -154,6 +169,19 @@ Executable "little-bang-toploop"
     little-bang-ast,
     little-bang-a-translator,
     little-bang-parser,
+    tiny-bang-ast,
+    tiny-bang-interpreter,
+    tiny-bang-typechecker,
+    batteries
+
+Executable "big-bang-toploop"
+  Path: src/big-bang-toploop
+  MainIs: big_bang_toploop.ml
+  BuildDepends:
+    big-bang-ast,
+    big-bang-translator,
+    big-bang-parser,
+    little-bang-a-translator,
     tiny-bang-ast,
     tiny-bang-interpreter,
     tiny-bang-typechecker,
