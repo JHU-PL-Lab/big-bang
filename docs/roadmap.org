@@ -93,7 +93,39 @@ z = f c
 *** List pattern rest
 **** =[*rest]= has a known bug, refer to =FIXME:= comment in =big_bang_translation.ml=
 *** Object =private= sections
+** Keywords for literals
+#+BEGIN_EXAMPLE
+mutable dictionary {}
+#+END_EXAMPLE
+*** User defined
+#+BEGIN_EXAMPLE
+red_black_tree_set {}
+#+END_EXAMPLE
 ** Literals
+*** Arrays
+#+BEGIN_EXAMPLE
+let y = array [1,2,3]
+y(2)
+y(2) = 5
+
+let y = object
+     private
+         let my_data = «« makeArray 1 2 3 »»
+     public
+         def get(i) =
+             «« readArray my_data i »»
+         end
+         def set(i,x) =
+             «« writeArray my_data i x »»
+         end
+end
+
+y.set(2,5)
+
+let z = array of 5 0
+z(4)
+z(4) = 1
+#+END_EXAMPLE
 *** Sets
 *** Maps
 ** Functions
@@ -101,6 +133,26 @@ z = f c
 ** Primitive literals in patterns
 *** Patterns such as =5= would be encoded as =as int and y where y =? 5= and we don't have =where= guards in patterns
 * Long-term
+** Unicode
 ** Add pattern disjunction concrete syntax
+#+BEGIN_EXAMPLE
+p0 \ { p0 = p1 | p2; p1 = int; p2 = char }
+     IMPLICIT BINDING: binds p0 only
+     EXPLICIT BINDING: binds nothing
+
+p0 \ { p0 = p1 * p2; p1 = x; x = (); p2 = int }
+int * x
+     IMPLICIT BINDING: binds p0, p1, p2, x
+p0 \ { p0 = p1 * p2; p1 = bind x; p2 = int }
+     EXPLICIT BINDING: binds x
+
+p0 \ { p0 = p1 | p2; p1 = p3 * p4; p3 = int; p4 = bind x;
+        p2 = p5 * p6; p5 = char; p6 = bind x }
+     EXPLICIT BINDING: binds x (because it's bound in both disjuncts)
+
+p0 \ { p0 = p1 | p2; p1 = `Nil p3; p3 = (); p2 = p4 * p5; p4 = `Tl p0;
+        p5 = `Hd p6; p6 = p7 * p8; p7 = int; p8 = bind x }
+µπ. `Hd (int * x) * `Tl π
+#+END_EXAMPLE
 ** Exceptions
 ** Regex
