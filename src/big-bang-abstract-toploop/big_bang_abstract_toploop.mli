@@ -1,5 +1,5 @@
 exception Tiny_bang_translation_error of string
-exception Illformed_expression of string
+exception Illformed_program of string
 exception Type_error of string
 exception Interpretation_error of string
 

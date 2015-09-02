@@ -189,13 +189,11 @@ Executable "big-bang-toploop"
   Path: src/big-bang-toploop
   MainIs: big_bang_toploop.ml
   BuildDepends:
+    big-bang-abstract-toploop,
     big-bang-ast,
     big-bang-translator,
     big-bang-parser,
     little-bang-a-translator,
-    tiny-bang-ast,
-    tiny-bang-interpreter,
-    tiny-bang-typechecker,
     batteries
 
 Executable "test-tiny-bang"
