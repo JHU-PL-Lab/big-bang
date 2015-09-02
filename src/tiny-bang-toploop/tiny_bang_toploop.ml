@@ -1,74 +1,10 @@
 open Batteries;;
 
-open Tiny_bang_ast_pretty;;
-open Tiny_bang_ast_wellformedness;;
-open Tiny_bang_interpreter;;
-open Tiny_bang_toploop_options;;
-open Tiny_bang_typechecker;;
-
-type toploop_options = {
-  toploop_typechecker_disabled : bool
-};;
-
-let toploop_operate toploop_options e =
-  print_string "\n";
-  begin
-    try
-      (* Check well-formedness. *)
-      check_wellformed_expr e;
-      (* Typecheck (if appropriate). *)
-      if not @@ toploop_options.toploop_typechecker_disabled
-      then assert_typesafe e
-      else ();
-      (* Evaluate. *)
-      let v,env = eval e in
-      print_string (pretty_var v ^ " where "  ^ pretty_env env ^ "\n");
-    with
-    | Illformedness_found(ills) ->
-      print_string "Provided expression is ill-formed:\n";
-      List.iter
-        (fun ill ->
-           print_string @@ "   " ^ pretty_illformedness ill ^ "\n")
-        ills
-    | Typecheck_error ->
-      print_string "Typechecking error discovered.\n"
-  end;
-  print_string "\n";
-  print_string "Please enter an expression to evaluate followed by \";;\".\n";
-  print_string "\n";
-  flush stdout
-;;
-
-let command_line_parsing () = 
-  let parser = BatOptParse.OptParser.make ~version:"version 0.3" () in
-  BatOptParse.OptParser.add parser
-    ~long_name:"log"
-    logging_option;
-  BatOptParse.OptParser.add parser
-    ~short_name:'T'
-    ~long_name:"no-typecheck"
-    disable_typechecking_option;
-  let spare_args = BatOptParse.OptParser.parse_argv parser in
-  match spare_args with
-  | [] ->
-    { toploop_typechecker_disabled =
-        Option.default false @@
-        disable_typechecking_option.BatOptParse.Opt.option_get()
-    }
-  | _ -> failwith "BAD!" (* TODO: better error message *)
-;;
-
 let () =
-  (* parse command-line arguments *)
-  let toploop_options = command_line_parsing () in
-
-  print_string "TinyBang 0.3 Toploop\n";
-  print_string "--------------------\n";
-  print_string "\n";
-  print_string "Please enter an expression to evaluate followed by \";;\".\n";
-  print_string "\n";
-  flush stdout;
-  Tiny_bang_parser.parse_tiny_bang_expressions IO.stdin
-  |> LazyList.map fst
-  |> LazyList.iter (toploop_operate toploop_options)
+  Big_bang_abstract_toploop.start
+    "Tiny Bang"
+    "0.3"
+    Tiny_bang_generated_lexer.token
+    Tiny_bang_generated_parser.delim_expr
+    identity
 ;;
