@@ -14,7 +14,10 @@ let ident_cont = alpha | digit
 rule token = parse
   | eof                              { EOF }
   | "int+"                           { INT_PLUS }
+  | "int-"                           { INT_MINUS }
+  | "int*"                           { INT_TIMES }
   | "int="                           { INT_EQUAL }
+  | "int<"                           { INT_LESSTHAN }
   | comment                          { token lexbuf }
   | whitespace                       { token lexbuf }
   | "{"                              { OPEN_BRACE }

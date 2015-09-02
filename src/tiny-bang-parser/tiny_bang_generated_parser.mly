@@ -18,7 +18,10 @@ open Tiny_bang_parser_support;;
 %token DOUBLE_SEMICOLON
 %token EOF
 %token INT_PLUS
+%token INT_MINUS
+%token INT_TIMES
 %token INT_EQUAL
+%token INT_LESSTHAN
 %token REFERENCE_ASSIGN
 %token KEYWORD_INT
 %token KEYWORD_REF
@@ -77,8 +80,14 @@ identifier:
 builtin:
   | INT_PLUS
       { Op_int_plus }
+  | INT_MINUS
+      { Op_int_minus }
+  | INT_TIMES
+      { Op_int_times }
   | INT_EQUAL
       { Op_int_equal }
+  | INT_LESSTHAN
+      { Op_int_lessthan }
   | REFERENCE_ASSIGN
       { Op_ref }
   ;

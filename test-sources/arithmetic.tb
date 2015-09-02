@@ -1,0 +1,8 @@
+# EXPECT-INT-VARIABLE-VALUE c 9
+w = 3;
+x = 4;
+y = 5;
+z = 6;
+a = int+ x y;
+b = int- a z;
+c = int* w b;

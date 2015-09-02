@@ -13,6 +13,7 @@
 open Batteries;;
 open OUnit2;;
 
+open Tiny_bang_ast;;
 open Tiny_bang_ast_wellformedness;;
 open Tiny_bang_interpreter;;
 open Tiny_bang_typechecker;;
@@ -22,14 +23,21 @@ exception File_test_creation_failure of string;;
 type test_expectation =
   | Expect_typecheck_only
   | Expect_typecheck_and_run
-  | Expect_typefail;;
+  | Expect_typefail
+  | Expect_int_variable_value of string * int;;
 
 let parse_expectation str =
-  match str with
-    | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_and_run)
-    | "EXPECT-TYPECHECK-ONLY" -> Some(Expect_typecheck_only)
-    | "EXPECT-TYPEFAIL" -> Some(Expect_typefail)
-    | _ -> None
+  if String.starts_with str "EXPECT-INT-VARIABLE-VALUE" then
+    match Str.split (Str.regexp_string " ") (String.tail str (String.length "EXPECT-INT-VARIABLE-Value")) with
+      | [x; y] ->
+          Some(Expect_int_variable_value(x, int_of_string y))
+      | _ -> None
+  else
+    match str with
+      | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_and_run)
+      | "EXPECT-TYPECHECK-ONLY" -> Some(Expect_typecheck_only)
+      | "EXPECT-TYPEFAIL" -> Some(Expect_typefail)
+      | _ -> None
 ;;
 
 let make_test filename expectation =
@@ -40,6 +48,8 @@ let make_test filename expectation =
                                     "(should typecheck and run)"
                                 | Expect_typefail ->
                                     "(should fail to typecheck)"
+                                | Expect_int_variable_value(name, value) ->
+                                    "(should have `" ^ name ^ "' equal to " ^ string_of_int value ^ ")"
   in
   let test_name = filename ^ ": " ^ test_name_expectation in
   (* Create the test in a thunk. *)
@@ -61,6 +71,20 @@ let make_test filename expectation =
             (* Now actually run it!  This won't produce any assertable results,
                but it could raise an exception if the typechecker is broken. *)
             ignore (eval expr)
+        | Expect_int_variable_value(name, value) ->
+            (match eval expr with
+              | (_, env) ->
+                (* I don't use lookup here, since all we have is the name of
+                   variable we want to look at, not any other info in the Var
+                   structure. *)
+                let variable = find (function
+                  | Var (_, Ident(identifier), _) -> identifier = name
+                  | _ -> false
+                ) (Environment.keys env)
+                in
+                (match var_project project_int env variable with
+                  | None -> assert_failure "There isn't an int at the variable"
+                  | Some(actual) -> assert_equal actual value))
         | Expect_typefail ->
             assert_bool "Typechecking succeeded." @@ not typecheck_result
 
