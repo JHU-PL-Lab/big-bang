@@ -1,29 +1,6 @@
 %{
 open Big_bang_ast;;
-open Tiny_bang_ast_uid;;
 open Tiny_bang_parser_support;;
-open Tiny_bang_source_origin;;
-open Lexing;;
-
-
-(* FIXME: Refactor the repetition between this, Little_bang_generated_parser and
-          Tiny_bang_generated_parser.
-*)
-let next_uid startpos endpos =
-  let uid : ast_uid = next_uid () in
-  let start = { file_pos_lineno = startpos.pos_lnum
-              ; file_pos_colno = startpos.pos_bol
-              } in
-  let stop = { file_pos_lineno = endpos.pos_lnum
-             ; file_pos_colno = endpos.pos_bol
-             } in
-  let region = { file_region_filename = startpos.pos_fname
-               ; file_region_start = start
-               ; file_region_end = stop
-               } in
-  Ast_uid_hashtbl.add (get_ast_position_hash()) uid region;
-  uid
-;;
 %}
 
 (**********)

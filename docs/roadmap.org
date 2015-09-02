@@ -2,7 +2,6 @@
 
 * Short term
 ** TODO Refactorings
-*** TODO Remove duplication of ~next_uid~ in parsers
 *** TODO [[https://github.com/JHU-PL-Lab/big-bang/issues/1][Abstract over toploops]]
 **** Base the abstraction on Big Bang lexer, parser and toploop
 **** TODO Figure out what the ~Tiny_bang_parser_support.get_ast_position_hash ()~ thing is all about
