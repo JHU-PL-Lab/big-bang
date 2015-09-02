@@ -46,8 +46,15 @@ let make_test filename expectation =
   test_name >::
     function _ ->
       (* Begin by parsing the file. *)
-      let (expr,_) =
-        File.with_file_in filename Tiny_bang_parser.parse_tiny_bang_program
+      let expr =
+        File.with_file_in
+          filename
+          (
+            fun input ->
+              input
+              |> Lexing.from_input
+              |> Tiny_bang_parser.prog Tiny_bang_lexer.token
+          )
       in
       (* Verify that it is well-formed. *)
       check_wellformed_expr expr;

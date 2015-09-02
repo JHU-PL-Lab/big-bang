@@ -4,6 +4,11 @@
 ** TODO Refactorings
 *** TODO [[https://github.com/JHU-PL-Lab/big-bang/issues/1][Abstract over toploops]]
 **** Base the abstraction on Big Bang lexer, parser and toploop
+**** DONE Create abstract toploop
+     CLOSED: [2015-09-02 Wed 13:59]
+**** DONE Basic conversion of toploops to use the abstract toploop
+     CLOSED: [2015-09-02 Wed 13:59]
+**** TODO Remove the =_generated= part of lexers and parsers names
 **** TODO Come back with command line options
 ***** It was extracted from Tiny Bang toploop
 #+BEGIN_EXAMPLE
@@ -93,7 +98,6 @@ let () =
      1. [[https://github.com/JHU-PL-Lab/big-bang/blob/850edbd6ec00a8ea7c60fb1469fd471502681aba/src/little-bang-parser/little_bang_parser.ml#L19][This]] is where the data is generated.
      2. [[https://github.com/JHU-PL-Lab/big-bang/blob/850edbd6ec00a8ea7c60fb1469fd471502681aba/src/little-bang-toploop/little_bang_toploop.ml#L43][And this]] is where the data gets ignored.
 ***** TODO Maybe reintroduce it in the Big Bang parser
-**** TODO Remove the =_generated= part of lexers and parsers names
 *** TODO Abstract version number
     Toploops need the version number and it's repeated all over, instead of
     having a single source.

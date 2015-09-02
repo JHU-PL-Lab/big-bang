@@ -40,8 +40,7 @@ Library "tiny-bang-ast"
 Library "tiny-bang-parser"
   Path: src/tiny-bang-parser
   Modules:
-    Tiny_bang_generated_lexer,
-    Tiny_bang_generated_parser,
+    Tiny_bang_lexer,
     Tiny_bang_parser
   BuildDepends:
     batteries,
@@ -93,8 +92,7 @@ Library "little-bang-ast"
 Library "little-bang-parser"
   Path: src/little-bang-parser
   Modules:
-    Little_bang_generated_lexer,
-    Little_bang_generated_parser,
+    Little_bang_lexer,
     Little_bang_parser
   BuildDepends:
     batteries,

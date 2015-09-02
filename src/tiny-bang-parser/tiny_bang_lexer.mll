@@ -1,5 +1,5 @@
 {
-  open Tiny_bang_generated_parser;;
+  open Tiny_bang_parser;;
 }
 
 let digit = ['0'-'9']

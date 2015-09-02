@@ -4,8 +4,8 @@ let () =
   Big_bang_abstract_toploop.start
     "Little Bang"
     "0.3"
-    Little_bang_generated_lexer.token
-    Little_bang_generated_parser.delim_expr
+    Little_bang_lexer.token
+    Little_bang_parser.delim_expr
     (
       fun little_bang_program ->
         little_bang_program
