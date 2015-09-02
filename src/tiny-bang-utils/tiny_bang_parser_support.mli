@@ -10,3 +10,5 @@ open Tiny_bang_source_origin;;
 val reset_ast_position_hash : unit -> unit
 
 val get_ast_position_hash : unit -> file_region Ast_uid_hashtbl.t
+
+val next_uid : Lexing.position -> Lexing.position -> ast_uid
