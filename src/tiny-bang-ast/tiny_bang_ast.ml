@@ -10,10 +10,13 @@ open Tiny_bang_utils;;
 module Ast_uid_hashtbl = Tiny_bang_ast_uid.Ast_uid_hashtbl;;
 
 (** The builtin in Tinybang. **)
-type builtin_op = 
-  | Op_int_plus   (** int+ *)
-  | Op_int_equal  (** int= *)
-  | Op_ref        (** := *)
+type builtin_op =
+  | Op_int_plus      (** int+ *)
+  | Op_int_minus     (** int- *)
+  | Op_int_times     (** int* *)
+  | Op_int_equal     (** int= *)
+  | Op_int_lessthan  (** int< *)
+  | Op_ref           (** := *)
 ;;
 
 (** {6 Identifiers} *)
@@ -149,14 +152,14 @@ type expr = Expr of ast_uid * clause list
 and clause = Clause of ast_uid * var * redex
 
 (** The type of a reducable expression. *)
-and	redex =
+and redex =
   | Value_redex of ast_uid * value
   | Var_redex of ast_uid * var
   | Appl_redex of ast_uid * var * var
   | Builtin_redex of ast_uid * builtin_op * var list 
 
 (** TinyBang's value type. *)
-and	value =
+and value =
   | Empty_onion_value of ast_uid
   | Label_value of ast_uid * label * var
   | Onion_value of ast_uid * var * var

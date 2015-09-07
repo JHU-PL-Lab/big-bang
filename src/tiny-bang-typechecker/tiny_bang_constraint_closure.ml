@@ -165,8 +165,8 @@ let close_primitive_builtin
    @return The constraints learned from this process (which do not include the
           original constraints).  
 *)
-let close_by_int_addition (cs : Constraint_database.t) : tbconstraint Enum.t =
-  close_primitive_builtin cs Op_int_plus @@
+let close_by_int_op op (cs : Constraint_database.t) : tbconstraint Enum.t =
+  close_primitive_builtin cs op @@
   fun upper_bound operands ->
     match operands with
     | [Filtered_type(t1,_,_);Filtered_type(t2,_,_)] ->
@@ -192,8 +192,8 @@ let close_by_int_addition (cs : Constraint_database.t) : tbconstraint Enum.t =
    @return The constraints learned from this process (which do not include the
           original constraints).  
 *)
-let close_by_int_equality (cs : Constraint_database.t) : tbconstraint Enum.t =
-  close_primitive_builtin cs Op_int_equal @@
+let close_by_int_bool_op op (cs : Constraint_database.t) : tbconstraint Enum.t =
+  close_primitive_builtin cs op @@
   fun upper_bound operands ->
     match operands with
     | [Filtered_type(t1,_,_);Filtered_type(t2,_,_)] ->
@@ -201,7 +201,7 @@ let close_by_int_equality (cs : Constraint_database.t) : tbconstraint Enum.t =
         match t1,t2 with
         | Int_type,Int_type ->
           let empty_onion_tvar =
-            Tvar(Builtin_ident(Op_int_equal,0),Some initial_contour)
+            Tvar(Builtin_ident(op,0),Some initial_contour)
           in
           let empty_onion_constraint = Enum.singleton @@
             Lower_bound_constraint(
@@ -228,6 +228,17 @@ let close_by_int_equality (cs : Constraint_database.t) : tbconstraint Enum.t =
       Enum.singleton @@ Inconsistency_constraint
 ;;
 
+(* This exists to not be a total function if someone forgets to write a closure
+   rule.*)
+let builtin_closure op =
+  match op with
+  | Op_int_plus -> close_by_int_op Op_int_plus
+  | Op_int_minus -> close_by_int_op Op_int_minus
+  | Op_int_times -> close_by_int_op Op_int_times
+  | Op_int_equal -> close_by_int_bool_op Op_int_equal
+  | Op_int_lessthan -> close_by_int_bool_op Op_int_lessthan
+  | Op_ref -> raise (Failure "There aren't closure rules for Op_ref")
+
 (* ************************************************************************** *)
 (* CLOSURE *)
 (* The mechanism by which a complete closure occurs. *)
@@ -240,8 +251,11 @@ let rec perform_closure cs =
   let closure_functions =
     [ close_by_transitivity
     ; close_by_application
-    ; close_by_int_addition
-    ; close_by_int_equality
+    ; builtin_closure Op_int_plus
+    ; builtin_closure Op_int_minus
+    ; builtin_closure Op_int_times
+    ; builtin_closure Op_int_equal
+    ; builtin_closure Op_int_lessthan
     ] in
   let cs' =
     Constraint_database.union cs @@ Constraint_database.of_enum @@

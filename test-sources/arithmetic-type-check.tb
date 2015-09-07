@@ -1,0 +1,4 @@
+# EXPECT-TYPEFAIL
+x = 1;
+y = ();
+z = int- y x;

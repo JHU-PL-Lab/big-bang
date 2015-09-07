@@ -205,29 +205,27 @@ let project_ref_var v =
   | _ -> None
 ;;
 
-(*metatheoretic functions for the builtin operators *)
-let builtin_op env op list_var =
-  match op with
-  | Op_int_plus ->
-    begin
+let builtin_int_binary_op env op list_var func =
+  begin
       match list_var with
       | [x1;x2] ->
         let result =
           let open Option in
           let%bind v1 = var_project project_int env x1 in
           let%bind v2 = var_project project_int env x2 in
-          Some(v1 + v2)
+          Some(func v1 v2)
         in
         begin
           match result with
           | Some(n) -> ([],Int_value(next_uid(), n))
-          | None -> raise @@ Evaluation_failure("Addition defined only on ints.")
+          | None -> raise @@ Evaluation_failure(pretty_builtin_op op ^ " defined only on ints.")
         end
       | _ ->
-        raise @@ Evaluation_failure "Addition requires exactly two arguments."
+        raise @@ Evaluation_failure(pretty_builtin_op op ^ " requires exactly two arguments.")
     end
-  | Op_int_equal ->
-    begin
+
+let builtin_int_comparison_op env op list_var func =
+  begin
       match list_var with
       | [x1;x2] ->
         let result =
@@ -239,18 +237,33 @@ let builtin_op env op list_var =
               Builtin_ident(Op_int_equal,0),
               Some empty_freshening_stack)
           in
-          let lname = Ident(if v1 = v2 then "True" else "False") in
+          let lname = Ident(if func v1 v2 then "True" else "False") in
           let v = Label_value(next_uid(),Label lname,empty_onion_var) in
           return ([(empty_onion_var, Empty_onion_value(next_uid()))],v)
         in
         begin
           match result with
           | Some x -> x
-          | None -> raise @@ Evaluation_failure("Addition defined only on ints.")
+          | None -> raise @@ Evaluation_failure(pretty_builtin_op op ^ " defined only on ints.")
         end
       | _ ->
-        raise @@ Evaluation_failure "Addition requires exactly two arguments."
+        raise @@ Evaluation_failure(pretty_builtin_op op ^ " requires exactly two arguments.")
     end
+
+
+(*metatheoretic functions for the builtin operators *)
+let builtin_op env op list_var =
+  match op with
+  | Op_int_plus ->
+    builtin_int_binary_op env op list_var (+)
+  | Op_int_minus ->
+    builtin_int_binary_op env op list_var (-)
+  | Op_int_times ->
+    builtin_int_binary_op env op list_var ( * ) (* The spaces ensure that it's not parsed as a comment *)
+  | Op_int_equal ->
+    builtin_int_comparison_op env op list_var (=)
+  | Op_int_lessthan ->
+    builtin_int_comparison_op env op list_var (<)
   | Op_ref ->
     begin
       match list_var with

@@ -5,8 +5,11 @@ open Tiny_bang_string_utils;;
 
 let pretty_builtin_op op =
   match op with
-  | Op_int_plus -> "int+"
+  | Op_int_plus  -> "int+"
+  | Op_int_minus -> "int-"
+  | Op_int_times -> "int*"
   | Op_int_equal -> "int="
+  | Op_int_lessthan -> "int<"
   | Op_ref -> ":="
 ;;
 
