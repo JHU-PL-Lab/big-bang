@@ -156,7 +156,7 @@ and redex =
   | Value_redex of ast_uid * value
   | Var_redex of ast_uid * var
   | Appl_redex of ast_uid * var * var
-  | Builtin_redex of ast_uid * builtin_op * var list 
+  | Builtin_redex of ast_uid * builtin_op * var list
 
 (** TinyBang's value type. *)
 and value =

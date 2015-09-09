@@ -6,6 +6,7 @@ open Tiny_bang_parser_support;;
 
 %token <string> IDENTIFIER
 %token <string> LABEL
+%token <int> INT
 %token EQUALS
 %token AMPERSAND
 %token ARROW
@@ -13,6 +14,10 @@ open Tiny_bang_parser_support;;
 %token LEFT_PAREN
 %token RIGHT_PAREN
 %token ASTERISK
+%token PLUS
+%token MINUS
+%token EQUALITY
+%token LESS_THAN
 %token KEYWORD_FUN
 %token KEYWORD_LET
 %token KEYWORD_IN
@@ -22,8 +27,10 @@ open Tiny_bang_parser_support;;
 %left LAM
 %right KEYWORD_IN
 (* %nonassoc '<=' '>=' '==' *)
+%nonassoc EQUALITY LESS_THAN
 (* %right '<-' *)
 (* %left '+' '-' *)
+%left PLUS MINUS
 %left ASTERISK (* '/' '%' *)
 %left AMPERSAND
 (* %right 'putChar' *)
@@ -59,8 +66,23 @@ expr:
       { Onion_expr((next_uid $startpos $endpos),$1,$3) }
   | KEYWORD_LET variable EQUALS expr KEYWORD_IN expr
       { Let_expr((next_uid $startpos $endpos),$2,$4,$6) }
+  | infix_expr
+      { $1 }
   | appl_expr
       { $1 }
+  ;
+
+infix_expr:
+  | expr PLUS expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_int_plus,[$1;$3]) }
+  | expr ASTERISK expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_int_times,[$1;$3]) }
+  | expr MINUS expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_int_minus,[$1;$3]) }
+  | expr EQUALITY expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_int_equal,[$1;$3]) }
+  | expr LESS_THAN expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_int_lessthan,[$1;$3]) }
   ;
 
 appl_expr:
@@ -89,6 +111,8 @@ primary_expr:
 literal:
   | EMPTY_ONION
       { Empty_onion((next_uid $startpos $endpos)) }
+  | INT
+      { Little_bang_ast.Int_value ((next_uid $startpos $endpos), $1) }
 ;
 
 variable:
