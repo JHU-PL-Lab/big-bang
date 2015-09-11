@@ -1,3 +1,6 @@
+open Batteries;;
+open List;;
+
 let append_to_clause_list tiny_bang_ast_expr new_clauses =
   let Tiny_bang_ast.Expr (_, tiny_bang_ast_expr_clauses) = tiny_bang_ast_expr in
   Tiny_bang_ast.Expr (Tiny_bang_ast_uid.next_uid (), (BatList.append tiny_bang_ast_expr_clauses new_clauses))
@@ -15,7 +18,7 @@ let a_translate_ident i =
   | Little_bang_ast.Ident s -> Tiny_bang_ast.Ident s
   | Little_bang_ast.Fresh_ident n ->
     (* This step makes sense because the fresh idents from the LittleBang AST
-       module should be in sync with the ident counter from the TinyBang AST 
+       module should be in sync with the ident counter from the TinyBang AST
        module. *)
     Tiny_bang_ast.Fresh_ident n
 ;;
@@ -145,6 +148,33 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
          )
        ]
     )
+  | Little_bang_ast.Builtin_expr (_, op, args) ->
+      (* This function composition is used to provoke the side effect of next_uid
+         for each argument*)
+      let arg_idents = map (Tiny_bang_ast.new_fresh_ident % const ()) args
+      in
+      let arg_exprs = map (uncurry a_translate_expr) (map2 (fun x y -> (x, y)) args arg_idents)
+      in
+      (*Tiny_bang_ast.Expr (Tiny_bang_ast_uid.next_uid ()) [Tiny_bang_ast.Clause (
+        Tiny_bang_ast_uid.next_uid (),
+        Tiny_bang_ast.Var (Tiny_bang_ast_uid.next_uid (), binding_ident, None),
+        Tiny_bang_ast.Builtin_redex (Tiny_bang_ast_uid.next_uid ()) op 
+      )]*)
+      append_to_clause_list
+        (fold_left
+          (fun x y ->
+            match y with
+            | Tiny_bang_ast.Expr (_, clauses) -> append_to_clause_list x clauses
+          )
+          (hd arg_exprs) (tl arg_exprs))
+        [Tiny_bang_ast.Clause (
+          Tiny_bang_ast_uid.next_uid (),
+          Tiny_bang_ast.Var ((Tiny_bang_ast_uid.next_uid ()), binding_ident, None),
+          Tiny_bang_ast.Builtin_redex (
+            (Tiny_bang_ast_uid.next_uid ()), op,
+              (map (fun x -> Tiny_bang_ast.Var (Tiny_bang_ast_uid.next_uid (), x, None)) arg_idents)
+          )
+        )]
   | Little_bang_ast.Let_expr (
       _, Little_bang_ast.Var (_, little_bang_ast_expr_assigned_ident),
       little_bang_ast_expr_assignment,
@@ -187,6 +217,8 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
 
 and a_translate_value little_bang_ast_value =
   match little_bang_ast_value with
+  | Little_bang_ast.Int_value(_, value) ->
+    Tiny_bang_ast.Int_value (Tiny_bang_ast_uid.next_uid (), value)
   | Little_bang_ast.Empty_onion (_) ->
     Tiny_bang_ast.Empty_onion_value (Tiny_bang_ast_uid.next_uid ())
   | Little_bang_ast.Function (_, little_bang_ast_pattern, little_bang_ast_body) ->

@@ -20,8 +20,7 @@ let new_fresh_ident () =
       "Tiny_bang_ast.new_fresh_ident returned Ident (not Fresh_ident)"
   | Tiny_bang_ast.Builtin_ident _ ->
     raise @@ Invariant_failure
-      "Tiny_bang_ast.new_fresh_ident returned Builtin_ident (not Fresh_ident)"      
-;;
+      "Tiny_bang_ast.new_fresh_ident returned Builtin_ident (not Fresh_ident)"
 
 type var = Var of ast_uid * ident;;
 
@@ -39,7 +38,9 @@ type expr =
   | Onion_expr of ast_uid * expr * expr
   | Let_expr of ast_uid * var * expr * expr
   | Appl_expr of ast_uid * expr * expr
+  | Builtin_expr of ast_uid * Tiny_bang_ast.builtin_op * expr list
 and value =
   | Empty_onion of ast_uid
   | Function of ast_uid * pattern * expr
+  | Int_value of ast_uid * int
 ;;
