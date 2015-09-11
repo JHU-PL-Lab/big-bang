@@ -63,6 +63,7 @@ rule read = parse
 
   | "=?"    { OPERATOR_EQUALITY }
   | "not=?" { OPERATOR_INEQUALITY }
+  | "<?"    { OPERATOR_LESS_THAN }
 
   (* Keywords. *)
 

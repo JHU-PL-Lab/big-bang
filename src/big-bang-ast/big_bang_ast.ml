@@ -105,6 +105,7 @@ and operation =
   | Operation_onioning of ast_uid * expression * expression
   | Operation_equality of ast_uid * expression * expression
   | Operation_inequality of ast_uid * expression * expression
+  | Operation_less_than of ast_uid * expression * expression
 
 (******************************************************************************)
 
