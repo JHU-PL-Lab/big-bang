@@ -33,6 +33,7 @@ open Tiny_bang_parser_support;;
 (* Operators. *)
 
 %token OPERATOR_EQUALITY
+%token OPERATOR_LESS_THAN
 %token OPERATOR_INEQUALITY
 
 (* Keywords. *)
@@ -88,7 +89,7 @@ open Tiny_bang_parser_support;;
 %left     AND
 %nonassoc XOR
 %nonassoc UNARY_PREFIX_OPERATION_PRECEDENCE
-%nonassoc OPERATOR_EQUALITY OPERATOR_INEQUALITY
+%nonassoc OPERATOR_EQUALITY OPERATOR_LESS_THAN OPERATOR_INEQUALITY
 %left     PLUS MINUS
 %left     ASTERISK SLASH
 %left     AMPERSAND
@@ -1165,6 +1166,15 @@ comparison_operator:
     {
       fun left_operand right_operand ->
         Operation_equality (
+          next_uid $startpos $endpos,
+          left_operand,
+          right_operand
+        )
+    }
+  | OPERATOR_LESS_THAN
+    {
+      fun left_operand right_operand ->
+        Operation_less_than (
           next_uid $startpos $endpos,
           left_operand,
           right_operand

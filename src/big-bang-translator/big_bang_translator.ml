@@ -662,6 +662,10 @@ and translate_literal (literal : Big_bang_ast.literal) : Little_bang_ast.expr =
     |> fold_onion
     |> seal
 
+  | Big_bang_ast.Number (_, value) ->  Little_bang_ast.Value_expr (
+    Tiny_bang_ast_uid.next_uid (),
+    Little_bang_ast.Int_value (Tiny_bang_ast_uid.next_uid (), value)
+  )
   | _ -> raise @@ Not_yet_implemented "translate_literal"
 
 and translate_object_section (object_section : Big_bang_ast.object_section) : Little_bang_ast.expr list =
@@ -771,6 +775,13 @@ and translate_object_member (object_member : Big_bang_ast.object_member) : Littl
     )
     |> prevent_extra_parameters @@ List.length formal_parameters
 
+and translate_builtin_operation op lhs rhs =
+  Little_bang_ast.Builtin_expr (
+    Tiny_bang_ast_uid.next_uid (),
+    op,
+    [translate_expression lhs; translate_expression rhs]
+  )
+
 and translate_operation (operation : Big_bang_ast.operation) : Little_bang_ast.expr =
   match operation with
 
@@ -805,6 +816,25 @@ and translate_operation (operation : Big_bang_ast.operation) : Little_bang_ast.e
       not_truth_table (),
       translate_expression operand
     )
+
+  | Big_bang_ast.Operation_plus (_, lhs, rhs) ->
+      translate_builtin_operation Tiny_bang_ast.Op_int_plus lhs rhs
+  | Big_bang_ast.Operation_minus (_, lhs, rhs) ->
+      translate_builtin_operation Tiny_bang_ast.Op_int_minus lhs rhs
+  | Big_bang_ast.Operation_multiplication (_, lhs, rhs) ->
+      translate_builtin_operation Tiny_bang_ast.Op_int_times lhs rhs
+  | Big_bang_ast.Operation_equality (_, lhs, rhs) ->
+      translate_builtin_operation Tiny_bang_ast.Op_int_equal lhs rhs
+  | Big_bang_ast.Operation_less_than (_, lhs, rhs) ->
+      translate_builtin_operation Tiny_bang_ast.Op_int_lessthan lhs rhs
+  | Big_bang_ast.Operation_inequality (_, lhs, rhs) ->
+      translate_operation (Big_bang_ast.Operation_not (
+        Tiny_bang_ast_uid.next_uid (),
+        Big_bang_ast.Expression_operation (
+          Tiny_bang_ast_uid.next_uid (),
+          Big_bang_ast.Operation_equality (Tiny_bang_ast_uid.next_uid (), lhs, rhs)
+        )
+      ))
 
   | Big_bang_ast.Operation_onioning (_, left_expression, right_expression) ->
     Little_bang_ast.Onion_expr (
