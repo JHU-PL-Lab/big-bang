@@ -78,6 +78,7 @@ z = f c
 **** TODO Number
 ***** TODO Literal
 ***** TODO Operations
+****** TODO ~>~, ~<=~, ~>=~ in terms of ~=~ and ~<~
 **** TODO Characters
 ***** TODO Literals
 ***** TODO Operations
