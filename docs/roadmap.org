@@ -34,22 +34,12 @@
 **** TODO Architect an mechanism for translation functions to declare the need for helper functions
 **** TODO Architect an mechanism for declaring helper functions
 **** TODO Add the preamble to the generated Little Bang code
-** TODO Add to Little Bang things that Tiny Bang already supports
-*** TODO Ref cells
-*** TODO Built-ins
-**** TODO =int+=
-**** TODO =int==
 ** TODO Add missing things to Tiny Bang
-*** TODO =int-=
-*** TODO =int*=
 *** TODO =int/=
 *** TODO =char=
 *** TODO =char==
-** TODO Add to Little Bang the things recently added to Tiny Bang on the previous bullet
 ** TODO Finish up the Big Bang translation layer
 *** TODO Assignment
-**** TODO Mutable assignments and updates
-**** TODO Variables referring to ref cells, when used, are automatically deferred (i.e. no need for a =!= as in OCaml)
 **** TODO =object.field = value= works by projecting out a ref cell, which is then updated
 *** TODO Built-ins
 **** They work by overloaded functions (onions of functions)
@@ -76,7 +66,6 @@ c = a & b
 z = f c
 #+END_EXAMPLE
 **** TODO Number
-***** TODO Literal
 ***** TODO Operations
 ****** TODO ~>~, ~<=~, ~>=~ in terms of ~=~ and ~<~
 **** TODO Characters
