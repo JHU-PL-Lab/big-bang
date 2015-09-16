@@ -148,6 +148,22 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
          )
        ]
     )
+  | Little_bang_ast.Ref_expr (_, value) ->
+    let ident = Tiny_bang_ast.new_fresh_ident ()
+    in
+    append_to_clause_list (a_translate_expr value ident) [
+      Tiny_bang_ast.Clause (
+        Tiny_bang_ast_uid.next_uid (),
+        Tiny_bang_ast.Var (Tiny_bang_ast_uid.next_uid (), binding_ident, None),
+        Tiny_bang_ast.Value_redex (
+          Tiny_bang_ast_uid.next_uid (),
+          Tiny_bang_ast.Ref_value (
+            Tiny_bang_ast_uid.next_uid (),
+            Tiny_bang_ast.Var (Tiny_bang_ast_uid.next_uid (), ident, None)
+          )
+        )
+      );
+    ]
   | Little_bang_ast.Builtin_expr (_, op, args) ->
       (* This function composition is used to provoke the side effect of next_uid
          for each argument*)
@@ -212,7 +228,7 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
 
 and a_translate_value little_bang_ast_value =
   match little_bang_ast_value with
-  | Little_bang_ast.Int_value(_, value) ->
+  | Little_bang_ast.Int_value (_, value) ->
     Tiny_bang_ast.Int_value (Tiny_bang_ast_uid.next_uid (), value)
   | Little_bang_ast.Empty_onion (_) ->
     Tiny_bang_ast.Empty_onion_value (Tiny_bang_ast_uid.next_uid ())
@@ -222,6 +238,40 @@ and a_translate_value little_bang_ast_value =
       a_translate_pattern little_bang_ast_pattern (Tiny_bang_ast.new_fresh_ident ()),
       a_translate_expr little_bang_ast_body (Tiny_bang_ast.new_fresh_ident ())
     )
+
+and a_translate_primitive_pattern binding_ident underlying filter =
+  match underlying with
+  | Little_bang_ast.Var_pattern (_, Little_bang_ast.Var (_, lb_ident)) ->
+      Tiny_bang_ast.Pattern (
+        (Tiny_bang_ast_uid.next_uid ()),
+        Tiny_bang_ast.Pvar (
+          (Tiny_bang_ast_uid.next_uid ()),
+          binding_ident
+        ),
+        (Tiny_bang_ast.Pvar_map.singleton
+          (Tiny_bang_ast.Pvar (Tiny_bang_ast_uid.next_uid (), binding_ident))
+          (filter @@ Tiny_bang_ast.Pvar (Tiny_bang_ast_uid.next_uid (), a_translate_ident lb_ident))
+        )
+      )
+  | Little_bang_ast.Empty_pattern (_) ->
+      let tmp_ident = Tiny_bang_ast.new_fresh_ident ()
+      in
+      let pvar = Tiny_bang_ast.Pvar (Tiny_bang_ast_uid.next_uid (), tmp_ident)
+      in
+      Tiny_bang_ast.Pattern (
+        (Tiny_bang_ast_uid.next_uid ()),
+        Tiny_bang_ast.Pvar (
+          (Tiny_bang_ast_uid.next_uid ()),
+          binding_ident
+        ),
+        (Tiny_bang_ast.Pvar_map.add pvar
+          (Tiny_bang_ast.Empty_filter (Tiny_bang_ast_uid.next_uid ()))
+          @@ Tiny_bang_ast.Pvar_map.singleton
+          (Tiny_bang_ast.Pvar (Tiny_bang_ast_uid.next_uid (), binding_ident))
+          (filter pvar)
+        )
+      )
+  | _ -> raise @@ Failure "Only Empty_pattern and Var_pattern can occur in a ref cell"
 
 and a_translate_pattern little_bang_ast_pattern binding_ident =
   match little_bang_ast_pattern with
@@ -244,6 +294,15 @@ and a_translate_pattern little_bang_ast_pattern binding_ident =
           Tiny_bang_ast.Pvar_map.empty
       )
     )
+  | Little_bang_ast.Int_pattern (_, underlying) ->
+      a_translate_primitive_pattern binding_ident underlying
+        (fun var -> Tiny_bang_ast.Int_filter (Tiny_bang_ast_uid.next_uid (), var))
+  | Little_bang_ast.Array_pattern (_, underlying) ->
+      a_translate_primitive_pattern binding_ident underlying
+        (fun var -> Tiny_bang_ast.Array_filter (Tiny_bang_ast_uid.next_uid (), var))
+  | Little_bang_ast.Ref_pattern (_, underlying) ->
+      a_translate_primitive_pattern binding_ident underlying
+        (fun var -> Tiny_bang_ast.Ref_filter (Tiny_bang_ast_uid.next_uid (), var))
   | Little_bang_ast.Label_pattern (_, little_bang_ast_label, little_bang_ast_subpattern) ->
     let label_ident = (Tiny_bang_ast.new_fresh_ident ()) in
     let Tiny_bang_ast.Pattern (

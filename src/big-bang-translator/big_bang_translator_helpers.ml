@@ -3,6 +3,67 @@
 
 open Batteries;;
 
+
+(**
+ * Given an input expression, surround it with the prelude. *)
+let (apply_prelude : Little_bang_ast.expr -> Little_bang_ast.expr) = begin
+  let open Little_bang_ast in
+  let prelude_path = "./src/big-bang-translator/prelude.lb" (*TODO: use Oasis to fill this in*)
+  in
+  let f = open_in_bin prelude_path
+  in
+  let unprocessed = fst @@ Little_bang_parser.parse_little_bang_program f
+  in
+  close_in f;
+  let rec update_expr expr replacement =
+    match expr with
+    | Var_expr (_, Var(_, Ident("BIG_BANG_COMPILATION_UNIT"))) -> replacement
+    | Value_expr (_, Function(_, pat, body)) ->
+        Value_expr (
+          Tiny_bang_ast_uid.next_uid (),
+          Function(
+            Tiny_bang_ast_uid.next_uid (),
+            pat,
+            update_expr body replacement
+          )
+        )
+    | Label_expr (_, label, expr') ->
+        Label_expr (Tiny_bang_ast_uid.next_uid (), label, update_expr expr' replacement)
+    | Onion_expr (_, expr1, expr2) ->
+        Onion_expr (Tiny_bang_ast_uid.next_uid (), update_expr expr1 replacement, update_expr expr2 replacement)
+    | Let_expr (_, name, expr1, expr2) ->
+        Let_expr (
+          Tiny_bang_ast_uid.next_uid (),
+          name,
+          update_expr expr1 replacement,
+          update_expr expr2 replacement
+        )
+    | Appl_expr (_, expr1, expr2) ->
+        Appl_expr (Tiny_bang_ast_uid.next_uid (), update_expr expr1 replacement, update_expr expr2 replacement)
+    | Builtin_expr (_, op, args) ->
+        Builtin_expr (
+          Tiny_bang_ast_uid.next_uid (),
+          op,
+          List.map (fun x -> update_expr x replacement) args
+        )
+    | Ref_expr (_, expr') ->
+        Ref_expr (Tiny_bang_ast_uid.next_uid (), update_expr expr' replacement)
+    | x -> x
+  in
+  update_expr unprocessed
+end
+;;
+
+let little_bang_var_expr identifier =
+  Little_bang_ast.Var_expr (
+        Tiny_bang_ast_uid.next_uid (),
+        Little_bang_ast.Var (
+          Tiny_bang_ast_uid.next_uid (),
+          identifier
+        )
+      )
+;;
+
 (** Create an onion out of the given expressions. *)
 let fold_onion (expressions : Little_bang_ast.expr list) : Little_bang_ast.expr =
   match expressions with

@@ -295,7 +295,7 @@ let builtin_closure op =
               Enum.singleton @@ Inconsistency_constraint
         end
     | Op_array_set -> fun (cs : Constraint_database.t) ->
-      close_primitive_builtin cs Op_array_get @@ fun upper_bound operands ->
+      close_primitive_builtin cs Op_array_set @@ fun upper_bound operands ->
         begin
           match operands with
           | [Filtered_type(Array_type contents,_,_); Filtered_type(Int_type,_,_); newValue] ->

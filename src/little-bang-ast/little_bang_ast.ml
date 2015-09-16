@@ -32,6 +32,9 @@ type pattern =
   | Var_pattern of ast_uid * var
   | Empty_pattern of ast_uid
   | Label_pattern of ast_uid * label * pattern
+  | Ref_pattern of ast_uid * pattern
+  | Int_pattern of ast_uid * pattern
+  | Array_pattern of ast_uid * pattern
   | Conjunction_pattern of ast_uid * pattern * pattern
 ;;
 
@@ -43,6 +46,11 @@ type expr =
   | Let_expr of ast_uid * var * expr * expr
   | Appl_expr of ast_uid * expr * expr
   | Builtin_expr of ast_uid * Tiny_bang_ast.builtin_op * expr list
+  (* This is an expression in little bang, but a value in tiny bang.
+     The reason why is that Ref_value in tiny bang requires a var,
+     while Ref_expr in little bang takes an expression, so it needs to
+     be able to add clauses, so it can't just be a litle bang value.*)
+  | Ref_expr of ast_uid * expr
 and value =
   | Empty_onion of ast_uid
   | Function of ast_uid * pattern * expr

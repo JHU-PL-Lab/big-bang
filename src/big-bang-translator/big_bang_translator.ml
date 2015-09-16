@@ -35,7 +35,7 @@ let translate_identifier_to_tiny_bang
 
 let rec translate_program (program : Big_bang_ast.program) : Little_bang_ast.expr =
   match program with
-  | Big_bang_ast.Program (_, block) -> translate_block block
+  | Big_bang_ast.Program (_, block) -> apply_prelude @@ translate_block block
 
 and translate_block (block : Big_bang_ast.block) : Little_bang_ast.expr =
   (* Instead of using Fig. 1, translate the sequencing that happens in blocks as:
@@ -172,12 +172,12 @@ and translate_expression (expression : Big_bang_ast.expression) : Little_bang_as
     )
 
   | Big_bang_ast.Expression_identifier (_, identifier) ->
-    Little_bang_ast.Var_expr (
+    Little_bang_ast.Appl_expr(
       Tiny_bang_ast_uid.next_uid (),
-      Little_bang_ast.Var (
-        Tiny_bang_ast_uid.next_uid (),
+      Big_bang_translator_helpers.little_bang_var_expr @@
+        Little_bang_ast.Ident "$variableUnwrap",
+      Big_bang_translator_helpers.little_bang_var_expr @@
         translate_identifier identifier
-      )
     )
 
   | Big_bang_ast.Expression_flow_control (_, flow_control) ->
@@ -232,6 +232,9 @@ and translate_expression (expression : Big_bang_ast.expression) : Little_bang_as
 
   | Big_bang_ast.Expression_block (_, block) ->
     translate_block block
+
+  | Big_bang_ast.Expression_assignment (_, assignment) ->
+      translate_assignment assignment
 
   | _ -> raise @@ Not_yet_implemented "translate_expression"
 
@@ -859,7 +862,34 @@ and translate_assignment (assignment : Big_bang_ast.assignment) : Little_bang_as
       translate_expression value,
       void ()
     )
-  | _ -> raise @@ Not_yet_implemented "translate_assignment"
+  | Big_bang_ast.Assignment_mutable (_, variable, value) ->
+    Little_bang_ast.Let_expr (
+      Tiny_bang_ast_uid.next_uid (),
+      Little_bang_ast.Var (
+        Tiny_bang_ast_uid.next_uid (),
+        translate_identifier variable
+      ),
+      Little_bang_ast.Ref_expr (
+        Tiny_bang_ast_uid.next_uid (),
+        translate_expression value
+      ),
+      void ()
+    )
+  | Big_bang_ast.Assignment_mutable_update (_, refCell, value) ->
+    begin
+      let lhs = match refCell with
+      (* We don't want to unwrap ref cells on the left-hand side *)
+      | Big_bang_ast.Expression_identifier (_, ident) ->
+          Big_bang_translator_helpers.little_bang_var_expr @@
+            translate_identifier ident
+      | x -> translate_expression x
+      in
+      Little_bang_ast.Builtin_expr (
+        Tiny_bang_ast_uid.next_uid (),
+        Tiny_bang_ast.Op_ref,
+        [lhs; translate_expression value;]
+      )
+    end
 
 and translate_flow_control (flow_control : Big_bang_ast.flow_control) : Little_bang_ast.expr =
   match flow_control with

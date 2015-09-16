@@ -153,7 +153,9 @@ Library "big-bang-translator"
     big-bang-ast,
     little-bang-ast,
     tiny-bang-ast,
-    tiny-bang-utils
+    tiny-bang-utils,
+    little-bang-parser
+  DataFiles: src/big-bang-translator/prelude.lb
 
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
