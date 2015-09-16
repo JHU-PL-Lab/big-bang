@@ -155,11 +155,6 @@ let rec a_translate_expr little_bang_ast_expr binding_ident =
       in
       let arg_exprs = map (uncurry a_translate_expr) (map2 (fun x y -> (x, y)) args arg_idents)
       in
-      (*Tiny_bang_ast.Expr (Tiny_bang_ast_uid.next_uid ()) [Tiny_bang_ast.Clause (
-        Tiny_bang_ast_uid.next_uid (),
-        Tiny_bang_ast.Var (Tiny_bang_ast_uid.next_uid (), binding_ident, None),
-        Tiny_bang_ast.Builtin_redex (Tiny_bang_ast_uid.next_uid ()) op 
-      )]*)
       append_to_clause_list
         (fold_left
           (fun x y ->

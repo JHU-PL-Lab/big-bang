@@ -21,6 +21,7 @@ let new_fresh_ident () =
   | Tiny_bang_ast.Builtin_ident _ ->
     raise @@ Invariant_failure
       "Tiny_bang_ast.new_fresh_ident returned Builtin_ident (not Fresh_ident)"
+;;
 
 type var = Var of ast_uid * ident;;
 
