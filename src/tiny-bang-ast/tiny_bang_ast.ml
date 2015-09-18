@@ -17,6 +17,10 @@ type builtin_op =
   | Op_int_equal     (** int= *)
   | Op_int_lessthan  (** int< *)
   | Op_ref           (** := *)
+  | Op_array_new     (** arrayNew *)
+  | Op_array_length  (** arrayLength *)
+  | Op_array_get     (** arrayGet *)
+  | Op_array_set     (** arraySet *)
 ;;
 
 (** {6 Identifiers} *)
@@ -26,6 +30,7 @@ type ident =
   | Ident of string
   | Fresh_ident of int
   | Builtin_ident of builtin_op * int
+  | Builtin_local_ident of builtin_op * ident * int
 ;;
 
 module Ident_hash =
@@ -132,7 +137,7 @@ type pattern_filter =
   | Label_filter of ast_uid * label * pvar
   | Conjunction_filter of ast_uid * pvar * pvar
   | Int_filter of ast_uid * pvar
-  | Ref_filter of ast_uid * pvar  
+  | Ref_filter of ast_uid * pvar
 ;;
 (* Note that the variables on Int_filter and Ref_filter are of a different sort;
    they have different binding rules. *)
@@ -165,5 +170,7 @@ and value =
   | Onion_value of ast_uid * var * var
   | Function_value of ast_uid * pattern * expr
   | Int_value of ast_uid * int
+  (*NOTE: just like `var's pointing to a ref may be re-bound to different values*)
+  | Array_value of ast_uid * var array
   | Ref_value of ast_uid * var
 ;;

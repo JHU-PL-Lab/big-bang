@@ -123,21 +123,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
       let free_t = walk t in
       let free_h =
         match r with
-        | Value_redex(_,v) ->
-          begin
-            match v with
-            | Empty_onion_value(_) -> Var_set.empty
-            | Int_value(_,_) -> Var_set.empty
-            | Ref_value(_,x') -> Var_set.singleton x'
-            | Label_value(_,_,x') -> Var_set.singleton x'
-            | Onion_value(_,x1,x2) -> Var_set.of_list [x1;x2]
-            | Function_value(_,p,e) ->
-              Var_set.diff (vars_free_in_expr e)
-                (vars_bound_by_pattern p
-                  |> Pvar_set.enum
-                  |> Enum.map var_of_pvar
-                  |> Var_set.of_enum) 
-          end
+        | Value_redex(_,v) -> vars_free_in_value v
         | Var_redex(_,x') -> Var_set.singleton x'
         | Appl_redex(_,x1,x2) -> Var_set.of_list [x1;x2]
         | Builtin_redex(_,_,v_list) -> Var_set.of_list v_list
@@ -145,6 +131,20 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
       Var_set.remove x @@ Var_set.union free_h free_t
   in
   walk cls_initial
+and vars_free_in_value v =
+  match v with
+  | Empty_onion_value(_) -> Var_set.empty
+  | Int_value(_,_) -> Var_set.empty
+  | Ref_value(_,x') -> Var_set.singleton x'
+  | Label_value(_,_,x') -> Var_set.singleton x'
+  | Onion_value(_,x1,x2) -> Var_set.of_list [x1;x2]
+  | Array_value(_,_) -> Var_set.empty (*See comment at the definition*)
+  | Function_value(_,p,e) ->
+    Var_set.diff (vars_free_in_expr e)
+      (vars_bound_by_pattern p
+          |> Pvar_set.enum
+          |> Enum.map var_of_pvar
+          |> Var_set.of_enum)
 ;;
 
 (**

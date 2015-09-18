@@ -11,13 +11,18 @@ let pretty_builtin_op op =
   | Op_int_equal -> "int="
   | Op_int_lessthan -> "int<"
   | Op_ref -> ":="
+  | Op_array_new -> "arrayNew"
+  | Op_array_length -> "arrayLength"
+  | Op_array_get -> "arrayGet"
+  | Op_array_set -> "arraySet"
 ;;
 
-let pretty_ident ident =
+let rec pretty_ident ident =
   match ident with
   | Ident s -> s
   | Fresh_ident id -> "__" ^ string_of_int id
   | Builtin_ident(op,n) -> "__" ^ pretty_builtin_op op ^ "_" ^ string_of_int n
+  | Builtin_local_ident(op,basis,n) -> "__" ^ pretty_builtin_op op ^ "__based_on__" ^ (pretty_ident basis) ^ "__" ^ string_of_int n
 ;;
 
 let pretty_label (Label i) = "`" ^ pretty_ident i;;
@@ -83,6 +88,8 @@ and pretty_value v =
   match v with
   | Empty_onion_value(_) -> "()"
   | Int_value(_,x) -> string_of_int x
+  | Array_value(_,x) -> Tiny_bang_string_utils.concat_sep_delim "array {" "}" ", " @@
+    Enum.map pretty_var @@ BatArray.enum x
   | Label_value(_, l, x) -> pretty_label l ^ " " ^ pretty_var x
   | Onion_value(_, x1, x2) -> pretty_var x1 ^ " & " ^ pretty_var x2
   | Function_value(_, p, e) -> pretty_pattern p ^ " -> " ^ pretty_expr e

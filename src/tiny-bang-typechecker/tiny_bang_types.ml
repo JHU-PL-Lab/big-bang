@@ -155,6 +155,7 @@ sig
     | Onion_type of tvar * tvar
     | Function_type of pattern_type * tvar * tbconstraint_database
     | Ref_type of tvar
+    | Array_type of tvar
     | Int_type 
 end;;
 
@@ -245,6 +246,7 @@ struct
     | T.Label_type(l,a) -> T.Label_type(l, f a)
     | T.Onion_type(a1,a2) -> T.Onion_type(f a1, f a2)
     | T.Ref_type(a1) -> T.Ref_type(f a1)
+    | T.Array_type(a1) -> T.Array_type(f a1)
     | T.Function_type(pt,a,cs) ->
       (* Pattern types are never subject to variable replacement. *)
       T.Function_type(pt, f a, Db.replace_variables f cs)

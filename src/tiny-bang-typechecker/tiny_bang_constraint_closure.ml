@@ -238,7 +238,76 @@ let builtin_closure op =
   | Op_int_times -> close_by_int_op Op_int_times
   | Op_int_equal -> close_by_int_bool_op Op_int_equal
   | Op_int_lessthan -> close_by_int_bool_op Op_int_lessthan
-  | Op_ref -> raise (Failure "There aren't closure rules for Op_ref")
+  | Op_array_new -> fun (cs : Constraint_database.t) ->
+      close_primitive_builtin cs Op_array_new @@ fun upper_bound operands ->
+        begin
+          match operands, upper_bound with
+          | [Filtered_type(t1,_,_);initial_value_type], Tvar (tvar_ident, tvar_contour) ->
+            begin
+              match t1 with
+              | Int_type ->
+                let contents_type = Tvar(Builtin_local_ident (Op_array_new, tvar_ident, 0), tvar_contour)
+                in
+                BatList.enum [
+                  Lower_bound_constraint(
+                    Type_lower_bound(unfiltered_type @@ Array_type contents_type),
+                    upper_bound);
+                  Lower_bound_constraint(
+                    Type_lower_bound(initial_value_type),
+                    contents_type
+                  );
+                ]
+              | _ ->
+                (* Operand1 must be an int. *)
+                Enum.singleton @@ Inconsistency_constraint
+            end
+          | _, _ ->
+            (* There must be two operands. *)
+            Enum.singleton @@ Inconsistency_constraint
+        end
+  | Op_array_length -> fun (cs : Constraint_database.t) ->
+      close_primitive_builtin cs Op_array_length @@ fun upper_bound operands ->
+        begin
+          match operands with
+          | [Filtered_type(t1,_,_)] ->
+            begin
+              match t1 with
+              | Array_type _->
+                Enum.singleton @@ Lower_bound_constraint(
+                  Type_lower_bound(unfiltered_type Int_type),
+                  upper_bound)
+              | _ ->
+                (* Operand1 must be an array. *)
+                Enum.singleton @@ Inconsistency_constraint
+            end
+          | _ ->
+            (* There must be one operand. *)
+            Enum.singleton @@ Inconsistency_constraint
+        end
+  | Op_array_get -> fun (cs : Constraint_database.t) ->
+      close_primitive_builtin cs Op_array_get @@ fun upper_bound operands ->
+        begin
+          match operands with
+          | [Filtered_type(Array_type contents,_,_); Filtered_type(Int_type,_,_)] ->
+            Enum.singleton @@
+              Lower_bound_constraint (Intermediate_lower_bound contents, upper_bound)
+          | _ ->
+              Enum.singleton @@ Inconsistency_constraint
+        end
+    | Op_array_set -> fun (cs : Constraint_database.t) ->
+      close_primitive_builtin cs Op_array_get @@ fun upper_bound operands ->
+        begin
+          match operands with
+          | [Filtered_type(Array_type contents,_,_); Filtered_type(Int_type,_,_); newValue] ->
+              BatList.enum @@ [
+                Lower_bound_constraint (Type_lower_bound(unfiltered_type Empty_onion_type), upper_bound);
+                Lower_bound_constraint (Type_lower_bound newValue, contents)
+              ]
+          | _ ->
+              Enum.singleton @@ Inconsistency_constraint
+        end
+
+  | Op_ref -> raise (Failure "There aren't yet closure rules for Op_ref")
 
 (* ************************************************************************** *)
 (* CLOSURE *)
@@ -257,6 +326,10 @@ let rec perform_closure cs =
     ; builtin_closure Op_int_times
     ; builtin_closure Op_int_equal
     ; builtin_closure Op_int_lessthan
+    ; builtin_closure Op_array_new
+    ; builtin_closure Op_array_length
+    ; builtin_closure Op_array_get
+    ; builtin_closure Op_array_set
     ] in
   let cs' =
     Constraint_database.union cs @@ Constraint_database.of_enum @@

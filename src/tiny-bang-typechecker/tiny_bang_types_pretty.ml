@@ -46,7 +46,8 @@ let rec pretty_type t =
   match t with
   | Empty_onion_type -> "()"
   | Int_type -> "int"
-  | Ref_type(a) -> "ref " ^ pretty_tvar a 
+  | Ref_type(a) -> "ref " ^ pretty_tvar a
+  | Array_type(a) -> "array " ^ pretty_tvar a
   | Label_type(l,a) -> pretty_label l ^ " " ^ pretty_tvar a
   | Onion_type(a1,a2) -> pretty_tvar a1 ^ " & " ^ pretty_tvar a2
   | Function_type(p,a,cs) ->

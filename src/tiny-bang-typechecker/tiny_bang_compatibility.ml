@@ -782,6 +782,10 @@ and compatibility_by_type_with_only_constr_pats
          | _ -> None
       )
       tasks
+  | Array_type(_) ->
+    (*For now, this masquerades as the Empty_onion_type
+     * TODO: actually implement this when we add array patterns *)
+    immediate_solve (fun _ -> None) tasks
   | Ref_type(x) ->
     immediate_solve 
       (fun filt->

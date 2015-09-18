@@ -1,0 +1,13 @@
+# EXPECT-TYPEFAIL
+length = 10;
+initialValue = p1 \
+     { p1 = ();
+     } ->
+     { r = ();
+     };
+arr = arrayNew length initialValue;
+x2 = ();
+i = 2;
+x1 = arrayGet i;
+x3 = x1 x2;
+ignored = arraySet arr i length;

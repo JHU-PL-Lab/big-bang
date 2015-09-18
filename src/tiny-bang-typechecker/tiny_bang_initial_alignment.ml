@@ -84,6 +84,7 @@ and initial_align_value v =
   | Empty_onion_value(_) -> Empty_onion_type
   | Int_value(_,_) -> Int_type
   | Ref_value(_,x) -> Ref_type(initial_align_var x)
+  | Array_value(_,_) -> raise @@ Align_error "Arrays are not literals"
   | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
   | Onion_value(_,x1,x2) ->
     Onion_type(initial_align_var x1,initial_align_var x2)

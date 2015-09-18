@@ -1,0 +1,10 @@
+# EXPECT-INT-VARIABLE-VALUE length2=10 fifthValue=36 fifthValue2=6
+length = 10;
+initialValue = 36;
+arr = arrayNew length initialValue;
+length2 = arrayLength arr;
+five = 5;
+fifthValue = arrayGet arr five;
+six = 6;
+ignoreMe = arraySet arr five six;
+fifthValue2 = arrayGet arr five;
