@@ -1,4 +1,4 @@
-PKG oasis batteries menhirLib oUnit
+PKG oasis batteries menhirLib oUnit ocaml-monadic
 S src/**
 B _build/src/**
 EXT ounit
