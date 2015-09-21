@@ -6,7 +6,7 @@ let digit = ['0'-'9']
 let alpha = ['a'-'z'] | ['A'-'Z']
 let whitespace = [' ' '\t' '\n']
 let comment = '#' [^'\n']* '\n'
-let integer =  '-'? ('0' | ['1'-'9'] (digit | '_')*)
+let integer = '-'? ('0' | ['1'-'9'] (digit | '_')*)
 
 let ident_start = alpha
 let ident_cont = alpha | digit
