@@ -150,9 +150,10 @@ let close_primitive_builtin
         zero ()
     in
     let%bind operand_filtered_types =
-      sequence @@ List.map (fun a -> select_sensible_lower_bounds a cs) operands
+      sequence @@ List.enum @@
+        List.map (fun a -> select_sensible_lower_bounds a cs) operands
     in
-    return @@ f upper_bound operand_filtered_types
+    return @@ f upper_bound @@ List.of_enum operand_filtered_types
   in
   constraints_enum_m
   |> Nondeterminism_monad.enum

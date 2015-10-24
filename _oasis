@@ -18,6 +18,7 @@ Library "tiny-bang-utils"
   Modules:
     Tiny_bang_ast_uid,
     Tiny_bang_logger,
+    Tiny_bang_monad_utils,
     Tiny_bang_nondeterminism,
     Tiny_bang_parser_support,
     Tiny_bang_source_origin,
@@ -25,7 +26,8 @@ Library "tiny-bang-utils"
     Tiny_bang_utils
   BuildDepends:
     batteries,
-    monadlib
+    monadlib,
+    ocaml-monadic
 
 Library "tiny-bang-ast"
   Path: src/tiny-bang-ast
