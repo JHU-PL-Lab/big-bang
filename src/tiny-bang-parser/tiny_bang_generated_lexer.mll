@@ -22,6 +22,7 @@ rule token = parse
   | "arrayLength"                    { ARRAY_LENGTH }
   | "arrayGet"                       { ARRAY_GET }
   | "arraySet"                       { ARRAY_SET }
+  | "array"                          { ARRAY }
   | comment                          { token lexbuf }
   | whitespace                       { token lexbuf }
   | "{"                              { OPEN_BRACE }

@@ -782,12 +782,23 @@ and compatibility_by_type_with_only_constr_pats
          | _ -> None
       )
       tasks
-  | Array_type(_) ->
-    (*For now, this masquerades as the Empty_onion_type
-     * TODO: actually implement this when we add array patterns *)
-    immediate_solve (fun _ -> None) tasks
+  | Array_type(t) ->
+    immediate_solve
+      (fun filt->
+         let Pattern_type(p,map_tvar) = filt in
+         let type_pat = Tpvar_map.find p map_tvar in
+         match type_pat with
+         | Array_filter_type(p') ->
+           (* Bind an unfiltered array to the pattern variable. *)
+           let just_an_array = Filtered_type (
+               Array_type(t), Pattern_type_set.empty, Pattern_type_set.empty)
+           in
+           Some [(just_an_array, tvar_of_tpvar p')]
+         | _ -> None
+      )
+      tasks
   | Ref_type(x) ->
-    immediate_solve 
+    immediate_solve
       (fun filt->
          let Pattern_type(p,map_tvar) = filt in
          let type_pat = Tpvar_map.find p map_tvar in

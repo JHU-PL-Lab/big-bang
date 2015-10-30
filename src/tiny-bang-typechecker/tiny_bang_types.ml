@@ -42,6 +42,7 @@ type pattern_filter_type =
   | Label_filter_type of label * tpvar
   | Conjunction_filter_type of tpvar * tpvar
   | Int_filter_type of tpvar
+  | Array_filter_type of tpvar
   | Ref_filter_type of tpvar
 ;;
 

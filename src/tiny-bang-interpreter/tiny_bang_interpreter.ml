@@ -85,6 +85,8 @@ let compatibility env first_x_arg pat : value Var_map.t option =
           if l = l' then compat x x' else None
         | Int_value(_, _) as i, Int_filter(_, x) ->
           Some (Var_map.singleton (var_of_pvar x) i)
+        | Array_value(_, _) as i, Array_filter(_, x) ->
+          Some (Var_map.singleton (var_of_pvar x) i)
         | Ref_value(_,x), Ref_filter(_, x') ->
           let x_value = lookup env x in
           Some (Var_map.singleton (var_of_pvar x') x_value)

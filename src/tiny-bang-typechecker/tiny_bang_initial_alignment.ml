@@ -29,6 +29,7 @@ let initial_align_pattern_filter pf =
   | Conjunction_filter(_,x1,x2) ->
     Conjunction_filter_type(initial_align_pvar x1, initial_align_pvar x2)
   | Int_filter(_,x1) -> Int_filter_type(initial_align_pvar x1)
+  | Array_filter(_,x1) -> Array_filter_type(initial_align_pvar x1)
   | Ref_filter(_,x1) -> Ref_filter_type(initial_align_pvar x1)
 ;;
 

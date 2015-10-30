@@ -1,0 +1,4 @@
+# EXPECT-TYPECHECK
+length = 0;
+initialValue = 36;
+arr = arrayNew length initialValue;

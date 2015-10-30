@@ -21,6 +21,7 @@ let pretty_pattern_filter_type pf =
   | Label_filter_type(l,a) -> pretty_label l ^ " " ^ pretty_tpvar a
   | Conjunction_filter_type(a1,a2) -> pretty_tpvar a1 ^ " * " ^ pretty_tpvar a2
   | Int_filter_type(a1) -> pretty_tpvar a1 ^ ":int"
+  | Array_filter_type(a1) -> pretty_tpvar a1 ^ ":array"
   | Ref_filter_type(a1) -> "ref " ^ pretty_tpvar a1
 ;;
 

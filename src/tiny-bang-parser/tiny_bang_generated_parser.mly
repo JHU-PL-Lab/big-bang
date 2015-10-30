@@ -26,6 +26,7 @@ open Tiny_bang_parser_support;;
 %token ARRAY_LENGTH
 %token ARRAY_GET
 %token ARRAY_SET
+%token ARRAY
 %token REFERENCE_ASSIGN
 %token KEYWORD_INT
 %token KEYWORD_REF
@@ -158,6 +159,8 @@ filter_rule:
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
+  | pattern_variable COLON ARRAY
+      { Array_filter((next_uid $startpos $endpos),$1) }
   | pattern_variable COLON KEYWORD_INT
       { Int_filter((next_uid $startpos $endpos),$1)}
   | label pattern_variable

@@ -138,6 +138,7 @@ type pattern_filter =
   | Conjunction_filter of ast_uid * pvar * pvar
   | Int_filter of ast_uid * pvar
   | Ref_filter of ast_uid * pvar
+  | Array_filter of ast_uid * pvar
 ;;
 (* Note that the variables on Int_filter and Ref_filter are of a different sort;
    they have different binding rules. *)
