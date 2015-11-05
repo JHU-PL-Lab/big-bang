@@ -29,6 +29,7 @@ let initial_align_pattern_filter pf =
   | Conjunction_filter(_,x1,x2) ->
     Conjunction_filter_type(initial_align_pvar x1, initial_align_pvar x2)
   | Int_filter(_,x1) -> Int_filter_type(initial_align_pvar x1)
+  | Array_filter(_,x1) -> Array_filter_type(initial_align_pvar x1)
   | Ref_filter(_,x1) -> Ref_filter_type(initial_align_pvar x1)
 ;;
 
@@ -84,6 +85,7 @@ and initial_align_value v =
   | Empty_onion_value(_) -> Empty_onion_type
   | Int_value(_,_) -> Int_type
   | Ref_value(_,x) -> Ref_type(initial_align_var x)
+  | Array_value(_,_) -> raise @@ Align_error "Arrays are not literals"
   | Label_value(_,l,x) -> Label_type(l,initial_align_var x)
   | Onion_value(_,x1,x2) ->
     Onion_type(initial_align_var x1,initial_align_var x2)

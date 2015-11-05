@@ -85,6 +85,8 @@ let compatibility env first_x_arg pat : value Var_map.t option =
           if l = l' then compat x x' else None
         | Int_value(_, _) as i, Int_filter(_, x) ->
           Some (Var_map.singleton (var_of_pvar x) i)
+        | Array_value(_, _) as i, Array_filter(_, x) ->
+          Some (Var_map.singleton (var_of_pvar x) i)
         | Ref_value(_,x), Ref_filter(_, x') ->
           let x_value = lookup env x in
           Some (Var_map.singleton (var_of_pvar x') x_value)
@@ -150,6 +152,7 @@ and var_replace_value fn v =
   | Int_value(_, _) -> v
   | Label_value(_, l, x) -> Label_value(next_uid(), l, fn x)
   | Ref_value(_, x) -> Ref_value(next_uid(), fn x)
+  | Array_value(_, x) -> Array_value(next_uid(), Array.map fn x)
   | Onion_value(_, x1, x2) -> Onion_value(next_uid(), fn x1, fn x2)
   | Function_value(_, p, e) ->
     Function_value(next_uid(), p, var_replace_expr fn e)
@@ -191,6 +194,15 @@ let rec var_project projector env var =
       | None -> var_project projector env x2
     end
   | _ -> projector v
+;;
+
+
+let project_value v = Some v ;;
+
+let project_array v =
+  match v with
+  | Array_value(_, arr) -> Some arr
+  | _ -> None
 ;;
 
 let project_int v =
@@ -264,6 +276,84 @@ let builtin_op env op list_var =
     builtin_int_comparison_op env op list_var (=)
   | Op_int_lessthan ->
     builtin_int_comparison_op env op list_var (<)
+  | Op_array_new ->
+      begin
+        match list_var with
+        | [x;y] ->
+          begin
+            match var_project project_int env x with
+            | None -> raise @@ Evaluation_failure "array_new's first argument must be an int"
+            | Some length ->
+                begin
+                  match var_project project_value env y with
+                  | None -> raise @@ Evaluation_failure "array_new's second argument must be a value"
+                  | Some initialValue ->
+                    begin
+                      let arr = Array.init length (fun _ -> Var (next_uid (), new_fresh_ident (), None))
+                      in
+                      Array.iter (fun var -> update env var initialValue) arr;
+                      ([], Array_value (next_uid (), arr))
+                    end
+                end
+          end
+        | _ -> raise @@ Evaluation_failure "array_new takes 2 arguments"
+      end
+  | Op_array_length ->
+      begin
+        match list_var with
+        | [x] ->
+          begin
+            match var_project project_array env x with
+            | None -> raise @@ Evaluation_failure "array_length takes 1 array argument"
+            | Some arr -> ([], Int_value (next_uid (), Array.length arr))
+          end
+        | _ -> raise @@ Evaluation_failure "array_length takes 1 argument"
+      end
+  | Op_array_get ->
+      begin
+        match list_var with
+        | [x;y] ->
+          begin
+            let open Option.Monad in
+            match (let%bind arr = var_project project_array env x
+            in
+            let%bind index = var_project project_int env y
+            in
+            if index < (Array.length arr) then
+              let%bind value = var_project project_value env @@ Array.get arr index
+              in
+              Some ([], value)
+            else raise @@ Evaluation_failure "Array index out of bounds"
+            ) with
+            | None -> raise @@ Evaluation_failure "array_get parameter types"
+            | Some x -> x
+          end
+        |  _ -> raise @@ Evaluation_failure "array_get takes 2 arguments"
+      end
+  | Op_array_set ->
+     begin
+        match list_var with
+        | [x;y;z] ->
+          begin
+            let open Option.Monad in
+            match (let%bind arr = var_project project_array env x
+            in
+            let%bind index = var_project project_int env y
+            in
+            let%bind newValue = var_project project_value env z
+            in
+            if index < (Array.length arr) then
+              begin
+                update env (Array.get arr index) newValue;
+                Some ([], Empty_onion_value (Tiny_bang_ast_uid.next_uid ()))
+              end
+            else raise @@ Evaluation_failure "Array index out of bounds"
+            ) with
+            | None -> raise @@ Evaluation_failure "array_get parameter types"
+            | Some x -> x
+          end
+        |  _ -> raise @@ Evaluation_failure "array_set takes 2 arguments"
+      end
   | Op_ref ->
     begin
       match list_var with

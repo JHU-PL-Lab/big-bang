@@ -18,6 +18,11 @@ rule token = parse
   | "int*"                           { INT_TIMES }
   | "int="                           { INT_EQUAL }
   | "int<"                           { INT_LESSTHAN }
+  | "arrayNew"                       { ARRAY_NEW }
+  | "arrayLength"                    { ARRAY_LENGTH }
+  | "arrayGet"                       { ARRAY_GET }
+  | "arraySet"                       { ARRAY_SET }
+  | "array"                          { ARRAY }
   | comment                          { token lexbuf }
   | whitespace                       { token lexbuf }
   | "{"                              { OPEN_BRACE }

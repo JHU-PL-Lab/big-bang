@@ -22,6 +22,11 @@ open Tiny_bang_parser_support;;
 %token INT_TIMES
 %token INT_EQUAL
 %token INT_LESSTHAN
+%token ARRAY_NEW
+%token ARRAY_LENGTH
+%token ARRAY_GET
+%token ARRAY_SET
+%token ARRAY
 %token REFERENCE_ASSIGN
 %token KEYWORD_INT
 %token KEYWORD_REF
@@ -88,6 +93,14 @@ builtin:
       { Op_int_equal }
   | INT_LESSTHAN
       { Op_int_lessthan }
+  | ARRAY_NEW
+    { Op_array_new }
+  | ARRAY_LENGTH
+    { Op_array_length }
+  | ARRAY_GET
+    { Op_array_get }
+  | ARRAY_SET
+    { Op_array_set }
   | REFERENCE_ASSIGN
       { Op_ref }
   ;
@@ -146,6 +159,8 @@ filter_rule:
 filter:
   | EMPTY_ONION
       { Empty_filter(next_uid $startpos $endpos) }
+  | pattern_variable COLON ARRAY
+      { Array_filter((next_uid $startpos $endpos),$1) }
   | pattern_variable COLON KEYWORD_INT
       { Int_filter((next_uid $startpos $endpos),$1)}
   | label pattern_variable

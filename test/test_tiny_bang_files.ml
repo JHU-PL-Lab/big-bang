@@ -19,19 +19,25 @@ open Tiny_bang_interpreter;;
 open Tiny_bang_typechecker;;
 
 exception File_test_creation_failure of string;;
+exception Parse_expectation_failure of string;;
 
 type test_expectation =
   | Expect_typecheck_only
   | Expect_typecheck_and_run
   | Expect_typefail
-  | Expect_int_variable_value of string * int;;
+  | Expect_int_variable_values of (string * int) list
+;;
 
 let parse_expectation str =
+  (* e.g. EXPECT-INT-VARIABLE-VALUE c=9 d=10 devil=666 *)
   if String.starts_with str "EXPECT-INT-VARIABLE-VALUE" then
-    match Str.split (Str.regexp_string " ") (String.tail str (String.length "EXPECT-INT-VARIABLE-Value")) with
-      | [x; y] ->
-          Some(Expect_int_variable_value(x, int_of_string y))
-      | _ -> None
+    Some (Expect_int_variable_values (List.map
+      (fun term -> match Str.split (Str.regexp_string "=") term with
+        | [x;y] -> (x, int_of_string y)
+        | _ -> raise @@ Parse_expectation_failure "Invalid EXPECT-INT-VARIABLE-VALUE format"
+      )
+      (Str.split (Str.regexp_string " ") (String.tail str (String.length "EXPECT-INT-VARIABLE-Value")))
+    ))
   else
     match str with
       | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_and_run)
@@ -41,15 +47,17 @@ let parse_expectation str =
 ;;
 
 let make_test filename expectation =
-  let test_name_expectation = match expectation with
-                                | Expect_typecheck_only ->
-                                    "(should typecheck)"
-                                | Expect_typecheck_and_run ->
-                                    "(should typecheck and run)"
-                                | Expect_typefail ->
-                                    "(should fail to typecheck)"
-                                | Expect_int_variable_value(name, value) ->
-                                    "(should have `" ^ name ^ "' equal to " ^ string_of_int value ^ ")"
+  let test_name_expectation =
+    match expectation with
+    | Expect_typecheck_only ->
+        "(should typecheck)"
+    | Expect_typecheck_and_run ->
+        "(should typecheck and run)"
+    | Expect_typefail ->
+        "(should fail to typecheck)"
+    | Expect_int_variable_values(lst) ->
+        "(should have " ^ (String.concat " AND " (List.map
+          (function (x,y) -> "`" ^ x ^ "'=" ^ string_of_int y) lst)) ^ ")"
   in
   let test_name = filename ^ ": " ^ test_name_expectation in
   (* Create the test in a thunk. *)
@@ -71,20 +79,22 @@ let make_test filename expectation =
             (* Now actually run it!  This won't produce any assertable results,
                but it could raise an exception if the typechecker is broken. *)
             ignore (eval expr)
-        | Expect_int_variable_value(name, value) ->
-            (match eval expr with
-              | (_, env) ->
-                (* I don't use lookup here, since all we have is the name of
-                   variable we want to look at, not any other info in the Var
-                   structure. *)
-                let variable = find (function
-                  | Var (_, Ident(identifier), _) -> identifier = name
-                  | _ -> false
-                ) (Environment.keys env)
-                in
-                (match var_project project_int env variable with
-                  | None -> assert_failure "There isn't an int at the variable"
-                  | Some(actual) -> assert_equal actual value))
+        | Expect_int_variable_values(lst) ->
+            List.iter (function (name, value) ->
+              (match eval expr with
+                | (_, env) ->
+                  (* I don't use lookup here, since all we have is the name of
+                     variable we want to look at, not any other info in the Var
+                     structure. *)
+                  let variable = find (function
+                    | Var (_, Ident(identifier), _) -> identifier = name
+                    | _ -> false
+                  ) (Environment.keys env)
+                  in
+                  (match var_project project_int env variable with
+                    | None -> assert_failure "There isn't an int at the variable"
+                    | Some(actual) -> assert_equal actual value))
+            ) lst
         | Expect_typefail ->
             assert_bool "Typechecking succeeded." @@ not typecheck_result
 

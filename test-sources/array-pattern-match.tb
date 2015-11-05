@@ -1,0 +1,6 @@
+# EXPECT-TYPECHECK
+f = p0 \ { p0 = p1:array } -> { r = p1 };
+n = 10;
+arr = arrayNew n f;
+z = f arr;
+
