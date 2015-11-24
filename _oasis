@@ -12,6 +12,7 @@ BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 AlphaFeatures: ocamlbuild_more_args
 XOCamlbuildExtraArgs: -use-menhir -use-ocamlfind -cflags -w,@A-4-44
+BuildDepends: threads
 
 Library "tiny-bang-utils"
   Path: src/tiny-bang-utils
