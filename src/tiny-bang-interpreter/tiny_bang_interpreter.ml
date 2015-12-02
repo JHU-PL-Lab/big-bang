@@ -107,9 +107,8 @@ let rec application_match env x_fn x_arg : clause list option =
   logger `debug ("Lookup: " ^ pretty_var x_fn ^ "\n");
   match lookup env x_fn with
   | Onion_value(_, x_left, x_right) ->
-    Option.map_default Option.some
-      (application_match env x_left x_arg)
-      (application_match env x_right x_arg)
+    BatEnum.peek @@
+      BatEnum.append (BatOption.enum @@ application_match env x_left x_arg) (BatOption.enum @@ application_match env x_right x_arg)
   | Function_value(_, pat, Expr(_, cls)) ->
     begin
       let answer = compatibility env x_arg pat in

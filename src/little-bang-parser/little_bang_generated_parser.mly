@@ -21,7 +21,15 @@ open Tiny_bang_parser_support;;
 %token KEYWORD_FUN
 %token KEYWORD_LET
 %token KEYWORD_IN
+%token KEYWORD_INT
+%token KEYWORD_REF
 %token DOUBLE_SEMICOLON
+%token KEYWORD_ARRAY
+%token KEYWORD_ARRAY_NEW
+%token KEYWORD_ARRAY_GET
+%token KEYWORD_ARRAY_SET
+%token KEYWORD_ARRAY_LENGTH
+%token COLON
 %token EOF
 
 %left LAM
@@ -30,10 +38,12 @@ open Tiny_bang_parser_support;;
 %nonassoc EQUALITY LESS_THAN
 (* %right '<-' *)
 (* %left '+' '-' *)
+%nonassoc KEYWORD_REF
 %left PLUS MINUS
 %left ASTERISK (* '/' '%' *)
 %left AMPERSAND
 (* %right 'putChar' *)
+
 
 %start <Little_bang_ast.expr> prog
 %start <Little_bang_ast.expr option> delim_expr
@@ -62,10 +72,20 @@ expr:
           Function((next_uid $startpos $endpos),$2,$4)
         )
       }
+  | KEYWORD_ARRAY_NEW primary_expr primary_expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_array_new,[$2;$3]) }
+  | KEYWORD_ARRAY_GET primary_expr primary_expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_array_get,[$2;$3]) }
+  | KEYWORD_ARRAY_SET primary_expr primary_expr primary_expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_array_set,[$2;$3;$4]) }
+  | KEYWORD_ARRAY_LENGTH primary_expr
+    { Builtin_expr ((next_uid $startpos $endpos),Op_array_length,[$2]) }
   | expr AMPERSAND expr
       { Onion_expr((next_uid $startpos $endpos),$1,$3) }
   | KEYWORD_LET variable EQUALS expr KEYWORD_IN expr
       { Let_expr((next_uid $startpos $endpos),$2,$4,$6) }
+  | KEYWORD_REF expr
+    { Ref_expr((next_uid $startpos $endpos),$2) }
   | infix_expr
       { $1 }
   | appl_expr
@@ -134,6 +154,10 @@ identifier:
 pattern:
   | pattern ASTERISK pattern
       { Conjunction_pattern((next_uid $startpos $endpos),$1,$3) }
+  | primary_pattern COLON KEYWORD_INT
+      { Int_pattern((next_uid $startpos $endpos),$1) }
+  | primary_pattern COLON KEYWORD_ARRAY
+      { Array_pattern((next_uid $startpos $endpos),$1) }
   | primary_pattern
       { $1 }
   ;
@@ -145,6 +169,8 @@ primary_pattern:
       { Empty_pattern((next_uid $startpos $endpos)) }
   | label primary_pattern
       { Label_pattern((next_uid $startpos $endpos),$1,$2) }
+  | KEYWORD_REF primary_pattern
+      { Ref_pattern((next_uid $startpos $endpos),$2) }
   | LEFT_PAREN pattern RIGHT_PAREN
       { $2 }
   ;
