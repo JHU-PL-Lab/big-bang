@@ -7,6 +7,10 @@ export OPAMYES=1
 
 if [ -f "$HOME/.opam/config" ]; then
     opam update
+    eval `opam config env`
+    ocamlfind remove plugin-loader
+    ocamlfind remove userconf
+    ocamlfind remove oasis
     opam upgrade
 else
     opam init
