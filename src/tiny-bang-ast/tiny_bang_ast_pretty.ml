@@ -20,7 +20,8 @@ let pretty_builtin_op op =
 let rec pretty_ident ident =
   match ident with
   | Ident s -> s
-  | Fresh_ident id -> "__" ^ string_of_int id
+  | Fresh_ident (id, None) -> "__" ^ string_of_int id
+  | Fresh_ident (id, Some label) -> label ^ "__" ^ string_of_int id
   | Builtin_ident(op,n) -> "__" ^ pretty_builtin_op op ^ "_" ^ string_of_int n
   | Builtin_local_ident(op,basis,n) -> "__" ^ pretty_builtin_op op ^ "__based_on__" ^ (pretty_ident basis) ^ "__" ^ string_of_int n
 ;;

@@ -14,7 +14,10 @@ type ident =
 
 let new_fresh_ident () =
   match Tiny_bang_ast.new_fresh_ident () with
-  | Tiny_bang_ast.Fresh_ident n -> Fresh_ident n
+  | Tiny_bang_ast.Fresh_ident(n, _) ->
+        (*We're really only using this code to get at the number-generation
+         * scheme, so we can ignore any labels.*)  
+        Fresh_ident n
   | Tiny_bang_ast.Ident _ ->
     raise @@ Invariant_failure
       "Tiny_bang_ast.new_fresh_ident returned Ident (not Fresh_ident)"

@@ -30,7 +30,9 @@ let test_expression_empty_onion _ =
   in
   assert_bool "expected A-Translation to return the empty onion" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr
+        Little_bang_a_translator.Ident_map.empty
+        little_bang_expression binding_ident
     )
   )
 ;;
@@ -85,7 +87,9 @@ let test_expression_label _ =
   in
   assert_bool "expected A-Translation to return the label expression" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr
+        Little_bang_a_translator.Ident_map.empty
+        little_bang_expression binding_ident
     )
   )
 ;;
@@ -153,7 +157,7 @@ let test_expression_onion _ =
   in
   assert_bool "expected A-Translation to return the onion" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr Little_bang_a_translator.Ident_map.empty little_bang_expression binding_ident
     )
   )
 ;;
@@ -210,7 +214,7 @@ let test_expression_function _ =
   in
   assert_bool "expected A-Translation to return the function" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr Little_bang_a_translator.Ident_map.empty little_bang_expression binding_ident
     )
   )
 ;;
@@ -298,7 +302,7 @@ let test_expression_appl _ =
   in
   assert_bool "expected A-Translation to return the appl" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr Little_bang_a_translator.Ident_map.empty little_bang_expression binding_ident
     )
   )
 ;;
@@ -349,7 +353,9 @@ let test_expression_let _ =
           )
         ]
       ) ->
-      assert_equal (Little_bang_a_translator.a_translate_ident assigned_ident)
+      assert_equal (Little_bang_a_translator.a_translate_ident
+        (Little_bang_a_translator.Ident_map.singleton assigned_ident assigned_ident_output)
+        assigned_ident)
         assigned_ident_output;
       assert_equal binding_ident binding_ident_output;
       true
@@ -357,7 +363,7 @@ let test_expression_let _ =
   in
   assert_bool "expected A-Translation to return the let" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr Little_bang_a_translator.Ident_map.empty little_bang_expression binding_ident
     )
   )
 ;;
@@ -394,7 +400,7 @@ let test_expression_var _ =
           )
         ]
       ) ->
-      assert_equal (Little_bang_a_translator.a_translate_ident var_ident)
+      assert_equal (Little_bang_a_translator.a_translate_ident Little_bang_a_translator.Ident_map.empty var_ident)
         var_ident_output;
       assert_equal binding_ident binding_ident_output;
       true
@@ -402,7 +408,7 @@ let test_expression_var _ =
   in
   assert_bool "expected A-Translation to return the var" (
     is_expected_tiny_bang_expression (
-      Little_bang_a_translator.a_translate_expr little_bang_expression binding_ident
+      Little_bang_a_translator.a_translate_expr Little_bang_a_translator.Ident_map.empty little_bang_expression binding_ident
     )
   )
 ;;
@@ -412,10 +418,10 @@ let test_pattern_empty_onion _ =
   let little_bang_pattern =
     Little_bang_ast.Empty_pattern (Tiny_bang_ast_uid.next_uid ())
   in
-  match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
-  | Tiny_bang_ast.Pattern (
+  match Little_bang_a_translator.a_translate_pattern Little_bang_a_translator.Ident_map.empty little_bang_pattern binding_ident with
+  | (Tiny_bang_ast.Pattern (
       _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
-    ) ->
+    ), _) ->
     assert_equal binding_ident binding_ident_output;
     (
       match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
@@ -440,10 +446,10 @@ let test_pattern_label _ =
       (Little_bang_ast.Empty_pattern (Tiny_bang_ast_uid.next_uid ()))
     )
   in
-  match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
-  | Tiny_bang_ast.Pattern (
+  match Little_bang_a_translator.a_translate_pattern Little_bang_a_translator.Ident_map.empty little_bang_pattern binding_ident with
+  | (Tiny_bang_ast.Pattern (
       _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
-    ) ->
+    ), _) ->
     assert_equal binding_ident binding_ident_output;
     (
       match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
@@ -476,10 +482,10 @@ let test_pattern_conjunction _ =
       (Little_bang_ast.Empty_pattern (Tiny_bang_ast_uid.next_uid ()))
     )
   in
-  match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
-  | Tiny_bang_ast.Pattern (
+  match Little_bang_a_translator.a_translate_pattern Little_bang_a_translator.Ident_map.empty little_bang_pattern binding_ident with
+  | (Tiny_bang_ast.Pattern (
       _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
-    ) ->
+    ), _) ->
     assert_equal binding_ident binding_ident_output;
     (
       match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with
@@ -520,10 +526,10 @@ let test_pattern_var _ =
       )
     )
   in
-  match Little_bang_a_translator.a_translate_pattern little_bang_pattern binding_ident with
-  | Tiny_bang_ast.Pattern (
+  match Little_bang_a_translator.a_translate_pattern Little_bang_a_translator.Ident_map.empty little_bang_pattern binding_ident with
+  | (Tiny_bang_ast.Pattern (
       _, (Tiny_bang_ast.Pvar (_, binding_ident_output)), tiny_bang_pattern_filter_rules
-    ) ->
+    ), _) ->
     assert_equal binding_ident binding_ident_output;
     (
       match Tiny_bang_ast.Pvar_map.bindings tiny_bang_pattern_filter_rules with

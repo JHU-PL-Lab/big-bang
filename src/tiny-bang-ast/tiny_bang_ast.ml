@@ -28,7 +28,8 @@ type builtin_op =
 (** A data type for identifiers in TinyBang. *)
 type ident =
   | Ident of string
-  | Fresh_ident of int
+  | Fresh_ident of int * string option (* this string is a label for debugging
+                                        purposes. It's printed if it's present. *)
   | Builtin_ident of builtin_op * int
   | Builtin_local_ident of builtin_op * ident * int
 ;;
@@ -54,10 +55,16 @@ module Ident_set = Set.Make(Ident_order);;
 
 let fresh_ident_counter = ref 0;;
 
+let new_labeled_fresh_ident label =
+  let current_fresh_ident = !fresh_ident_counter in
+  fresh_ident_counter := current_fresh_ident + 1;
+  Fresh_ident (current_fresh_ident, Some label)
+;;
+
 let new_fresh_ident () =
   let current_fresh_ident = !fresh_ident_counter in
   fresh_ident_counter := current_fresh_ident + 1;
-  Fresh_ident current_fresh_ident
+  Fresh_ident (current_fresh_ident, None)
 ;;
 
 (** The label type.  The identifier stored in this label does not contain the
