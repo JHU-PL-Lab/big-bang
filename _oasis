@@ -160,6 +160,7 @@ Library "big-bang-translator"
 Executable "tiny-bang-toploop"
   Path: src/tiny-bang-toploop
   MainIs: tiny_bang_toploop.ml
+  CompiledObject: native
   BuildDepends:
     tiny-bang-ast,
     tiny-bang-interpreter,
@@ -170,6 +171,7 @@ Executable "tiny-bang-toploop"
 Executable "little-bang-toploop"
   Path: src/little-bang-toploop
   MainIs: little_bang_toploop.ml
+  CompiledObject: native
   BuildDepends:
     little-bang-ast,
     little-bang-a-translator,
@@ -182,6 +184,7 @@ Executable "little-bang-toploop"
 Executable "big-bang-toploop"
   Path: src/big-bang-toploop
   MainIs: big_bang_toploop.ml
+  CompiledObject: native
   BuildDepends:
     big-bang-ast,
     big-bang-translator,
@@ -195,6 +198,7 @@ Executable "big-bang-toploop"
 Executable "test-tiny-bang"
   Path: test/
   MainIs: test_tiny_bang.ml
+  CompiledObject: native
   BuildDepends:
     little-bang-a-translator,
     tiny-bang-interpreter,
