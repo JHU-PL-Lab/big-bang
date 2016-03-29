@@ -26,6 +26,7 @@ type test_expectation =
   | Expect_typecheck_and_run
   | Expect_typefail
   | Expect_int_variable_values of (string * int) list
+  | Expect_illformed
 ;;
 
 let parse_expectation str =
@@ -43,6 +44,7 @@ let parse_expectation str =
       | "EXPECT-TYPECHECK" -> Some(Expect_typecheck_and_run)
       | "EXPECT-TYPECHECK-ONLY" -> Some(Expect_typecheck_only)
       | "EXPECT-TYPEFAIL" -> Some(Expect_typefail)
+      | "EXPECT-ILL-FORMED" -> Some(Expect_illformed)
       | _ -> None
 ;;
 
@@ -58,6 +60,8 @@ let make_test filename expectation =
     | Expect_int_variable_values(lst) ->
         "(should have " ^ (String.concat " AND " (List.map
           (function (x,y) -> "`" ^ x ^ "'=" ^ string_of_int y) lst)) ^ ")"
+    | Expect_illformed ->
+        "(should have ill-formedness)"
   in
   let test_name = filename ^ ": " ^ test_name_expectation in
   (* Create the test in a thunk. *)
@@ -68,7 +72,24 @@ let make_test filename expectation =
         File.with_file_in filename Tiny_bang_parser.parse_tiny_bang_program
       in
       (* Verify that it is well-formed. *)
-      check_wellformed_expr expr;
+      begin
+        try
+          check_wellformed_expr expr;
+          begin
+            match expectation with
+                | Expect_illformed -> assert_failure @@ "No ill-formedness found."
+                | _ -> ()
+          end
+        with Illformedness_found(illformednesses) ->
+          begin
+            match expectation with
+                | Expect_illformed -> ()
+                | _ -> assert_failure ("Ill-formedness program:" ^
+                                       (illformednesses
+                                        |> List.map pretty_illformedness
+                                        |> String.join ", "))
+          end
+      end;
       (* Next, typecheck it. *)
       let typecheck_result = typecheck expr in
       match expectation with
@@ -96,7 +117,9 @@ let make_test filename expectation =
                     | Some(actual) -> assert_equal actual value))
             ) lst
         | Expect_typefail ->
-            assert_bool "Typechecking succeeded." @@ not typecheck_result
+          assert_bool "Typechecking succeeded." @@ not typecheck_result
+        | Expect_illformed ->
+          ()
 
 let make_test_from filename =
   let expectations =

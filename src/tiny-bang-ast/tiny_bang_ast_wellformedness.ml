@@ -130,7 +130,7 @@ let rec vars_free_in_expr (Expr(_,cls_initial)) =
         | Appl_redex(_,x1,x2) -> Var_set.of_list [x1;x2]
         | Builtin_redex(_,_,v_list) -> Var_set.of_list v_list
       in
-      Var_set.remove x @@ Var_set.union free_h free_t
+      Var_set.union free_h (Var_set.remove x free_t)
   in
   walk cls_initial
 and vars_free_in_value v =
