@@ -23,14 +23,14 @@ let translate_identifier (identifier : Big_bang_ast.identifier) : Little_bang_as
     Little_bang_ast.Fresh_ident identifier_id
 ;;
 
-let translate_identifier_to_tiny_bang
+let translate_identifier_to_tiny_bang_label
     (identifier : Big_bang_ast.identifier)
-  : Tiny_bang_ast.ident =
-  match identifier with
+  : Tiny_bang_ast.label =
+  Tiny_bang_ast.Label (match identifier with
   | Big_bang_ast.Identifier identifier_string ->
     Tiny_bang_ast.Ident identifier_string
   | Big_bang_ast.Fresh_identifier identifier_id ->
-    Tiny_bang_ast.Fresh_ident identifier_id
+    Tiny_bang_ast.Fresh_ident (identifier_id, None))
 ;;
 
 let rec translate_program (program : Big_bang_ast.program) : Little_bang_ast.expr =
@@ -273,9 +273,7 @@ and translate_pattern_literal (pattern_literal : Big_bang_ast.pattern_literal) :
       fun (identifier, pattern) ->
         Little_bang_ast.Label_pattern (
           Tiny_bang_ast_uid.next_uid (),
-          Tiny_bang_ast.Label (
-            translate_identifier_to_tiny_bang identifier
-          ),
+        translate_identifier_to_tiny_bang_label identifier,
           translate_pattern pattern
         )
     )
@@ -405,9 +403,7 @@ and translate_literal (literal : Big_bang_ast.literal) : Little_bang_ast.expr =
       fun (identifier, expression) ->
         Little_bang_ast.Label_expr (
           Tiny_bang_ast_uid.next_uid (),
-          Tiny_bang_ast.Label (
-            translate_identifier_to_tiny_bang identifier
-          ),
+          translate_identifier_to_tiny_bang_label identifier,
           translate_expression expression
         )
     )
@@ -729,9 +725,7 @@ and translate_object_member (object_member : Big_bang_ast.object_member) : Littl
             ),
             Little_bang_ast.Label_pattern (
               Tiny_bang_ast_uid.next_uid (),
-              Tiny_bang_ast.Label (
-                translate_identifier_to_tiny_bang message
-              ),
+              translate_identifier_to_tiny_bang_label message,
               Little_bang_ast.Empty_pattern (
                 Tiny_bang_ast_uid.next_uid ()
               )
