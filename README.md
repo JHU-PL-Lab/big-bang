@@ -1,6 +1,8 @@
 Big Bang
 ========
 
+**This project is not currently under development.**
+
 [![Build Status](https://travis-ci.org/JHU-PL-Lab/big-bang.svg?branch=master)](https://travis-ci.org/JHU-PL-Lab/big-bang)
 
 Usage
